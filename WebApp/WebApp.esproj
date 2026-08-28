@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.4338480">
+  <PropertyGroup>
+    <StartupCommand>npm start</StartupCommand>
+    <JavaScriptTestFramework>Jasmine</JavaScriptTestFramework>
+    <!-- Allows the build (or compile) script located on package.json to run on Build -->
+    <ShouldRunBuildScript>false</ShouldRunBuildScript>
+    <!-- Folder where production build objects will be placed -->
+    <BuildOutputFolder>$(MSBuildProjectDirectory)\dist\WebApp\browser\</BuildOutputFolder>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="src\app\shared\templat\**" />
+    <TypeScriptConfiguration Remove="src\app\shared\templat\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="src\app\core\guards\" />
+    <Folder Include="src\app\core\interceptors\" />
+    <Folder Include="src\app\core\services\" />
+    <Folder Include="src\app\features\dashboard\channels\" />
+    <Folder Include="src\app\features\dashboard\episodes\" />
+    <Folder Include="src\app\features\dashboard\series\" />
+    <Folder Include="src\app\features\public\home\" />
+    <Folder Include="src\app\features\public\player\" />
+    <Folder Include="src\app\feature\public\" />
+    <Folder Include="src\app\shared\models\" />
+    <Folder Include="src\app\shared\templates\blank-page\" />
+  </ItemGroup>
+</Project>

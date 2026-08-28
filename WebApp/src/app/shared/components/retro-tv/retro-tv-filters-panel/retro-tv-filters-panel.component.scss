@@ -1,0 +1,125 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+.filters-panel {
+  position: absolute;
+  top: 2.2rem;
+  right: 0.4rem;
+  z-index: 20;
+  background: linear-gradient(145deg, rgba(30, 30, 50, 0.97), rgba(15, 15, 30, 0.97));
+  border: 1px solid rgba(107, 207, 127, 0.5);
+  border-radius: 10px;
+  padding: 0.75rem;
+  width: 200px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.8),
+    0 0 15px rgba(107, 207, 127, 0.1);
+  pointer-events: auto;
+
+  &--fs {
+    width: 260px;
+
+    .filter-label { font-size: 1rem; }
+    .filter-value { font-size: 1rem; }
+
+    input[type='range'] { width: 120px; }
+  }
+}
+
+.filters-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.45rem;
+  color: #6bcf7f;
+}
+
+.filters-panel-close {
+  background: none;
+  border: none;
+  color: #6bcf7f;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+  line-height: 1;
+
+  &:hover { color: #ff6b6b; }
+
+  &:focus-visible {
+    outline: 2px solid #ffd93d;
+    outline-offset: 2px;
+  }
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+
+  input[type='checkbox'] {
+    width: 14px;
+    height: 14px;
+    accent-color: #6bcf7f;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+}
+
+.filter-label {
+  font-family: 'VT323', monospace;
+  font-size: 0.8rem;
+  color: #fff;
+  flex: 1;
+}
+
+.filter-control {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.filter-value {
+  font-family: 'VT323', monospace;
+  font-size: 0.8rem;
+  color: #ffd93d;
+  min-width: 28px;
+  text-align: right;
+}
+
+.filter-row--toggle {
+  border-bottom: 1px solid rgba(107, 207, 127, 0.2);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+
+  .filter-label { color: #6bcf7f; font-weight: bold; }
+}
+
+.filters-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+input[type='range'] {
+  -webkit-appearance: none;
+  width: 80px;
+  height: 3px;
+  background: rgba(107, 207, 127, 0.3);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6bcf7f;
+    cursor: pointer;
+    box-shadow: 0 0 4px rgba(107, 207, 127, 0.6);
+  }
+}

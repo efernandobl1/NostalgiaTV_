@@ -1,0 +1,45 @@
+# Actualizaciones automáticas como PRs revisables: Dependabot abre PRs agrupados de
+# minor/patch, el workflow (Trivy + build de imágenes) corre sobre cada uno y sólo se
+# fusiona si pasa. Los "major" llegan en su propio PR para revisarlos con cuidado.
+version: 2
+
+updates:
+  # --- Frontend Angular (npm) ---
+  - package-ecosystem: "npm"
+    directory: "/WebApp"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      angular-y-deps-menores:
+        update-types: ["minor", "patch"]
+    ignore:
+      # Los "major" de Angular se migran con `ng update`, no con un bump ciego.
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+
+  # --- Backend .NET (NuGet) ---
+  - package-ecosystem: "nuget"
+    directory: "/WebApi"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      nuget-menores:
+        update-types: ["minor", "patch"]
+
+  # --- Imágenes base de Docker (tags/digests de los Dockerfile) ---
+  - package-ecosystem: "docker"
+    directory: "/WebApp"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/WebApi/WebApi"
+    schedule:
+      interval: "weekly"
+
+  # --- Acciones de GitHub del workflow de CI/CD ---
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

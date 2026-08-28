@@ -1,0 +1,63 @@
+<div class="filters-panel" [class.filters-panel--fs]="isFullscreen()"
+  (click)="$event.stopPropagation()">
+
+  <div class="filters-panel-header">
+    <span>{{ isFullscreen() ? 'FILTROS FULLSCREEN' : 'FILTROS' }}</span>
+    <button class="filters-panel-close" (click)="close.emit()">✕</button>
+  </div>
+
+  <div class="filter-row filter-row--toggle">
+    <span class="filter-label">Activar filtros</span>
+    <input type="checkbox" [checked]="filtersEnabled()"
+      (change)="filtersEnabledChange.emit($any($event.target).checked)"
+    />
+  </div>
+
+  <div [class.filters-disabled]="!filtersEnabled()">
+
+  <div class="filter-row">
+    <span class="filter-label">Intensidad líneas</span>
+    <div class="filter-control">
+      <input type="range" min="0" max="100" step="1"
+        [value]="activeFilters().scanlineIntensity"
+        (input)="updateFilter.emit({ key: 'scanlineIntensity', value: +$any($event.target).value })"
+      />
+      <span class="filter-value">{{ activeFilters().scanlineIntensity }}%</span>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <span class="filter-label">Densidad líneas</span>
+    <div class="filter-control">
+      <input type="range" min="1" max="10" step="1"
+        [value]="activeFilters().scanlineDensity"
+        (input)="updateFilter.emit({ key: 'scanlineDensity', value: +$any($event.target).value })"
+      />
+      <span class="filter-value">{{ activeFilters().scanlineDensity }}</span>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <span class="filter-label">Curvatura CRT</span>
+    <input type="checkbox" [checked]="activeFilters().crtCurvature"
+      (change)="updateFilter.emit({ key: 'crtCurvature', value: $any($event.target).checked })"
+    />
+  </div>
+
+  <div class="filter-row">
+    <span class="filter-label">Viñeta</span>
+    <input type="checkbox" [checked]="activeFilters().vignette"
+      (change)="updateFilter.emit({ key: 'vignette', value: $any($event.target).checked })"
+    />
+  </div>
+
+  <div class="filter-row">
+    <span class="filter-label">Scanline animado</span>
+    <input type="checkbox" [checked]="activeFilters().scanlineAnimation"
+      (change)="updateFilter.emit({ key: 'scanlineAnimation', value: $any($event.target).checked })"
+    />
+  </div>
+
+  </div><!-- /filters-disabled wrapper -->
+
+</div>

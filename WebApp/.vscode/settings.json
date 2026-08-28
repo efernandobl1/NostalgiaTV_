@@ -1,0 +1,6 @@
+{
+    "angular.components.standalone": true,
+    "angular.components.style": "scss",
+    "angular.fileGenerator.omitSuffix": false,
+    "angular.fileGenerator.typeSeparator": "."
+}

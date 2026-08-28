@@ -1,0 +1,96 @@
+<div
+    [class.component-dark-theme]="themeService.isDark()"
+    [class.card-borderd-theme]="themeService.isCardBorder()"
+    [class.rtl-enabled]="themeService.isRTLEnabled()">
+
+    <div class="breadcrumb-card mb-25 d-md-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Channel Eras</h5>
+        <button mat-flat-button color="primary" (click)="openForm()" [disabled]="!selectedChannelId()">
+            <mat-icon>add</mat-icon> New Era
+        </button>
+    </div>
+
+    <mat-card class="daxa-card mb-25 border-radius bg-white border-none d-block">
+        <mat-card-header>
+            <mat-card-title>
+                <h5 class="mb-0">Channel Eras</h5>
+            </mat-card-title>
+        </mat-card-header>
+
+        <mat-card-content>
+            <div class="filters-bar">
+                <mat-form-field appearance="outline">
+                    <mat-label>Filter by Channel</mat-label>
+                    <mat-select (selectionChange)="onChannelChange($event.value)">
+                        @for (c of channels(); track c.id) {
+                            <mat-option [value]="c.id">{{ c.name }}</mat-option>
+                        }
+                    </mat-select>
+                </mat-form-field>
+            </div>
+
+            <div class="table-responsive">
+                <table mat-table [dataSource]="dataSource">
+
+                    <ng-container matColumnDef="id">
+                        <th mat-header-cell *matHeaderCellDef>#</th>
+                        <td mat-cell *matCellDef="let e">{{ e.id }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="name">
+                        <th mat-header-cell *matHeaderCellDef>Name</th>
+                        <td mat-cell *matCellDef="let e">{{ e.name }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="description">
+                        <th mat-header-cell *matHeaderCellDef>Description</th>
+                        <td mat-cell *matCellDef="let e">
+                            <span class="truncated-cell" [title]="e.description ?? ''">{{ e.description ?? '—' }}</span>
+                        </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="startDate">
+                        <th mat-header-cell *matHeaderCellDef>Start Date</th>
+                        <td mat-cell *matCellDef="let e">{{ e.startDate | date:'mediumDate' }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="endDate">
+                        <th mat-header-cell *matHeaderCellDef>End Date</th>
+                        <td mat-cell *matCellDef="let e">{{ e.endDate ? (e.endDate | date:'mediumDate') : '—' }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="series">
+                        <th mat-header-cell *matHeaderCellDef>Series</th>
+                        <td mat-cell *matCellDef="let e">
+                            <span class="truncated-cell" [title]="getSeriesNames(e.seriesIds)">{{ getSeriesNames(e.seriesIds) }}</span>
+                        </td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="bumpers">
+                        <th mat-header-cell *matHeaderCellDef>Bumpers</th>
+                        <td mat-cell *matCellDef="let e">{{ e.bumpers.length }}</td>
+                    </ng-container>
+
+                    <ng-container matColumnDef="actions">
+                        <th mat-header-cell *matHeaderCellDef>Actions</th>
+                        <td mat-cell *matCellDef="let e">
+                            <button mat-icon-button (click)="openForm(e)"><mat-icon>edit</mat-icon></button>
+                            <button mat-icon-button color="primary" (click)="assignSeries(e)"><mat-icon>playlist_add</mat-icon></button>
+                            <button mat-icon-button color="warn" (click)="deleteEra(e)"><mat-icon>delete</mat-icon></button>
+                        </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+                    <tr class="mat-row" *matNoDataRow>
+                        <td class="mat-cell" colspan="8">
+                            @if (!selectedChannelId()) { Select a channel to see eras. }
+                            @else { No eras found. }
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
+        </mat-card-content>
+    </mat-card>
+</div>

@@ -1,0 +1,117 @@
+<mat-card
+  class="daxa-card border-none d-block"
+  [class.component-dark-theme]="themeService.isDark()"
+  [style.--mat-card-elevated-container-color]="themeService.isDark() ? '#1b232d' : '#ffffff'"
+>
+  <mat-card-header>
+    <mat-card-title>
+      <h5 class="mb-0">{{ isEdit ? 'Edit' : 'New' }} {{ config.title }}</h5>
+    </mat-card-title>
+  </mat-card-header>
+  <mat-card-content style="max-height: 65vh; overflow-y: auto;">
+    <form [formGroup]="form" class="pt-2">
+      @for (field of config.fields; track field.key) {
+        <div class="form-group mb-20">
+          <label class="main-label d-block lh-1 text-black">{{ field.label }}</label>
+
+          @if (field.type === 'datepicker') {
+            <mat-form-field class="w-100 mb-13 mt-10">
+              <mat-label>{{ field.label }}</mat-label>
+              <input matInput [matDatepicker]="picker" [formControlName]="field.key" />
+              <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+              <mat-datepicker #picker></mat-datepicker>
+              @if (form.get(field.key)!.invalid && form.get(field.key)!.touched) {
+                <mat-error>{{ field.label }} is required.</mat-error>
+              }
+            </mat-form-field>
+          } @else if (field.type === 'file') {
+            <mat-form-field class="w-100 mb-13 mt-10">
+              <mat-label>{{ field.label }}</mat-label>
+              <input
+                matInput
+                type="text"
+                [formControlName]="field.key"
+                [readonly]="!!selectedFiles[field.key]"
+                placeholder="https://..."
+              />
+              @if (form.get(field.key)!.invalid && form.get(field.key)!.touched) {
+                <mat-error>{{ field.label }} is required.</mat-error>
+              }
+            </mat-form-field>
+            <app-simple-fu (fileSelected)="onFileSelected($event, field.key)" />
+            @if (previewUrls[field.key]) {
+              <div class="text-center mt-10">
+                <img
+                  [src]="previewUrls[field.key]"
+                  style="
+                    max-width: 200px;
+                    max-height: 150px;
+                    border-radius: 8px;
+                    object-fit: contain;
+                  "
+                />
+              </div>
+            }
+          } @else {
+            <mat-form-field class="w-100 mb-13 mt-10">
+              <mat-label>{{ field.label }}</mat-label>
+              @switch (field.type) {
+                @case ('textarea') {
+                  <textarea matInput [formControlName]="field.key" rows="3"></textarea>
+                }
+                @case ('number') {
+                  <input matInput type="number" [formControlName]="field.key" />
+                }
+                @case ('select') {
+                  <mat-select [formControlName]="field.key">
+                    @for (opt of field.options; track opt.value) {
+                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                    }
+                  </mat-select>
+                }
+                @case ('multiselect') {
+                  <mat-select [formControlName]="field.key" multiple>
+                    @for (opt of field.options; track opt.value) {
+                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                    }
+                  </mat-select>
+                }
+                @case ('date') {
+                  <input matInput type="date" [formControlName]="field.key" />
+                }
+                @default {
+                  <input matInput type="text" [formControlName]="field.key" />
+                }
+              }
+            </mat-form-field>
+            @if (form.get(field.key)!.invalid && form.get(field.key)!.touched) {
+              @if (form.get(field.key)!.hasError('required')) {
+                <span class="text-danger" style="font-size: 12px"
+                  >{{ field.label }} is required.</span
+                >
+              }
+              @if (form.get(field.key)!.hasError('minlength')) {
+                <span class="text-danger" style="font-size: 12px"
+                  >{{ field.label }} must be at least
+                  {{ form.get(field.key)!.getError('minlength').requiredLength }} characters.</span
+                >
+              }
+              @if (form.get(field.key)!.hasError('maxlength')) {
+                <span class="text-danger" style="font-size: 12px"
+                  >{{ field.label }} must be at most
+                  {{ form.get(field.key)!.getError('maxlength').requiredLength }} characters.</span
+                >
+              }
+            }
+          }
+        </div>
+      }
+    </form>
+  </mat-card-content>
+  <mat-card-actions align="end">
+    <button mat-button (click)="cancel()">Cancel</button>
+    <button mat-flat-button color="primary" (click)="submit()">
+      {{ isEdit ? 'Save' : 'Create' }}
+    </button>
+  </mat-card-actions>
+</mat-card>
