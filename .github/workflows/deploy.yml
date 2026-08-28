@@ -41,7 +41,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push WebApi
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./WebApi
           file: ./WebApi/WebApi/Dockerfile
@@ -55,7 +55,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push WebApp
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./WebApp
           file: ./WebApp/Dockerfile
