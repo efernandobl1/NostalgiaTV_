@@ -1,0 +1,167 @@
+<div class="remote-control remote-control--series" [class.remote-control--collapsed]="isCollapsed()">
+
+  <div class="remote-header">
+    <button mat-mini-fab (click)="goToLogin.emit()" matTooltip="Login">
+      <mat-icon>person</mat-icon>
+    </button>
+    <h3>SERIES</h3>
+    <button mat-mini-fab (click)="openSettings.emit()" matTooltip="Configuración">
+      <mat-icon>settings</mat-icon>
+    </button>
+  </div>
+
+  <div class="remote-led"></div>
+  <div class="remote-divider"></div>
+
+  <!-- Siempre visible en mobile y desktop -->
+  <div class="remote-always-visible">
+  <div class="series-panel-header">
+    @if (selectedSeries()?.logoPath) {
+      <img [src]="apiUrl() + selectedSeries()!.logoPath" class="series-panel-logo" />
+    }
+    <span class="series-panel-name">{{ selectedSeries()?.name }}</span>
+  </div>
+
+  <!-- Cambiar serie + Filtros + Canales en una fila -->
+  <div class="series-top-actions">
+    <button class="change-series-btn" (click)="changeSeries.emit()" [tabindex]="1">
+      ⇄ SERIE
+    </button>
+    <button mat-stroked-button class="nav-btn nav-btn--secondary"
+      (click)="openFilters.emit()" [tabindex]="1">FILTROS</button>
+    <button mat-stroked-button class="nav-btn nav-btn--back"
+      (click)="backToChannels.emit()" [tabindex]="1">← CANALES</button>
+  </div>
+
+  <!-- Media controls + Aleatorio en la misma fila -->
+  <div class="media-controls media-controls--inline">
+    <button mat-icon-button (click)="toggleMute.emit()">
+      <mat-icon>{{ isMuted() ? 'volume_off' : 'volume_mute' }}</mat-icon>
+    </button>
+    <button mat-icon-button (click)="volumeDown.emit()">
+      <mat-icon>volume_down</mat-icon>
+    </button>
+    <button mat-icon-button (click)="volumeUp.emit()">
+      <mat-icon>volume_up</mat-icon>
+    </button>
+    <button mat-icon-button (click)="toggleFullscreen.emit()">
+      <mat-icon>fullscreen</mat-icon>
+    </button>
+    <!-- Aleatorio compacto junto a media controls -->
+    <label class="random-toggle-inline">
+      <mat-icon>shuffle</mat-icon>
+      <input type="checkbox"
+        [checked]="settings().randomPlayback"
+        (change)="onRandomToggle.emit($any($event.target).checked)"
+      />
+    </label>
+  </div>
+
+  <button class="remote-collapse-btn" (click)="toggleCollapse()">
+    <mat-icon>{{ isCollapsed() ? 'expand_less' : 'expand_more' }}</mat-icon>
+    <span>{{ isCollapsed() ? 'VER EPISODIOS' : 'OCULTAR' }}</span>
+  </button>
+</div>
+
+  <!-- Colapsable -->
+  <div class="remote-collapsible">
+
+    <div class="remote-divider remote-divider--mobile-hidden"></div>
+
+  <!-- Botones de acción — junto a cambiar serie en mobile -->
+  <div class="mobile-actions">
+    <button mat-stroked-button class="nav-btn nav-btn--secondary"
+      (click)="openFilters.emit()" [tabindex]="3">FILTROS</button>
+    <button mat-stroked-button class="nav-btn nav-btn--back"
+      (click)="backToChannels.emit()" [tabindex]="3">← CANALES</button>
+  </div>
+
+  <!-- Season tabs justo arriba de episodios -->
+  <div class="season-tabs">
+    @for (season of seasonGroups(); track season) {
+      <button class="season-tab"
+        [class.active]="selectedEpisodeType() === 'normal' && selectedSeason() === season"
+        (click)="selectSeason.emit(season)"
+        [tabindex]="1"
+        [attr.aria-label]="'Temporada ' + season"
+      >T{{ season }}</button>
+    }
+    @if (hasSpecials()) {
+      <button class="season-tab"
+        [class.active]="selectedEpisodeType() === 'special'"
+        (click)="selectEpisodeType.emit('special')"
+        [tabindex]="1"
+      >ESP</button>
+    }
+    @if (hasMovies()) {
+      <button class="season-tab"
+        [class.active]="selectedEpisodeType() === 'movie'"
+        (click)="selectEpisodeType.emit('movie')"
+        [tabindex]="1"
+      >PEL</button>
+    }
+  </div>
+
+  <div class="remote-divider remote-divider--mobile-hidden"></div>
+
+  <div class="episodes-list">
+    @for (ep of episodesForView(); track ep.id) {
+      <button class="episode-btn"
+        [class.active]="currentEpisodeId() === ep.id"
+        [class.watched]="watchedMap()[ep.id]"
+        (click)="playEpisode.emit(ep)"
+        [tabindex]="2"
+        [attr.aria-label]="'Episodio ' + ep.episodeNumber + ': ' + ep.title"
+      >
+        <span class="episode-btn-number">{{ ep.episodeNumber }}</span>
+        <span class="episode-btn-title">{{ ep.title }}</span>
+        @if (watchedMap()[ep.id]) {
+          <mat-icon class="watched-icon">check_circle</mat-icon>
+        }
+      </button>
+    } @empty {
+      <div class="episodes-empty">Sin episodios</div>
+    }
+  </div>
+
+  <button class="reset-series-btn" (click)="resetSeries.emit()">
+    ↺ Restablecer vistos
+  </button>
+
+  <!-- Solo desktop -->
+  <div class="nav-controls desktop-nav" style="margin-top: 0.5rem">
+    <button mat-stroked-button class="nav-btn nav-btn--secondary"
+      (click)="openFilters.emit()" [tabindex]="3">FILTROS</button>
+    <button mat-stroked-button class="nav-btn nav-btn--back"
+      (click)="backToChannels.emit()" [tabindex]="3">← CANALES</button>
+  </div>
+
+</div>
+
+  <!-- Footer solo desktop -->
+  <div class="remote-footer remote-footer--series">
+    <div class="media-controls">
+      <button mat-icon-button (click)="toggleMute.emit()" [tabindex]="3" aria-label="Silenciar">
+        <mat-icon>{{ isMuted() ? 'volume_off' : 'volume_mute' }}</mat-icon>
+      </button>
+      <button mat-icon-button (click)="volumeDown.emit()" [tabindex]="3">
+        <mat-icon>volume_down</mat-icon>
+      </button>
+      <button mat-icon-button (click)="volumeUp.emit()" [tabindex]="3">
+        <mat-icon>volume_up</mat-icon>
+      </button>
+      <button mat-icon-button (click)="toggleFullscreen.emit()" [tabindex]="3">
+        <mat-icon>fullscreen</mat-icon>
+      </button>
+      <!-- Aleatorio en desktop -->
+      <label class="random-toggle-inline random-toggle-inline--desktop">
+        <mat-icon>shuffle</mat-icon>
+        <input type="checkbox"
+          [checked]="settings().randomPlayback"
+          (change)="onRandomToggle.emit($any($event.target).checked)"
+        />
+      </label>
+    </div>
+  </div>
+
+</div>

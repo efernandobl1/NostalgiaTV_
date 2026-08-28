@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/WebApi/">
+    <Project Path="WebApi/ApplicationCore/ApplicationCore.csproj" Id="4e88ddc0-c8ee-4857-b388-d8443e05cb93" />
+    <Project Path="WebApi/Infrastructure/Infrastructure.csproj" Id="c938f74f-d76b-4fa0-8333-496ab7859a2a" />
+    <Project Path="WebApi/WebApi/WebApi.csproj" Id="48d2a53c-db03-40e2-a137-eb4f350b4836" />
+  </Folder>
+  <Folder Name="/WebApp/">
+    <Project Path="WebApp/WebApp.esproj">
+      <Build />
+      <Deploy />
+    </Project>
+  </Folder>
+</Solution>

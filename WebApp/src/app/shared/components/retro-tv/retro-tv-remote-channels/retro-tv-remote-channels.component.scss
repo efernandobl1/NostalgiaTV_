@@ -1,0 +1,485 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+.remote-control {
+  position: fixed;
+  right: 2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(145deg, #3d3d5c, #2a2a3e);
+  border: 3px solid #1a1a2e;
+  border-radius: 20px;
+  padding: 1.5rem 1rem;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.7),
+    inset 0 2px 4px rgba(255, 255, 255, 0.05);
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 100;
+  width: 215px;
+  display: flex;
+  flex-direction: column;
+  animation: remoteEnter 600ms 400ms ease-out backwards;
+
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 3px; }
+  &::-webkit-scrollbar-thumb { background: #6bcf7f; border-radius: 3px; }
+}
+
+@keyframes remoteEnter {
+  from { opacity: 0; transform: translateX(100%) translateY(-50%); }
+  to   { opacity: 1; transform: translateX(0) translateY(-50%); }
+}
+
+.remote-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+
+  h3 {
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.65rem;
+    color: #6bcf7f;
+    text-shadow: 0 2px 10px rgba(107, 207, 127, 0.5);
+    margin: 0;
+    flex: 1;
+    text-align: center;
+  }
+
+  .mat-mdc-mini-fab {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    background: linear-gradient(145deg, #2d2d44, #1a1a2e) !important;
+    border: 2px solid #6bcf7f !important;
+    box-shadow: 0 0 10px rgba(107, 207, 127, 0.3) !important;
+
+    .mat-icon { color: #6bcf7f; font-size: 18px; width: 18px; height: 18px; }
+
+    &:hover { box-shadow: 0 0 15px rgba(107, 207, 127, 0.6) !important; }
+  }
+}
+
+.remote-led {
+  width: 8px;
+  height: 8px;
+  background: #ff6b6b;
+  border-radius: 50%;
+  margin: 0 auto 0.75rem;
+  box-shadow: 0 0 10px rgba(255, 107, 107, 0.8);
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 50%, 100% { opacity: 1; }
+  25%, 75%      { opacity: 0.3; }
+}
+
+.remote-divider {
+  height: 2px;
+  background: rgba(107, 207, 127, 0.2);
+  margin-bottom: 1rem;
+}
+
+.channels-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  flex: 1;
+}
+
+.channel-btn {
+  background: linear-gradient(145deg, #2d2d44, #1a1a2e);
+  border: 2px solid #1a1a2e;
+  border-radius: 10px;
+  padding: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #fff;
+  font-family: 'VT323', monospace;
+  font-size: 1rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:hover {
+    transform: translateX(-5px) scale(1.02);
+    border-color: #6bcf7f;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), 0 0 15px rgba(107, 207, 127, 0.3);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ffd93d;
+    outline-offset: 2px;
+    box-shadow: 0 0 8px rgba(255, 217, 61, 0.6);
+  }
+
+  &:active { transform: translateX(-5px) scale(0.98); }
+
+  &.active {
+    border-color: #ff6b6b;
+    background: linear-gradient(145deg, #3d3d5c, #2a2a3e);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 107, 107, 0.5);
+    animation: activeChannel 0.5s ease-out;
+  }
+}
+
+@keyframes activeChannel {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.channel-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.channel-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.channel-number {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.6rem;
+  color: #ffd93d;
+  text-shadow: 0 0 8px rgba(255, 217, 61, 0.6);
+}
+
+.channel-name {
+  color: #6bcf7f;
+  font-size: 0.95rem;
+}
+
+.remote-footer {
+  display: none;
+}
+
+.media-controls {
+  display: flex;
+  gap: 0.2rem;
+  justify-content: center;
+  margin-bottom: 0.8rem;
+}
+
+.nav-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nav-btn {
+  width: 100%;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.5rem;
+  color: #ffd93d !important;
+  border-color: #ffd93d !important;
+
+  &:focus-visible {
+    outline: 2px solid #ffd93d;
+    outline-offset: 2px;
+    box-shadow: 0 0 8px rgba(255, 217, 61, 0.6);
+  }
+}
+
+.nav-btn--secondary {
+  color: #6bcf7f !important;
+  border-color: #6bcf7f !important;
+}
+
+// Oculto en desktop
+.remote-collapse-btn {
+  display: none;
+  width: 100%;
+  background: rgba(107, 207, 127, 0.08);
+  border: 1px solid rgba(107, 207, 127, 0.3);
+  border-radius: 8px;
+  color: #6bcf7f;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.4rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease;
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+  &:hover {
+    background: rgba(107, 207, 127, 0.15);
+    border-color: #6bcf7f;
+  }
+}
+
+.remote-collapsible {
+  transition: max-height 0.35s ease, opacity 0.35s ease;
+  max-height: 2000px;
+  opacity: 1;
+}
+
+@media (max-width: 1200px) {
+  .remote-control { width: 195px; padding: 1rem 0.8rem; right: 1rem; }
+}
+
+@media (max-width: 768px) {
+  .remote-control {
+    right: auto;
+    left: 50%;
+    top: auto;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 100%;
+    max-height: 70vh;
+    padding: 0.75rem 1rem;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    overflow-y: auto;
+    transition: max-height 0.35s ease;
+  }
+
+  .remote-collapse-btn {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: linear-gradient(145deg, #3d3d5c, #2a2a3e);
+    margin-bottom: 0.5rem;
+  }
+
+  .remote-control--collapsed {
+    max-height: 130px;
+    overflow: hidden;
+
+    .remote-collapse-btn { display: flex !important; }
+
+    .remote-collapsible {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .remote-led,
+    .remote-divider {
+      display: none;
+    }
+  }
+
+  .remote-control:not(.remote-control--collapsed) {
+    .remote-collapsible { overflow: visible; }
+  }
+
+  .channels-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .channel-btn {
+    padding: 1rem;
+    min-height: 56px;
+  }
+
+  .media-controls {
+    .mat-mdc-icon-button {
+      width: 48px;
+      height: 48px;
+
+      .mat-icon { font-size: 28px; width: 28px; height: 28px; }
+    }
+  }
+
+  .nav-controls {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem;
+
+    .nav-btn { font-size: 0.4rem; padding: 0.6rem; }
+  }
+}
+
+@media (max-width: 480px) {
+  .remote-control { padding: 0.6rem 0.75rem; }
+  .channel-btn { padding: 0.75rem 0.5rem; }
+  .channel-number { font-size: 0.5rem; }
+  .channel-name { font-size: 0.85rem; }
+}
+
+@media (min-width: 1920px) {
+  .remote-control { width: 230px; right: 3rem; }
+}
+
+// Oculto en desktop
+.remote-always-visible {
+  display: contents;
+}
+
+.media-controls--inline {
+  display: flex;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.3rem 0;
+  border-top: 1px solid rgba(107, 207, 127, 0.15);
+  border-bottom: 1px solid rgba(107, 207, 127, 0.15);
+  margin-bottom: 0.5rem;
+
+  .mat-mdc-icon-button {
+    color: #6bcf7f;
+    width: 32px;
+    height: 32px;
+    .mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  }
+}
+
+@media (max-width: 768px) {
+  .remote-always-visible {
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(145deg, #3d3d5c, #2a2a3e);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding-bottom: 0.5rem;
+  }
+
+  .media-controls--inline {
+    display: flex;
+    justify-content: center;
+    gap: 0.2rem;
+    padding: 0.3rem 0;
+    border-top: 1px solid rgba(107, 207, 127, 0.15);
+    border-bottom: 1px solid rgba(107, 207, 127, 0.15);
+    margin-top: 0.4rem;
+
+    .mat-mdc-icon-button {
+      width: 48px;
+      height: 48px;
+      color: #6bcf7f;
+
+      .mat-icon { font-size: 28px; width: 28px; height: 28px; }
+    }
+  }
+
+  // Footer desktop oculto en mobile
+  .remote-footer {
+    display: none;
+  }
+
+  .remote-control--collapsed {
+    max-height: 180px; // header + media controls + toggle
+
+    .remote-collapsible {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .remote-led,
+    .remote-divider {
+      display: none;
+    }
+  }
+}
+
+.channel-top-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+
+  .nav-btn {
+    font-family: 'VT323', monospace !important;
+    font-size: 0.85rem !important;
+    padding: 0 0.2rem;
+    min-width: 0 !important;
+    letter-spacing: 0;
+    border-radius: 20px !important;
+    height: 32px !important;
+    line-height: 32px !important;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+}
+
+.era-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+.era-label {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.4rem;
+  color: #ffd93d;
+  margin-right: 0.3rem;
+}
+
+.era-btn {
+  background: linear-gradient(145deg, #2d2d44, #1a1a2e);
+  border: 1px solid rgba(107, 207, 127, 0.3);
+  border-radius: 12px;
+  padding: 0.3rem 0.6rem;
+  color: #6bcf7f;
+  font-family: 'VT323', monospace;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #6bcf7f;
+    box-shadow: 0 0 10px rgba(107, 207, 127, 0.3);
+  }
+
+  &.active {
+    border-color: #ff6b6b;
+    background: linear-gradient(145deg, #3d3d5c, #2a2a3e);
+    box-shadow: 0 0 15px rgba(255, 107, 107, 0.4);
+    color: #ff6b6b;
+  }
+}
+
+.desktop-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .channel-top-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+    margin-bottom: 0.4rem;
+
+    .nav-btn {
+      font-family: inherit !important;
+      font-size: inherit !important;
+      letter-spacing: normal !important;
+      padding: 0.4rem 0.2rem;
+      min-width: 0;
+      border-radius: 20px !important;
+    }
+  }
+
+  .desktop-nav {
+    display: none;
+  }
+
+  .remote-control--collapsed {
+    max-height: 210px; // header + top-actions + media controls + toggle
+  }
+}

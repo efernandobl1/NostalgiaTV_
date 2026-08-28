@@ -1,0 +1,177 @@
+<!-- Series Dialog -->
+@if (showSeriesDialog()) {
+  <div class="dialog-backdrop" (click)="closeSeriesDialog.emit()">
+    <div class="dialog-panel" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <span class="dialog-title">SERIES</span>
+        <button mat-icon-button (click)="closeSeriesDialog.emit()" [tabindex]="10">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="dialog-filters">
+        <input class="retro-input" placeholder="Buscar por nombre..."
+          [value]="seriesSearchName()"
+          (input)="searchChange.emit($any($event.target).value)"
+        />
+        <select class="retro-select" (change)="channelFilterChange.emit($any($event.target).value)">
+          <option value="">Todos los canales</option>
+          @for (channel of channels(); track channel.id) {
+            <option [value]="channel.id">{{ channel.name }}</option>
+          }
+        </select>
+      </div>
+      @if (seriesLoading()) {
+        <div class="dialog-empty">Cargando...</div>
+      } @else {
+        <div class="dialog-list">
+          @for (serie of allSeries(); track serie.id) {
+            <div class="series-item" (click)="enterSeries.emit(serie)" [tabindex]="10">
+              @if (serie.logoPath) {
+                <img [src]="apiUrl() + serie.logoPath" class="series-item-logo" />
+              } @else {
+                <div class="series-item-logo-placeholder">
+                  <mat-icon>tv</mat-icon>
+                </div>
+              }
+              <div class="series-item-info">
+                <span class="series-item-name">{{ serie.name }}</span>
+                @if (serie.startDate) {
+                  <span class="series-item-year">{{ serie.startDate | date: 'yyyy' }}</span>
+                }
+              </div>
+            </div>
+          } @empty {
+            <div class="dialog-empty">No se encontraron series</div>
+          }
+        </div>
+        <div class="dialog-pagination">
+          <button mat-icon-button [disabled]="seriesPage() === 1"
+            (click)="prevPage.emit()" [tabindex]="10">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <span class="pagination-info">{{ seriesPage() }} / {{ seriesTotalPages() }}</span>
+          <button mat-icon-button [disabled]="seriesPage() === seriesTotalPages()"
+            (click)="nextPage.emit()" [tabindex]="10">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Settings Dialog -->
+@if (showSettingsDialog()) {
+  <div class="dialog-backdrop" (click)="closeSettingsDialog.emit()">
+    <div class="dialog-panel dialog-panel--settings" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <span class="dialog-title">CONFIGURACIÓN</span>
+        <button mat-icon-button (click)="closeSettingsDialog.emit()" [tabindex]="10">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="settings-list">
+        <label class="setting-item">
+          <span>Activar filtros CRT</span>
+          <input type="checkbox" [checked]="settings().alwaysShowFilters"
+            (change)="updateSetting.emit({ key: 'alwaysShowFilters', value: $any($event.target).checked })"
+          />
+        </label>
+        <label class="setting-item">
+          <span>Ver bumpers</span>
+          <input type="checkbox" [checked]="settings().showBumpers"
+            (change)="updateSetting.emit({ key: 'showBumpers', value: $any($event.target).checked })"
+          />
+        </label>
+        <label class="setting-item">
+          <span>Ver anuncios de época</span>
+          <input type="checkbox" [checked]="settings().showAds"
+            (change)="updateSetting.emit({ key: 'showAds', value: $any($event.target).checked })"
+          />
+        </label>
+        <label class="setting-item">
+          <span>Efecto brillo TV</span>
+          <input type="checkbox" [checked]="settings().tvGlowEffect"
+            (change)="updateSetting.emit({ key: 'tvGlowEffect', value: $any($event.target).checked })"
+          />
+        </label>
+        <label class="setting-item">
+          <span>Incluir películas</span>
+          <input type="checkbox" [checked]="settings().includeMovies"
+            (change)="updateSetting.emit({ key: 'includeMovies', value: $any($event.target).checked })"
+          />
+        </label>
+        <label class="setting-item">
+          <span>Incluir especiales</span>
+          <input type="checkbox" [checked]="settings().includeSpecials"
+            (change)="updateSetting.emit({ key: 'includeSpecials', value: $any($event.target).checked })"
+          />
+        </label>
+        <div class="setting-item setting-item--action">
+          <span>Reiniciar todo lo visto</span>
+          <button class="reset-btn"
+            (click)="resetAll.emit(); closeSettingsDialog.emit()">↺</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Schedule Dialog -->
+@if (showScheduleDialog()) {
+  <div class="dialog-backdrop" (click)="closeScheduleDialog.emit()">
+    <div class="dialog-wrapper">
+      @if (currentEntryIndex() >= 0) {
+        <div class="schedule-external-indicator" [style.top.px]="currentEntryPosition()"></div>
+      }
+      <div class="dialog-panel dialog-panel--schedule" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <span class="dialog-title">PROGRAMACIÓN</span>
+          <button mat-icon-button (click)="closeScheduleDialog.emit()" [tabindex]="10">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <div class="dialog-filters">
+          <select class="retro-select" [value]="scheduleChannelId() ?? ''" (change)="scheduleChannelChange.emit(+$any($event.target).value)">
+            @for (channel of channels(); track channel.id) {
+              <option [value]="channel.id">{{ channel.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="schedule-content">
+          @if (scheduleLoading()) {
+            <div class="dialog-empty">Cargando...</div>
+          } @else {
+            <div class="dialog-list schedule-list" #scheduleList>
+              @for (entry of filteredScheduleEntries(); track entry.id) {
+                <div class="schedule-item" [class.schedule-item--current]="isCurrentEntry(entry)" [class.schedule-item--bumper]="entry.bumperId" [attr.data-entry-id]="entry.id">
+                  <div class="schedule-time">
+                    <span class="schedule-start">{{ toLocalTime(entry.startTime) | date:'HH:mm' }}</span>
+                    <span class="schedule-end">{{ toLocalTime(entry.endTime) | date:'HH:mm' }}</span>
+                  </div>
+                  <div class="schedule-info">
+                    @if (entry.bumperId) {
+                      <span class="schedule-series schedule-series--bumper">BUMPER</span>
+                    } @else {
+                      <span class="schedule-series">{{ entry.seriesName }}</span>
+                      <span class="schedule-episode">{{ entry.episodeTitle }}</span>
+                      <span class="schedule-meta">
+                        @if (entry.season > 0) { T{{ entry.season }} }
+                        @if (entry.episodeNumber > 0) { · EP{{ entry.episodeNumber }} }
+                      </span>
+                    }
+                  </div>
+                  @if (entry.seriesLogoPath) {
+                    <img [src]="apiUrl() + entry.seriesLogoPath" class="schedule-logo" />
+                  }
+                </div>
+              } @empty {
+                <div class="dialog-empty">Sin programación disponible</div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}

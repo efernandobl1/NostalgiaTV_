@@ -1,0 +1,234 @@
+<div class="tv-setup">
+  <div class="tv-container" #tvContainer>
+    <div
+    class="screen-overlay"
+    #screenOverlay
+    (click)="onScreenClick()"
+  >
+      <div class="static-noise" [class.hidden]="!showStatic()"></div>
+
+      @if (currentState() || currentEpisode()) {
+        <video
+          #videoPlayer
+          class="video-player"
+          [class.video-player--cover]="!isFullscreen()"
+          [class.video-player--contain]="isFullscreen()"
+          [muted]="isMuted()"
+          playsinline
+          [attr.autoplay]="isIOSDevice ? null : ''"
+          disablePictureInPicture
+          controlslist="nodownload nofullscreen noremoteplayback"
+        >
+          <source>
+        </video>
+
+        @if (isIOSDevice && iosNeedsPlay()) {
+          <button class="ios-play-btn" (click)="iosStartPlay()" aria-label="Reproducir">
+            <mat-icon>play_circle</mat-icon>
+          </button>
+        }
+
+        <div
+          class="video-filters"
+          #videoFilters
+          [class.curvature]="activeFilters().crtCurvature"
+          [class.vignette]="activeFilters().vignette"
+          [style.--scanline-opacity]="activeFilters().scanlineIntensity / 100"
+          [style.--scanline-size.px]="activeFilters().scanlineDensity"
+        ></div>
+
+        @if (settings().alwaysShowFilters) {
+          <button
+            class="overlay-filter-btn"
+            [class.visible]="true"
+            (click)="toggleFiltersPanel()"
+          >
+            <mat-icon>tune</mat-icon>
+          </button>
+        }
+
+        @if (mode() === 'channels' && currentChannel()?.logoPath) {
+          <div class="corner-logo" [class.visible]="showOverlay()" [class.corner-logo--fs]="isFullscreen()">
+            <img [src]="apiUrl + currentChannel()!.logoPath" class="corner-logo-img" />
+          </div>
+        }
+
+        @if (mode() === 'series' && selectedSeries()?.logoPath) {
+          <div class="corner-logo" [class.visible]="showOverlay()" [class.corner-logo--fs]="isFullscreen()">
+            <img [src]="apiUrl + selectedSeries()!.logoPath" class="corner-logo-img" />
+          </div>
+        }
+
+        <div
+          class="series-overlay"
+          [class.visible]="showOverlay()"
+          [class.series-overlay--fs]="isFullscreen()"
+          [class.series-overlay--with-controls]="!!currentEpisode() || !!currentState()"
+        >
+          <div class="overlay-info">
+            @if (mode() === 'channels') {
+              @if (currentState()!.isBumper) {
+                <span class="overlay-series">BUMPER</span>
+              } @else {
+                <span class="overlay-series">{{ currentState()!.seriesName }}</span>
+                <span class="overlay-episode">{{ currentState()!.episodeTitle }}</span>
+              }
+            } @else {
+              <span class="overlay-series">{{ selectedSeries()!.name }}</span>
+              <span class="overlay-episode">{{ currentEpisode()!.title }}</span>
+            }
+          </div>
+        </div>
+
+        @if (mode() === 'series' && currentEpisode()) {
+          <app-retro-tv-controls
+            [visible]="showOverlay()"
+            [isPaused]="isPaused()"
+            [isMuted]="isMuted()"
+            [volumeLevel]="volumeLevel()"
+            [progressPercent]="progressPercent()"
+            [currentTimeFormatted]="currentTimeFormatted()"
+            [durationFormatted]="durationFormatted()"
+            [audioTracks]="audioTracks()"
+            [currentAudioTrack]="currentAudioTrack()"
+            [isFullscreen]="isFullscreen()"
+            [showProgress]="false"
+            (playPause)="togglePlayPause()"
+            (toggleMute)="toggleMute()"
+            (setVolume)="setVolume($event)"
+            (toggleFullscreen)="toggleFullscreen()"
+          />
+        }
+
+        @if (mode() === 'channels' && currentChannel()) {
+          <app-retro-tv-controls
+            [visible]="showOverlay()"
+            [isPaused]="isPaused()"
+            [isMuted]="isMuted()"
+            [volumeLevel]="volumeLevel()"
+            [progressPercent]="progressPercent()"
+            [currentTimeFormatted]="currentTimeFormatted()"
+            [durationFormatted]="durationFormatted()"
+            [audioTracks]="audioTracks()"
+            [currentAudioTrack]="currentAudioTrack()"
+            [isFullscreen]="isFullscreen()"
+            [showProgress]="false"
+            (playPause)="togglePlayPause()"
+            (toggleMute)="toggleMute()"
+            (setVolume)="setVolume($event)"
+            (toggleFullscreen)="toggleFullscreen()"
+          />
+        }
+
+        @if (showFiltersPanel()) {
+          <app-retro-tv-filters-panel
+            [isFullscreen]="isFullscreen()"
+            [activeFilters]="activeFilters()"
+            [filtersEnabled]="settings().alwaysShowFilters"
+            (updateFilter)="updateFilter($event.key, $event.value)"
+            (filtersEnabledChange)="updateSetting('alwaysShowFilters', $event)"
+            (close)="closeFiltersPanel()"
+          />
+        }
+
+      } @else {
+        <div class="tv-content">
+          <div class="series-logo">NOSTALGIA TV</div>
+          <div class="episode-title">Selecciona un canal</div>
+        </div>
+      }
+
+      <div class="crt-scanlines" [class.hidden]="!activeFilters().scanlineAnimation"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tv-light"></div>
+<div class="floor"></div>
+<div class="scene-overlay" [class.no-glow]="!settings().tvGlowEffect"></div>
+<div class="kid-section">
+  <img src="images/kid-watching.png" alt="Kid watching TV" class="kid-image" />
+</div>
+
+@if (mode() === 'channels') {
+  <app-retro-tv-remote-channels
+    [channels]="channels()"
+    [currentChannelId]="currentChannel()?.id ?? null"
+    [channelEras]="channelEras()"
+    [selectedEraId]="selectedEraId()"
+    [isMuted]="isMuted()"
+    [hasChannel]="!!currentChannel()"
+    [apiUrl]="apiUrl"
+    (selectChannel)="selectChannel($event)"
+    (selectEra)="selectEra($event)"
+    (toggleMute)="toggleMute()"
+    (volumeDown)="volumeDown()"
+    (volumeUp)="volumeUp()"
+    (toggleFullscreen)="toggleFullscreen()"
+    (openSeries)="openSeriesDialog()"
+    (openSchedule)="openScheduleDialog()"
+    (openFilters)="toggleFiltersPanel()"
+    (goToLogin)="goToLogin()"
+    (openSettings)="openSettingsDialog()"
+  />
+}
+
+@if (mode() === 'series') {
+  <app-retro-tv-remote-series
+    [selectedSeries]="selectedSeries()"
+    [seasonGroups]="seasonGroups()"
+    [selectedSeason]="selectedSeason()"
+    [selectedEpisodeType]="selectedEpisodeType()"
+    [episodesForView]="episodesForView()"
+    [currentEpisodeId]="currentEpisode()?.id ?? null"
+    [watchedMap]="watchedMap()"
+    [hasSpecials]="hasSpecials()"
+    [hasMovies]="hasMovies()"
+    [isMuted]="isMuted()"
+    [settings]="settings()"
+    [apiUrl]="apiUrl"
+    (selectSeason)="selectSeason($event)"
+    (selectEpisodeType)="selectEpisodeType($event)"
+    (playEpisode)="playEpisode($event)"
+    (onRandomToggle)="onRandomToggleChange($event)"
+    (resetSeries)="resetSeriesProgress()"
+    (toggleMute)="toggleMute()"
+    (volumeDown)="volumeDown()"
+    (volumeUp)="volumeUp()"
+    (toggleFullscreen)="toggleFullscreen()"
+    (openFilters)="toggleFiltersPanel()"
+    (backToChannels)="backToChannels()"
+    (goToLogin)="goToLogin()"
+    (openSettings)="openSettingsDialog()"
+    (changeSeries)="openSeriesDialog()"
+  />
+}
+
+<app-retro-tv-dialogs
+  [showSeriesDialog]="showSeriesDialog()"
+  [allSeries]="allSeries()"
+  [seriesLoading]="seriesLoading()"
+  [seriesPage]="seriesPage()"
+  [seriesTotalPages]="seriesTotalPages()"
+  [seriesSearchName]="seriesSearchName()"
+  [channels]="channels()"
+  [apiUrl]="apiUrl"
+  [showSettingsDialog]="showSettingsDialog()"
+  [settings]="settings()"
+  [showScheduleDialog]="showScheduleDialog()"
+  [scheduleEntries]="scheduleEntries()"
+  [scheduleLoading]="scheduleLoading()"
+  [scheduleChannelId]="currentChannel()?.id ?? null"
+  [showBumpers]="settings().showBumpers"
+  (closeSeriesDialog)="closeSeriesDialog()"
+  (enterSeries)="enterSeriesMode($event)"
+  (searchChange)="onSeriesSearchChange($event)"
+  (channelFilterChange)="onChannelFilterChange($event)"
+  (nextPage)="seriesNextPage()"
+  (prevPage)="seriesPrevPage()"
+  (closeSettingsDialog)="closeSettingsDialog()"
+  (updateSetting)="updateSetting($event.key, $event.value)"
+  (resetAll)="resetAllProgress()"
+  (closeScheduleDialog)="closeScheduleDialog()"
+  (scheduleChannelChange)="onScheduleChannelChange($event)"
+/>

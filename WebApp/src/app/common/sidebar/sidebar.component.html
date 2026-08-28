@@ -1,0 +1,63 @@
+<div class="sidebar-area bg-white"
+     [ngClass]="{'active': isSidebarToggled}"
+     [class.component-dark-theme]="themeService.isDark()"
+     [class.dark-sidebar]="themeService.isSidebarDark()"
+     [class.right-sidebar]="themeService.isRightSidebar()"
+     [class.hide-sidebar]="themeService.isHideSidebar()"
+     [class.card-borderd-theme]="themeService.isCardBorder()"
+     [class.rtl-enabled]="themeService.isRTLEnabled()">
+    <div class="logo bg-white">
+        <a routerLink="/" class="d-flex align-items-center">
+            <img src="images/logo-icon.svg" alt="logo-icon">
+            <span class="fw-semibold">NostalgiaTV</span>
+        </a>
+    </div>
+    <div (click)="toggle()"
+         class="burger-menu"
+         [ngClass]="{'active': isSidebarToggled}">
+        <span class="top-bar"></span>
+        <span class="middle-bar"></span>
+        <span class="bottom-bar"></span>
+    </div>
+    <ng-scrollbar visibility="hover">
+        <div class="sidebar-inner">
+            <div class="sidebar-menu">
+                <mat-accordion>
+                    @for (menu of menuService.menus(); track menu.id) {
+                      @if (menu.children.length > 0) {
+                          <span class="sub-title text-body">{{ menu.caption }}</span>
+                          @for (child of menu.children; track child.id) {
+                              <a [routerLink]="child.url"
+                                class="sidebar-menu-link"
+                                routerLinkActive="active"
+                                [routerLinkActiveOptions]="{exact: true}">
+                                  <i class="material-symbols-outlined">{{ child.icon }}</i>
+                                  <span class="title">{{ child.caption }}</span>
+                              </a>
+                          }
+                      } @else {
+                          <a [routerLink]="menu.url"
+                            class="sidebar-menu-link"
+                            routerLinkActive="active"
+                            [routerLinkActiveOptions]="{exact: true}">
+                              <i class="material-symbols-outlined">{{ menu.icon }}</i>
+                              <span class="title">{{ menu.caption }}</span>
+                          </a>
+                      }
+                    } @empty {
+                        <span class="text-body d-block ps-3">No hay menús disponibles</span>
+                    }
+
+                    <span class="sub-title text-body">CUENTA</span>
+                    <a routerLink="/dashboard/logout"
+                       class="sidebar-menu-link"
+                       routerLinkActive="active"
+                       [routerLinkActiveOptions]="{exact: true}">
+                        <i class="material-symbols-outlined">logout</i>
+                        <span class="title">Logout</span>
+                    </a>
+                </mat-accordion>
+            </div>
+        </div>
+    </ng-scrollbar>
+</div>
