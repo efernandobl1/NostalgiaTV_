@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostBinding, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -7,6 +7,7 @@ import { RouterLink, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CustomizerSettingsService } from '../../../../shared/components/customizer-settings/customizer-settings.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { TvModeService } from '../../../../core/services/tv-mode.service';
 
 @Component({
   selector: 'app-sign-in',
@@ -22,6 +23,8 @@ import { AuthService } from '../../../../core/services/auth.service';
   styleUrl: './sign-in.component.scss',
 })
 export class SignInComponent {
+  readonly tvMode = inject(TvModeService);
+  @HostBinding('class.tv-mode') get isTvMode(): boolean { return this.tvMode.enabled(); }
   hide = true;
   authForm: FormGroup;
   errorMessage = '';

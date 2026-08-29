@@ -17,7 +17,7 @@
   <div class="remote-always-visible">
   <div class="series-panel-header">
     @if (selectedSeries()?.logoPath) {
-      <img [src]="apiUrl() + selectedSeries()!.logoPath" class="series-panel-logo" />
+          <img [src]="apiUrl() + selectedSeries()!.logoPath" [alt]="selectedSeries()!.name" class="series-panel-logo" />
     }
     <span class="series-panel-name">{{ selectedSeries()?.name }}</span>
   </div>

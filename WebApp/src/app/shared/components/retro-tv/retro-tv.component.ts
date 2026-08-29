@@ -9,10 +9,12 @@ import {
   inject,
   effect,
   NgZone,
+  HostBinding,
+  HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -28,6 +30,7 @@ import { RetroTvFiltersPanelComponent } from "./retro-tv-filters-panel/retro-tv-
 import { RetroTvRemoteChannelsComponent } from "./retro-tv-remote-channels/retro-tv-remote-channels.component";
 import { RetroTvRemoteSeriesComponent } from "./retro-tv-remote-series/retro-tv-remote-series.component";
 import { RetroTvDialogsComponent } from "./retro-tv-dialogs/retro-tv-dialogs.component";
+import { TvModeService } from '../../../core/services/tv-mode.service';
 
 interface Channel { id: number; name: string; logoPath?: string; }
 interface ChannelEra { id: number; name: string; description?: string; seriesIds: number[]; }
@@ -63,12 +66,14 @@ type AppMode = 'channels' | 'series';
     RetroTvFiltersPanelComponent,
     RetroTvRemoteChannelsComponent,
     RetroTvRemoteSeriesComponent,
-    RetroTvDialogsComponent
+    RetroTvDialogsComponent,
+    RouterLink,
 ],
   templateUrl: './retro-tv.component.html',
   styleUrl: './retro-tv.component.scss',
 })
 export class RetroTvComponent implements AfterViewInit, OnDestroy {
+  @HostBinding('class.tv-mode') get isTvMode(): boolean { return this.tvMode.enabled(); }
   @ViewChild('tvContainer') tvContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('screenOverlay') screenOverlay!: ElementRef<HTMLDivElement>;
   @ViewChild('videoPlayer') videoPlayer!: ElementRef<HTMLVideoElement>;
@@ -80,6 +85,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   private tvSettings = inject(TvSettingsService);
   private watchedService = inject(WatchedService);
   private ngZone = inject(NgZone);
+  readonly tvMode = inject(TvModeService);
 
   apiUrl = environment.apiUrl;
 
@@ -174,8 +180,27 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   private overlayTimeout?: ReturnType<typeof setTimeout>;
   private progressInterval?: ReturnType<typeof setInterval>;
   private uiUpdateInterval?: ReturnType<typeof setInterval>;
+  private clockInterval?: ReturnType<typeof setInterval>;
   private readonly BUFFER_SECONDS = 20;
   private pendingNextEpisodePath: string | null = null;
+  currentClock = signal(this.formatClock());
+
+  @HostListener('document:keydown', ['$event'])
+  onTvKeydown(event: KeyboardEvent): void {
+    if (!this.tvMode.enabled()) return;
+
+    this.showOverlay.set(true);
+    clearTimeout(this.overlayTimeout);
+    this.overlayTimeout = setTimeout(() => this.showOverlay.set(false), 5000);
+
+    if (event.key === 'Escape' || event.key === 'Backspace') {
+      if (this.showFiltersPanel()) this.closeFiltersPanel();
+      else if (this.showSeriesDialog()) this.closeSeriesDialog();
+      else if (this.showSettingsDialog()) this.closeSettingsDialog();
+      else if (this.showScheduleDialog()) this.closeScheduleDialog();
+      else if (this.mode() === 'series') this.backToChannels();
+    }
+  }
 
   constructor() {
     effect(() => {
@@ -192,6 +217,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
 
     this.loadChannels();
     this.loadEpisodeTypes();
+    this.clockInterval = setInterval(() => this.currentClock.set(this.formatClock()), 30_000);
     this.setupResizeObserver();
     setTimeout(() => this.adjustOverlay(), 100);
 
@@ -200,6 +226,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     });
 
     this.route.queryParams.subscribe(params => {
+      if (params['search'] === 'true') this.openSeriesDialog();
       if (params['serie']) {
         this.http.get<PagedResult<SeriesResponse>>(`${this.apiUrl}/api/v1/public/series`, {
           params: { name: params['serie'].replace(/-/g, ' '), pageSize: 1 },
@@ -220,7 +247,12 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     clearTimeout(this.overlayTimeout);
     clearInterval(this.progressInterval);
     clearInterval(this.uiUpdateInterval);
+    clearInterval(this.clockInterval);
     document.removeEventListener('fullscreenchange', this.fullscreenHandler);
+  }
+
+  private formatClock(): string {
+    return new Intl.DateTimeFormat('es-GT', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
   }
 
   // ── AV1 ───────────────────────────────────────────────────────────────────

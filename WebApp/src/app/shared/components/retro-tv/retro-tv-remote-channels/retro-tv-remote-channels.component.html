@@ -1,29 +1,32 @@
 <div class="remote-control" [class.remote-control--collapsed]="isCollapsed()">
 
   <div class="remote-header">
-    <button mat-mini-fab (click)="goToLogin.emit()" matTooltip="Login">
-      <mat-icon>person</mat-icon>
-    </button>
     <h3>CONTROL</h3>
-    <button mat-mini-fab (click)="openSettings.emit()" matTooltip="Configuración">
-      <mat-icon>settings</mat-icon>
-    </button>
+    <div class="remote-led"></div>
   </div>
-
-  <div class="remote-led"></div>
   <div class="remote-divider"></div>
+
+  @if (hasChannel()) {
+    <div class="now-playing">
+      <span class="section-label section-label--live">EN EMISIÓN · CH {{ currentChannelId() }}</span>
+      <span class="now-playing__channel">{{ currentSeriesName() || 'Canal en vivo' }}</span>
+      <span class="now-playing__program">{{ currentEpisodeTitle() }}</span>
+    </div>
+  }
+
+  <div class="section-heading"><span class="section-label">CANALES</span><span>Un clic sintoniza</span></div>
 
   <div class="remote-always-visible">
 
     <!-- Botones de acción siempre visibles en mobile -->
     <div class="channel-top-actions">
       <button mat-stroked-button class="nav-btn"
-        (click)="openSeries.emit()" [tabindex]="1">SERIES</button>
+        (click)="openSeries.emit()" [tabindex]="1"><mat-icon>grid_view</mat-icon>SERIES</button>
       <button mat-stroked-button class="nav-btn nav-btn--secondary"
         [disabled]="!hasChannel()"
-        (click)="openSchedule.emit()" [tabindex]="1">PROG.</button>
+        (click)="openSchedule.emit()" [tabindex]="1"><mat-icon>calendar_month</mat-icon>PROG.</button>
       <button mat-stroked-button class="nav-btn nav-btn--secondary"
-        (click)="openFilters.emit()" [tabindex]="1">FILTROS</button>
+        (click)="openFilters.emit()" [tabindex]="1"><mat-icon>tune</mat-icon>IMAGEN</button>
     </div>
 
     <!-- Media controls -->
@@ -95,6 +98,8 @@
       <button mat-stroked-button class="nav-btn nav-btn--secondary"
         (click)="openFilters.emit()" [tabindex]="3">FILTROS</button>
     </div>
+
+    <button class="settings-button" type="button" (click)="openSettings.emit()"><mat-icon>settings</mat-icon>Ajustes</button>
 
   </div>
 

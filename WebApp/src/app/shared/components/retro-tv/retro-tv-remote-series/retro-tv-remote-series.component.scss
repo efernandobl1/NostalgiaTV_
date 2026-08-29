@@ -311,7 +311,7 @@
 .remote-collapse-btn { display: none; }
 
 .remote-collapsible {
-  transition: max-height 0.35s ease, opacity 0.35s ease;
+  transition: opacity 0.35s ease;
   max-height: 2000px;
   opacity: 1;
 }
@@ -335,7 +335,6 @@
     border-radius: 20px 20px 0 0;
     border-bottom: none;
     overflow-y: auto;
-    transition: max-height 0.35s ease;
   }
 
   // Sección siempre visible — en mobile es un bloque normal
@@ -445,6 +444,38 @@
     gap: 0.4rem;
     padding-bottom: 1rem;
   }
+}
+
+// Readable control scale shared by desktop, tablet and TV.
+.remote-control { width: 280px; font-family: Outfit, sans-serif; }
+.remote-header h3 { font-size: .7rem; }
+.series-panel-name { font-size: .65rem; line-height: 1.6; overflow-wrap: anywhere; }
+.change-series-btn,
+.reset-series-btn { min-height: 44px; padding: .55rem .65rem; font-size: .65rem; line-height: 1.45; white-space: normal; }
+.season-tab { min-width: 44px; min-height: 44px; padding: .55rem .65rem; font-size: .6rem; }
+.episode-btn { min-height: 48px; padding: .65rem .7rem; }
+.episode-btn-number { font-size: .55rem; }
+.episode-btn-title { font-size: 1rem; }
+.random-toggle,
+.random-toggle--compact { min-height: 44px; font-size: 1rem; }
+.series-top-actions { grid-template-columns: repeat(3,minmax(0,1fr)); gap: .5rem; }
+.series-top-actions .change-series-btn,
+.series-top-actions .nav-btn { min-height: 48px !important; height: auto !important; padding: .4rem !important; border-radius: 10px !important; font: 600 12px/1.2 Outfit,sans-serif !important; white-space: normal; }
+.media-controls--inline .mat-mdc-icon-button { width: 46px; height: 46px; }
+
+@media (max-width: 1023px) {
+  .remote-control { inset: auto 0 0; width: 100%; max-width: none; max-height: 58dvh; padding: 14px 18px max(14px,env(safe-area-inset-bottom)); transform: none; border-width: 3px 0 0; border-radius: 24px 24px 0 0; }
+  .episodes-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .remote-collapse-btn { min-height: 44px; font-size: .75rem; }
+}
+
+@media (max-width: 600px) {
+  .remote-control { max-height: 64dvh; padding: 12px 14px max(10px,env(safe-area-inset-bottom)); }
+  .series-panel-name { font-size: .6rem; }
+  .series-top-actions .change-series-btn,
+  .series-top-actions .nav-btn { min-height: 50px !important; font-size: 12px !important; }
+  .episodes-list { display: flex; flex-direction: column; }
+  .episode-btn-title { font-size: 1rem; }
 }
 
 @media (max-width: 480px) {
@@ -639,4 +670,22 @@
   .remote-divider--mobile-hidden {
     display: none;
   }
+}
+
+// Final responsive guard: later legacy rules must not shrink readable controls.
+.remote-control { width: 280px; }
+.series-top-actions .change-series-btn,
+.series-top-actions .nav-btn { min-height: 48px !important; height: auto !important; padding: .4rem !important; border-radius: 10px !important; font: 600 12px/1.2 Outfit,sans-serif !important; white-space: normal; }
+.episode-btn-title { font-size: 1rem; }
+.episode-btn-number { font-size: .55rem; }
+.season-tab { min-width: 44px; min-height: 44px; font-size: .6rem; }
+
+@media (max-width: 1023px) {
+  .remote-control { inset: auto 0 0; width: 100%; max-width: none; transform: none; }
+}
+
+@media (max-width: 600px) {
+  .series-top-actions .change-series-btn,
+  .series-top-actions .nav-btn { min-height: 50px !important; font-size: 12px !important; }
+  .episode-btn-title { font-size: 1rem; }
 }

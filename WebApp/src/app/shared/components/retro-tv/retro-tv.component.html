@@ -1,3 +1,27 @@
+<nav class="public-actions" aria-label="Opciones de visualización">
+  <div class="brand-group">
+    <a class="brand" routerLink="/" aria-label="Nostalgia TV, inicio"><span class="brand-led"></span>NOSTALGIA TV</a>
+    @if (tvMode.enabled()) {
+      <span class="tv-channel">CH {{ currentChannel()?.id ?? '--' }}</span>
+    }
+  </div>
+  <div class="public-actions__buttons">
+    @if (tvMode.suggested() && !tvMode.enabled()) {
+      <button class="tv-suggestion" type="button" (click)="tvMode.setEnabled(true)">
+        Este navegador parece una TV · Activar modo TV
+      </button>
+      <button class="dismiss-suggestion" type="button" (click)="tvMode.dismissSuggestion()" aria-label="Cerrar sugerencia">×</button>
+    }
+    @if (tvMode.enabled()) {
+      <button class="tv-clock" type="button" (click)="tvMode.setEnabled(false)" aria-label="Salir del modo TV">{{ currentClock() }}</button>
+    } @else {
+      <button class="header-action search-action" type="button" (click)="openSeriesDialog()"><mat-icon>search</mat-icon><span>Buscar serie o canal</span></button>
+      <button class="header-action accessibility-action" type="button" (click)="tvMode.setEnabled(true)"><mat-icon>accessibility_new</mat-icon><span>Accesibilidad</span></button>
+      <button class="header-action login-action" type="button" (click)="goToLogin()"><mat-icon>person</mat-icon><span>Entrar</span></button>
+    }
+  </div>
+</nav>
+
 <div class="tv-setup">
   <div class="tv-container" #tvContainer>
     <div
@@ -159,6 +183,8 @@
     [isMuted]="isMuted()"
     [hasChannel]="!!currentChannel()"
     [apiUrl]="apiUrl"
+    [currentSeriesName]="currentState()?.seriesName ?? ''"
+    [currentEpisodeTitle]="currentState()?.episodeTitle ?? ''"
     (selectChannel)="selectChannel($event)"
     (selectEra)="selectEra($event)"
     (toggleMute)="toggleMute()"
@@ -232,3 +258,12 @@
   (closeScheduleDialog)="closeScheduleDialog()"
   (scheduleChannelChange)="onScheduleChannelChange($event)"
 />
+
+@if (tvMode.enabled()) {
+  <div class="tv-help" aria-hidden="true">
+    <span><kbd>OK</kbd>Sintonizar</span>
+    <span><kbd>▲</kbd>Guía y series</span>
+    <span><kbd>▼</kbd>Ajustes de imagen</span>
+    <span><kbd>←</kbd>Ocultar tira</span>
+  </div>
+}

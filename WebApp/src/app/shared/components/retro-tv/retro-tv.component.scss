@@ -10,6 +10,55 @@
   position: relative;
 }
 
+.public-actions {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 64px;
+  padding: 0 28px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(10, 10, 22, .92), rgba(10, 10, 22, 0));
+}
+
+.brand,
+.public-actions button { pointer-events: auto; }
+
+.brand-group, .brand, .header-action { display: flex; align-items: center; }
+.brand-group { gap: 12px; }
+.brand {
+  gap: 12px;
+  color: #ff7b79;
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(.72rem, 1.1vw, 1rem);
+  text-shadow: 0 0 18px rgba(255, 107, 107, .6);
+}
+
+.brand-led { width: 10px; height: 10px; border-radius: 50%; background: #ff6b6b; box-shadow: 0 0 10px rgba(255,107,107,.9); }
+
+.public-actions__buttons { display: flex; align-items: center; gap: .5rem; }
+
+.public-actions button {
+  min-height: 44px;
+  border: 1px solid rgba(142, 232, 159, .55);
+  border-radius: 999px;
+  padding: .65rem 1rem;
+  color: #8ee89f;
+  background: rgba(142, 232, 159, .06);
+  cursor: pointer;
+}
+
+.header-action { gap: 8px; }
+.accessibility-action { color: #ffd93d !important; border-color: rgba(255,217,61,.4) !important; background: rgba(255,217,61,.07) !important; }
+.login-action { color: #c9c2ff !important; border-color: #8b7dff !important; background: rgba(139,125,255,.16) !important; }
+.tv-clock { border: 0 !important; color: #c3c8db !important; background: transparent !important; font: 400 34px/1 'VT323', monospace !important; }
+.tv-channel { padding: 2px 16px; border: 2px solid rgba(255,217,61,.5); border-radius: 10px; color: #ffd93d; font-size: 34px; }
+.tv-suggestion { color: #ffd93d !important; }
+.dismiss-suggestion { width: 44px; padding: 0 !important; font-size: 1.5rem !important; }
+
 :focus-visible {
   outline: 2px solid #ffd93d !important;
   outline-offset: 2px;
@@ -371,6 +420,13 @@
   .kid-section { height: 56dvh; }
 }
 @media (max-width: 768px) {
+  .public-actions { inset: 0 0 auto; height: 56px; padding: 0 16px; }
+  .brand { font-size: .5rem; }
+  .brand-led { display: none; }
+  .tv-suggestion { display: none; }
+  .header-action { width: 44px; min-height: 44px !important; padding: 0 !important; justify-content: center; border-radius: 12px !important; }
+  .header-action span { display: none; }
+  .accessibility-action { display: none; }
   .tv-setup {
     width: 100vw;
     height: 50dvh;
@@ -389,6 +445,109 @@
     height: 72dvh;
   }
 }
+
+:host.tv-mode {
+  --tv-safe-zone: max(5vw, 48px);
+  background: #070817;
+
+  .public-actions { inset: 0; height: auto; padding: 54px var(--tv-safe-zone) 0; align-items: flex-start; background: none; }
+  .brand { font-size: clamp(1rem, 1.4vw, 1.5rem); }
+
+  .tv-setup {
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    transform: none;
+  }
+
+  .tv-container { background-image: none; filter: none; }
+
+  .screen-overlay {
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0;
+  }
+
+  .kid-section,
+  .floor,
+  .tv-light,
+  .scene-overlay { display: none; }
+
+  app-retro-tv-remote-channels,
+  app-retro-tv-remote-series { font-size: 1.75rem; }
+
+  ::ng-deep .remote-control {
+    top: auto;
+    right: var(--tv-safe-zone);
+    bottom: 150px;
+    left: var(--tv-safe-zone);
+    width: auto;
+    max-height: 220px;
+    padding: 0;
+    transform: none;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  ::ng-deep .remote-header,
+  ::ng-deep .remote-led,
+  ::ng-deep .remote-divider,
+  ::ng-deep .remote-footer,
+  ::ng-deep .remote-collapse-btn { display: none !important; }
+
+  ::ng-deep .channels-list {
+    flex-direction: row;
+    gap: 22px;
+    overflow-x: auto;
+    padding: .5rem;
+  }
+
+  ::ng-deep .channel-btn {
+    min-width: 300px;
+    min-height: 168px;
+    padding: 18px;
+    border-width: 3px;
+    border-radius: 16px;
+    font-size: 1.5rem;
+  }
+
+  ::ng-deep .channel-top-actions,
+  ::ng-deep .media-controls--inline { display: none !important; }
+
+  :focus-visible {
+    outline: 4px solid #ffd93d !important;
+    outline-offset: 5px;
+    box-shadow: 0 0 0 8px rgba(255, 217, 61, .22) !important;
+    transform: scale(1.05);
+  }
+
+  .series-logo { font-size: clamp(1.25rem, 2.3vw, 2.5rem); }
+  .episode-title { font-size: clamp(1.75rem, 2.5vw, 3rem); }
+  .overlay-series { font-size: clamp(1rem, 1.4vw, 1.6rem); }
+  .overlay-episode { font-size: clamp(1.75rem, 2.2vw, 2.75rem); }
+}
+
+.tv-help { display: none; }
+:host.tv-mode .tv-help {
+  position: fixed;
+  left: var(--tv-safe-zone);
+  right: var(--tv-safe-zone);
+  bottom: 54px;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  color: #aab0c6;
+  font-family: Outfit, sans-serif;
+  font-size: 24px;
+}
+:host.tv-mode .tv-help span { display: flex; align-items: center; gap: 10px; }
+:host.tv-mode .tv-help kbd { padding: 2px 12px; border-radius: 8px; color: #0e0e1c; background: #c3c8db; font: 400 28px/1 'VT323', monospace; }
+:host.tv-mode .tv-help span:first-child kbd { background: #8ee89f; }
+:host.tv-mode .tv-help span:last-child kbd { background: #ff8f8f; }
 
 @media (max-width: 480px) {
   .tv-setup {

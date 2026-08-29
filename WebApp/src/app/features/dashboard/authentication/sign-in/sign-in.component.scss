@@ -1,118 +1,44 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
 
-// Fondo retro (mismo mundo visual que la TV pública), pero la tarjeta queda clara
-// para que los inputs de Angular Material sigan siendo legibles y accesibles.
-.sign-in-area {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    overflow-x: hidden;
-    background:
-        radial-gradient(ellipse at 50% 0%, rgba(121, 109, 246, 0.18), transparent 60%),
-        linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 55%, #16213e 100%);
-    position: relative;
+:host { display: block; min-height: 100dvh; }
+.sign-in-area { min-height: 100dvh; display: grid; grid-template-columns: 1.1fr 1fr; color: #e6e8f2; background: radial-gradient(ellipse at 18% -10%,rgba(139,125,255,.18),transparent 55%), linear-gradient(160deg,#15152b,#0e0e1c 58%,#101a30); }
+.login-intro { display: flex; flex-direction: column; justify-content: center; gap: 20px; padding: 0 clamp(3rem,5vw,72px); }
+.login-brand, .access-label { font-family: 'Press Start 2P', cursive; }
+.login-brand { color: #ff6b6b; font-size: 12px; }
+.login-intro h1 { margin: 0; max-width: 560px; color: #8ee89f; font: 400 clamp(3rem,4vw,58px)/1 'VT323', monospace; }
+.login-intro p { max-width: 440px; margin: 0; color: #aab0c6; font-size: 17px; line-height: 1.6; }
+.login-intro a, .mobile-back { display: inline-flex; align-items: center; gap: 6px; width: fit-content; color: #8ee89f; font-size: 15px; }
+.login-panel { align-self: center; width: min(420px,calc(100% - 3rem)); margin: auto; padding: 32px; border: 1px solid rgba(139,125,255,.22); border-radius: 16px; background: #191b2e; box-shadow: 0 10px 34px rgba(0,0,0,.45); }
+.access-label { display: block; margin-bottom: 18px; color: #ffd93d; font-size: 10px; }
+.mobile-title, .mobile-back { display: none; }
+form { display: flex; flex-direction: column; }
+form > label { margin-bottom: 8px; color: #e6e8f2; font-size: 15px; }
+mat-form-field { width: 100%; margin-bottom: 6px; }
+input.mat-mdc-input-element { color: #e6e8f2 !important; -webkit-text-fill-color: #e6e8f2 !important; font-size: 16px; }
+.login-options { display: flex; align-items: center; justify-content: space-between; margin: 2px 0 18px; color: #aab0c6; font-size: 14px; }
+.password-help { color: #8ee89f; }
+.submit-button.mat-mdc-button { min-height: 52px; border-radius: 999px; color: #fff; font-size: 16px !important; font-weight: 600; background: linear-gradient(135deg,#8b7dff,#5a4fe0); box-shadow: 0 6px 20px rgba(139,125,255,.35); }
+.submit-button[disabled] { opacity: .55; }
+.error { margin: -4px 0 10px; color: #ff8f8f; font-size: 14px; }
+.submit-error { margin: 12px 0 0; text-align: center; }
 
-    // Scanlines sutiles (respetan prefers-reduced-motion global).
-    &::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background: repeating-linear-gradient(
-            0deg,
-            rgba(0, 0, 0, 0.12),
-            rgba(0, 0, 0, 0.12) 1px,
-            transparent 1px,
-            transparent 4px
-        );
-    }
-
-    .d-table, .d-table-cell { height: auto; display: block; }
+@media (max-width: 700px) {
+  .sign-in-area { display: flex; flex-direction: column; justify-content: center; gap: 18px; padding: 28px 20px; }
+  .login-intro { display: contents; }
+  .login-intro p, .login-intro a { display: none; }
+  .login-brand { order: 0; font-size: 10px; }
+  .login-intro h1 { order: 1; font-size: 40px; }
+  .login-panel { display: contents; }
+  .access-label, .mobile-title { display: none; }
+  .login-panel form { order: 2; }
+  .mobile-back { display: block; order: 3; width: auto; text-align: center; }
+  .login-options { margin-top: 0; }
+  .submit-button.mat-mdc-button { min-height: 54px; }
 }
 
-.daxa-form {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 440px;
-    margin: 0 auto;
-    padding: 40px 36px;
-    border-radius: 16px;
-    border: 1px solid rgba(121, 109, 246, 0.35);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
-
-    // Marca retro sobre el título.
-    .title {
-        margin-bottom: 26px;
-
-        &::before {
-            content: 'NOSTALGIA TV';
-            display: block;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 15px;
-            letter-spacing: 1px;
-            color: #ff6b6b;
-            text-shadow: 0 0 14px rgba(255, 107, 107, 0.7), 2px 2px 0 rgba(0, 0, 0, 0.4);
-            margin-bottom: 18px;
-        }
-
-        h3 {
-            margin-bottom: 6px;
-            font-weight: 700;
-        }
-    }
-
-    form {
-        .form-group {
-            margin-bottom: 22px;
-
-            .main-label { margin-bottom: 10px; font-weight: 600; }
-            .error { font-size: 13px; margin-top: 6px; }
-        }
-
-        // El texto que se escribe debe ser claro sobre la tarjeta oscura.
-        input.mat-mdc-input-element,
-        .mat-mdc-input-element {
-            color: #f1f3f9 !important;
-            caret-color: var(--retro-green, #8ee89f);
-            -webkit-text-fill-color: #f1f3f9 !important;
-        }
-        .mat-mdc-input-element::placeholder { color: rgba(241, 243, 249, 0.5) !important; }
-
-        // Botón con acento retro (violeta → verde neón sutil en hover).
-        .btn.mat-mdc-button {
-            border: 0;
-            width: 100%;
-            height: auto;
-            display: block;
-            min-width: auto;
-            min-height: auto;
-            margin-top: 8px;
-            padding: 15px 30px;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-            border-radius: 999px;
-            color: var(--whiteColor);
-            background: linear-gradient(135deg, #796df6, #5a4fe0);
-            transition: filter .25s ease, box-shadow .25s ease;
-
-            &:hover:not([disabled]) {
-                filter: brightness(1.08);
-                box-shadow: 0 8px 24px rgba(121, 109, 246, 0.45);
-            }
-            &[disabled] {
-                background: #c9cfe0;
-                color: #ffffff;
-            }
-        }
-    }
-}
-
-@media (max-width: 575px) {
-    .daxa-form {
-        padding: 32px 22px;
-        .title::before { font-size: 12px; }
-    }
-}
+:host.tv-mode .sign-in-area { padding: 5vw; }
+:host.tv-mode .login-intro h1 { font-size: 5rem; }
+:host.tv-mode .login-intro p, :host.tv-mode form > label, :host.tv-mode .login-options { font-size: 1.5rem; }
+:host.tv-mode .login-panel { width: min(50rem,100%); padding: 3rem; }
+:host.tv-mode input.mat-mdc-input-element, :host.tv-mode .submit-button.mat-mdc-button { font-size: 1.5rem !important; }
+:host.tv-mode .submit-button.mat-mdc-button { min-height: 68px; }

@@ -24,7 +24,28 @@ html {
     --bodyColor: #919aa3;
     --transition: .5s;
     --fontSize: 16px;
+    --retroCursor: url('/images/cursors/retro-pointer.svg') 5 3, auto;
     --borderBoxShadow: rgba(0, 0, 0, .05) 0px 6px 24px 0px, rgba(0, 0, 0, .08) 0px 0px 0px 1px;
+}
+
+@media (pointer: fine) {
+    body,
+    a,
+    button,
+    [role='button'],
+    input[type='checkbox'],
+    input[type='radio'],
+    input[type='range'],
+    select,
+    summary {
+        cursor: var(--retroCursor);
+    }
+
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    textarea,
+    [contenteditable='true'] {
+        cursor: text;
+    }
 }
 *, ::after, ::before {
     box-sizing: border-box;

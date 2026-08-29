@@ -23,6 +23,8 @@ export class RetroTvRemoteChannelsComponent {
   isMuted = input<boolean>(false);
   hasChannel = input<boolean>(false);
   apiUrl = input<string>('');
+  currentSeriesName = input<string>('');
+  currentEpisodeTitle = input<string>('');
 
   selectChannel = output<Channel>();
   selectEra = output<ChannelEra>();
@@ -36,6 +38,6 @@ export class RetroTvRemoteChannelsComponent {
   goToLogin = output<void>();
   openSettings = output<void>();
 
-  isCollapsed = signal<boolean>(true);
+  isCollapsed = signal<boolean>(false);
   toggleCollapse(): void { this.isCollapsed.update(v => !v); }
 }

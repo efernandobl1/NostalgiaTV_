@@ -1,14 +1,13 @@
-<mat-card class="daxa-card error-card mb-25 pt-0 border-radius bg-white border-none d-block text-center">
-    <mat-card-content>
-        <img src="images/error.png" alt="error-image">
-        <h3>
-            OOPS! 404 Page Not Found!
-        </h3>
-        <p>
-            But no worries! Our team is looking ever where while you wait safely.
-        </p>
-        <a mat-button routerLink="/">
-            Back to Home
-        </a>
-    </mat-card-content>
-</mat-card>
+<main class="not-found">
+  <section class="signal-card" aria-labelledby="signal-title">
+    <div class="crt-screen">
+      <span class="error-code">404</span>
+      <h1 id="signal-title">SEÑAL PERDIDA</h1>
+    </div>
+    <p>Esta página no está en la programación. Vuelve al canal principal o busca una serie.</p>
+    <div class="error-actions">
+      <a mat-button routerLink="/">Volver al inicio</a>
+      <a mat-button routerLink="/" [queryParams]="{ search: true }" class="secondary-action">Buscar serie</a>
+    </div>
+  </section>
+</main>
