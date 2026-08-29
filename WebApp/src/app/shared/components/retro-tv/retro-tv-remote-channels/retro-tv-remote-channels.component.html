@@ -1,11 +1,11 @@
 <div class="remote-control" [class.remote-control--collapsed]="isCollapsed()">
 
   <div class="remote-header">
-    <button mat-mini-fab (click)="goToLogin.emit()" matTooltip="Login" aria-label="Iniciar sesión">
+    <button mat-mini-fab (click)="goToLogin.emit()" matTooltip="Login">
       <mat-icon>person</mat-icon>
     </button>
     <h3>CONTROL</h3>
-    <button mat-mini-fab (click)="openSettings.emit()" matTooltip="Configuración" aria-label="Abrir configuración">
+    <button mat-mini-fab (click)="openSettings.emit()" matTooltip="Configuración">
       <mat-icon>settings</mat-icon>
     </button>
   </div>
@@ -18,31 +18,31 @@
     <!-- Botones de acción siempre visibles en mobile -->
     <div class="channel-top-actions">
       <button mat-stroked-button class="nav-btn"
-        (click)="openSeries.emit()">SERIES</button>
+        (click)="openSeries.emit()" [tabindex]="1">SERIES</button>
       <button mat-stroked-button class="nav-btn nav-btn--secondary"
         [disabled]="!hasChannel()"
-        (click)="openSchedule.emit()">PROG.</button>
+        (click)="openSchedule.emit()" [tabindex]="1">PROG.</button>
       <button mat-stroked-button class="nav-btn nav-btn--secondary"
-        (click)="openFilters.emit()">FILTROS</button>
+        (click)="openFilters.emit()" [tabindex]="1">FILTROS</button>
     </div>
 
     <!-- Media controls -->
     <div class="media-controls media-controls--inline">
-      <button mat-icon-button (click)="toggleMute.emit()" aria-label="Silenciar o activar volumen">
+      <button mat-icon-button (click)="toggleMute.emit()">
         <mat-icon>{{ isMuted() ? 'volume_off' : 'volume_mute' }}</mat-icon>
       </button>
-      <button mat-icon-button (click)="volumeDown.emit()" aria-label="Bajar volumen">
+      <button mat-icon-button (click)="volumeDown.emit()">
         <mat-icon>volume_down</mat-icon>
       </button>
-      <button mat-icon-button (click)="volumeUp.emit()" aria-label="Subir volumen">
+      <button mat-icon-button (click)="volumeUp.emit()">
         <mat-icon>volume_up</mat-icon>
       </button>
-      <button mat-icon-button (click)="toggleFullscreen.emit()" aria-label="Alternar pantalla completa">
+      <button mat-icon-button (click)="toggleFullscreen.emit()">
         <mat-icon>fullscreen</mat-icon>
       </button>
     </div>
 
-    <button class="remote-collapse-btn" (click)="toggleCollapse()" [attr.aria-expanded]="!isCollapsed()">
+    <button class="remote-collapse-btn" (click)="toggleCollapse()">
       <mat-icon>{{ isCollapsed() ? 'expand_less' : 'expand_more' }}</mat-icon>
       <span>{{ isCollapsed() ? 'VER CANALES' : 'OCULTAR' }}</span>
     </button>
@@ -56,8 +56,7 @@
         @for (era of channelEras(); track era.id) {
           <button class="era-btn"
             [class.active]="selectedEraId() === era.id"
-            (click)="selectEra.emit(era)"
-            [attr.aria-label]="'Seleccionar era ' + era.name">
+            (click)="selectEra.emit(era)">
             {{ era.name }}
           </button>
         }
@@ -72,10 +71,11 @@
         <button class="channel-btn"
           [class.active]="currentChannelId() === channel.id"
           (click)="selectChannel.emit(channel)"
+          [tabindex]="1"
           [attr.aria-label]="'Canal ' + (i + 1) + ': ' + channel.name"
         >
           @if (channel.logoPath) {
-            <img [src]="apiUrl() + channel.logoPath" class="channel-logo" [alt]="channel.name" loading="lazy" decoding="async" />
+            <img [src]="apiUrl() + channel.logoPath" class="channel-logo" [alt]="channel.name" />
           }
           <div class="channel-info">
             <span class="channel-number">CH {{ i + 1 }}</span>
@@ -88,12 +88,12 @@
     <!-- Solo desktop -->
     <div class="nav-controls desktop-nav" style="margin-top: 0.8rem">
       <button mat-stroked-button class="nav-btn"
-        (click)="openSeries.emit()">SERIES</button>
+        (click)="openSeries.emit()" [tabindex]="3">SERIES</button>
       <button mat-stroked-button class="nav-btn nav-btn--secondary"
         [disabled]="!hasChannel()"
-        (click)="openSchedule.emit()">PROGRAMACIÓN</button>
+        (click)="openSchedule.emit()" [tabindex]="3">PROGRAMACIÓN</button>
       <button mat-stroked-button class="nav-btn nav-btn--secondary"
-        (click)="openFilters.emit()">FILTROS</button>
+        (click)="openFilters.emit()" [tabindex]="3">FILTROS</button>
     </div>
 
   </div>
@@ -101,16 +101,16 @@
   <!-- Footer solo desktop -->
   <div class="remote-footer">
     <div class="media-controls">
-      <button mat-icon-button (click)="toggleMute.emit()" aria-label="Silenciar o activar volumen">
+      <button mat-icon-button (click)="toggleMute.emit()" [tabindex]="2" aria-label="Silenciar">
         <mat-icon>{{ isMuted() ? 'volume_off' : 'volume_mute' }}</mat-icon>
       </button>
-      <button mat-icon-button (click)="volumeDown.emit()" aria-label="Bajar volumen">
+      <button mat-icon-button (click)="volumeDown.emit()" [tabindex]="2">
         <mat-icon>volume_down</mat-icon>
       </button>
-      <button mat-icon-button (click)="volumeUp.emit()" aria-label="Subir volumen">
+      <button mat-icon-button (click)="volumeUp.emit()" [tabindex]="2">
         <mat-icon>volume_up</mat-icon>
       </button>
-      <button mat-icon-button (click)="toggleFullscreen.emit()" aria-label="Alternar pantalla completa">
+      <button mat-icon-button (click)="toggleFullscreen.emit()" [tabindex]="2">
         <mat-icon>fullscreen</mat-icon>
       </button>
     </div>

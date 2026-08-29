@@ -1,7 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
 :host {
-  --retro-body-size: 1rem;
-  --retro-label-size: 0.75rem;
-  --retro-touch-target: 44px;
   display: block;
   height: 100vh;
   height: 100dvh;
@@ -157,7 +156,8 @@
 
 .series-logo {
   font-family: 'Press Start 2P', cursive;
-  font-size: clamp(0.75rem, 1.5vw, 1.5rem);
+  // Mínimo legible subido (antes 0.6rem) para pantallas chicas.
+  font-size: clamp(0.8rem, 2.2vw, 1.6rem);
   color: #ff6b6b;
   text-shadow: 0 0 20px rgba(255,107,107,0.8), 0 0 40px rgba(255,107,107,0.4), 2px 2px 0 rgba(0,0,0,0.5);
   margin-bottom: 1rem;
@@ -166,12 +166,10 @@
 }
 
 .episode-title {
-  max-width: 100%;
-  font-size: clamp(0.875rem, 1.3vw, 1.2rem);
-  line-height: 1.15;
-  text-wrap: balance;
-  color: #6bcf7f;
-  text-shadow: 0 2px 10px rgba(107,207,127,0.5), 1px 1px 0 rgba(0,0,0,0.5);
+  // Verde más claro (mejor contraste) y mínimo legible subido (antes 0.6rem).
+  font-size: clamp(0.85rem, 1.8vw, 1.3rem);
+  color: #8ee89f;
+  text-shadow: 0 2px 10px rgba(107,207,127,0.5), 1px 1px 0 rgba(0,0,0,0.7);
 }
 
 @keyframes glow {
@@ -221,17 +219,19 @@
 
 .overlay-series {
   font-family: 'Press Start 2P', cursive;
-  font-size: clamp(0.625rem, calc(0.7rem * var(--screen-scale, 1)), 1rem);
-  line-height: 1.25;
+  // Mínimo legible (antes 0.2rem ≈ 3px, ilegible en pantallas chicas).
+  font-size: clamp(0.6rem, calc(0.6rem * var(--screen-scale, 1)), 1rem);
   color: #ff6b6b;
+  // El rojo sobre fondo oscuro subía apenas de contraste; se refuerza la sombra.
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .overlay-episode {
   font-family: 'VT323', monospace;
-  font-size: clamp(0.875rem, calc(1rem * var(--screen-scale, 1)), 1.5rem);
-  line-height: 1.15;
-  overflow-wrap: anywhere;
-  color: #6bcf7f;
+  // Mínimo legible (antes 0.3rem). VT323 es condensada, admite algo más de tamaño.
+  font-size: clamp(0.85rem, calc(0.95rem * var(--screen-scale, 1)), 1.6rem);
+  color: #8ee89f;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .ios-play-btn {
@@ -245,8 +245,8 @@
   border-radius: 50%;
   color: #6bcf7f;
   cursor: pointer;
-  width: clamp(44px, calc(56px * var(--screen-scale, 1)), 70px);
-  height: clamp(44px, calc(56px * var(--screen-scale, 1)), 70px);
+  width: clamp(18px, calc(56px * var(--screen-scale, 1)), 70px);
+  height: clamp(18px, calc(56px * var(--screen-scale, 1)), 70px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -254,9 +254,9 @@
   animation: glow 2s ease-in-out infinite;
 
   mat-icon {
-    font-size: clamp(28px, calc(36px * var(--screen-scale, 1)), 46px);
-    width: clamp(28px, calc(36px * var(--screen-scale, 1)), 46px);
-    height: clamp(28px, calc(36px * var(--screen-scale, 1)), 46px);
+    font-size: clamp(10px, calc(36px * var(--screen-scale, 1)), 46px);
+    width: clamp(10px, calc(36px * var(--screen-scale, 1)), 46px);
+    height: clamp(10px, calc(36px * var(--screen-scale, 1)), 46px);
   }
 
   &:hover {
@@ -372,9 +372,9 @@
 }
 @media (max-width: 768px) {
   .tv-setup {
-    width: min(125vw, 620px);
-    height: 58dvh;
-    top: 29%;
+    width: 100vw;
+    height: 50dvh;
+    top: 30%;
   }
 
   .kid-section {
@@ -392,9 +392,8 @@
 
 @media (max-width: 480px) {
   .tv-setup {
-    width: 128vw;
-    height: 58dvh;
-    top: 28%;
+    height: 50dvh;
+    top: 27%;
   }
 
   .kid-section {
@@ -404,32 +403,6 @@
 
   .floor {
     height: 75dvh;
-  }
-}
-
-@media (orientation: landscape) and (max-height: 520px) {
-  .tv-setup {
-    left: 28%;
-    top: 50%;
-    width: 56vw;
-    height: 96dvh;
-  }
-
-  .kid-section {
-    left: 28%;
-    bottom: 0;
-    height: 52dvh;
-  }
-
-  .floor { height: 38dvh; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tv-setup,
-  .scene-overlay,
-  .series-logo,
-  .remote-control {
-    animation: none !important;
   }
 }
 

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -8,19 +8,15 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { CustomizerSettingsService } from '../../../../shared/components/customizer-settings/customizer-settings.service';
 
 @Component({
-  selector: 'app-forgot-password',
-  imports: [
-    RouterLink,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatCheckboxModule,
-    ReactiveFormsModule,
-  ],
-  templateUrl: './forgot-password.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
-  styleUrl: './forgot-password.component.scss',
+    selector: 'app-forgot-password',
+    imports: [RouterLink, MatFormFieldModule, MatInputModule, MatButtonModule, MatCheckboxModule, ReactiveFormsModule],
+    templateUrl: './forgot-password.component.html',
+    styleUrl: './forgot-password.component.scss'
 })
 export class ForgotPasswordComponent {
-  constructor(public themeService: CustomizerSettingsService) {}
+
+    constructor(
+        public themeService: CustomizerSettingsService
+    ) {}
+
 }

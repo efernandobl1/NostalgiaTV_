@@ -4,21 +4,32 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace WebApi.HealthChecks;
 
-public sealed class SqlServerHealthCheck(NostalgiaTVContext context) : IHealthCheck
+/// <summary>
+/// Comprueba que la API pueda abrir una conexión real con SQL Server usando la
+/// misma cadena de conexión de la aplicación. Se usa como readiness probe.
+/// </summary>
+public sealed class SqlServerHealthCheck(IServiceScopeFactory scopeFactory) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(
-        HealthCheckContext healthCheckContext,
+        HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            return await context.Database.CanConnectAsync(cancellationToken)
-                ? HealthCheckResult.Healthy()
-                : HealthCheckResult.Unhealthy("SQL Server is unavailable.");
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<NostalgiaTVContext>();
+
+            return await dbContext.Database.CanConnectAsync(cancellationToken)
+                ? HealthCheckResult.Healthy("SQL Server disponible.")
+                : HealthCheckResult.Unhealthy("No fue posible conectar con SQL Server.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception exception)
         {
-            return HealthCheckResult.Unhealthy("SQL Server readiness check failed.", exception);
+            return HealthCheckResult.Unhealthy("No fue posible conectar con SQL Server.", exception);
         }
     }
 }

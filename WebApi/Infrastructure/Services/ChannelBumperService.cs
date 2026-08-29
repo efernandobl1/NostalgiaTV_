@@ -27,6 +27,7 @@ namespace Infrastructure.Services
         public async Task<List<ChannelBumperResponse>> GetByEraAsync(int eraId)
         {
             var bumpers = await _context.ChannelBumpers
+                .AsNoTracking()
                 .Where(b => b.ChannelEraId == eraId)
                 .OrderBy(b => b.Order)
                 .ToListAsync();
@@ -159,6 +160,7 @@ namespace Infrastructure.Services
         public async Task<ChannelBumperResponse?> GetRandomBumperAsync(int eraId)
         {
             var bumpers = await _context.ChannelBumpers
+                .AsNoTracking()
                 .Where(b => b.ChannelEraId == eraId && !string.IsNullOrEmpty(b.FilePath))
                 .ToListAsync();
 

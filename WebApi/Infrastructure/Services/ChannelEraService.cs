@@ -71,6 +71,7 @@ namespace Infrastructure.Services
         public async Task<ChannelEraResponse> GetByIdAsync(int eraId)
         {
             var era = await _context.ChannelEras
+                .AsNoTracking()
                 .Include(e => e.Series)
                 .Include(e => e.Bumpers)
                 .Include(e => e.Channel)

@@ -3,12 +3,12 @@
 
   <div class="filters-panel-header">
     <span>{{ isFullscreen() ? 'FILTROS FULLSCREEN' : 'FILTROS' }}</span>
-    <button class="filters-panel-close" (click)="close.emit()" aria-label="Cerrar filtros">✕</button>
+    <button class="filters-panel-close" (click)="close.emit()">✕</button>
   </div>
 
   <div class="filter-row filter-row--toggle">
     <span class="filter-label">Activar filtros</span>
-    <input type="checkbox" aria-label="Activar filtros" [checked]="filtersEnabled()"
+    <input type="checkbox" [checked]="filtersEnabled()"
       (change)="filtersEnabledChange.emit($any($event.target).checked)"
     />
   </div>
@@ -18,7 +18,7 @@
   <div class="filter-row">
     <span class="filter-label">Intensidad líneas</span>
     <div class="filter-control">
-      <input type="range" min="0" max="100" step="1" aria-label="Intensidad de líneas"
+      <input type="range" min="0" max="100" step="1"
         [value]="activeFilters().scanlineIntensity"
         (input)="updateFilter.emit({ key: 'scanlineIntensity', value: +$any($event.target).value })"
       />
@@ -29,7 +29,7 @@
   <div class="filter-row">
     <span class="filter-label">Densidad líneas</span>
     <div class="filter-control">
-      <input type="range" min="1" max="10" step="1" aria-label="Densidad de líneas"
+      <input type="range" min="1" max="10" step="1"
         [value]="activeFilters().scanlineDensity"
         (input)="updateFilter.emit({ key: 'scanlineDensity', value: +$any($event.target).value })"
       />
@@ -39,21 +39,21 @@
 
   <div class="filter-row">
     <span class="filter-label">Curvatura CRT</span>
-    <input type="checkbox" aria-label="Curvatura CRT" [checked]="activeFilters().crtCurvature"
+    <input type="checkbox" [checked]="activeFilters().crtCurvature"
       (change)="updateFilter.emit({ key: 'crtCurvature', value: $any($event.target).checked })"
     />
   </div>
 
   <div class="filter-row">
     <span class="filter-label">Viñeta</span>
-    <input type="checkbox" aria-label="Viñeta" [checked]="activeFilters().vignette"
+    <input type="checkbox" [checked]="activeFilters().vignette"
       (change)="updateFilter.emit({ key: 'vignette', value: $any($event.target).checked })"
     />
   </div>
 
   <div class="filter-row">
     <span class="filter-label">Scanline animado</span>
-    <input type="checkbox" aria-label="Scanline animado" [checked]="activeFilters().scanlineAnimation"
+    <input type="checkbox" [checked]="activeFilters().scanlineAnimation"
       (change)="updateFilter.emit({ key: 'scanlineAnimation', value: $any($event.target).checked })"
     />
   </div>

@@ -1,4 +1,4 @@
-import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 
@@ -7,7 +7,6 @@ import { MatIconModule } from '@angular/material/icon';
   standalone: true,
   imports: [CommonModule, MatIconModule],
   templateUrl: './retro-tv-controls.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './retro-tv-controls.component.scss',
 })
 export class RetroTvControlsComponent {

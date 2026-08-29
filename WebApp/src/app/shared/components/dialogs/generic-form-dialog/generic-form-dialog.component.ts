@@ -1,5 +1,5 @@
-import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, ValidatorFn } from '@angular/forms';
+import { Component, Inject } from '@angular/core';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidatorFn } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -18,6 +18,12 @@ export interface DialogField {
   type: 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'date' | 'datepicker' | 'file';
   validators?: ValidatorFn[];
   options?: { value: any; label: string }[];
+  // Para multiselect agrupado (p. ej. menús por sección). Si viene, tiene prioridad sobre options.
+  groups?: { label: string; options: { value: any; label: string }[] }[];
+  hint?: string;
+  // Multiselect "creable": permite crear una opción nueva al vuelo (p. ej. categorías).
+  creatable?: boolean;
+  onCreate?: (label: string) => import('rxjs').Observable<{ value: any; label: string }>;
 }
 
 export interface DialogConfig<T = any> {
@@ -30,6 +36,7 @@ export interface DialogConfig<T = any> {
   selector: 'app-generic-form-dialog',
   imports: [
     ReactiveFormsModule,
+    FormsModule,
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
@@ -40,9 +47,8 @@ export interface DialogConfig<T = any> {
     MatIconModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    SimpleFuComponent,
+    SimpleFuComponent
   ],
-  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './generic-form-dialog.component.html',
 })
 export class GenericFormDialogComponent {
@@ -73,6 +79,26 @@ export class GenericFormDialogComponent {
   fileSelectionMode: 'upload' | 'url' = 'upload';
   selectedFiles: Record<string, File> = {};
   fileUrls: Record<string, string> = {};
+
+  // Estado para el multiselect "creable" (crear opción al vuelo).
+  newOptionLabel: Record<string, string> = {};
+  creating: Record<string, boolean> = {};
+
+  createOption(field: DialogField) {
+    const label = (this.newOptionLabel[field.key] ?? '').trim();
+    if (!label || !field.onCreate || this.creating[field.key]) return;
+    this.creating[field.key] = true;
+    field.onCreate(label).subscribe({
+      next: (opt) => {
+        field.options = [...(field.options ?? []), opt];
+        const ctrl = this.form.get(field.key);
+        ctrl?.setValue([...(ctrl.value ?? []), opt.value]);
+        this.newOptionLabel[field.key] = '';
+        this.creating[field.key] = false;
+      },
+      error: () => { this.creating[field.key] = false; },
+    });
+  }
 
   onFileSelected(file: File, key: string) {
     this.selectedFiles = { ...this.selectedFiles, [key]: file };

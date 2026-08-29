@@ -1,4 +1,4 @@
-import { Component, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,14 +7,9 @@ import { SeriesResponse } from '../../../models/serie.model';
 import { TvSettings } from '../../../../core/services/tv-settings.service';
 
 interface EpisodeResponse {
-  id: number;
-  title: string;
-  filePath?: string;
-  season: number;
-  episodeNumber: number;
-  episodeTypeId: number;
-  episodeTypeName: string;
-  seriesId: number;
+  id: number; title: string; filePath?: string;
+  season: number; episodeNumber: number;
+  episodeTypeId: number; episodeTypeName: string; seriesId: number;
 }
 
 @Component({
@@ -22,7 +17,6 @@ interface EpisodeResponse {
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule],
   templateUrl: './retro-tv-remote-series.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './retro-tv-remote-series.component.scss',
 })
 export class RetroTvRemoteSeriesComponent {
@@ -55,7 +49,5 @@ export class RetroTvRemoteSeriesComponent {
   changeSeries = output<void>();
 
   isCollapsed = signal<boolean>(true);
-  toggleCollapse(): void {
-    this.isCollapsed.update((v) => !v);
-  }
+  toggleCollapse(): void { this.isCollapsed.update(v => !v); }
 }

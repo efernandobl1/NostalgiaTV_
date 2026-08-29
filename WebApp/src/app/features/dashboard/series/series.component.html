@@ -3,16 +3,17 @@
     [class.card-borderd-theme]="themeService.isCardBorder()"
     [class.rtl-enabled]="themeService.isRTLEnabled()">
 
-    <app-dashboard-page-header title="Series">
+    <div class="breadcrumb-card mb-25 d-md-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Series</h5>
         <button mat-flat-button color="primary" (click)="openForm()">
-            <mat-icon>add</mat-icon> New Series
+            <mat-icon>add</mat-icon> Nueva serie
         </button>
-    </app-dashboard-page-header>
+    </div>
 
     <mat-card class="daxa-card mb-25 border-radius bg-white border-none d-block">
         <mat-card-content>
             <div class="table-responsive">
-                <table mat-table [dataSource]="dataSource" class="w-full table-fixed [&_.mat-column-id]:w-[60px] [&_.mat-column-name]:w-[150px] [&_.mat-column-description]:w-[180px] [&_.mat-column-startDate]:w-[120px] [&_.mat-column-endDate]:w-[120px] [&_.mat-column-rating]:w-[80px] [&_.mat-column-categories]:w-[180px] [&_.mat-column-actions]:w-[120px]">
+                <table mat-table [dataSource]="dataSource">
 
                     <ng-container matColumnDef="id">
                         <th mat-header-cell *matHeaderCellDef>#</th>
@@ -20,25 +21,25 @@
                     </ng-container>
 
                     <ng-container matColumnDef="name">
-                        <th mat-header-cell *matHeaderCellDef>Name</th>
+                        <th mat-header-cell *matHeaderCellDef>Nombre</th>
                         <td mat-cell *matCellDef="let s">{{ s.name }}</td>
                     </ng-container>
 
                     <ng-container matColumnDef="description">
-                        <th mat-header-cell *matHeaderCellDef>Description</th>
+                        <th mat-header-cell *matHeaderCellDef>Descripción</th>
                         <td mat-cell *matCellDef="let s">
-                            <span class="block w-full truncate text-xs text-[#888]" [title]="s.description ?? ''">{{ s.description ?? '—' }}</span>
+                            <span class="truncated-cell" [title]="s.description ?? ''">{{ s.description ?? '—' }}</span>
                         </td>
                     </ng-container>
 
                     <ng-container matColumnDef="startDate">
-                        <th mat-header-cell *matHeaderCellDef>Start Date</th>
-                        <td mat-cell *matCellDef="let s">{{ s.startDate | date:'mediumDate' }}</td>
+                        <th mat-header-cell *matHeaderCellDef>Inicio</th>
+                        <td mat-cell *matCellDef="let s">{{ s.startDate | date:'dd/MM/yyyy' }}</td>
                     </ng-container>
 
                     <ng-container matColumnDef="endDate">
-                        <th mat-header-cell *matHeaderCellDef>End Date</th>
-                        <td mat-cell *matCellDef="let s">{{ s.endDate ? (s.endDate | date:'mediumDate') : '—' }}</td>
+                        <th mat-header-cell *matHeaderCellDef>Fin</th>
+                        <td mat-cell *matCellDef="let s">{{ s.endDate ? (s.endDate | date:'dd/MM/yyyy') : '—' }}</td>
                     </ng-container>
 
                     <ng-container matColumnDef="rating">
@@ -47,14 +48,14 @@
                     </ng-container>
 
                     <ng-container matColumnDef="categories">
-                        <th mat-header-cell *matHeaderCellDef>Categories</th>
+                        <th mat-header-cell *matHeaderCellDef>Categorías</th>
                         <td mat-cell *matCellDef="let s">
-                            <span class="block w-full truncate text-xs text-[#888]" [title]="getCategoryNames(s.categoryIds)">{{ getCategoryNames(s.categoryIds) }}</span>
+                            <span class="truncated-cell" [title]="getCategoryNames(s.categoryIds)">{{ getCategoryNames(s.categoryIds) }}</span>
                         </td>
                     </ng-container>
 
                     <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Actions</th>
+                        <th mat-header-cell *matHeaderCellDef>Acciones</th>
                         <td mat-cell *matCellDef="let s">
                             <button mat-icon-button (click)="openForm(s)"><mat-icon>edit</mat-icon></button>
                             <button mat-icon-button color="primary" (click)="assignCategories(s)"><mat-icon>category</mat-icon></button>
@@ -65,7 +66,7 @@
                     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
                     <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
                     <tr class="mat-row" *matNoDataRow>
-                        <td class="mat-cell" colspan="8">No series found.</td>
+                        <td class="mat-cell" colspan="8">No hay series.</td>
                     </tr>
                 </table>
             </div>

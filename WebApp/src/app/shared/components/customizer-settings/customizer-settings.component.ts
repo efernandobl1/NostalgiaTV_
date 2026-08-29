@@ -1,71 +1,73 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component } from '@angular/core';
 import { CustomizerSettingsService } from './customizer-settings.service';
 import { NgClass } from '@angular/common';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NgScrollbarModule } from 'ngx-scrollbar';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
-  selector: 'app-customizer-settings',
-  imports: [NgClass, MatDividerModule, MatIconModule, MatButtonModule, NgScrollbarModule],
-  templateUrl: './customizer-settings.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
-  styleUrl: './customizer-settings.component.scss',
+    selector: 'app-customizer-settings',
+    imports: [NgClass, MatDividerModule, MatIconModule, MatButtonModule, NgScrollbarModule],
+    templateUrl: './customizer-settings.component.html',
+    styleUrl: './customizer-settings.component.scss'
 })
 export class CustomizerSettingsComponent {
-  // isToggled
-  isToggled = false;
 
-  constructor(public themeService: CustomizerSettingsService) {
-    this.themeService.isToggled$.pipe(takeUntilDestroyed()).subscribe((isToggled) => {
-      this.isToggled = isToggled;
-    });
-  }
+    // isToggled
+    isToggled = false;
+    
+    constructor(
+        public themeService: CustomizerSettingsService
+    ) {
+        this.themeService.isToggled$.subscribe(isToggled => {
+            this.isToggled = isToggled;
+        });
+    }
 
-  // Dark Mode
-  toggleTheme() {
-    this.themeService.toggleTheme();
-  }
+    // Dark Mode
+    toggleTheme() {
+        this.themeService.toggleTheme();
+    }
 
-  // Sidebar Dark
-  toggleSidebarTheme() {
-    this.themeService.toggleSidebarTheme();
-  }
+    // Sidebar Dark
+    toggleSidebarTheme() {
+        this.themeService.toggleSidebarTheme();
+    }
 
-  // Right Sidebar
-  toggleRightSidebarTheme() {
-    this.themeService.toggleRightSidebarTheme();
-  }
+    // Right Sidebar
+    toggleRightSidebarTheme() {
+        this.themeService.toggleRightSidebarTheme();
+    }
 
-  // Hide Sidebar
-  toggleHideSidebarTheme() {
-    this.themeService.toggleHideSidebarTheme();
-  }
+    // Hide Sidebar
+    toggleHideSidebarTheme() {
+        this.themeService.toggleHideSidebarTheme();
+    }
 
-  // Header Dark Mode
-  toggleHeaderTheme() {
-    this.themeService.toggleHeaderTheme();
-  }
+    // Header Dark Mode
+    toggleHeaderTheme() {
+        this.themeService.toggleHeaderTheme();
+    }
 
-  // Card Border
-  toggleCardBorderTheme() {
-    this.themeService.toggleCardBorderTheme();
-  }
+    // Card Border
+    toggleCardBorderTheme() {
+        this.themeService.toggleCardBorderTheme();
+    }
 
-  // Card Border Radius
-  toggleCardBorderRadiusTheme() {
-    this.themeService.toggleCardBorderRadiusTheme();
-  }
+    // Card Border Radius
+    toggleCardBorderRadiusTheme() {
+        this.themeService.toggleCardBorderRadiusTheme();
+    }
 
-  // RTL Mode
-  toggleRTLEnabledTheme() {
-    this.themeService.toggleRTLEnabledTheme();
-  }
+    // RTL Mode
+    toggleRTLEnabledTheme() {
+        this.themeService.toggleRTLEnabledTheme();
+    }
 
-  // Settings Button Toggle
-  toggle() {
-    this.themeService.toggle();
-  }
+    // Settings Button Toggle
+    toggle() {
+        this.themeService.toggle();
+    }
+
 }

@@ -20,7 +20,7 @@ namespace Infrastructure
             GlobalFFOptions.Configure(opts => opts.BinaryFolder = configuration["FFmpeg:BinaryFolder"]!);
 
             services.AddDbContext<NostalgiaTVContext>(options => options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
-            services.AddSignalRCore();
+            // SignalR is registered in Program.cs via AddSignalR() (which already includes the core services).
 
             //Configurations
             services.Configure<FileUploadSettings>(configuration.GetSection("FileUpload"));

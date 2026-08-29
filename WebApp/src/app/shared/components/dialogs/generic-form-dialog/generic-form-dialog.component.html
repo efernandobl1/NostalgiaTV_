@@ -5,7 +5,7 @@
 >
   <mat-card-header>
     <mat-card-title>
-      <h5 class="mb-0">{{ isEdit ? 'Edit' : 'New' }} {{ config.title }}</h5>
+      <h5 class="mb-0">{{ isEdit ? 'Editar' : 'Crear' }} {{ config.title }}</h5>
     </mat-card-title>
   </mat-card-header>
   <mat-card-content style="max-height: 65vh; overflow-y: auto;">
@@ -21,7 +21,7 @@
               <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
               <mat-datepicker #picker></mat-datepicker>
               @if (form.get(field.key)!.invalid && form.get(field.key)!.touched) {
-                <mat-error>{{ field.label }} is required.</mat-error>
+                <mat-error>{{ field.label }}: obligatorio.</mat-error>
               }
             </mat-form-field>
           } @else if (field.type === 'file') {
@@ -35,7 +35,7 @@
                 placeholder="https://..."
               />
               @if (form.get(field.key)!.invalid && form.get(field.key)!.touched) {
-                <mat-error>{{ field.label }} is required.</mat-error>
+                <mat-error>{{ field.label }}: obligatorio.</mat-error>
               }
             </mat-form-field>
             <app-simple-fu (fileSelected)="onFileSelected($event, field.key)" />
@@ -71,8 +71,18 @@
                 }
                 @case ('multiselect') {
                   <mat-select [formControlName]="field.key" multiple>
-                    @for (opt of field.options; track opt.value) {
-                      <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                    @if (field.groups) {
+                      @for (g of field.groups; track g.label) {
+                        <mat-optgroup [label]="g.label">
+                          @for (opt of g.options; track opt.value) {
+                            <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                          }
+                        </mat-optgroup>
+                      }
+                    } @else {
+                      @for (opt of field.options; track opt.value) {
+                        <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+                      }
                     }
                   </mat-select>
                 }
@@ -84,21 +94,43 @@
                 }
               }
             </mat-form-field>
+            @if (field.type === 'multiselect' && field.creatable) {
+              <div class="d-flex align-items-center" style="gap: 8px; margin: -6px 0 12px;">
+                <mat-form-field class="mb-0" style="flex: 1;">
+                  <mat-label>Crear nueva</mat-label>
+                  <input
+                    matInput
+                    [(ngModel)]="newOptionLabel[field.key]"
+                    [ngModelOptions]="{ standalone: true }"
+                    (keydown.enter)="$event.preventDefault(); createOption(field)"
+                    placeholder="Escribí un nombre y presioná Crear"
+                  />
+                </mat-form-field>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  [disabled]="creating[field.key] || !newOptionLabel[field.key]"
+                  (click)="createOption(field)"
+                >
+                  <mat-icon>add</mat-icon> Crear
+                </button>
+              </div>
+            }
             @if (form.get(field.key)!.invalid && form.get(field.key)!.touched) {
               @if (form.get(field.key)!.hasError('required')) {
                 <span class="text-danger" style="font-size: 12px"
-                  >{{ field.label }} is required.</span
+                  >{{ field.label }}: obligatorio.</span
                 >
               }
               @if (form.get(field.key)!.hasError('minlength')) {
                 <span class="text-danger" style="font-size: 12px"
-                  >{{ field.label }} must be at least
+                  >{{ field.label }}: mínimo
                   {{ form.get(field.key)!.getError('minlength').requiredLength }} characters.</span
                 >
               }
               @if (form.get(field.key)!.hasError('maxlength')) {
                 <span class="text-danger" style="font-size: 12px"
-                  >{{ field.label }} must be at most
+                  >{{ field.label }}: máximo
                   {{ form.get(field.key)!.getError('maxlength').requiredLength }} characters.</span
                 >
               }
@@ -109,9 +141,9 @@
     </form>
   </mat-card-content>
   <mat-card-actions align="end">
-    <button mat-button (click)="cancel()">Cancel</button>
+    <button mat-button (click)="cancel()">Cancelar</button>
     <button mat-flat-button color="primary" (click)="submit()">
-      {{ isEdit ? 'Save' : 'Create' }}
+      {{ isEdit ? 'Guardar' : 'Crear' }}
     </button>
   </mat-card-actions>
 </mat-card>

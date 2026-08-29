@@ -2,13 +2,13 @@
   <div class="retro-controls" [class.visible]="visible()">
 
     <button class="rc-btn" (click)="playPause.emit()"
-      [tabindex]="isFullscreen() ? 0 : -1" aria-label="Reproducir o pausar">
+      [tabindex]="isFullscreen() ? 1 : -1" aria-label="Play/Pausa">
       <mat-icon>{{ isPaused() ? 'play_arrow' : 'pause' }}</mat-icon>
     </button>
 
     <div class="rc-volume-wrap">
       <button class="rc-btn" (click)="toggleMute.emit()"
-        [tabindex]="isFullscreen() ? 0 : -1" aria-label="Silenciar o activar volumen">
+        [tabindex]="isFullscreen() ? 1 : -1" aria-label="Volumen">
         <mat-icon>{{
           isMuted() || volumeLevel() === 0 ? 'volume_off' :
           volumeLevel() < 0.5 ? 'volume_down' : 'volume_up'
@@ -18,7 +18,7 @@
         <input type="range" min="0" max="1" step="0.05"
           [value]="isMuted() ? 0 : volumeLevel()"
           (input)="setVolume.emit(+$any($event.target).value)"
-          [tabindex]="isFullscreen() ? 0 : -1"
+          [tabindex]="isFullscreen() ? 1 : -1"
           aria-label="Nivel de volumen"
         />
       </div>
@@ -29,7 +29,7 @@
         role="slider"
         [attr.aria-valuenow]="progressPercent()"
         aria-valuemin="0" aria-valuemax="100"
-        [tabindex]="isFullscreen() ? 0 : -1"
+        [tabindex]="isFullscreen() ? 1 : -1"
         (keydown)="progressKeydown.emit($event)"
         aria-label="Progreso del video"
       >
@@ -45,7 +45,7 @@
     @if (audioTracks().length > 1) {
       <select class="rc-select"
         (change)="setAudioTrack.emit(+$any($event.target).value)"
-        [tabindex]="isFullscreen() ? 0 : -1"
+        [tabindex]="isFullscreen() ? 1 : -1"
         aria-label="Pista de audio"
       >
         @for (track of audioTracks(); track track; let i = $index) {
@@ -57,7 +57,7 @@
     }
 
     <button class="rc-btn" (click)="toggleFullscreen.emit()"
-      [tabindex]="isFullscreen() ? 0 : -1" aria-label="Alternar pantalla completa">
+      [tabindex]="isFullscreen() ? 1 : -1" aria-label="Pantalla completa">
       <mat-icon>{{ isFullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
     </button>
 

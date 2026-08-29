@@ -1,23 +1,26 @@
 import { Routes } from '@angular/router';
-import { provideNativeDateAdapter } from '@angular/material/core';
+import { PublicLayoutComponent } from './layouts/public-layout/public-layout.component';
+import { DashboardLayoutComponent } from './layouts/dashboard-layout/dashboard-layout.component';
+import { NotFoundComponent } from './common/not-found/not-found.component';
+import { InternalErrorComponent } from './common/internal-error/internal-error.component';
+import { SignInComponent } from './features/dashboard/authentication/sign-in/sign-in.component';
 import { authGuard } from './core/guards/auth.guard';
 import { menuGuard } from './core/guards/menu.guard';
 
 export const routes: Routes = [
     {
         path: '',
-        loadComponent: () => import('./layouts/public-layout/public-layout.component').then(m => m.PublicLayoutComponent),
+        component: PublicLayoutComponent,
         children: [
             { path: '', loadComponent: () => import('./features/public/home/home.component').then(m => m.HomeComponent) }
         ]
     },
-    { path: 'dashboard/login', loadComponent: () => import('./features/dashboard/authentication/sign-in/sign-in.component').then(m => m.SignInComponent) },
+    { path: 'dashboard/login', component: SignInComponent },
     { path: 'dashboard/logout', loadComponent: () => import('./features/dashboard/authentication/logout/logout.component').then(m => m.LogoutComponent) },
     {
       path: 'dashboard',
-      loadComponent: () => import('./layouts/dashboard-layout/dashboard-layout.component').then(m => m.DashboardLayoutComponent),
+      component: DashboardLayoutComponent,
       canActivate: [authGuard],
-      providers: [provideNativeDateAdapter()],
       children: [
           { path: '', redirectTo: 'series', pathMatch: 'full' },
           { path: 'series', canActivate: [menuGuard], loadComponent: () => import('./features/dashboard/series/series.component').then(m => m.SeriesComponent) },
@@ -30,6 +33,6 @@ export const routes: Routes = [
           { path: 'channel-bumpers', canActivate: [menuGuard], loadComponent: () => import('./features/dashboard/channel-bumpers/channel-bumpers.component').then(m => m.ChannelBumpersComponent) },
       ]
     },
-    { path: 'internal-error', loadComponent: () => import('./common/internal-error/internal-error.component').then(m => m.InternalErrorComponent) },
-    { path: '**', loadComponent: () => import('./common/not-found/not-found.component').then(m => m.NotFoundComponent) }
+    { path: 'internal-error', component: InternalErrorComponent },
+    { path: '**', component: NotFoundComponent }
 ];

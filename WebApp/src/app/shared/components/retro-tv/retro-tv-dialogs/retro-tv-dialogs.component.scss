@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
 .dialog-backdrop {
   position: fixed;
   inset: 0;
@@ -6,11 +8,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding:
-    max(1rem, env(safe-area-inset-top))
-    max(1rem, env(safe-area-inset-right))
-    max(1rem, env(safe-area-inset-bottom))
-    max(1rem, env(safe-area-inset-left));
 }
 
 .dialog-wrapper {
@@ -24,7 +21,7 @@
   border: 2px solid #6bcf7f;
   border-radius: 12px;
   padding: 1.5rem;
-  width: min(90vw, 480px);
+  width: 90%;
   max-width: 480px;
   max-height: 80vh;
   display: flex;
@@ -58,21 +55,12 @@
   align-items: center;
   justify-content: space-between;
 
-  gap: 0.75rem;
-
-  .mat-mdc-icon-button {
-    width: 44px;
-    height: 44px;
-    color: #6bcf7f;
-  }
+  .mat-mdc-icon-button { color: #6bcf7f; }
 }
 
 .dialog-title {
   font-family: 'VT323', monospace;
-  min-width: 0;
-  font-size: clamp(1.25rem, 4vw, 1.5rem);
-  line-height: 1.2;
-  overflow-wrap: anywhere;
+  font-size: 1.4rem;
   color: #6bcf7f;
   text-shadow: 0 0 10px rgba(107, 207, 127, 0.5);
   letter-spacing: 2px;
@@ -91,9 +79,8 @@
   border-radius: 6px;
   color: #fff;
   font-family: 'VT323', monospace;
-  min-height: 44px;
   font-size: 1rem;
-  padding: 0.55rem 0.7rem;
+  padding: 0.4rem 0.6rem;
   width: 100%;
   outline: none;
 
@@ -125,7 +112,6 @@
   border: 1px solid rgba(107, 207, 127, 0.15);
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 64px;
 
   &:hover { border-color: #6bcf7f; background: rgba(107, 207, 127, 0.08); }
 
@@ -216,9 +202,7 @@
   border-bottom: 1px solid rgba(107, 207, 127, 0.1);
   cursor: pointer;
   font-family: 'VT323', monospace;
-  min-height: 52px;
-  font-size: 1.125rem;
-  line-height: 1.3;
+  font-size: 1rem;
   color: #fff;
 
   input[type='checkbox'] {
@@ -239,10 +223,8 @@
       border: 1px solid rgba(255, 107, 107, 0.4);
       border-radius: 4px;
       color: #ff6b6b;
-      min-width: 44px;
-      min-height: 44px;
-      font-size: 1.25rem;
-      padding: 0.25rem 0.6rem;
+      font-size: 1rem;
+      padding: 0.1rem 0.5rem;
       cursor: pointer;
 
       &:hover { background: rgba(255, 107, 107, 0.15); }
@@ -326,45 +308,8 @@
 
 .schedule-meta {
   font-family: 'VT323', monospace;
-  font-size: 1rem;
+  font-size: 0.85rem;
   color: #6bcf7f;
-}
-
-@media (max-width: 768px) {
-  .dialog-backdrop {
-    align-items: flex-end;
-    padding-inline: max(0.75rem, env(safe-area-inset-left));
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
-  }
-
-  .dialog-wrapper,
-  .dialog-panel {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .dialog-panel {
-    max-height: calc(100dvh - max(1.5rem, env(safe-area-inset-top)));
-    padding: 1rem;
-  }
-
-  .dialog-panel--schedule {
-    max-width: none;
-    margin-left: 0;
-  }
-
-  .schedule-external-indicator { display: none; }
-
-  .schedule-item {
-    align-items: flex-start;
-    padding: 0.75rem 0.6rem;
-  }
-
-  .schedule-series,
-  .schedule-episode {
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
 }
 
 .schedule-episode--bumper {

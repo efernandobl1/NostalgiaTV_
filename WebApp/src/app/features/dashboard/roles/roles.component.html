@@ -3,16 +3,17 @@
     [class.card-borderd-theme]="themeService.isCardBorder()"
     [class.rtl-enabled]="themeService.isRTLEnabled()">
 
-    <app-dashboard-page-header title="Roles">
+    <div class="breadcrumb-card mb-25 d-md-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Roles</h5>
         <button mat-flat-button color="primary" (click)="openForm()">
-            <mat-icon>add</mat-icon> New Role
+            <mat-icon>add</mat-icon> Nuevo rol
         </button>
-    </app-dashboard-page-header>
+    </div>
 
     <mat-card class="daxa-card mb-25 border-radius bg-white border-none d-block">
         <mat-card-content>
             <div class="table-responsive">
-                <table mat-table [dataSource]="dataSource" class="w-full table-fixed [&_.mat-column-id]:w-[60px] [&_.mat-column-name]:w-[150px] [&_.mat-column-description]:w-[300px] [&_.mat-column-actions]:w-[100px]">
+                <table mat-table [dataSource]="dataSource">
 
                     <ng-container matColumnDef="id">
                         <th mat-header-cell *matHeaderCellDef>#</th>
@@ -20,19 +21,19 @@
                     </ng-container>
 
                     <ng-container matColumnDef="name">
-                        <th mat-header-cell *matHeaderCellDef>Name</th>
+                        <th mat-header-cell *matHeaderCellDef>Nombre</th>
                         <td mat-cell *matCellDef="let r">{{ r.name }}</td>
                     </ng-container>
 
                     <ng-container matColumnDef="description">
-                        <th mat-header-cell *matHeaderCellDef>Description</th>
+                        <th mat-header-cell *matHeaderCellDef>Descripción</th>
                         <td mat-cell *matCellDef="let r">
-                            <span class="block w-full truncate text-xs text-[#888]" [title]="r.description ?? ''">{{ r.description ?? '—' }}</span>
+                            <span class="truncated-cell" [title]="r.description ?? ''">{{ r.description ?? '—' }}</span>
                         </td>
                     </ng-container>
 
                     <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Actions</th>
+                        <th mat-header-cell *matHeaderCellDef>Acciones</th>
                         <td mat-cell *matCellDef="let r">
                             <button mat-icon-button (click)="openForm(r)"><mat-icon>edit</mat-icon></button>
                             <button mat-icon-button color="warn" (click)="delete(r.id)"><mat-icon>delete</mat-icon></button>
@@ -42,7 +43,7 @@
                     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
                     <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
                     <tr class="mat-row" *matNoDataRow>
-                        <td class="mat-cell" colspan="4">No roles found.</td>
+                        <td class="mat-cell" colspan="4">No hay roles.</td>
                     </tr>
                 </table>
             </div>

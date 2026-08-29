@@ -79,6 +79,52 @@ button {
     margin-bottom: 25px !important;
 }
 
+// Utilities CSS
+@import "./utilities";
+
+// UI Kit CSS
+@import "./ui-kit";
+
+// Typography CSS
+@import "./typography";
+
+// RTL CSS
+@import "./rtl";
+
+// Dark CSS
+@import "./dark";
+
+// Retro identity layer (se aplica sobre el modo oscuro)
+@import "./retro";
+
+// ─── Global dashboard table & filter styles ───────────────────────────────────
+
+.filters-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+
+    mat-form-field {
+        margin-bottom: 0;
+        min-width: 200px;
+    }
+}
+
+.truncated-cell {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    // Accesibilidad: 0.75rem/#888 (≈3.5:1) fallaba WCAG AA. Se sube tamaño y contraste.
+    font-size: 0.8125rem;
+    color: #4b5563;
+    width: 100%;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 /* Max width 767px */
 @media only screen and (max-width : 767px) {
     body { font-size: 14px; }
@@ -107,10 +153,23 @@ button {
 @media only screen and (min-width: 1600px) {}
 
 html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+// Antes forzaba Roboto y pisaba la tipografía Outfit del tema; se conserva Outfit.
+body { margin: 0; }
 
+// Accesibilidad: foco visible de alto contraste en todo el sitio.
 :focus-visible {
   outline: 2px solid #ffd93d !important;
   outline-offset: 2px;
   box-shadow: 0 0 8px rgba(255, 217, 61, 0.6) !important;
+}
+
+// Accesibilidad: respetar la preferencia de movimiento reducido del sistema.
+// No cambia el estilo visual; solo desactiva animaciones para quien lo pide.
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
