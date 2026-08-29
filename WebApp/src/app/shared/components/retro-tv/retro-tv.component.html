@@ -49,13 +49,13 @@
 
         @if (mode() === 'channels' && currentChannel()?.logoPath) {
           <div class="corner-logo" [class.visible]="showOverlay()" [class.corner-logo--fs]="isFullscreen()">
-            <img [src]="apiUrl + currentChannel()!.logoPath" class="corner-logo-img" />
+            <img [src]="apiUrl + currentChannel()!.logoPath" [alt]="'Logo del canal ' + currentChannel()!.name" class="corner-logo-img" />
           </div>
         }
 
         @if (mode() === 'series' && selectedSeries()?.logoPath) {
           <div class="corner-logo" [class.visible]="showOverlay()" [class.corner-logo--fs]="isFullscreen()">
-            <img [src]="apiUrl + selectedSeries()!.logoPath" class="corner-logo-img" />
+            <img [src]="apiUrl + selectedSeries()!.logoPath" [alt]="'Logo de la serie ' + selectedSeries()!.name" class="corner-logo-img" />
           </div>
         }
 

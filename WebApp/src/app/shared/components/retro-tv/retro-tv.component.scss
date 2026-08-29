@@ -217,14 +217,19 @@
 
 .overlay-series {
   font-family: 'Press Start 2P', cursive;
-  font-size: clamp(0.2rem, calc(0.55rem * var(--screen-scale, 1)), 1rem);
+  // Mínimo legible (antes 0.2rem ≈ 3px, ilegible en pantallas chicas).
+  font-size: clamp(0.6rem, calc(0.6rem * var(--screen-scale, 1)), 1rem);
   color: #ff6b6b;
+  // El rojo sobre fondo oscuro subía apenas de contraste; se refuerza la sombra.
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .overlay-episode {
   font-family: 'VT323', monospace;
-  font-size: clamp(0.3rem, calc(0.9rem * var(--screen-scale, 1)), 1.5rem);
-  color: #6bcf7f;
+  // Mínimo legible (antes 0.3rem). VT323 es condensada, admite algo más de tamaño.
+  font-size: clamp(0.85rem, calc(0.95rem * var(--screen-scale, 1)), 1.6rem);
+  color: #8ee89f;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .ios-play-btn {
