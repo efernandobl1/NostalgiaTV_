@@ -29,6 +29,10 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
           format: table
+          # WebApp = toolchain de build de Angular (devDependencies). Sus paquetes
+          # npm NO llegan a la imagen final (solo nginx + estáticos ya compilados),
+          # así que sus CVEs son de build, no de runtime. El backend .NET sí se escanea.
+          skip-dirs: WebApp
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
