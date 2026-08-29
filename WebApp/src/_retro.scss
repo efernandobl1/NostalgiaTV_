@@ -73,11 +73,34 @@ body.dark-theme {
         }
     }
 
-    // ── Cards ────────────────────────────────────────────────────────────────
+    // ── Contenido: paneles oscuros con texto claro (garantiza visibilidad) ─────
     .daxa-card,
-    .mat-mdc-card {
+    .mat-mdc-card,
+    .header-area,
+    .breadcrumb-card {
+        background: #191b2e !important;
+        color: #e6e8f2 !important;
         border: 1px solid rgba(139, 125, 255, 0.22) !important;
         box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45) !important;
+    }
+
+    // Tablas: fondo transparente sobre la card, texto claro.
+    .mat-mdc-table,
+    .mat-mdc-row,
+    .mat-mdc-header-row,
+    .mat-mdc-cell,
+    .mat-mdc-header-cell,
+    .mat-mdc-paginator {
+        background-color: transparent !important;
+        color: #e6e8f2 !important;
+    }
+    .mat-mdc-header-cell { color: #aab0c6 !important; }
+    .truncated-cell { color: #c3c8db !important; }
+
+    // Texto general del contenido y controles de paginación legibles.
+    .main-content-area, .breadcrumb-card {
+        color: #e6e8f2;
+        .mat-mdc-icon-button, .mat-mdc-select-value, .mat-mdc-paginator { color: #e6e8f2 !important; }
     }
 
     // ── Encabezado de página ("Series", "Roles", ...) ──────────────────────────

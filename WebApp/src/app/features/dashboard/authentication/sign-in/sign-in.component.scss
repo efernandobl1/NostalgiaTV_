@@ -72,6 +72,15 @@
             .error { font-size: 13px; margin-top: 6px; }
         }
 
+        // El texto que se escribe debe ser claro sobre la tarjeta oscura.
+        input.mat-mdc-input-element,
+        .mat-mdc-input-element {
+            color: #f1f3f9 !important;
+            caret-color: var(--retro-green, #8ee89f);
+            -webkit-text-fill-color: #f1f3f9 !important;
+        }
+        .mat-mdc-input-element::placeholder { color: rgba(241, 243, 249, 0.5) !important; }
+
         // Botón con acento retro (violeta → verde neón sutil en hover).
         .btn.mat-mdc-button {
             border: 0;
