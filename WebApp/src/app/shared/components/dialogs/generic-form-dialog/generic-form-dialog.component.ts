@@ -11,7 +11,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { SimpleFuComponent } from '../../simple-fu/simple-fu.component';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
-import { JsonPipe } from '@angular/common';
 
 export interface DialogField {
   key: string;
@@ -41,8 +40,7 @@ export interface DialogConfig<T = any> {
     MatIconModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    SimpleFuComponent,
-    JsonPipe
+    SimpleFuComponent
   ],
   templateUrl: './generic-form-dialog.component.html',
 })
@@ -63,8 +61,6 @@ export class GenericFormDialogComponent {
     config.fields.forEach((field) => {
       const initialValue = config.data?.[field.key] ?? (field.type === 'multiselect' ? [] : '');
       controls[field.key] = [initialValue, field.validators ?? []];
-      console.log(field.key, 'validators:', field.validators);
-
       // Load existing preview for file fields on edit
       if (field.type === 'file' && config.data?.[field.key]) {
         this.previewUrls[field.key] = config.data[field.key];
@@ -78,7 +74,6 @@ export class GenericFormDialogComponent {
   fileUrls: Record<string, string> = {};
 
   onFileSelected(file: File, key: string) {
-    console.log('file received in dialog:', file);
     this.selectedFiles = { ...this.selectedFiles, [key]: file };
     const reader = new FileReader();
     reader.onload = (e) =>

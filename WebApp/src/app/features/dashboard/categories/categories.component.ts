@@ -45,8 +45,8 @@ export class CategoriesComponent implements OnInit, AfterViewInit {
 
     openForm(category?: CategoryResponse) {
         const config: DialogConfig = {
-            title: 'Category',
-            fields: [{ key: 'name', label: 'Name', type: 'text', validators: [Validators.required, Validators.maxLength(100)] }],
+            title: 'categoría',
+            fields: [{ key: 'name', label: 'Nombre', type: 'text', validators: [Validators.required, Validators.maxLength(100)] }],
             data: category ?? null
         };
 

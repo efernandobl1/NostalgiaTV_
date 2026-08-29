@@ -88,17 +88,17 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
         if (!channelId) { this.showError('Select a channel first'); return; }
 
         const config: DialogConfig = {
-            title: era ? 'Edit Era' : 'New Era',
+            title: 'era',
             fields: [
-                { key: 'name', label: 'Name', type: 'text', validators: [Validators.required] },
-                { key: 'description', label: 'Description', type: 'textarea' },
+                { key: 'name', label: 'Nombre', type: 'text', validators: [Validators.required] },
+                { key: 'description', label: 'Descripción', type: 'textarea' },
                 {
                     key: 'startDate',
-                    label: 'Start Date',
+                    label: 'Fecha de inicio',
                     type: 'datepicker',
                     validators: [Validators.required],
                 },
-                { key: 'endDate', label: 'End Date', type: 'datepicker' },
+                { key: 'endDate', label: 'Fecha de fin', type: 'datepicker' },
             ],
             data: era ? { ...era } : null,
         };
@@ -133,7 +133,7 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
 
     assignSeries(era: ChannelEraResponse) {
         const config: DialogConfig = {
-            title: `Assign Series — ${era.name}`,
+            title: `series de ${era.name}`,
             fields: [
                 {
                     key: 'seriesIds',

@@ -66,16 +66,16 @@ export class SeriesComponent implements OnInit, AfterViewInit {
 
     openForm(series?: SeriesResponse) {
         const config: DialogConfig = {
-            title: 'Series',
+            title: 'serie',
             fields: [
-                { key: 'name', label: 'Name', type: 'text', validators: [Validators.required, Validators.maxLength(100)] },
-                { key: 'description', label: 'Description', type: 'textarea' },
-                { key: 'history', label: 'History', type: 'textarea' },
+                { key: 'name', label: 'Nombre', type: 'text', validators: [Validators.required, Validators.maxLength(100)] },
+                { key: 'description', label: 'Descripción', type: 'textarea' },
+                { key: 'history', label: 'Historia', type: 'textarea' },
                 { key: 'logo', label: 'Logo', type: 'file' },
-                { key: 'startDate', label: 'Start Date', type: 'datepicker', validators: [Validators.required] },
-                { key: 'endDate', label: 'End Date', type: 'datepicker' },
-                { key: 'rating', label: 'Rating', type: 'number' },
-                { key: 'seasons', label: 'Seasons', type: 'number', validators: [Validators.required, Validators.min(1)] },
+                { key: 'startDate', label: 'Fecha de inicio', type: 'datepicker', validators: [Validators.required] },
+                { key: 'endDate', label: 'Fecha de fin', type: 'datepicker' },
+                { key: 'rating', label: 'Calificación', type: 'number' },
+                { key: 'seasons', label: 'Temporadas', type: 'number', validators: [Validators.required, Validators.min(1)] },
             ],
             data: series ?? null,
         };
@@ -119,7 +119,7 @@ export class SeriesComponent implements OnInit, AfterViewInit {
 
     assignCategories(series: SeriesResponse) {
         const config: DialogConfig = {
-            title: 'Assign Categories',
+            title: 'categorías de la serie',
             fields: [{ key: 'categoryIds', label: 'Categories', type: 'multiselect', options: this.categories().map(c => ({ value: c.id, label: c.name })) }],
             data: { categoryIds: series.categoryIds },
         };

@@ -158,18 +158,18 @@ export class ChannelsComponent implements OnInit, AfterViewInit {
 
   openForm(channel?: ChannelResponse) {
     const config: DialogConfig = {
-      title: 'Channel',
+      title: 'canal',
       fields: [
-        { key: 'name', label: 'Name', type: 'text', validators: [Validators.required] },
+        { key: 'name', label: 'Nombre', type: 'text', validators: [Validators.required] },
         { key: 'logo', label: 'Logo', type: 'file' },
-        { key: 'history', label: 'History', type: 'textarea' },
+        { key: 'history', label: 'Historia', type: 'textarea' },
         {
           key: 'startDate',
-          label: 'Start Date',
+          label: 'Fecha de inicio',
           type: 'datepicker',
           validators: [Validators.required],
         },
-        { key: 'endDate', label: 'End Date', type: 'datepicker' },
+        { key: 'endDate', label: 'Fecha de fin', type: 'datepicker' },
       ],
       data: channel ? { ...channel, logo: environment.apiUrl + channel.logoPath } : null,
     };
@@ -227,7 +227,7 @@ export class ChannelsComponent implements OnInit, AfterViewInit {
           return true;
         });
         const config: DialogConfig = {
-          title: `Schedule — ${channel.name}`,
+          title: `Programación — ${channel.name}`,
           fields: [],
           data: { entries: unique },
         };

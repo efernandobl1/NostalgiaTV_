@@ -38,24 +38,24 @@
                     </ng-container>
 
                     <ng-container matColumnDef="name">
-                        <th mat-header-cell *matHeaderCellDef>Name</th>
+                        <th mat-header-cell *matHeaderCellDef>Nombre</th>
                         <td mat-cell *matCellDef="let e">{{ e.name }}</td>
                     </ng-container>
 
                     <ng-container matColumnDef="description">
-                        <th mat-header-cell *matHeaderCellDef>Description</th>
+                        <th mat-header-cell *matHeaderCellDef>Descripción</th>
                         <td mat-cell *matCellDef="let e">
                             <span class="truncated-cell" [title]="e.description ?? ''">{{ e.description ?? '—' }}</span>
                         </td>
                     </ng-container>
 
                     <ng-container matColumnDef="startDate">
-                        <th mat-header-cell *matHeaderCellDef>Start Date</th>
+                        <th mat-header-cell *matHeaderCellDef>Inicio</th>
                         <td mat-cell *matCellDef="let e">{{ e.startDate | date:'dd/MM/yyyy' }}</td>
                     </ng-container>
 
                     <ng-container matColumnDef="endDate">
-                        <th mat-header-cell *matHeaderCellDef>End Date</th>
+                        <th mat-header-cell *matHeaderCellDef>Fin</th>
                         <td mat-cell *matCellDef="let e">{{ e.endDate ? (e.endDate | date:'dd/MM/yyyy') : '—' }}</td>
                     </ng-container>
 
@@ -85,7 +85,7 @@
                     <tr class="mat-row" *matNoDataRow>
                         <td class="mat-cell" colspan="8">
                             @if (!selectedChannelId()) { Select a channel to see eras. }
-                            @else { No eras found. }
+                            @else { No hay eras. }
                         </td>
                     </tr>
                 </table>

@@ -52,11 +52,11 @@ export class RolesComponent implements OnInit, AfterViewInit {
 
     openForm(rol?: RolResponse) {
         const config: DialogConfig = {
-            title: 'Role',
+            title: 'rol',
             fields: [
-                { key: 'name', label: 'Name', type: 'text', validators: [Validators.required, Validators.maxLength(100)] },
-                { key: 'description', label: 'Description', type: 'textarea' },
-                { key: 'menuIds', label: 'Menus', type: 'multiselect', options: this.allMenus().map(m => ({ value: m.id, label: m.name })) },
+                { key: 'name', label: 'Nombre', type: 'text', validators: [Validators.required, Validators.maxLength(100)] },
+                { key: 'description', label: 'Descripción', type: 'textarea' },
+                { key: 'menuIds', label: 'Menús', type: 'multiselect', options: this.allMenus().map(m => ({ value: m.id, label: m.name })) },
             ],
             data: rol ?? null,
         };

@@ -90,11 +90,11 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
         if (!eraId) { this.showError('Select an era first'); return; }
 
         const config: DialogConfig = {
-            title: bumper ? 'Edit Bumper' : 'New Bumper',
+            title: 'bumper',
             fields: [
-                { key: 'title', label: 'Title', type: 'text', validators: [Validators.required] },
+                { key: 'title', label: 'Título', type: 'text', validators: [Validators.required] },
                 { key: 'file', label: 'Video File', type: 'file' },
-                { key: 'order', label: 'Order', type: 'number' },
+                { key: 'order', label: 'Orden', type: 'number' },
             ],
             data: bumper ? { ...bumper } : { order: 0 },
         };

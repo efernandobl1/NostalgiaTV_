@@ -51,11 +51,11 @@ export class UsersComponent implements OnInit, AfterViewInit {
 
     openForm(user?: UserResponse) {
         const config: DialogConfig = {
-            title: 'User',
+            title: 'usuario',
             fields: [
-                { key: 'username', label: 'Username', type: 'text', validators: [Validators.required, Validators.maxLength(50)] },
-                { key: 'password', label: 'Password', type: 'text', validators: user ? [Validators.minLength(8), Validators.maxLength(50)] : [Validators.required, Validators.minLength(8), Validators.maxLength(50)] },
-                { key: 'rolId', label: 'Role', type: 'select', validators: [Validators.required], options: this.roles().map(r => ({ value: r.id, label: r.name })) }
+                { key: 'username', label: 'Usuario', type: 'text', validators: [Validators.required, Validators.maxLength(50)] },
+                { key: 'password', label: 'Contraseña', type: 'text', validators: user ? [Validators.minLength(8), Validators.maxLength(50)] : [Validators.required, Validators.minLength(8), Validators.maxLength(50)] },
+                { key: 'rolId', label: 'Rol', type: 'select', validators: [Validators.required], options: this.roles().map(r => ({ value: r.id, label: r.name })) }
             ],
             data: user ? { username: user.username, rolId: user.rol.id } : null
         };

@@ -21,7 +21,7 @@
                     </ng-container>
 
                     <ng-container matColumnDef="name">
-                        <th mat-header-cell *matHeaderCellDef>Name</th>
+                        <th mat-header-cell *matHeaderCellDef>Nombre</th>
                         <td mat-cell *matCellDef="let c">{{ c.name }}</td>
                     </ng-container>
 
@@ -42,12 +42,12 @@
                     </ng-container>
 
                     <ng-container matColumnDef="startDate">
-                        <th mat-header-cell *matHeaderCellDef>Start Date</th>
+                        <th mat-header-cell *matHeaderCellDef>Inicio</th>
                         <td mat-cell *matCellDef="let c">{{ c.startDate | date:'dd/MM/yyyy' }}</td>
                     </ng-container>
 
                     <ng-container matColumnDef="endDate">
-                        <th mat-header-cell *matHeaderCellDef>End Date</th>
+                        <th mat-header-cell *matHeaderCellDef>Fin</th>
                         <td mat-cell *matCellDef="let c">{{ c.endDate ? (c.endDate | date:'dd/MM/yyyy') : '—' }}</td>
                     </ng-container>
 
@@ -63,7 +63,7 @@
                     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
                     <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
                     <tr class="mat-row" *matNoDataRow>
-                        <td class="mat-cell" colspan="6">No channels found.</td>
+                        <td class="mat-cell" colspan="6">No hay canales.</td>
                     </tr>
                 </table>
             </div>

@@ -114,9 +114,9 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
 
     editEpisode(episode: EpisodeResponse) {
         const config: DialogConfig = {
-            title: 'Edit Episode',
+            title: 'episodio',
             fields: [
-                { key: 'title', label: 'Title', type: 'text' },
+                { key: 'title', label: 'Título', type: 'text' },
                 { key: 'episodeNumber', label: 'Episode Number', type: 'number' },
                 {
                     key: 'episodeTypeId',
