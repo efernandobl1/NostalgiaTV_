@@ -1,3 +1,4 @@
+import { map } from 'rxjs';
 import { Component, OnInit, ViewChild, AfterViewInit, signal } from '@angular/core';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
@@ -41,7 +42,7 @@ export class SeriesComponent implements OnInit, AfterViewInit {
         this.loadSeries();
         this.categoriesService.getAll().subscribe({
             next: data => this.categories.set(data),
-            error: () => this.showError('Error loading categories'),
+            error: () => this.showError('Error al cargar las categorías'),
         });
     }
 
@@ -50,7 +51,7 @@ export class SeriesComponent implements OnInit, AfterViewInit {
     loadSeries() {
         this.seriesService.getAll().subscribe({
             next: data => this.dataSource.data = data,
-            error: () => this.showError('Error loading series'),
+            error: () => this.showError('Error al cargar las series'),
         });
     }
 
@@ -58,9 +59,9 @@ export class SeriesComponent implements OnInit, AfterViewInit {
         this.seriesService.delete(id).subscribe({
             next: () => {
                 this.dataSource.data = this.dataSource.data.filter(s => s.id !== id);
-                this.showSuccess('Series deleted');
+                this.showSuccess('Serie eliminada');
             },
-            error: () => this.showError('Error deleting series'),
+            error: () => this.showError('Error al eliminar la serie'),
         });
     }
 
@@ -101,17 +102,17 @@ export class SeriesComponent implements OnInit, AfterViewInit {
                 this.seriesService.update(series.id, payload).subscribe({
                     next: updated => {
                         this.dataSource.data = this.dataSource.data.map(s => s.id === updated.id ? updated : s);
-                        this.showSuccess('Series updated');
+                        this.showSuccess('Serie actualizada');
                     },
-                    error: () => this.showError('Error updating series'),
+                    error: () => this.showError('Error al actualizar la serie'),
                 });
             } else {
                 this.seriesService.create(payload).subscribe({
                     next: created => {
                         this.dataSource.data = [...this.dataSource.data, created];
-                        this.showSuccess('Series created');
+                        this.showSuccess('Serie creada');
                     },
-                    error: () => this.showError('Error creating series'),
+                    error: () => this.showError('Error al crear la serie'),
                 });
             }
         });
@@ -120,7 +121,20 @@ export class SeriesComponent implements OnInit, AfterViewInit {
     assignCategories(series: SeriesResponse) {
         const config: DialogConfig = {
             title: 'categorías de la serie',
-            fields: [{ key: 'categoryIds', label: 'Categories', type: 'multiselect', options: this.categories().map(c => ({ value: c.id, label: c.name })) }],
+            fields: [{
+                key: 'categoryIds',
+                label: 'Categorías',
+                type: 'multiselect',
+                options: this.categories().map(c => ({ value: c.id, label: c.name })),
+                // Crear una categoría nueva sin salir del diálogo (workflow inline).
+                creatable: true,
+                onCreate: (name: string) => this.categoriesService.create({ name }).pipe(
+                    map(c => {
+                        this.categories.set([...this.categories(), c]);
+                        return { value: c.id, label: c.name };
+                    })
+                ),
+            }],
             data: { categoryIds: series.categoryIds },
         };
 
@@ -134,9 +148,9 @@ export class SeriesComponent implements OnInit, AfterViewInit {
             this.seriesService.assignCategories(series.id, result.data.categoryIds).subscribe({
                 next: updated => {
                     this.dataSource.data = this.dataSource.data.map(s => s.id === updated.id ? updated : s);
-                    this.showSuccess('Categories assigned');
+                    this.showSuccess('Categorías asignadas');
                 },
-                error: () => this.showError('Error assigning categories'),
+                error: () => this.showError('Error al asignar categorías'),
             });
         });
     }
@@ -145,6 +159,6 @@ export class SeriesComponent implements OnInit, AfterViewInit {
         return categoryIds.map(id => this.categories().find(c => c.id === id)?.name ?? id).join(', ');
     }
 
-    private showSuccess(msg: string) { this.snackBar.open(msg, 'Close', { duration: 3000 }); }
-    private showError(msg: string) { this.snackBar.open(msg, 'Close', { duration: 3000, panelClass: 'error-snack' }); }
+    private showSuccess(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 3000 }); }
+    private showError(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 3000, panelClass: 'error-snack' }); }
 }

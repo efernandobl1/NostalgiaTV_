@@ -40,15 +40,32 @@ export class RolesComponent implements OnInit, AfterViewInit {
     ngOnInit() {
         this.rolesService.getAll().subscribe({
             next: data => this.dataSource.data = data,
-            error: () => this.showError('Error loading roles'),
+            error: () => this.showError('Error al cargar los roles'),
         });
         this.menuService.getAllMenus().subscribe({
-            next: data => this.allMenus.set(data.filter(m => m.parentId !== null)),
-            error: () => this.showError('Error loading menus'),
+            next: data => this.allMenus.set(data),
+            error: () => this.showError('Error al cargar los menús'),
         });
     }
 
     ngAfterViewInit() { this.dataSource.paginator = this.paginator; }
+
+    // Agrupa los menús hijos bajo su sección padre (SEGURIDAD, CONTENIDO, ...)
+    // para que el selector sea legible en vez de una lista plana.
+    private buildMenuGroups() {
+        const menus = this.allMenus();
+        return menus
+            .filter(m => m.parentId === null)
+            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+            .map(parent => ({
+                label: parent.name,
+                options: menus
+                    .filter(m => m.parentId === parent.id)
+                    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+                    .map(child => ({ value: child.id, label: child.name })),
+            }))
+            .filter(g => g.options.length > 0);
+    }
 
     openForm(rol?: RolResponse) {
         const config: DialogConfig = {
@@ -56,7 +73,7 @@ export class RolesComponent implements OnInit, AfterViewInit {
             fields: [
                 { key: 'name', label: 'Nombre', type: 'text', validators: [Validators.required, Validators.maxLength(100)] },
                 { key: 'description', label: 'Descripción', type: 'textarea' },
-                { key: 'menuIds', label: 'Menús', type: 'multiselect', options: this.allMenus().map(m => ({ value: m.id, label: m.name })) },
+                { key: 'menuIds', label: 'Menús a los que puede acceder', type: 'multiselect', groups: this.buildMenuGroups() },
             ],
             data: rol ?? null,
         };
@@ -72,7 +89,7 @@ export class RolesComponent implements OnInit, AfterViewInit {
                 this.rolesService.update(rol.id, result.data).subscribe({
                     next: updated => {
                         this.dataSource.data = this.dataSource.data.map(r => r.id === updated.id ? updated : r);
-                        this.showSuccess('Role updated');
+                        this.showSuccess('Rol actualizado');
                     },
                     error: () => this.showError('Error updating role'),
                 });
@@ -80,7 +97,7 @@ export class RolesComponent implements OnInit, AfterViewInit {
                 this.rolesService.create(result.data).subscribe({
                     next: created => {
                         this.dataSource.data = [...this.dataSource.data, created];
-                        this.showSuccess('Role created');
+                        this.showSuccess('Rol creado');
                     },
                     error: () => this.showError('Error creating role'),
                 });
@@ -92,12 +109,12 @@ export class RolesComponent implements OnInit, AfterViewInit {
         this.rolesService.delete(id).subscribe({
             next: () => {
                 this.dataSource.data = this.dataSource.data.filter(r => r.id !== id);
-                this.showSuccess('Role deleted');
+                this.showSuccess('Rol eliminado');
             },
             error: () => this.showError('Error deleting role'),
         });
     }
 
-    private showSuccess(msg: string) { this.snackBar.open(msg, 'Close', { duration: 3000 }); }
-    private showError(msg: string) { this.snackBar.open(msg, 'Close', { duration: 3000, panelClass: 'error-snack' }); }
+    private showSuccess(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 3000 }); }
+    private showError(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 3000, panelClass: 'error-snack' }); }
 }

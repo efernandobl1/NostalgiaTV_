@@ -43,7 +43,7 @@ export class UsersComponent implements OnInit, AfterViewInit {
         });
         this.rolesService.getAll().subscribe({
             next: data => this.roles.set(data),
-            error: () => this.showError('Error loading roles')
+            error: () => this.showError('Error al cargar los roles')
         });
     }
 
@@ -97,6 +97,6 @@ export class UsersComponent implements OnInit, AfterViewInit {
         });
     }
 
-    private showSuccess(msg: string) { this.snackBar.open(msg, 'Close', { duration: 3000 }); }
-    private showError(msg: string) { this.snackBar.open(msg, 'Close', { duration: 3000, panelClass: 'error-snack' }); }
+    private showSuccess(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 3000 }); }
+    private showError(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 3000, panelClass: 'error-snack' }); }
 }

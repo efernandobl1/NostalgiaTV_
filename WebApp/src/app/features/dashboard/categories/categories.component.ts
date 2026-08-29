@@ -39,7 +39,7 @@ export class CategoriesComponent implements OnInit, AfterViewInit {
     loadCategories() {
         this.categoriesService.getAll().subscribe({
             next: data => this.dataSource.data = data,
-            error: () => this.showError('Error loading categories')
+            error: () => this.showError('Error al cargar las categorías')
         });
     }
 
@@ -87,6 +87,6 @@ export class CategoriesComponent implements OnInit, AfterViewInit {
         });
     }
 
-    private showSuccess(msg: string) { this.snackBar.open(msg, 'Close', { duration: 3000 }); }
-    private showError(msg: string) { this.snackBar.open(msg, 'Close', { duration: 3000, panelClass: 'error-snack' }); }
+    private showSuccess(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 3000 }); }
+    private showError(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 3000, panelClass: 'error-snack' }); }
 }

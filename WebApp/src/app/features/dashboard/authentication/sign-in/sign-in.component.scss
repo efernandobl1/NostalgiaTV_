@@ -1,330 +1,109 @@
-.sign-in-area {
-    height: 100vh;
-    overflow-x: hidden;
-    padding: {
-        top: 30px;
-        bottom: 30px;
-    };
-}
-.daxa-form {
-    max-width: 930px;
-    padding: 100px;
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
+// Fondo retro (mismo mundo visual que la TV pública), pero la tarjeta queda clara
+// para que los inputs de Angular Material sigan siendo legibles y accesibles.
+.sign-in-area {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow-x: hidden;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(121, 109, 246, 0.18), transparent 60%),
+        linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 55%, #16213e 100%);
+    position: relative;
+
+    // Scanlines sutiles (respetan prefers-reduced-motion global).
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+            0deg,
+            rgba(0, 0, 0, 0.12),
+            rgba(0, 0, 0, 0.12) 1px,
+            transparent 1px,
+            transparent 4px
+        );
+    }
+
+    .d-table, .d-table-cell { height: auto; display: block; }
+}
+
+.daxa-form {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 40px 36px;
+    border-radius: 16px;
+    border: 1px solid rgba(121, 109, 246, 0.35);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
+
+    // Marca retro sobre el título.
     .title {
-        margin-bottom: 25px;
+        margin-bottom: 26px;
+
+        &::before {
+            content: 'NOSTALGIA TV';
+            display: block;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 15px;
+            letter-spacing: 1px;
+            color: #ff6b6b;
+            text-shadow: 0 0 14px rgba(255, 107, 107, 0.7), 2px 2px 0 rgba(0, 0, 0, 0.4);
+            margin-bottom: 18px;
+        }
 
         h3 {
             margin-bottom: 6px;
+            font-weight: 700;
         }
     }
+
     form {
         .form-group {
             margin-bottom: 22px;
-            
-            .main-label {
-                margin-bottom: 12px;
-            }
-            .error {
-                font-size: 14px;
-                margin-top: 7px;
-            }
-        }
-        .info {
-            a {
-                position: relative;
-                top: 2px;
-            }
-        }
-        .btn {
-            &.mat-mdc-button {
-                border: 0;
-                width: 100%;
-                height: auto;
-                display: block;
-                min-width: auto;
-                min-height: auto;
-                margin-top: 22px;
-                padding: 17px 30px;
-                font-weight: normal;
-                color: var(--whiteColor);
-                background-color: var(--daxaColor);
 
-                &[disabled] {
-                    background-color: #eff3f9;
-                }
-            }
+            .main-label { margin-bottom: 10px; font-weight: 600; }
+            .error { font-size: 13px; margin-top: 6px; }
         }
-        .signin-with-socials {
-            margin-top: 22px;
 
-            .or {
-                z-index: 1;
+        // Botón con acento retro (violeta → verde neón sutil en hover).
+        .btn.mat-mdc-button {
+            border: 0;
+            width: 100%;
+            height: auto;
+            display: block;
+            min-width: auto;
+            min-height: auto;
+            margin-top: 8px;
+            padding: 15px 30px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            border-radius: 999px;
+            color: var(--whiteColor);
+            background: linear-gradient(135deg, #796df6, #5a4fe0);
+            transition: filter .25s ease, box-shadow .25s ease;
 
-                span {
-                    background-color: var(--whiteColor);
-                    padding: {
-                        left: 25px;
-                        right: 25px;
-                    };
-                }
-                &::before {
-                    left: 0;
-                    right: 0;
-                    top: 50%;
-                    height: 1px;
-                    content: '';
-                    z-index: -1;
-                    margin-top: 2px;
-                    position: absolute;
-                    background: #dae0ec;
-                    transform: translateY(-50%);
-                }
+            &:hover:not([disabled]) {
+                filter: brightness(1.08);
+                box-shadow: 0 8px 24px rgba(121, 109, 246, 0.45);
             }
-            .socials {
-                margin-top: 15px;
-
-                .mat-mdc-button {
-                    padding: 0;
-                    width: 30px;
-                    height: 30px;
-                    min-width: auto;
-                    border-radius: 50%;
-                    display: inline-block;
-                    color: var(--whiteColor);
-                    background-color: var(--daxaColor);
-                    margin: {
-                        left: 5px;
-                        right: 5px;
-                    };
-                    &:first-child {
-                        margin-left: 0;
-                    }
-                    &:last-child {
-                        margin-right: 0;
-                    }
-                    &.facebook {
-                        background-color: #3a559f;
-                    }
-                    &.twitter {
-                        background-color: rgba(15, 20, 25, 1);
-                    }
-                    &.google {
-                        background-color: #e02f2f;
-                    }
-                    &.linkedin {
-                        background-color: #007ab9;
-                    }
-                }
-            }
-        }
-    }
-    &.card-borderd-theme {
-        box-shadow: var(--borderBoxShadow) !important;
-    }
-    &.component-dark-theme {
-        form {
-            .btn {
-                &.mat-mdc-button {
-                    &[disabled] {
-                        opacity: 0.5;
-                        background-color: var(--blackColor);
-                    }
-                }
-            }
-            .signin-with-socials {
-                .or {
-                    span {
-                        background-color: #1b232d;
-                    }
-                    &::before {
-                        background: rgba(255, 255, 255, 0.09);
-                    }
-                }
-            }
-        }
-    }
-}
-::ng-deep {
-    .daxa-form {
-        form {
-            .mat-mdc-checkbox {
-                .mdc-checkbox {
-                    padding: 0;
-                    margin: 0;
-
-                    .mdc-checkbox__native-control {
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        bottom: 0;
-                        width: 100%;
-                        height: 100%;
-                    }
-                    .mdc-checkbox__background {
-                        top: 0;
-                        left: 0;
-                    }
-                    .mat-mdc-checkbox-ripple, .mdc-checkbox__ripple {
-                        border-radius: 2px;
-                    }
-                    .mat-mdc-checkbox-touch-target {
-                        width: 100%;
-                        height: 100%;
-                    }
-                }
-                .mdc-label {
-                    color: var(--bodyColor);
-                    margin-left: 9px;
-                }
-            }
-        }
-        &.rtl-enabled {
-            form {
-                .mat-mdc-checkbox {
-                    .mdc-label {
-                        margin: {
-                            left: 0;
-                            right: 9px;
-                        };
-                    }
-                }
+            &[disabled] {
+                background: #c9cfe0;
+                color: #ffffff;
             }
         }
     }
 }
 
-/* Max width 767px */
-@media only screen and (max-width : 767px) {
-
-    .sign-in-area {
-        padding: {
-            left: 12.5px;
-            right: 12.5px;
-        };
-    }
+@media (max-width: 575px) {
     .daxa-form {
-        max-width: 100%;
-        padding: 35px 15px;
-    
-        .title {
-            margin-bottom: 20px;
-    
-            h3 {
-                margin-bottom: 5px;
-            }
-        }
-        form {
-            .form-group {
-                margin-bottom: 18px;
-            }
-            .btn {
-                &.mat-mdc-button {
-                    margin-top: 18px;
-                    padding: 14px 30px;
-                }
-            }
-            .signin-with-socials {
-                margin-top: 18px;
-    
-                .or {
-                    span {
-                        padding: {
-                            left: 15px;
-                            right: 15px;
-                        };
-                    }
-                }
-                .socials {
-                    margin-top: 13px;
-                }
-            }
-        }
+        padding: 32px 22px;
+        .title::before { font-size: 12px; }
     }
-    ::ng-deep {
-        .daxa-form {
-            form {
-                .mat-mdc-checkbox {
-                    .mdc-label {
-                        margin-left: 3px;
-                    }
-                }
-            }
-            &.rtl-enabled {
-                form {
-                    .mat-mdc-checkbox {
-                        .mdc-label {
-                            margin: {
-                                left: 0;
-                                right: 3px;
-                            };
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-}
-
-/* Min width 576px to Max width 767px */
-@media only screen and (min-width : 576px) and (max-width : 767px) {
-
-    .daxa-form {
-        max-width: 540px;
-    }
-
-}
-
-/* Min width 768px to Max width 991px */
-@media only screen and (min-width : 768px) and (max-width : 991px) {
-
-    .sign-in-area {
-        padding: {
-            left: 12.5px;
-            right: 12.5px;
-        };
-    }
-    .daxa-form {
-        max-width: 720px;
-        padding: 70px;
-    
-        .title {
-            margin-bottom: 20px;
-        }
-        form {
-            .form-group {
-                margin-bottom: 20px;
-            }
-            .btn {
-                &.mat-mdc-button {
-                    margin-top: 20px;
-                }
-            }
-            .signin-with-socials {
-                margin-top: 20px;
-            }
-        }
-    }
-
-}
-
-/* Min width 992px to Max width 1199px */
-@media only screen and (min-width : 992px) and (max-width : 1199px) {
-
-    .daxa-form {
-        padding: 90px;
-    }
-
-}
-
-/* Min width 1200px to Max width 1399px */
-@media only screen and (min-width: 1200px) and (max-width: 1399px) {}
-
-/* Min width 1600px */
-@media only screen and (min-width: 1600px) {
-
-    .daxa-form {
-        padding: 100px 130px;
-    }
-
 }

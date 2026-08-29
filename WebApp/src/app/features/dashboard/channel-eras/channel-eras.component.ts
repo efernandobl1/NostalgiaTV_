@@ -179,9 +179,9 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
     }
 
     private showSuccess(msg: string) {
-        this.snackBar.open(msg, 'Close', { duration: 3000 });
+        this.snackBar.open(msg, 'Cerrar', { duration: 3000 });
     }
     private showError(msg: string) {
-        this.snackBar.open(msg, 'Close', { duration: 3000, panelClass: 'error-snack' });
+        this.snackBar.open(msg, 'Cerrar', { duration: 3000, panelClass: 'error-snack' });
     }
 }
