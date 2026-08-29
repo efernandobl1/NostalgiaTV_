@@ -2,25 +2,22 @@ name: nostalgiatv
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Compose de PRODUCCIÓN para la VPS. Se coloca en /opt/nostalgiatv/docker-compose.yml
-# junto a su .env y a la carpeta ./monitoring del repo. No construye imágenes de la
-# app: las descarga de GHCR y Watchtower las actualiza cuando el CI publica una nueva
-# :latest (despliegue sin SSH). El monitoreo (Loki + Alloy + Grafana + Uptime Kuma)
-# viene integrado: Alloy recolecta los logs de todos los contenedores y los manda a
-# Loki, Grafana los visualiza y Uptime Kuma sondea los /health.
+# junto a su .env. No construye imágenes: las descarga de GHCR y Watchtower las
+# actualiza cuando el CI publica una nueva :latest (despliegue sin SSH). El monitoreo
+# (Loki/Alloy/Grafana/Uptime Kuma) corre APARTE en su propio stack; aquí sólo se
+# conecta la red externa 'monitoring-net' para que pueda sondear/recolectar.
 #
 # Preparación (una sola vez) en la VPS:
 #   docker login ghcr.io -u <usuario> --password-stdin   # token classic (read:packages)
-#   cp -r ./monitoring /opt/nostalgiatv/monitoring        # configs de Loki/Alloy/Grafana
-#   mkdir -p /opt/nostalgiatv/{data/sqlserver,logs/webapi,media,uploads,data/loki,data/grafana,data/uptime-kuma,data/alloy}
+#   docker network create monitoring-net    # si aún no existe (la comparte tu stack de monitoreo)
+#   mkdir -p /opt/nostalgiatv/{data/sqlserver,logs/webapi,media,uploads}
 #   chown -R 10001:0     /opt/nostalgiatv/data/sqlserver              # contenedor mssql
 #   chown -R 1654:1654   /opt/nostalgiatv/logs /opt/nostalgiatv/media /opt/nostalgiatv/uploads   # 'app' del contenedor .NET
-#   chown -R 10001:10001 /opt/nostalgiatv/data/loki /opt/nostalgiatv/data/alloy
-#   chown -R 472:472     /opt/nostalgiatv/data/grafana
 #   cp env.js /opt/nostalgiatv/env.js                     # apiUrl:'' (mismo origen, no requiere IP)
 #
 # Nada se publica al exterior salvo la webapp en 127.0.0.1:${WEB_HTTP_PORT:-8090}.
 # El nginx del HOST termina TLS y enruta tu dominio hacia ese puerto (ver
-# deploy/nginx-host/nostalgiatv.conf). API, BD y monitoreo quedan ocultos.
+# deploy/nginx-host/nostalgiatv.conf). API y BD quedan ocultas.
 #
 # Desplegar:  cd /opt/nostalgiatv && docker compose pull && docker compose up -d
 # ─────────────────────────────────────────────────────────────────────────────
@@ -162,97 +159,16 @@ services:
       - no-new-privileges:true
     logging: *default-log-options
 
-  # ── Monitoreo ──────────────────────────────────────────────────────────────
-  loki:
-    image: ${LOKI_IMAGE:-grafana/loki:3.3.2}
-    container_name: nostalgia-loki
-    restart: unless-stopped
-    command: -config.file=/etc/loki/local-config.yaml
-    volumes:
-      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
-      - ./data/loki:/loki
-    networks:
-      - monitoring
-    security_opt:
-      - no-new-privileges:true
-    logging: *default-log-options
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3100/ready || exit 1"]
-      interval: 20s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-
-  alloy:
-    image: ${ALLOY_IMAGE:-grafana/alloy:v1.5.1}
-    container_name: nostalgia-alloy
-    restart: unless-stopped
-    command:
-      - run
-      - /etc/alloy/config.alloy
-      - --storage.path=/var/lib/alloy/data
-    volumes:
-      - ./monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
-      - ./data/alloy:/var/lib/alloy/data
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - loki
-    networks:
-      - monitoring
-    security_opt:
-      - no-new-privileges:true
-    logging: *default-log-options
-
-  grafana:
-    image: ${GRAFANA_IMAGE:-grafana/grafana:11.4.0}
-    container_name: nostalgia-grafana
-    restart: unless-stopped
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Defina GRAFANA_ADMIN_PASSWORD}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_ANALYTICS_REPORTING_ENABLED: "false"
-      TZ: ${TIME_ZONE:-America/Guatemala}
-    ports:
-      - "${MONITORING_BIND:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
-    volumes:
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./data/grafana:/var/lib/grafana
-    depends_on:
-      - loki
-    networks:
-      - monitoring
-    security_opt:
-      - no-new-privileges:true
-    logging: *default-log-options
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1"]
-      interval: 20s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-
-  uptime-kuma:
-    image: ${UPTIME_KUMA_IMAGE:-louislam/uptime-kuma:1}
-    container_name: nostalgia-uptime-kuma
-    restart: unless-stopped
-    environment:
-      TZ: ${TIME_ZONE:-America/Guatemala}
-    ports:
-      - "${MONITORING_BIND:-127.0.0.1}:${UPTIME_KUMA_PORT:-3001}:3001"
-    volumes:
-      - ./data/uptime-kuma:/app/data
-    networks:
-      - monitoring
-    security_opt:
-      - no-new-privileges:true
-    logging: *default-log-options
-
 networks:
   web-net:
     driver: bridge
   data-net:
     driver: bridge
     internal: true
+  # Red compartida donde ya corren Loki/Alloy/Grafana/Uptime Kuma (stack de
+  # monitoreo aparte). webapi y webapp se conectan a ella para que ese stack
+  # los sondee (/health) y recolecte sus logs. Debe existir previamente:
+  #   docker network create monitoring-net
   monitoring:
-    driver: bridge
+    external: true
+    name: monitoring-net
