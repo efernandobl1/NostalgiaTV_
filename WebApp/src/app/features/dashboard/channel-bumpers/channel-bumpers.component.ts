@@ -55,7 +55,7 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
     ngOnInit() {
         this.channelsService.getAll().subscribe({
             next: (data) => this.channels.set(data),
-            error: () => this.showError('Error loading channels'),
+            error: () => this.showError('Error al cargar los canales'),
         });
     }
 
@@ -69,7 +69,7 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
         this.dataSource.data = [];
         this.erasService.getByChannel(channelId).subscribe({
             next: (data) => this.eras.set(data),
-            error: () => this.showError('Error loading eras'),
+            error: () => this.showError('Error al cargar las eras'),
         });
     }
 
@@ -81,7 +81,7 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
     loadBumpers(eraId: number) {
         this.bumpersService.getByEra(eraId).subscribe({
             next: (data) => (this.dataSource.data = data),
-            error: () => this.showError('Error loading bumpers'),
+            error: () => this.showError('Error al cargar los bumpers'),
         });
     }
 
@@ -119,17 +119,17 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
                 this.bumpersService.update(bumper.id, formData).subscribe({
                     next: () => {
                         this.loadBumpers(eraId);
-                        this.showSuccess('Bumper updated');
+                        this.showSuccess('Bumper actualizado');
                     },
-                    error: () => this.showError('Error updating bumper'),
+                    error: () => this.showError('Error al actualizar el bumper'),
                 });
             } else {
                 this.bumpersService.create(eraId, formData).subscribe({
                     next: () => {
                         this.loadBumpers(eraId);
-                        this.showSuccess('Bumper created');
+                        this.showSuccess('Bumper creado');
                     },
-                    error: () => this.showError('Error creating bumper'),
+                    error: () => this.showError('Error al crear el bumper'),
                 });
             }
         });
@@ -139,9 +139,9 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
         this.bumpersService.delete(bumper.id).subscribe({
             next: () => {
                 this.loadBumpers(this.selectedEraId()!);
-                this.showSuccess('Bumper deleted');
+                this.showSuccess('Bumper eliminado');
             },
-            error: () => this.showError('Error deleting bumper'),
+            error: () => this.showError('Error al eliminar el bumper'),
         });
     }
 

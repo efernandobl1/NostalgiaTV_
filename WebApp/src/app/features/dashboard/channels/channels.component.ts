@@ -152,7 +152,7 @@ export class ChannelsComponent implements OnInit, AfterViewInit {
   loadChannels() {
     this.channelsService.getAll().subscribe({
       next: (data) => (this.dataSource.data = data),
-      error: () => this.showError('Error loading channels'),
+      error: () => this.showError('Error al cargar los canales'),
     });
   }
 
@@ -200,17 +200,17 @@ export class ChannelsComponent implements OnInit, AfterViewInit {
             this.dataSource.data = this.dataSource.data.map((c) =>
               c.id === updated.id ? updated : c,
             );
-            this.showSuccess('Channel updated');
+            this.showSuccess('Canal actualizado');
           },
-          error: () => this.showError('Error updating channel'),
+          error: () => this.showError('Error al actualizar el canal'),
         });
       } else {
         this.channelsService.create(payload).subscribe({
           next: (created) => {
             this.dataSource.data = [...this.dataSource.data, created];
-            this.showSuccess('Channel created');
+            this.showSuccess('Canal creado');
           },
-          error: () => this.showError('Error creating channel'),
+          error: () => this.showError('Error al crear el canal'),
         });
       }
     });
@@ -237,7 +237,7 @@ export class ChannelsComponent implements OnInit, AfterViewInit {
           data: config,
         });
       },
-      error: () => this.showError('Error loading schedule'),
+      error: () => this.showError('Error al cargar la programación'),
     });
   }
 

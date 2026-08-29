@@ -61,17 +61,17 @@ export class CategoriesComponent implements OnInit, AfterViewInit {
                 this.categoriesService.update(category.id, result.data).subscribe({
                     next: updated => {
                         this.dataSource.data = this.dataSource.data.map(c => c.id === updated.id ? updated : c);
-                        this.showSuccess('Category updated');
+                        this.showSuccess('Categoría actualizada');
                     },
-                    error: () => this.showError('Error updating category')
+                    error: () => this.showError('Error al actualizar la categoría')
                 });
             } else {
                 this.categoriesService.create(result.data).subscribe({
                     next: created => {
                         this.dataSource.data = [...this.dataSource.data, created];
-                        this.showSuccess('Category created');
+                        this.showSuccess('Categoría creada');
                     },
-                    error: () => this.showError('Error creating category')
+                    error: () => this.showError('Error al crear la categoría')
                 });
             }
         });
@@ -81,9 +81,9 @@ export class CategoriesComponent implements OnInit, AfterViewInit {
         this.categoriesService.delete(id).subscribe({
             next: () => {
                 this.dataSource.data = this.dataSource.data.filter(c => c.id !== id);
-                this.showSuccess('Category deleted');
+                this.showSuccess('Categoría eliminada');
             },
-            error: () => this.showError('Error deleting category')
+            error: () => this.showError('Error al eliminar la categoría')
         });
     }
 

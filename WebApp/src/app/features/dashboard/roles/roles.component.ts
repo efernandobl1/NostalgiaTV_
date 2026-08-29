@@ -58,11 +58,12 @@ export class RolesComponent implements OnInit, AfterViewInit {
             .filter(m => m.parentId === null)
             .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
             .map(parent => ({
-                label: parent.name,
+                // caption es la etiqueta en español que ya usa el sidebar (name está en inglés).
+                label: parent.caption || parent.name,
                 options: menus
                     .filter(m => m.parentId === parent.id)
                     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-                    .map(child => ({ value: child.id, label: child.name })),
+                    .map(child => ({ value: child.id, label: child.caption || child.name })),
             }))
             .filter(g => g.options.length > 0);
     }
@@ -91,7 +92,7 @@ export class RolesComponent implements OnInit, AfterViewInit {
                         this.dataSource.data = this.dataSource.data.map(r => r.id === updated.id ? updated : r);
                         this.showSuccess('Rol actualizado');
                     },
-                    error: () => this.showError('Error updating role'),
+                    error: () => this.showError('Error al actualizar el rol'),
                 });
             } else {
                 this.rolesService.create(result.data).subscribe({
@@ -99,7 +100,7 @@ export class RolesComponent implements OnInit, AfterViewInit {
                         this.dataSource.data = [...this.dataSource.data, created];
                         this.showSuccess('Rol creado');
                     },
-                    error: () => this.showError('Error creating role'),
+                    error: () => this.showError('Error al crear el rol'),
                 });
             }
         });
@@ -111,7 +112,7 @@ export class RolesComponent implements OnInit, AfterViewInit {
                 this.dataSource.data = this.dataSource.data.filter(r => r.id !== id);
                 this.showSuccess('Rol eliminado');
             },
-            error: () => this.showError('Error deleting role'),
+            error: () => this.showError('Error al eliminar el rol'),
         });
     }
 

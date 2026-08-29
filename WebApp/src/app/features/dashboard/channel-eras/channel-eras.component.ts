@@ -60,7 +60,7 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
     ngOnInit() {
         this.channelsService.getAll().subscribe({
             next: (data) => this.channels.set(data),
-            error: () => this.showError('Error loading channels'),
+            error: () => this.showError('Error al cargar los canales'),
         });
         this.seriesService.getAll().subscribe({
             next: (data) => this.series.set(data),
@@ -79,7 +79,7 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
     loadEras(channelId: number) {
         this.channelErasService.getByChannel(channelId).subscribe({
             next: (data) => (this.dataSource.data = data),
-            error: () => this.showError('Error loading eras'),
+            error: () => this.showError('Error al cargar las eras'),
         });
     }
 
@@ -115,17 +115,17 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
                 this.channelErasService.update(era.id, result.data as ChannelEraRequest).subscribe({
                     next: () => {
                         this.loadEras(channelId);
-                        this.showSuccess('Era updated');
+                        this.showSuccess('Era actualizada');
                     },
-                    error: () => this.showError('Error updating era'),
+                    error: () => this.showError('Error al actualizar la era'),
                 });
             } else {
                 this.channelErasService.create(channelId, result.data as ChannelEraRequest).subscribe({
                     next: () => {
                         this.loadEras(channelId);
-                        this.showSuccess('Era created');
+                        this.showSuccess('Era creada');
                     },
-                    error: () => this.showError('Error creating era'),
+                    error: () => this.showError('Error al crear la era'),
                 });
             }
         });
@@ -159,7 +159,7 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
                     this.loadEras(this.selectedChannelId()!);
                     this.showSuccess('Series assigned');
                 },
-                error: () => this.showError('Error assigning series'),
+                error: () => this.showError('Error al asignar series'),
             });
         });
     }
@@ -168,9 +168,9 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
         this.channelErasService.delete(era.id).subscribe({
             next: () => {
                 this.loadEras(this.selectedChannelId()!);
-                this.showSuccess('Era deleted');
+                this.showSuccess('Era eliminada');
             },
-            error: () => this.showError('Error deleting era'),
+            error: () => this.showError('Error al eliminar la era'),
         });
     }
 

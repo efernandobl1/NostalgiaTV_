@@ -39,7 +39,7 @@ export class UsersComponent implements OnInit, AfterViewInit {
     ngOnInit() {
         this.usersService.getAll().subscribe({
             next: data => this.dataSource.data = data,
-            error: () => this.showError('Error loading users')
+            error: () => this.showError('Error al cargar los usuarios')
         });
         this.rolesService.getAll().subscribe({
             next: data => this.roles.set(data),
@@ -71,17 +71,17 @@ export class UsersComponent implements OnInit, AfterViewInit {
                 this.usersService.update(user.id, result.data).subscribe({
                     next: updated => {
                         this.dataSource.data = this.dataSource.data.map(u => u.id === updated.id ? updated : u);
-                        this.showSuccess('User updated');
+                        this.showSuccess('Usuario actualizado');
                     },
-                    error: () => this.showError('Error updating user')
+                    error: () => this.showError('Error al actualizar el usuario')
                 });
             } else {
                 this.usersService.create(result.data).subscribe({
                     next: created => {
                         this.dataSource.data = [...this.dataSource.data, created];
-                        this.showSuccess('User created');
+                        this.showSuccess('Usuario creado');
                     },
-                    error: () => this.showError('Error creating user')
+                    error: () => this.showError('Error al crear el usuario')
                 });
             }
         });
@@ -91,9 +91,9 @@ export class UsersComponent implements OnInit, AfterViewInit {
         this.usersService.delete(id).subscribe({
             next: () => {
                 this.dataSource.data = this.dataSource.data.filter(u => u.id !== id);
-                this.showSuccess('User deleted');
+                this.showSuccess('Usuario eliminado');
             },
-            error: () => this.showError('Error deleting user')
+            error: () => this.showError('Error al eliminar el usuario')
         });
     }
 

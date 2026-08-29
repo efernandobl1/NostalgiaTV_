@@ -89,7 +89,7 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
                 this.allEpisodes.set(data);
                 this.dataSource.data = data;
             },
-            error: () => this.showError('Error loading episodes')
+            error: () => this.showError('Error al cargar los episodios')
         });
     }
 
@@ -149,9 +149,9 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
                 next: updated => {
                     this.allEpisodes.update(list => list.map(e => e.id === updated.id ? updated : e));
                     this.applySeasonFilter(this.selectedSeason());
-                    this.showSuccess('Episode updated');
+                    this.showSuccess('Episodio actualizado');
                 },
-                error: () => this.showError('Error updating episode')
+                error: () => this.showError('Error al actualizar el episodio')
             });
         });
     }
