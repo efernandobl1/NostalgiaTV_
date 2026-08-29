@@ -124,6 +124,20 @@ body.dark-theme {
 
     // Foco de tabla / links con acento neón.
     a:hover { color: var(--retro-cyan); }
+
+    // ── Responsive: las fuentes pixel (anchas) se reducen en pantallas chicas ────
+    // para que los encabezados no desborden. Las tablas ya hacen scroll horizontal
+    // vía .table-responsive (overflow-x:auto), así que aquí sólo ajustamos la marca.
+    @media (max-width: 767px) {
+        .breadcrumb-card h5,
+        .breadcrumb-card .mb-0 { font-size: 24px !important; }
+        .sidebar-area .logo span { font-size: 11px; }
+    }
+    @media (max-width: 480px) {
+        .breadcrumb-card h5,
+        .breadcrumb-card .mb-0 { font-size: 21px !important; }
+        .sidebar-area .sub-title { font-size: 8px !important; }
+    }
 }
 
 // El toggle a modo claro sigue funcionando: en claro no se aplica nada de esto.
