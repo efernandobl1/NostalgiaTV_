@@ -23,7 +23,7 @@
         <div class="sidebar-inner">
             <div class="sidebar-menu">
                 <mat-accordion>
-                    @for (menu of menuService.menus(); track menu.id) {
+                    @for (menu of visibleMenus(); track menu.id) {
                       @if (menu.children.length > 0) {
                           <span class="sub-title text-body">{{ menu.caption }}</span>
                           @for (child of menu.children; track child.id) {

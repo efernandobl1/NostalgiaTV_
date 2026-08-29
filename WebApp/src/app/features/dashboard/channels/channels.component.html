@@ -35,7 +35,7 @@
                     </ng-container>
 
                     <ng-container matColumnDef="history">
-                        <th mat-header-cell *matHeaderCellDef>History</th>
+                        <th mat-header-cell *matHeaderCellDef>Historia</th>
                         <td mat-cell *matCellDef="let c">
                             <span class="truncated-cell" [title]="c.history ?? ''">{{ c.history ?? '—' }}</span>
                         </td>
@@ -54,9 +54,10 @@
                     <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef>Acciones</th>
                         <td mat-cell *matCellDef="let c">
-                            <button mat-icon-button (click)="openForm(c)"><mat-icon>edit</mat-icon></button>
-                            <button mat-icon-button (click)="viewSchedule(c)" matTooltip="View Schedule"><mat-icon>schedule</mat-icon></button>
-                            <button mat-icon-button (click)="refreshSchedule(c)" matTooltip="Refresh Schedule"><mat-icon>refresh</mat-icon></button>
+                            <button mat-icon-button (click)="openForm(c)" matTooltip="Editar canal"><mat-icon>edit</mat-icon></button>
+                            <button mat-icon-button color="primary" (click)="manageEras(c)" matTooltip="Gestionar eras"><mat-icon>date_range</mat-icon></button>
+                            <button mat-icon-button (click)="viewSchedule(c)" matTooltip="Ver programación"><mat-icon>schedule</mat-icon></button>
+                            <button mat-icon-button (click)="refreshSchedule(c)" matTooltip="Regenerar programación"><mat-icon>refresh</mat-icon></button>
                         </td>
                     </ng-container>
 

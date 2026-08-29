@@ -11,11 +11,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { SimpleFuComponent } from '../../simple-fu/simple-fu.component';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 export interface DialogField {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'date' | 'datepicker' | 'file';
+  type: 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'checkboxes' | 'date' | 'datepicker' | 'file';
   validators?: ValidatorFn[];
   options?: { value: any; label: string }[];
   // Para multiselect agrupado (p. ej. menús por sección). Si viene, tiene prioridad sobre options.
@@ -47,9 +48,11 @@ export interface DialogConfig<T = any> {
     MatIconModule,
     MatDatepickerModule,
     MatNativeDateModule,
+    MatCheckboxModule,
     SimpleFuComponent
   ],
   templateUrl: './generic-form-dialog.component.html',
+  styleUrl: './generic-form-dialog.component.scss',
 })
 export class GenericFormDialogComponent {
   form: FormGroup;
@@ -66,7 +69,8 @@ export class GenericFormDialogComponent {
     const controls: Record<string, any> = {};
 
     config.fields.forEach((field) => {
-      const initialValue = config.data?.[field.key] ?? (field.type === 'multiselect' ? [] : '');
+      const isArrayField = field.type === 'multiselect' || field.type === 'checkboxes';
+      const initialValue = config.data?.[field.key] ?? (isArrayField ? [] : '');
       controls[field.key] = [initialValue, field.validators ?? []];
       // Load existing preview for file fields on edit
       if (field.type === 'file' && config.data?.[field.key]) {
@@ -98,6 +102,35 @@ export class GenericFormDialogComponent {
       },
       error: () => { this.creating[field.key] = false; },
     });
+  }
+
+  // ── Checkboxes agrupados (p. ej. menús de un rol) ──────────────────────────
+  isChecked(key: string, value: any): boolean {
+    const arr = this.form.get(key)?.value;
+    return Array.isArray(arr) && arr.includes(value);
+  }
+
+  toggleCheckbox(key: string, value: any, checked: boolean) {
+    const ctrl = this.form.get(key);
+    const arr: any[] = Array.isArray(ctrl?.value) ? [...ctrl!.value] : [];
+    const idx = arr.indexOf(value);
+    if (checked && idx === -1) arr.push(value);
+    else if (!checked && idx !== -1) arr.splice(idx, 1);
+    ctrl?.setValue(arr);
+    ctrl?.markAsDirty();
+  }
+
+  // Marca/desmarca todas las opciones de un grupo (encabezado de sección).
+  toggleGroup(key: string, options: { value: any }[], checked: boolean) {
+    const ctrl = this.form.get(key);
+    const set = new Set<any>(Array.isArray(ctrl?.value) ? ctrl!.value : []);
+    options.forEach(o => (checked ? set.add(o.value) : set.delete(o.value)));
+    ctrl?.setValue([...set]);
+    ctrl?.markAsDirty();
+  }
+
+  isGroupAllChecked(key: string, options: { value: any }[]): boolean {
+    return options.length > 0 && options.every(o => this.isChecked(key, o.value));
   }
 
   onFileSelected(file: File, key: string) {

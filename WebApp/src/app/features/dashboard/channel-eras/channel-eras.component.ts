@@ -1,4 +1,6 @@
-import { Component, OnInit, signal, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, OnInit, signal, computed, ViewChild, AfterViewInit } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
@@ -34,6 +36,8 @@ import { DatePipe } from '@angular/common';
         MatCardModule,
         MatSelectModule,
         MatFormFieldModule,
+        MatTooltipModule,
+        RouterLink,
         DatePipe,
     ],
     templateUrl: './channel-eras.component.html',
@@ -45,6 +49,9 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
     channels = signal<ChannelResponse[]>([]);
     series = signal<SeriesResponse[]>([]);
     selectedChannelId = signal<number | null>(null);
+    // Nombre del canal seleccionado (para el encabezado "Eras — <canal>").
+    selectedChannelName = computed(() =>
+        this.channels().find(c => c.id === this.selectedChannelId())?.name ?? null);
     displayedColumns = ['id', 'name', 'description', 'startDate', 'endDate', 'series', 'bumpers', 'actions'];
     dataSource = new MatTableDataSource<ChannelEraResponse>([]);
 
@@ -52,6 +59,7 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
         private channelErasService: ChannelErasService,
         private channelsService: ChannelsService,
         private seriesService: SeriesService,
+        private route: ActivatedRoute,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
         public themeService: CustomizerSettingsService,
@@ -65,6 +73,12 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
         this.seriesService.getAll().subscribe({
             next: (data) => this.series.set(data),
         });
+        // Deep-link desde Canales: preselecciona el canal y carga sus eras.
+        const channelId = Number(this.route.snapshot.queryParamMap.get('channelId'));
+        if (channelId) {
+            this.selectedChannelId.set(channelId);
+            this.loadEras(channelId);
+        }
     }
 
     ngAfterViewInit() {
@@ -85,7 +99,7 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
 
     openForm(era?: ChannelEraResponse) {
         const channelId = this.selectedChannelId();
-        if (!channelId) { this.showError('Select a channel first'); return; }
+        if (!channelId) { this.showError('Seleccioná un canal primero'); return; }
 
         const config: DialogConfig = {
             title: 'era',
@@ -157,7 +171,7 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
             this.channelErasService.assignSeries(era.id, { seriesIds }).subscribe({
                 next: () => {
                     this.loadEras(this.selectedChannelId()!);
-                    this.showSuccess('Series assigned');
+                    this.showSuccess('Series asignadas');
                 },
                 error: () => this.showError('Error al asignar series'),
             });

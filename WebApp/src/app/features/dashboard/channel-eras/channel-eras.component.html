@@ -4,24 +4,25 @@
     [class.rtl-enabled]="themeService.isRTLEnabled()">
 
     <div class="breadcrumb-card mb-25 d-md-flex align-items-center justify-content-between">
-        <h5 class="mb-0">Eras</h5>
+        <div class="d-flex align-items-center" style="gap: 6px;">
+            <a mat-icon-button routerLink="/dashboard/channels" matTooltip="Volver a canales" aria-label="Volver a canales">
+                <mat-icon>arrow_back</mat-icon>
+            </a>
+            <h5 class="mb-0">
+                Eras@if (selectedChannelName()) {<span style="opacity: .8;"> — {{ selectedChannelName() }}</span>}
+            </h5>
+        </div>
         <button mat-flat-button color="primary" (click)="openForm()" [disabled]="!selectedChannelId()">
             <mat-icon>add</mat-icon> Nueva era
         </button>
     </div>
 
     <mat-card class="daxa-card mb-25 border-radius bg-white border-none d-block">
-        <mat-card-header>
-            <mat-card-title>
-                <h5 class="mb-0">Eras</h5>
-            </mat-card-title>
-        </mat-card-header>
-
         <mat-card-content>
             <div class="filters-bar">
                 <mat-form-field appearance="outline">
-                    <mat-label>Filter by Channel</mat-label>
-                    <mat-select (selectionChange)="onChannelChange($event.value)">
+                    <mat-label>Canal</mat-label>
+                    <mat-select [value]="selectedChannelId()" (selectionChange)="onChannelChange($event.value)">
                         @for (c of channels(); track c.id) {
                             <mat-option [value]="c.id">{{ c.name }}</mat-option>
                         }
@@ -84,7 +85,7 @@
                     <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
                     <tr class="mat-row" *matNoDataRow>
                         <td class="mat-cell" colspan="8">
-                            @if (!selectedChannelId()) { Select a channel to see eras. }
+                            @if (!selectedChannelId()) { Seleccioná un canal para ver sus eras. }
                             @else { No hay eras. }
                         </td>
                     </tr>

@@ -1,0 +1,26 @@
+// Checkboxes agrupados (usado para permisos/menús de un rol). Cada sección es
+// una tarjeta con un checkbox "seleccionar todo" en el encabezado y sus items
+// indentados debajo. Funciona en claro y oscuro (borde violeta sutil).
+.checkbox-field {
+    .checkbox-section {
+        border: 1px solid rgba(139, 125, 255, 0.18);
+        border-radius: 10px;
+        padding: 8px 12px 10px;
+        margin-bottom: 10px;
+    }
+
+    .checkbox-section__all {
+        font-weight: 700;
+        font-size: 12px;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+    }
+
+    .checkbox-section__items {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-top: 2px;
+        padding-left: 22px;
+    }
+}

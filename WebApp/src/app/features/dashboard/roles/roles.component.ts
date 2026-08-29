@@ -74,7 +74,7 @@ export class RolesComponent implements OnInit, AfterViewInit {
             fields: [
                 { key: 'name', label: 'Nombre', type: 'text', validators: [Validators.required, Validators.maxLength(100)] },
                 { key: 'description', label: 'Descripción', type: 'textarea' },
-                { key: 'menuIds', label: 'Menús a los que puede acceder', type: 'multiselect', groups: this.buildMenuGroups() },
+                { key: 'menuIds', label: 'Menús a los que puede acceder', type: 'checkboxes', groups: this.buildMenuGroups() },
             ],
             data: rol ?? null,
         };

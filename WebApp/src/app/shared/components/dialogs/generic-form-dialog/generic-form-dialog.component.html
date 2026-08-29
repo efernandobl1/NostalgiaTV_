@@ -52,6 +52,38 @@
                 />
               </div>
             }
+          } @else if (field.type === 'checkboxes') {
+            <!-- Checkboxes agrupados (más claros que un select múltiple para permisos). -->
+            <div class="checkbox-field mt-8 mb-13">
+              @if (field.groups) {
+                @for (g of field.groups; track g.label) {
+                  <div class="checkbox-section">
+                    <mat-checkbox
+                      class="checkbox-section__all"
+                      [checked]="isGroupAllChecked(field.key, g.options)"
+                      (change)="toggleGroup(field.key, g.options, $event.checked)"
+                    >{{ g.label }}</mat-checkbox>
+                    <div class="checkbox-section__items">
+                      @for (opt of g.options; track opt.value) {
+                        <mat-checkbox
+                          [checked]="isChecked(field.key, opt.value)"
+                          (change)="toggleCheckbox(field.key, opt.value, $event.checked)"
+                        >{{ opt.label }}</mat-checkbox>
+                      }
+                    </div>
+                  </div>
+                }
+              } @else {
+                <div class="checkbox-section__items">
+                  @for (opt of field.options; track opt.value) {
+                    <mat-checkbox
+                      [checked]="isChecked(field.key, opt.value)"
+                      (change)="toggleCheckbox(field.key, opt.value, $event.checked)"
+                    >{{ opt.label }}</mat-checkbox>
+                  }
+                </div>
+              }
+            </div>
           } @else {
             <mat-form-field class="w-100 mb-13 mt-10">
               <mat-label>{{ field.label }}</mat-label>

@@ -17,6 +17,8 @@ import {
 import { DatePipe, CommonModule } from '@angular/common';
 import { environment } from '../../../../environments/environment';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 interface ScheduleEntry {
   id: number;
@@ -120,6 +122,7 @@ export class ScheduleDialogComponent {
     MatDialogModule,
     MatSnackBarModule,
     MatCardModule,
+    MatTooltipModule,
     DatePipe,
     ScheduleDialogComponent,
   ],
@@ -138,8 +141,15 @@ export class ChannelsComponent implements OnInit, AfterViewInit {
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
     private http: HttpClient,
+    private router: Router,
     public themeService: CustomizerSettingsService,
   ) {}
+
+  // Las eras son propias de cada canal: en vez de un menú suelto, se gestionan
+  // desde la fila del canal (deep-link con el canal preseleccionado).
+  manageEras(channel: ChannelResponse) {
+    this.router.navigate(['/dashboard/channel-eras'], { queryParams: { channelId: channel.id } });
+  }
 
   ngOnInit() {
     this.loadChannels();
