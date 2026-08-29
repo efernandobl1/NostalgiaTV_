@@ -1,0 +1,108 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Capa de identidad RETRO para el dashboard. Se aplica sobre el modo oscuro
+// (activo por defecto). Mantiene el texto de tablas/forms legible (Outfit) y
+// reserva las fuentes pixel para marca y secciones. Accesibilidad: respeta el
+// prefers-reduced-motion global; los efectos son puramente decorativos.
+// ─────────────────────────────────────────────────────────────────────────────
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+:root {
+    --retro-purple: #8b7dff;
+    --retro-red: #ff6b6b;
+    --retro-green: #8ee89f;
+    --retro-cyan: #5be8e0;
+}
+
+body.dark-theme {
+    background:
+        radial-gradient(ellipse at 18% -10%, rgba(139, 125, 255, 0.16), transparent 55%),
+        radial-gradient(ellipse at 100% 0%, rgba(255, 107, 107, 0.07), transparent 45%),
+        linear-gradient(160deg, #15152b 0%, #0e0e1c 58%, #101a30 100%) !important;
+    background-attachment: fixed !important;
+
+    // Scanlines CRT sutiles sobre todo el fondo (detrás del contenido).
+    &::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+            0deg,
+            rgba(0, 0, 0, 0.10),
+            rgba(0, 0, 0, 0.10) 1px,
+            transparent 1px,
+            transparent 3px
+        );
+        opacity: 0.5;
+    }
+
+    // El contenido por encima de las scanlines.
+    app-root, .main-content-area, .sidebar-area, .header-area { position: relative; z-index: 1; }
+
+    // ── Sidebar ──────────────────────────────────────────────────────────────
+    .sidebar-area .logo span {
+        font-family: 'Press Start 2P', cursive;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        color: var(--retro-red);
+        text-shadow: 0 0 12px rgba(255, 107, 107, 0.55), 1px 1px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    .sidebar-area .sub-title {
+        font-family: 'Press Start 2P', cursive;
+        font-size: 8.5px !important;
+        letter-spacing: 1px;
+        color: rgba(142, 232, 159, 0.8) !important;
+        text-transform: uppercase;
+    }
+
+    .sidebar-menu-link {
+        border-left: 3px solid transparent;
+        transition: color .2s ease, background .2s ease, box-shadow .2s ease;
+
+        &:hover { color: var(--retro-purple) !important; }
+
+        &.active {
+            color: var(--retro-green) !important;
+            background: rgba(139, 125, 255, 0.14) !important;
+            border-left-color: var(--retro-green);
+            box-shadow: inset 0 0 20px rgba(139, 125, 255, 0.16);
+
+            i, .material-symbols-outlined { color: var(--retro-green) !important; }
+        }
+    }
+
+    // ── Cards ────────────────────────────────────────────────────────────────
+    .daxa-card,
+    .mat-mdc-card {
+        border: 1px solid rgba(139, 125, 255, 0.22) !important;
+        box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45) !important;
+    }
+
+    // ── Encabezado de página ("Series", "Roles", ...) ──────────────────────────
+    .breadcrumb-card h5,
+    .breadcrumb-card .mb-0 {
+        font-family: 'VT323', monospace;
+        font-size: 30px !important;
+        line-height: 1.1;
+        letter-spacing: 0.5px;
+        color: var(--retro-green);
+        text-shadow: 0 0 14px rgba(142, 232, 159, 0.32);
+    }
+
+    // ── Botón primario ─────────────────────────────────────────────────────────
+    .mat-mdc-flat-button.mat-primary,
+    .mat-mdc-raised-button.mat-primary,
+    .mat-mdc-unelevated-button.mat-primary {
+        background: linear-gradient(135deg, #8b7dff, #5a4fe0) !important;
+        color: #ffffff !important;
+        border-radius: 999px !important;
+        box-shadow: 0 6px 20px rgba(139, 125, 255, 0.35) !important;
+    }
+
+    // Foco de tabla / links con acento neón.
+    a:hover { color: var(--retro-cyan); }
+}
+
+// El toggle a modo claro sigue funcionando: en claro no se aplica nada de esto.

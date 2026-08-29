@@ -9,11 +9,11 @@ export class CustomizerSettingsService {
     constructor() {
         if (typeof window !== 'undefined' && window.localStorage) {
             // Dark Mode
-            this.isDarkTheme = JSON.parse(localStorage.getItem('isDarkTheme') || 'false');
+            this.isDarkTheme = JSON.parse(localStorage.getItem('isDarkTheme') || 'true');
             this.updateDarkBodyClass();
     
             // Sidebar Dark Mode
-            this.isSidebarDarkTheme = JSON.parse(localStorage.getItem('isSidebarDarkTheme') || 'false');
+            this.isSidebarDarkTheme = JSON.parse(localStorage.getItem('isSidebarDarkTheme') || 'true');
     
             // Right Sidebar
             this.isRightSidebarTheme = JSON.parse(localStorage.getItem('isRightSidebarTheme') || 'false');
@@ -22,7 +22,7 @@ export class CustomizerSettingsService {
             this.isHideSidebarTheme = JSON.parse(localStorage.getItem('isHideSidebarTheme') || 'false');
     
             // Header Dark
-            this.isHeaderDarkTheme = JSON.parse(localStorage.getItem('isHeaderDarkTheme') || 'false');
+            this.isHeaderDarkTheme = JSON.parse(localStorage.getItem('isHeaderDarkTheme') || 'true');
     
             // Card Border
             this.isCardBorderTheme = JSON.parse(localStorage.getItem('isCardBorderTheme') || 'false');

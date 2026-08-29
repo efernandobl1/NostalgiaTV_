@@ -94,6 +94,9 @@ button {
 // Dark CSS
 @import "./dark";
 
+// Retro identity layer (se aplica sobre el modo oscuro)
+@import "./retro";
+
 // ─── Global dashboard table & filter styles ───────────────────────────────────
 
 .filters-bar {
