@@ -56,7 +56,7 @@ export class SignInComponent {
         this.router.navigate(['/dashboard']);
       },
       error: () => {
-        this.errorMessage = 'Invalid username or password.';
+        this.errorMessage = 'Usuario o contraseña incorrectos.';
       },
     });
   }
