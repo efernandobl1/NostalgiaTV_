@@ -57,9 +57,10 @@
                     <ng-container matColumnDef="actions">
                         <th mat-header-cell *matHeaderCellDef>Acciones</th>
                         <td mat-cell *matCellDef="let s">
-                            <button mat-icon-button (click)="openForm(s)"><mat-icon>edit</mat-icon></button>
-                            <button mat-icon-button color="primary" (click)="assignCategories(s)"><mat-icon>category</mat-icon></button>
-                            <button mat-icon-button color="warn" (click)="delete(s.id)"><mat-icon>delete</mat-icon></button>
+                            <button mat-icon-button (click)="openForm(s)" matTooltip="Editar serie"><mat-icon>edit</mat-icon></button>
+                            <button mat-icon-button color="primary" (click)="manageEpisodes(s)" matTooltip="Gestionar episodios"><mat-icon>movie</mat-icon></button>
+                            <button mat-icon-button color="primary" (click)="assignCategories(s)" matTooltip="Asignar categorías"><mat-icon>category</mat-icon></button>
+                            <button mat-icon-button color="warn" (click)="delete(s.id)" matTooltip="Eliminar serie"><mat-icon>delete</mat-icon></button>
                         </td>
                     </ng-container>
 

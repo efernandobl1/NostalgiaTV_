@@ -1,5 +1,5 @@
 import { Component, OnInit, signal, computed, ViewChild, AfterViewInit } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
@@ -60,6 +60,7 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
         private channelsService: ChannelsService,
         private seriesService: SeriesService,
         private route: ActivatedRoute,
+        private router: Router,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
         public themeService: CustomizerSettingsService,
@@ -142,6 +143,13 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
                     error: () => this.showError('Error al crear la era'),
                 });
             }
+        });
+    }
+
+    // Los bumpers son propios de cada era: se gestionan desde la fila de la era.
+    manageBumpers(era: ChannelEraResponse) {
+        this.router.navigate(['/dashboard/channel-bumpers'], {
+            queryParams: { channelId: this.selectedChannelId(), eraId: era.id },
         });
     }
 

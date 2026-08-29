@@ -1,4 +1,5 @@
-import { Component, OnInit, signal, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, OnInit, signal, computed, ViewChild, AfterViewInit } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
@@ -27,7 +28,7 @@ import { environment } from '../../../../environments/environment';
     imports: [
         MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule,
         MatDialogModule, MatSnackBarModule, MatCardModule, MatSelectModule,
-        MatFormFieldModule, MatTooltipModule,
+        MatFormFieldModule, MatTooltipModule, RouterLink,
     ],
     templateUrl: './channel-bumpers.component.html',
     styleUrl: './channel-bumpers.component.scss',
@@ -39,6 +40,11 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
     eras = signal<ChannelEraResponse[]>([]);
     selectedChannelId = signal<number | null>(null);
     selectedEraId = signal<number | null>(null);
+    // Nombres para el encabezado "Bumpers — <era>".
+    selectedChannelName = computed(() =>
+        this.channels().find(c => c.id === this.selectedChannelId())?.name ?? null);
+    selectedEraName = computed(() =>
+        this.eras().find(e => e.id === this.selectedEraId())?.name ?? null);
     displayedColumns = ['id', 'title', 'filePath', 'order', 'actions'];
     dataSource = new MatTableDataSource<ChannelBumperResponse>([]);
     apiUrl = environment.apiUrl;
@@ -47,6 +53,7 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
         private bumpersService: ChannelBumpersService,
         private erasService: ChannelErasService,
         private channelsService: ChannelsService,
+        private route: ActivatedRoute,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
         public themeService: CustomizerSettingsService,
@@ -57,6 +64,20 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
             next: (data) => this.channels.set(data),
             error: () => this.showError('Error al cargar los canales'),
         });
+        // Deep-link desde Eras: preselecciona canal + era y carga sus bumpers.
+        const channelId = Number(this.route.snapshot.queryParamMap.get('channelId'));
+        const eraId = Number(this.route.snapshot.queryParamMap.get('eraId'));
+        if (channelId) {
+            this.selectedChannelId.set(channelId);
+            this.erasService.getByChannel(channelId).subscribe({
+                next: (data) => this.eras.set(data),
+                error: () => this.showError('Error al cargar las eras'),
+            });
+            if (eraId) {
+                this.selectedEraId.set(eraId);
+                this.loadBumpers(eraId);
+            }
+        }
     }
 
     ngAfterViewInit() {
@@ -87,13 +108,13 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
 
     openForm(bumper?: ChannelBumperResponse) {
         const eraId = this.selectedEraId();
-        if (!eraId) { this.showError('Select an era first'); return; }
+        if (!eraId) { this.showError('Seleccioná una era primero'); return; }
 
         const config: DialogConfig = {
             title: 'bumper',
             fields: [
                 { key: 'title', label: 'Título', type: 'text', validators: [Validators.required] },
-                { key: 'file', label: 'Video File', type: 'file' },
+                { key: 'file', label: 'Archivo de video', type: 'file' },
                 { key: 'order', label: 'Orden', type: 'number' },
             ],
             data: bumper ? { ...bumper } : { order: 0 },
@@ -146,13 +167,13 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
     }
 
     scan() {
-        if (!this.selectedEraId()) { this.showError('Select an era first'); return; }
+        if (!this.selectedEraId()) { this.showError('Seleccioná una era primero'); return; }
         this.bumpersService.scan(this.selectedEraId()!).subscribe({
             next: (data) => {
                 this.dataSource.data = data;
-                this.showSuccess('Bumpers synced from folder');
+                this.showSuccess('Bumpers sincronizados desde la carpeta');
             },
-            error: () => this.showError('Error scanning folder'),
+            error: () => this.showError('Error al escanear la carpeta'),
         });
     }
 

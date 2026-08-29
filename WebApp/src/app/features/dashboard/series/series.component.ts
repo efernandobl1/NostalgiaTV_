@@ -7,7 +7,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { SeriesService } from './series.service';
 import { CategoriesService } from '../categories/categories.service';
 import { SeriesResponse } from '../../../shared/models/serie.model';
@@ -18,7 +20,7 @@ import { DatePipe } from '@angular/common';
 
 @Component({
     selector: 'app-series',
-    imports: [MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, MatCardModule, DatePipe],
+    imports: [MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, MatCardModule, MatTooltipModule, DatePipe],
     templateUrl: './series.component.html',
     styleUrl: './series.component.scss',
 })
@@ -35,8 +37,15 @@ export class SeriesComponent implements OnInit, AfterViewInit {
         private categoriesService: CategoriesService,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
+        private router: Router,
         public themeService: CustomizerSettingsService,
     ) {}
+
+    // Los episodios son propios de cada serie: se gestionan desde la fila de la
+    // serie (deep-link con la serie preseleccionada) en vez de un menú suelto.
+    manageEpisodes(series: SeriesResponse) {
+        this.router.navigate(['/dashboard/episodes'], { queryParams: { seriesId: series.id } });
+    }
 
     ngOnInit() {
         this.loadSeries();

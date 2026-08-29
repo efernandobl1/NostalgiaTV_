@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { EpisodesService } from './episodes.service';
 import { SeriesService } from '../series/series.service';
 import { EpisodeResponse, UpdateEpisodeRequest } from '../../../shared/models/episode.model';
@@ -22,7 +23,7 @@ import { DialogConfig, GenericFormDialogComponent } from '../../../shared/compon
     imports: [
         MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule,
         MatDialogModule, MatSnackBarModule, MatCardModule, MatSelectModule,
-        MatFormFieldModule, MatTooltipModule, FormsModule
+        MatFormFieldModule, MatTooltipModule, FormsModule, RouterLink
     ],
     templateUrl: './episodes.component.html',
     styleUrl: './episodes.component.scss'
@@ -34,6 +35,9 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
     series = signal<SeriesResponse[]>([]);
     selectedSeriesId = signal<number | null>(null);
     selectedSeason = signal<number | null>(null);
+    // Nombre de la serie seleccionada (encabezado "Episodios — <serie>").
+    selectedSeriesName = computed(() =>
+        this.series().find(s => s.id === this.selectedSeriesId())?.name ?? null);
 
     episodeTypes = signal<{ id: number; name: string }[]>([
         { id: 1, name: 'Regular' },
@@ -56,6 +60,7 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
     constructor(
         private episodesService: EpisodesService,
         private seriesService: SeriesService,
+        private route: ActivatedRoute,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
         public themeService: CustomizerSettingsService
@@ -66,6 +71,12 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
             next: data => this.series.set(data),
             error: () => this.showError('Error al cargar las series')
         });
+        // Deep-link desde Series: preselecciona la serie y carga sus episodios.
+        const seriesId = Number(this.route.snapshot.queryParamMap.get('seriesId'));
+        if (seriesId) {
+            this.selectedSeriesId.set(seriesId);
+            this.loadEpisodes(seriesId);
+        }
     }
 
     ngAfterViewInit() {
@@ -100,15 +111,15 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
     }
 
     scan() {
-        if (!this.selectedSeriesId()) { this.showError('Select a series first'); return; }
+        if (!this.selectedSeriesId()) { this.showError('Seleccioná una serie primero'); return; }
         this.episodesService.scan(this.selectedSeriesId()!).subscribe({
             next: data => {
                 this.allEpisodes.set(data);
                 this.dataSource.data = data;
                 this.selectedSeason.set(null);
-                this.showSuccess('Episodes synced from folder');
+                this.showSuccess('Episodios sincronizados desde la carpeta');
             },
-            error: () => this.showError('Error scanning folder')
+            error: () => this.showError('Error al escanear la carpeta')
         });
     }
 
@@ -117,10 +128,10 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
             title: 'episodio',
             fields: [
                 { key: 'title', label: 'Título', type: 'text' },
-                { key: 'episodeNumber', label: 'Episode Number', type: 'number' },
+                { key: 'episodeNumber', label: 'Número de episodio', type: 'number' },
                 {
                     key: 'episodeTypeId',
-                    label: 'Type',
+                    label: 'Tipo',
                     type: 'select',
                     options: this.episodeTypes().map(t => ({ value: t.id, label: t.name }))
                 }

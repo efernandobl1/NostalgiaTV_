@@ -25,8 +25,10 @@ export class SidebarComponent {
     // ocultan visualmente: menuGuard sigue usando la lista completa, así que los
     // permisos por rol no cambian y las páginas siguen accesibles desde su flujo.
     private readonly hiddenUrls = new Set<string>([
-        '/dashboard/channel-eras',
-        '/dashboard/categories',
+        '/dashboard/channel-eras',      // dentro de Canales (por canal)
+        '/dashboard/channel-bumpers',   // dentro de Eras (por era)
+        '/dashboard/categories',        // creación inline desde Series
+        '/dashboard/episodes',          // dentro de Series (por serie)
     ]);
 
     // Vista filtrada del menú: quita los items ocultos y descarta las secciones
