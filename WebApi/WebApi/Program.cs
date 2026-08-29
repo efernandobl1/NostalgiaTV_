@@ -42,6 +42,7 @@ namespace WebApi
             builder.Services.AddExceptionHandling();
             builder.Services.AddValidationConfig();
             builder.Services.AddCorsConfig(builder.Configuration);
+            builder.Services.AddReverseProxyConfig(builder.Configuration);
             builder.Services.AddSecureLogging();
             builder.Services.AddHealthChecks()
                 .AddCheck<SqlServerHealthCheck>(
@@ -51,6 +52,10 @@ namespace WebApi
                     timeout: TimeSpan.FromSeconds(5));
 
             var app = builder.Build();
+
+            // Debe ir antes de HTTPS/HSTS: Nginx informa el esquema público real
+            // mediante X-Forwarded-Proto cuando el despliegue usa Docker Compose.
+            app.UseReverseProxyConfig();
 
             await app.ApplyMigrationsAsync();
 
@@ -63,7 +68,15 @@ namespace WebApi
             }
 
             app.UseExceptionHandler();
-            app.UseHttpsRedirection();
+
+            // Detrás de Nginx (que ya fuerza HTTPS y termina TLS) el redirect interno
+            // provocaría bucles y falsos fallos del healthcheck que llama por HTTP a Kestrel.
+            var usesTrustedReverseProxy = app.Configuration.GetValue<bool>("ReverseProxy:TrustForwardedHeaders");
+            if (!usesTrustedReverseProxy)
+            {
+                app.UseHttpsRedirection();
+            }
+
             app.UseAuthentication();
             app.UseSecureRequestLogging();
             app.UseAuthorization();

@@ -371,6 +371,9 @@ WebApi/WebApi/Logs/
 # Datos de los bind-mounts en producción (SQL, media, uploads, Loki, Grafana, etc.)
 /data/
 
+# Certificados TLS generados/montados en la VPS
+/certs/
+
 # Secretos locales de la API: solo se versionan las plantillas *.example.json
 appsettings.Local.json
 **/appsettings.Local.json

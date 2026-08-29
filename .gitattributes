@@ -3,6 +3,15 @@
 ###############################################################################
 * text=auto
 
+# Archivos que se ejecutan/leen dentro de contenedores Linux: siempre LF.
+*.sh            text eol=lf
+*.template      text eol=lf
+Dockerfile      text eol=lf
+*.alloy         text eol=lf
+docker-compose*.yml text eol=lf
+.env.example    text eol=lf
+.env.production.example text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #
