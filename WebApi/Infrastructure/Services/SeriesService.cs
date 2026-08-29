@@ -24,6 +24,29 @@ namespace Infrastructure.Services
             _folderService = folderService;
         }
 
+        // Extensiones de video reales que el scanner acepta como episodios.
+        private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+            { ".mp4", ".mkv", ".avi", ".webm", ".mov", ".wmv", ".flv" };
+
+        // Devuelve sólo archivos de video reales, ignorando artefactos de
+        // transcodificación (p. ej. "X.mp4.transcoding.mp4", "X.mp4.web-compatible")
+        // y temporales. Antes el scan tomaba TODO archivo de la carpeta, por lo que
+        // registraba esos temporales como episodios y la programación terminaba
+        // apuntando a rutas que luego no existían en disco (404 al reproducir).
+        private static IEnumerable<string> GetVideoFiles(string dir)
+        {
+            return Directory.GetFiles(dir).Where(path =>
+            {
+                var name = Path.GetFileName(path);
+                if (name.Contains(".transcoding.", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains(".web-compatible", StringComparison.OrdinalIgnoreCase) ||
+                    name.EndsWith(".part", StringComparison.OrdinalIgnoreCase) ||
+                    name.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase))
+                    return false;
+                return VideoExtensions.Contains(Path.GetExtension(path));
+            });
+        }
+
         public async Task<List<SeriesResponse>> GetAllAsync() => await _context.Series.ProjectToType<SeriesResponse>().ToListAsync();
 
         public async Task<SeriesResponse> GetByIdAsync(int id)
@@ -120,7 +143,7 @@ namespace Infrastructure.Services
                 var numberPart = dirName.Replace("season ", "", StringComparison.OrdinalIgnoreCase).Trim();
                 var seasonNumber = int.TryParse(numberPart, out var n) ? n : 0;
 
-                foreach (var file in Directory.GetFiles(seasonDir))
+                foreach (var file in GetVideoFiles(seasonDir))
                     scannedFiles.Add((file, seasonNumber, regularType.Id));
             }
 
@@ -129,7 +152,7 @@ namespace Infrastructure.Services
                 ?? Path.Combine(series.FolderPath, "specials");
 
             if (Directory.Exists(specialsDir))
-                foreach (var file in Directory.GetFiles(specialsDir))
+                foreach (var file in GetVideoFiles(specialsDir))
                     scannedFiles.Add((file, 0, specialType.Id));
 
             var moviesDir = allDirs.FirstOrDefault(d =>
@@ -137,7 +160,7 @@ namespace Infrastructure.Services
                 ?? Path.Combine(series.FolderPath, "movies");
 
             if (Directory.Exists(moviesDir))
-                foreach (var file in Directory.GetFiles(moviesDir))
+                foreach (var file in GetVideoFiles(moviesDir))
                     scannedFiles.Add((file, 0, movieType.Id));
 
             var scannedPaths = scannedFiles.Select(f => NormalizePath(f.FilePath)).ToHashSet();
