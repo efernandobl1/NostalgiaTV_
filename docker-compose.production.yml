@@ -77,7 +77,7 @@ services:
     environment:
       API_PUBLIC_URL: ${API_PUBLIC_URL:?Set API_PUBLIC_URL in .env.production}
     ports:
-      - 127.0.0.1:${WEB_HTTP_PORT:-8082}:80
+      - 127.0.0.1:${WEB_HTTP_PORT:-8082}:8080
     depends_on:
       webapi:
         condition: service_healthy
@@ -87,7 +87,7 @@ services:
         aliases:
           - nostalgia-tv-web
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
       interval: 30s
       timeout: 3s
       retries: 3
