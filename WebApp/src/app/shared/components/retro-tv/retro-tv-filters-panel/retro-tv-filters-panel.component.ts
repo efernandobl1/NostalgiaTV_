@@ -1,13 +1,13 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { VideoFilterProfile } from '../../../../core/services/tv-settings.service';
-
 
 @Component({
   selector: 'app-retro-tv-filters-panel',
   standalone: true,
   imports: [CommonModule],
   templateUrl: './retro-tv-filters-panel.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './retro-tv-filters-panel.component.scss',
 })
 export class RetroTvFiltersPanelComponent {

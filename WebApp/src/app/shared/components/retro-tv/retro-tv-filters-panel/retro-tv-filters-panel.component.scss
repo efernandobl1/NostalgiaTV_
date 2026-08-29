@@ -1,22 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
-
 .filters-panel {
   position: absolute;
-  top: 2.2rem;
-  right: 0.4rem;
+  top: 0.25rem;
+  right: 0.25rem;
   z-index: 20;
   background: linear-gradient(145deg, rgba(30, 30, 50, 0.97), rgba(15, 15, 30, 0.97));
   border: 1px solid rgba(107, 207, 127, 0.5);
   border-radius: 10px;
   padding: 0.75rem;
-  width: 200px;
+  width: min(260px, calc(100% - 0.5rem));
+  max-height: calc(100% - 0.5rem);
+  overflow-y: auto;
   box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.8),
     0 0 15px rgba(107, 207, 127, 0.1);
   pointer-events: auto;
 
   &--fs {
-    width: 260px;
+    top: max(1rem, env(safe-area-inset-top));
+    right: max(1rem, env(safe-area-inset-right));
+    width: min(320px, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
 
     .filter-label { font-size: 1rem; }
     .filter-value { font-size: 1rem; }
@@ -31,7 +34,8 @@
   justify-content: space-between;
   margin-bottom: 0.6rem;
   font-family: 'Press Start 2P', cursive;
-  font-size: 0.45rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
   color: #6bcf7f;
 }
 
@@ -40,7 +44,9 @@
   border: none;
   color: #6bcf7f;
   cursor: pointer;
-  font-size: 0.9rem;
+  width: 40px;
+  height: 40px;
+  font-size: 1.25rem;
   padding: 0;
   line-height: 1;
 
@@ -56,12 +62,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.4rem;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
   margin-bottom: 0.5rem;
 
   input[type='checkbox'] {
-    width: 14px;
-    height: 14px;
+    width: 20px;
+    height: 20px;
     accent-color: #6bcf7f;
     cursor: pointer;
     flex-shrink: 0;
@@ -70,7 +77,9 @@
 
 .filter-label {
   font-family: 'VT323', monospace;
-  font-size: 0.8rem;
+  min-width: 8rem;
+  font-size: 1rem;
+  line-height: 1.25;
   color: #fff;
   flex: 1;
 }
@@ -79,13 +88,13 @@
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  flex: 1;
+  flex: 1 1 100%;
   justify-content: flex-end;
 }
 
 .filter-value {
   font-family: 'VT323', monospace;
-  font-size: 0.8rem;
+  font-size: 1rem;
   color: #ffd93d;
   min-width: 28px;
   text-align: right;
@@ -106,8 +115,9 @@
 
 input[type='range'] {
   -webkit-appearance: none;
-  width: 80px;
-  height: 3px;
+  width: 100%;
+  min-width: 80px;
+  height: 6px;
   background: rgba(107, 207, 127, 0.3);
   border-radius: 2px;
   outline: none;
@@ -115,8 +125,8 @@ input[type='range'] {
 
   &::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 10px;
-    height: 10px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: #6bcf7f;
     cursor: pointer;

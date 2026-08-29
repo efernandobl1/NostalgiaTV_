@@ -28,7 +28,6 @@ namespace Infrastructure.Services
         public async Task<List<ChannelResponse>> GetAllAsync()
         {
             var channels = await _context.Channels
-                .AsNoTracking()
                 .Include(c => c.Series)
                 .Include(c => c.Eras).ThenInclude(e => e.Series)
                 .Include(c => c.Eras).ThenInclude(e => e.Bumpers)

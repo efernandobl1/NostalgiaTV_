@@ -79,7 +79,6 @@ namespace Infrastructure.Services
         public async Task<UserResponse> GetByIdAsync(int id)
         {
             var user = await _context.Users
-                .AsNoTracking()
                 .Include(u => u.Rol)
                 .ThenInclude(r => r.Menus)
                 .FirstOrDefaultAsync(u => u.Id == id)

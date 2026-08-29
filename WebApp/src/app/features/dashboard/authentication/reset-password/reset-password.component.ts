@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -8,19 +8,23 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { CustomizerSettingsService } from '../../../../shared/components/customizer-settings/customizer-settings.service';
 
 @Component({
-    selector: 'app-reset-password',
-    imports: [RouterLink, MatFormFieldModule, MatInputModule, MatButtonModule, MatCheckboxModule, ReactiveFormsModule],
-    templateUrl: './reset-password.component.html',
-    styleUrl: './reset-password.component.scss'
+  selector: 'app-reset-password',
+  imports: [
+    RouterLink,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatCheckboxModule,
+    ReactiveFormsModule,
+  ],
+  templateUrl: './reset-password.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrl: './reset-password.component.scss',
 })
 export class ResetPasswordComponent {
+  // Password Hide
+  hide = true;
+  hide2 = true;
 
-    // Password Hide
-    hide = true;
-    hide2 = true;
-
-    constructor(
-        public themeService: CustomizerSettingsService
-    ) {}
-
+  constructor(public themeService: CustomizerSettingsService) {}
 }

@@ -1,12 +1,9 @@
 node_modules
 dist
 .angular
-.vs
-.vscode
-obj
-bin
-**/*.user
-.env
 .git
+*.log
+.env
+.env.*
 Dockerfile*
-.dockerignore
+README*

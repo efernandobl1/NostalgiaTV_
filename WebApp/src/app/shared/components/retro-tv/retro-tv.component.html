@@ -42,6 +42,7 @@
             class="overlay-filter-btn"
             [class.visible]="true"
             (click)="toggleFiltersPanel()"
+            aria-label="Abrir filtros de video"
           >
             <mat-icon>tune</mat-icon>
           </button>
@@ -49,13 +50,13 @@
 
         @if (mode() === 'channels' && currentChannel()?.logoPath) {
           <div class="corner-logo" [class.visible]="showOverlay()" [class.corner-logo--fs]="isFullscreen()">
-            <img [src]="apiUrl + currentChannel()!.logoPath" [alt]="'Logo del canal ' + currentChannel()!.name" class="corner-logo-img" />
+            <img [src]="apiUrl + currentChannel()!.logoPath" [alt]="currentChannel()!.name + ' logo'" decoding="async" class="corner-logo-img" />
           </div>
         }
 
         @if (mode() === 'series' && selectedSeries()?.logoPath) {
           <div class="corner-logo" [class.visible]="showOverlay()" [class.corner-logo--fs]="isFullscreen()">
-            <img [src]="apiUrl + selectedSeries()!.logoPath" [alt]="'Logo de la serie ' + selectedSeries()!.name" class="corner-logo-img" />
+            <img [src]="apiUrl + selectedSeries()!.logoPath" [alt]="selectedSeries()!.name + ' logo'" decoding="async" class="corner-logo-img" />
           </div>
         }
 
@@ -80,6 +81,7 @@
           </div>
         </div>
 
+        @defer (when (mode() === 'series' && currentEpisode()) || (mode() === 'channels' && currentChannel()); prefetch on idle) {
         @if (mode() === 'series' && currentEpisode()) {
           <app-retro-tv-controls
             [visible]="showOverlay()"
@@ -119,8 +121,9 @@
             (toggleFullscreen)="toggleFullscreen()"
           />
         }
+        }
 
-        @if (showFiltersPanel()) {
+        @defer (when showFiltersPanel(); prefetch on idle) {
           <app-retro-tv-filters-panel
             [isFullscreen]="isFullscreen()"
             [activeFilters]="activeFilters()"
@@ -173,7 +176,7 @@
   />
 }
 
-@if (mode() === 'series') {
+@defer (when mode() === 'series'; prefetch on idle) {
   <app-retro-tv-remote-series
     [selectedSeries]="selectedSeries()"
     [seasonGroups]="seasonGroups()"
@@ -204,7 +207,8 @@
   />
 }
 
-<app-retro-tv-dialogs
+@defer (when showSeriesDialog() || showSettingsDialog() || showScheduleDialog(); prefetch on idle) {
+  <app-retro-tv-dialogs
   [showSeriesDialog]="showSeriesDialog()"
   [allSeries]="allSeries()"
   [seriesLoading]="seriesLoading()"
@@ -230,5 +234,6 @@
   (updateSetting)="updateSetting($event.key, $event.value)"
   (resetAll)="resetAllProgress()"
   (closeScheduleDialog)="closeScheduleDialog()"
-  (scheduleChannelChange)="onScheduleChannelChange($event)"
-/>
+    (scheduleChannelChange)="onScheduleChannelChange($event)"
+  />
+}

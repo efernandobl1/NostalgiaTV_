@@ -110,7 +110,6 @@ namespace Infrastructure.Services
             _logger.LogInformation("[SCHEDULE] GenerateScheduleAsync channelId={ch} from={from} until={until}", channelId, from, until);
 
             var channel = await _context.Channels
-                .AsNoTracking()
                 .Include(c => c.Eras).ThenInclude(e => e.Series)
                 .Include(c => c.Eras).ThenInclude(e => e.Bumpers)
                 .Include(c => c.Series)
@@ -135,7 +134,6 @@ namespace Infrastructure.Services
             var current = from;
 
             var seriesLastEpisodes = await _context.ChannelScheduleEntries
-                .AsNoTracking()
                 .Where(e => e.ChannelId == channelId && e.EpisodeId != null)
                 .Include(e => e.Episode)
                 .Where(e => e.Episode != null)
@@ -202,7 +200,6 @@ namespace Infrastructure.Services
                 }
 
                 var episodes = await _context.Episodes
-                    .AsNoTracking()
                     .Include(e => e.EpisodeType)
                     .Include(e => e.Series)
                     .Where(e => eraSeriesIds.Contains(e.SeriesId) && e.FilePath != null)
@@ -393,7 +390,6 @@ namespace Infrastructure.Services
             var now = DateTime.UtcNow;
 
             var entry = await _context.ChannelScheduleEntries
-                .AsNoTracking()
                 .Include(e => e.Episode).ThenInclude(e => e.Series)
                 .Include(e => e.Bumper)
                 .Where(e => e.ChannelId == channelId && e.StartTime <= now && e.EndTime > now)
@@ -405,7 +401,6 @@ namespace Infrastructure.Services
                 await EnsureScheduleGeneratedAsync(channelId, now.AddHours(24));
 
                 entry = await _context.ChannelScheduleEntries
-                    .AsNoTracking()
                     .Include(e => e.Episode).ThenInclude(e => e.Series)
                     .Include(e => e.Bumper)
                     .Where(e => e.ChannelId == channelId && e.StartTime <= now && e.EndTime > now)
@@ -421,7 +416,6 @@ namespace Infrastructure.Services
         {
             var now = DateTime.UtcNow;
             return await _context.ChannelScheduleEntries
-                .AsNoTracking()
                 .Include(e => e.Episode).ThenInclude(e => e.Series)
                 .Include(e => e.Bumper)
                 .Where(e => e.ChannelId == channelId && e.StartTime > now)
@@ -432,9 +426,11 @@ namespace Infrastructure.Services
         public async Task CleanupOldEntriesAsync()
         {
             var cutoff = DateTime.UtcNow.AddHours(-24);
-            await _context.ChannelScheduleEntries
+            var old = await _context.ChannelScheduleEntries
                 .Where(e => e.EndTime < cutoff)
-                .ExecuteDeleteAsync();
+                .ToListAsync();
+            _context.ChannelScheduleEntries.RemoveRange(old);
+            await _context.SaveChangesAsync();
         }
     }
 }

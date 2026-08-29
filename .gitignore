@@ -363,23 +363,10 @@ MigrationBackup/
 FodyWeavers.xsd
 
 WebApi/WebApi/wwwroot/uploads/
+/uploads/
 
-# Runtime logs (operativo + request/response)
-WebApi/WebApi/Logs/
-**/Logs/
-
-# Datos de los bind-mounts en producción (SQL, media, uploads, Loki, Grafana, etc.)
-/data/
-
-# Certificados TLS generados/montados en la VPS
-/certs/
-
-# Secretos locales de la API: solo se versionan las plantillas *.example.json
-appsettings.Local.json
-**/appsettings.Local.json
-
-# Variables de entorno: nunca subir .env reales, solo los *.example
 .env
-.env.*
+appsettings.Local.json
+appsettings.Production.json
 !.env.example
 !.env.production.example

@@ -108,7 +108,7 @@ namespace Infrastructure.Services
             {
                 HttpOnly = true,
                 Secure = true,
-                SameSite = SameSiteMode.Lax,
+                SameSite = SameSiteMode.None,
                 Expires = rememberMe ? DateTimeOffset.UtcNow.AddDays(30) : null
             });
 
@@ -116,7 +116,7 @@ namespace Infrastructure.Services
             {
                 HttpOnly = true,
                 Secure = true,
-                SameSite = SameSiteMode.Lax,
+                SameSite = SameSiteMode.None,
                 Expires = rememberMe ? DateTimeOffset.UtcNow.AddDays(30) : null
             });
 

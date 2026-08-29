@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -19,7 +19,9 @@ import { AuthService } from '../../../../core/services/auth.service';
     ReactiveFormsModule,
   ],
   templateUrl: './sign-in.component.html',
-  styleUrl: './sign-in.component.scss',
+  styleUrls: ['./sign-in.component.scss', '../../../../../_ui-kit.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
+  encapsulation: ViewEncapsulation.None,
 })
 export class SignInComponent {
   hide = true;
@@ -45,10 +47,10 @@ export class SignInComponent {
     if (this.authForm.invalid) return;
     const { rememberMe, ...credentials } = this.authForm.value;
     if (rememberMe) {
-        localStorage.setItem('rememberMe', 'true');
+      localStorage.setItem('rememberMe', 'true');
     } else {
-        localStorage.removeItem('rememberMe');
-        sessionStorage.setItem('sessionActive', 'true');
+      localStorage.removeItem('rememberMe');
+      sessionStorage.setItem('sessionActive', 'true');
     }
     this.authService.login(credentials).subscribe({
       next: () => {
@@ -56,7 +58,7 @@ export class SignInComponent {
         this.router.navigate(['/dashboard']);
       },
       error: () => {
-        this.errorMessage = 'Usuario o contraseña incorrectos.';
+        this.errorMessage = 'Invalid username or password.';
       },
     });
   }

@@ -1,12 +1,11 @@
 
 using ApplicationCore;
 using Infrastructure;
-using Infrastructure.Contexts;
 using Infrastructure.Hubs;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Serilog;
+using Serilog.Events;
 using WebApi.Extensions;
 using WebApi.HealthChecks;
 
@@ -20,15 +19,10 @@ namespace WebApi
 
             if (builder.Environment.IsDevelopment())
             {
-                builder.Configuration
-                    .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
-                    .AddEnvironmentVariables();
+                builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
             }
 
-            // No revelar el servidor (Kestrel) en las cabeceras de respuesta.
-            builder.WebHost.ConfigureKestrel(o => o.AddServerHeader = false);
-
-            builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration).Enrich.FromLogContext());
+            builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
 
             // Add services to the container.
             builder.Services.AddSignalR();
@@ -42,8 +36,6 @@ namespace WebApi
             builder.Services.AddExceptionHandling();
             builder.Services.AddValidationConfig();
             builder.Services.AddCorsConfig(builder.Configuration);
-            builder.Services.AddReverseProxyConfig(builder.Configuration);
-            builder.Services.AddSecureLogging();
             builder.Services.AddHealthChecks()
                 .AddCheck<SqlServerHealthCheck>(
                     "sqlserver",
@@ -53,13 +45,28 @@ namespace WebApi
 
             var app = builder.Build();
 
-            // Debe ir antes de HTTPS/HSTS: Nginx informa el esquema público real
-            // mediante X-Forwarded-Proto cuando el despliegue usa Docker Compose.
-            app.UseReverseProxyConfig();
-
             await app.ApplyMigrationsAsync();
 
             app.UseCors("DefaultPolicy");
+            app.UseSerilogRequestLogging(options =>
+            {
+                options.GetLevel = (context, _, exception) =>
+                {
+                    if (exception is not null || context.Response.StatusCode >= 500)
+                    {
+                        return LogEventLevel.Error;
+                    }
+
+                    if (context.Request.Path.StartsWithSegments("/health"))
+                    {
+                        return LogEventLevel.Debug;
+                    }
+
+                    return context.Response.StatusCode >= 400
+                        ? LogEventLevel.Warning
+                        : LogEventLevel.Information;
+                };
+            });
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -67,34 +74,23 @@ namespace WebApi
                 app.UseOpenApiConfig();
             }
 
+
             app.UseExceptionHandler();
-
-            // Detrás de Nginx (que ya fuerza HTTPS y termina TLS) el redirect interno
-            // provocaría bucles y falsos fallos del healthcheck que llama por HTTP a Kestrel.
-            var usesTrustedReverseProxy = app.Configuration.GetValue<bool>("ReverseProxy:TrustForwardedHeaders");
-            if (!usesTrustedReverseProxy)
-            {
-                app.UseHttpsRedirection();
-            }
-
+            app.UseHttpsRedirection();
             app.UseAuthentication();
-            app.UseSecureRequestLogging();
             app.UseAuthorization();
             app.UseRateLimiter();
             app.UseStaticFiles();
             app.MapControllers();
 
-            // Liveness: confirma que el proceso HTTP responde sin depender de SQL.
             app.MapHealthChecks("/health", new HealthCheckOptions
             {
                 Predicate = _ => false
-            }).AllowAnonymous();
-
-            // Readiness: comprueba una conexión real desde la API hacia SQL Server.
+            });
             app.MapHealthChecks("/health/ready", new HealthCheckOptions
             {
-                Predicate = healthCheck => healthCheck.Tags.Contains("ready")
-            }).AllowAnonymous();
+                Predicate = check => check.Tags.Contains("ready")
+            });
 
             app.MapHub<ChannelHub>("/hubs/channel");
 

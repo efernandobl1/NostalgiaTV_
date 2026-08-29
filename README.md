@@ -85,7 +85,7 @@ La API estará disponible en `https://localhost:7221` y la documentación en `ht
 1. Instala dependencias:
 ```bash
 cd WebApp
-npm install
+pnpm install
 ```
 
 2. Configura el environment en `src/environments/environment.ts`:
@@ -98,7 +98,7 @@ export const environment = {
 
 3. Corre el frontend:
 ```bash
-npm start
+pnpm start
 ```
 
 La aplicación estará disponible en `http://127.0.0.1:54636`.

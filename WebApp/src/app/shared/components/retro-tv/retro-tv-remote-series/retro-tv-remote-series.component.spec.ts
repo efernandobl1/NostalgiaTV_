@@ -13,6 +13,29 @@ describe('RetroTvRemoteSeriesComponent', () => {
 
     fixture = TestBed.createComponent(RetroTvRemoteSeriesComponent);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('settings', {
+      alwaysShowFilters: true,
+      showBumpers: false,
+      showAds: false,
+      tvGlowEffect: true,
+      includeMovies: true,
+      includeSpecials: true,
+      randomPlayback: false,
+      filters: {
+        scanlineIntensity: 15,
+        scanlineDensity: 1,
+        crtCurvature: true,
+        vignette: true,
+        scanlineAnimation: true,
+      },
+      filtersFullscreen: {
+        scanlineIntensity: 25,
+        scanlineDensity: 2,
+        crtCurvature: true,
+        vignette: true,
+        scanlineAnimation: false,
+      },
+    });
     fixture.detectChanges();
   });
 

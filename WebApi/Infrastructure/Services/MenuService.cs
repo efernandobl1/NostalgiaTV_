@@ -19,7 +19,6 @@ namespace Infrastructure.Services
         public async Task<List<MenuResponse>> GetByUserAsync(int userId)
         {
             var user = await _context.Users
-                .AsNoTracking()
                 .Include(u => u.Rol)
                 .ThenInclude(r => r.Menus)
                 .FirstOrDefaultAsync(u => u.Id == userId)
@@ -39,7 +38,7 @@ namespace Infrastructure.Services
 
         public async Task<List<MenuResponse>> GetAllAsync()
         {
-            var menus = await _context.Menus.AsNoTracking().ToListAsync();
+            var menus = await _context.Menus.ToListAsync();
             return menus.Adapt<List<MenuResponse>>();
         }
 

@@ -1,4 +1,14 @@
-import { Component, input, output, viewChild, signal, effect, computed, ElementRef } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  viewChild,
+  signal,
+  effect,
+  computed,
+  ElementRef,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,13 +16,18 @@ import { TvSettings } from '../../../../core/services/tv-settings.service';
 import { SeriesResponse } from '../../../models/serie.model';
 import { ScheduleEntry } from '../../../models/channel-era.model';
 
-interface Channel { id: number; name: string; logoPath?: string; }
+interface Channel {
+  id: number;
+  name: string;
+  logoPath?: string;
+}
 
 @Component({
   selector: 'app-retro-tv-dialogs',
   standalone: true,
   imports: [CommonModule, DatePipe, MatButtonModule, MatIconModule],
   templateUrl: './retro-tv-dialogs.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './retro-tv-dialogs.component.scss',
 })
 export class RetroTvDialogsComponent {
@@ -40,7 +55,7 @@ export class RetroTvDialogsComponent {
   filteredScheduleEntries = computed(() => {
     const entries = this.scheduleEntries();
     if (this.showBumpers()) return entries;
-    return entries.filter(e => e.episodeId != null && e.episodeId > 0);
+    return entries.filter((e) => e.episodeId != null && e.episodeId > 0);
   });
 
   // View refs
@@ -65,7 +80,7 @@ export class RetroTvDialogsComponent {
           // Header (70px) + Filters (60px) + Padding (24px) + item position
           const headerOffset = 154; // 70 + 60 + 24
           const itemHeight = 73;
-          pos = headerOffset + (i * itemHeight);
+          pos = headerOffset + i * itemHeight;
           // Add progress within the current episode
           const progress = this.getCurrentProgress(entry);
           pos += (progress / 100) * itemHeight;
@@ -109,6 +124,6 @@ export class RetroTvDialogsComponent {
   }
 
   toLocalTime(utcString: string): Date {
-      return new Date(utcString);
+    return new Date(utcString);
   }
 }

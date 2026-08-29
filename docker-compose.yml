@@ -1,9 +1,6 @@
-name: nostalgiatv
+name: nostalgia-tv
 
-# Compose para desarrollo/local: construye las imágenes desde el código y publica
-# los puertos sólo en localhost. Para producción usa docker-compose.production.yml.
-
-x-log-options: &default-log-options
+x-logging: &default-logging
   driver: local
   options:
     max-size: "10m"
@@ -11,95 +8,95 @@ x-log-options: &default-log-options
 
 services:
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: nostalgia-db
+    image: ${SQLSERVER_IMAGE:-mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04}
     restart: unless-stopped
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Express
-      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD}
-    ports:
-      - "127.0.0.1:1433:1433"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
     volumes:
       - sqlserver_data:/var/opt/mssql
     networks:
-      - nostalgia-net
-    logging: *default-log-options
+      - data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -No || exit 1"]
+      test:
+        - CMD-SHELL
+        - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -Q "SELECT 1" -No >/dev/null || exit 1
       interval: 10s
       timeout: 5s
-      retries: 15
+      retries: 12
       start_period: 30s
+    logging: *default-logging
 
   webapi:
+    image: nostalgia-api:local
     build:
       context: ./WebApi
       dockerfile: WebApi/Dockerfile
-    container_name: nostalgia-api
     restart: unless-stopped
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ASPNETCORE_URLS: http://+:8080
-      TZ: ${TIME_ZONE:-America/Guatemala}
-      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=NostalgiaTV;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True;Encrypt=True
-      Cors__AllowedOrigins__0: http://localhost:${WEB_HTTP_PORT:-8082}
-      Jwt__Key: ${JWT_SECRET_KEY:?Defina JWT_SECRET_KEY}
-      Jwt__Issuer: ${JWT_ISSUER:-nostalgiatv}
-      Jwt__Audience: ${JWT_ISSUER:-nostalgiatv}
-      # Permite acceder por nginx (mismo origen) sin bucles de redirect; en dev el
-      # puerto sigue publicado para llegar directo a Scalar/OpenAPI en :8080.
-      ReverseProxy__TrustForwardedHeaders: "true"
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=NostalgiaTV;User Id=sa;Password=${DB_PASSWORD:?Set DB_PASSWORD in .env};Encrypt=True;TrustServerCertificate=True
+      Cors__AllowedOrigins__0: ${APP_ORIGIN:-http://localhost:8082}
+      Jwt__Key: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}
+      Jwt__Issuer: ${JWT_ISSUER:-http://localhost:8081}
+      Jwt__Audience: ${JWT_AUDIENCE:-http://localhost:8081}
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads
     ports:
-      - "127.0.0.1:${API_HTTP_PORT:-8080}:8080"
+      - 127.0.0.1:${API_HTTP_PORT:-8081}:8080
     volumes:
-      - webapi_logs:/app/Logs
-      - media_files:/app/wwwroot/uploads/media
-      - uploads:/app/wwwroot/uploads
+      - ${UPLOADS_PATH:-./uploads}:/app/wwwroot/uploads
     depends_on:
       sqlserver:
         condition: service_healthy
     networks:
-      - nostalgia-net
-    logging: *default-log-options
+      - web
+      - data
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:8080/health || exit 1"]
-      interval: 15s
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/health"]
+      interval: 30s
       timeout: 5s
-      retries: 10
-      start_period: 40s
+      retries: 3
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging: *default-logging
 
   webapp:
+    image: nostalgia-web:local
     build:
       context: ./WebApp
       dockerfile: Dockerfile
-    container_name: nostalgia-web
     restart: unless-stopped
+    environment:
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:8081}
     ports:
-      - "127.0.0.1:${WEB_HTTP_PORT:-8082}:80"
-    volumes:
-      - ${ENV_JS_PATH:-./WebApp/public/assets/env.js}:/usr/share/nginx/html/assets/env.js:ro
+      - 127.0.0.1:${WEB_HTTP_PORT:-8082}:80
     depends_on:
       webapi:
         condition: service_healthy
     networks:
-      - nostalgia-net
-    logging: *default-log-options
+      - web
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
       start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
 
 volumes:
   sqlserver_data:
-  webapi_logs:
-  media_files:
-  uploads:
 
 networks:
-  nostalgia-net:
+  web:
     driver: bridge
+  data:
+    driver: bridge
+    internal: true

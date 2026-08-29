@@ -10,7 +10,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 
 namespace Infrastructure.BackgroundServices
 {
@@ -19,7 +18,7 @@ namespace Infrastructure.BackgroundServices
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IHubContext<ChannelHub> _hubContext;
         private readonly ILogger<ChannelBroadcastService> _logger;
-        private readonly ConcurrentDictionary<int, ChannelBroadcastState> _states = new();
+        private readonly Dictionary<int, ChannelBroadcastState> _states = new();
 
         public ChannelBroadcastService(
             IServiceScopeFactory scopeFactory,
@@ -81,66 +80,117 @@ namespace Infrastructure.BackgroundServices
         private async Task BroadcastStates()
         {
             using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<NostalgiaTVContext>();
             var scheduleService = scope.ServiceProvider.GetRequiredService<ChannelScheduleService>();
 
             foreach (var (channelId, state) in _states)
             {
-                var now = DateTime.UtcNow;
-                state.CurrentSecond = (now - state.StartedAt).TotalSeconds;
+                state.CurrentSecond = (DateTime.UtcNow - state.StartedAt).TotalSeconds;
 
-                // Rebuild the payload only when there is none yet or the current entry has ended.
-                // Between transitions the cached response is reused and only the time-based
-                // fields are recomputed below, so a steady-state tick issues no database queries.
-                if (state.CachedResponse == null || state.CurrentSecond >= state.DurationSeconds)
+                // Advance if current entry ended
+                if (state.CurrentSecond >= state.DurationSeconds)
                 {
                     // Extend schedule 24h ahead before fetching the next entry
-                    await scheduleService.EnsureScheduleGeneratedAsync(channelId, now.AddHours(24));
+                    await scheduleService.EnsureScheduleGeneratedAsync(channelId, DateTime.UtcNow.AddHours(24));
 
                     var entry = await scheduleService.GetCurrentEntryAsync(channelId);
                     if (entry == null)
                     {
                         // Force regenerate if still no entry
-                        await scheduleService.EnsureScheduleGeneratedAsync(channelId, now.AddHours(48));
+                        await scheduleService.EnsureScheduleGeneratedAsync(channelId, DateTime.UtcNow.AddHours(48));
                         entry = await scheduleService.GetCurrentEntryAsync(channelId);
                         if (entry == null) continue;
                     }
 
-                    // Skip episode entries whose episode row is missing (data integrity guard)
-                    if (entry.EpisodeId != null && entry.Episode == null) continue;
-
                     state.CurrentEpisodeId = entry.EpisodeId ?? 0;
+                    state.CurrentSecond = (DateTime.UtcNow - entry.StartTime).TotalSeconds;
                     state.StartedAt = entry.StartTime;
                     state.DurationSeconds = (entry.EndTime - entry.StartTime).TotalSeconds;
-                    state.CurrentSecond = (now - entry.StartTime).TotalSeconds;
-
-                    var next = await scheduleService.GetNextEntryAsync(channelId);
-                    state.CachedResponse = BuildStateResponse(entry, next, state.CurrentSecond, state.DurationSeconds);
                 }
 
-                var response = state.CachedResponse;
-                response.CurrentSecond = state.CurrentSecond;
-                response.SecondsUntilNext = state.DurationSeconds - state.CurrentSecond;
+                ChannelStateResponse response;
+
+                // Check if current entry is a bumper
+                var currentEntry = await scheduleService.GetCurrentEntryAsync(channelId);
+                if (currentEntry != null && currentEntry.EpisodeId == null && currentEntry.BumperId != null)
+                {
+                    // This is a bumper entry
+                    var bumper = await context.ChannelBumpers.FindAsync(currentEntry.BumperId);
+
+                    if (bumper == null) continue;
+
+                    response = new ChannelStateResponse
+                    {
+                        ChannelId = channelId,
+                        EpisodeId = 0,
+                        EpisodeTitle = bumper.Title,
+                        FilePath = bumper.FilePath!.Replace("wwwroot", "").Replace("\\", "/"),
+                        SeriesName = "",
+                        SeriesLogoPath = null,
+                        CurrentSecond = state.CurrentSecond,
+                        NextEpisodeId = 0,
+                        NextEpisodeTitle = null,
+                        SecondsUntilNext = state.DurationSeconds - state.CurrentSecond,
+                        IsBumper = true,
+                        BumperTitle = bumper.Title
+                    };
+                }
+                else
+                {
+                    var episode = await context.Episodes
+                        .Include(e => e.Series)
+                        .FirstOrDefaultAsync(e => e.Id == state.CurrentEpisodeId);
+
+                    if (episode == null) continue;
+
+                    var next = await scheduleService.GetNextEntryAsync(channelId);
+
+                    response = new ChannelStateResponse
+                    {
+                        ChannelId = channelId,
+                        EpisodeId = episode.Id,
+                        EpisodeTitle = episode.Title,
+                        FilePath = episode.FilePath!.Replace("wwwroot", "").Replace("\\", "/"),
+                        SeriesName = episode.Series.Name,
+                        SeriesLogoPath = episode.Series.LogoPath,
+                        CurrentSecond = state.CurrentSecond,
+                        NextEpisodeId = next?.EpisodeId ?? 0,
+                        NextEpisodeTitle = next?.Episode?.Title,
+                        SecondsUntilNext = state.DurationSeconds - state.CurrentSecond,
+                        IsBumper = false
+                    };
+                }
 
                 await _hubContext.Clients.Group($"channel-{channelId}")
                     .SendAsync("ChannelState", response);
             }
         }
 
-        // Builds the immutable-per-entry payload from an already-loaded schedule entry.
-        // Relies on the Episode/Series/Bumper navigations being eagerly loaded by the schedule
-        // service queries, so it performs no additional database access itself.
-        private static ChannelStateResponse BuildStateResponse(
-            ChannelScheduleEntry entry, ChannelScheduleEntry? next, double currentSecond, double duration)
+        public ChannelBroadcastState? GetState(int channelId) =>
+            _states.TryGetValue(channelId, out var state) ? state : null;
+
+        public async Task<ChannelStateResponse?> GetStateResponseAsync(int channelId)
         {
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<NostalgiaTVContext>();
+            var scheduleService = scope.ServiceProvider.GetRequiredService<ChannelScheduleService>();
+
+            var entry = await scheduleService.GetCurrentEntryAsync(channelId);
+            if (entry == null) return null;
+
+            var next = await scheduleService.GetNextEntryAsync(channelId);
+            var currentSecond = (DateTime.UtcNow - entry.StartTime).TotalSeconds;
+            var duration = (entry.EndTime - entry.StartTime).TotalSeconds;
+
             if (entry.EpisodeId == null && entry.BumperId != null)
             {
-                var bumper = entry.Bumper;
+                var bumper = await context.ChannelBumpers.FindAsync(entry.BumperId);
                 return new ChannelStateResponse
                 {
-                    ChannelId = entry.ChannelId,
+                    ChannelId = channelId,
                     EpisodeId = 0,
                     EpisodeTitle = bumper?.Title ?? "Bumper",
-                    FilePath = CleanPath(bumper?.FilePath),
+                    FilePath = bumper?.FilePath?.Replace("wwwroot", "").Replace("\\", "/") ?? "",
                     SeriesName = "",
                     SeriesLogoPath = null,
                     CurrentSecond = currentSecond,
@@ -154,10 +204,10 @@ namespace Infrastructure.BackgroundServices
 
             return new ChannelStateResponse
             {
-                ChannelId = entry.ChannelId,
+                ChannelId = channelId,
                 EpisodeId = entry.EpisodeId ?? 0,
                 EpisodeTitle = entry.Episode?.Title ?? "",
-                FilePath = CleanPath(entry.Episode?.FilePath),
+                FilePath = entry.Episode?.FilePath?.Replace("wwwroot", "").Replace("\\", "/") ?? "",
                 SeriesName = entry.Episode?.Series?.Name ?? "",
                 SeriesLogoPath = entry.Episode?.Series?.LogoPath,
                 CurrentSecond = currentSecond,
@@ -168,27 +218,6 @@ namespace Infrastructure.BackgroundServices
             };
         }
 
-        private static string CleanPath(string? path) =>
-            path?.Replace("wwwroot", "").Replace("\\", "/") ?? "";
-
-        public ChannelBroadcastState? GetState(int channelId) =>
-            _states.TryGetValue(channelId, out var state) ? state : null;
-
-        public async Task<ChannelStateResponse?> GetStateResponseAsync(int channelId)
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var scheduleService = scope.ServiceProvider.GetRequiredService<ChannelScheduleService>();
-
-            var entry = await scheduleService.GetCurrentEntryAsync(channelId);
-            if (entry == null) return null;
-
-            var next = await scheduleService.GetNextEntryAsync(channelId);
-            var currentSecond = (DateTime.UtcNow - entry.StartTime).TotalSeconds;
-            var duration = (entry.EndTime - entry.StartTime).TotalSeconds;
-
-            return BuildStateResponse(entry, next, currentSecond, duration);
-        }
-
         public async Task ReloadChannelAsync(int channelId)
         {
             using var scope = _scopeFactory.CreateScope();
@@ -197,9 +226,11 @@ namespace Infrastructure.BackgroundServices
             var context = scope.ServiceProvider.GetRequiredService<NostalgiaTVContext>();
 
             // Delete ALL schedule entries for this channel (past and future)
-            await context.ChannelScheduleEntries
+            var old = await context.ChannelScheduleEntries
                 .Where(e => e.ChannelId == channelId)
-                .ExecuteDeleteAsync();
+                .ToListAsync();
+            context.ChannelScheduleEntries.RemoveRange(old);
+            await context.SaveChangesAsync();
 
             // Regenerate full 24h schedule from now
             await scheduleService.EnsureScheduleGeneratedAsync(channelId, DateTime.UtcNow.AddHours(24));
@@ -207,7 +238,7 @@ namespace Infrastructure.BackgroundServices
             var entry = await scheduleService.GetCurrentEntryAsync(channelId);
             if (entry == null)
             {
-                _states.TryRemove(channelId, out _);
+                _states.Remove(channelId);
                 return;
             }
 

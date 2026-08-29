@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
-
 .remote-control {
   position: fixed;
   right: 2rem;
@@ -482,4 +480,115 @@
   .remote-control--collapsed {
     max-height: 210px; // header + top-actions + media controls + toggle
   }
+}
+
+// Responsive accessibility baseline for the public remote.
+.remote-control {
+  width: clamp(230px, 18vw, 280px);
+  max-height: calc(100dvh - 2rem);
+}
+
+.remote-header {
+  h3 {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .mat-mdc-mini-fab {
+    width: var(--retro-touch-target, 44px);
+    height: var(--retro-touch-target, 44px);
+
+    .mat-icon {
+      width: 24px;
+      height: 24px;
+      font-size: 24px;
+    }
+  }
+}
+
+.channel-btn {
+  min-height: 50px;
+  font-size: 1.125rem !important;
+}
+
+.channel-info { min-width: 0; }
+
+.channel-number {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+.channel-name {
+  font-size: 1.125rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-top-actions .nav-btn,
+.remote-collapse-btn {
+  min-height: var(--retro-touch-target, 44px);
+  height: var(--retro-touch-target, 44px) !important;
+  line-height: normal !important;
+  font-size: 1rem !important;
+}
+
+.media-controls--inline .mat-mdc-icon-button {
+  width: var(--retro-touch-target, 44px);
+  height: var(--retro-touch-target, 44px);
+
+  .mat-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 24px;
+  }
+}
+
+.era-label {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.era-btn {
+  min-height: var(--retro-touch-target, 44px);
+  font-size: 1rem !important;
+}
+
+@media (max-width: 1200px) and (min-width: 769px) {
+  .remote-control {
+    right: 1rem;
+    width: 230px;
+  }
+}
+
+@media (max-width: 768px) {
+  .remote-control {
+    width: 100%;
+    max-height: calc(100dvh - max(0.5rem, env(safe-area-inset-top)));
+    padding: 0.75rem 1rem max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .remote-control--collapsed {
+    max-height: 17rem;
+  }
+
+  .channel-btn {
+    min-height: 56px;
+    padding: 0.75rem;
+  }
+
+  .channel-top-actions .nav-btn {
+    padding-inline: 0.35rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .remote-control { padding-inline: 0.65rem; }
+
+  .channel-top-actions .nav-btn {
+    font-size: 0.9375rem !important;
+  }
+
+  .channels-list { grid-template-columns: 1fr; }
 }

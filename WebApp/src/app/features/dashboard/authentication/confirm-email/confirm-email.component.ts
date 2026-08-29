@@ -1,18 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { CustomizerSettingsService } from '../../../../shared/components/customizer-settings/customizer-settings.service';
 
 @Component({
-    selector: 'app-confirm-email',
-    imports: [RouterLink, MatButtonModule],
-    templateUrl: './confirm-email.component.html',
-    styleUrl: './confirm-email.component.scss'
+  selector: 'app-confirm-email',
+  imports: [RouterLink, MatButtonModule],
+  templateUrl: './confirm-email.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrl: './confirm-email.component.scss',
 })
 export class ConfirmEmailComponent {
-
-    constructor(
-        public themeService: CustomizerSettingsService
-    ) {}
-
+  constructor(public themeService: CustomizerSettingsService) {}
 }

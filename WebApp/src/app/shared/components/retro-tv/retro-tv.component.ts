@@ -9,7 +9,10 @@ import {
   inject,
   effect,
   NgZone,
+  DestroyRef,
+  ChangeDetectionStrategy,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -23,29 +26,57 @@ import { TvSettingsService } from '../../../core/services/tv-settings.service';
 import { WatchedService } from '../../../core/services/watched.service';
 import { SeriesResponse } from '../../models/serie.model';
 import { ScheduleEntry } from '../../models/channel-era.model';
-import { RetroTvControlsComponent } from "./retro-tv-controls/retro-tv-controls.component";
-import { RetroTvFiltersPanelComponent } from "./retro-tv-filters-panel/retro-tv-filters-panel.component";
-import { RetroTvRemoteChannelsComponent } from "./retro-tv-remote-channels/retro-tv-remote-channels.component";
-import { RetroTvRemoteSeriesComponent } from "./retro-tv-remote-series/retro-tv-remote-series.component";
-import { RetroTvDialogsComponent } from "./retro-tv-dialogs/retro-tv-dialogs.component";
+import { RetroTvControlsComponent } from './retro-tv-controls/retro-tv-controls.component';
+import { RetroTvFiltersPanelComponent } from './retro-tv-filters-panel/retro-tv-filters-panel.component';
+import { RetroTvRemoteChannelsComponent } from './retro-tv-remote-channels/retro-tv-remote-channels.component';
+import { RetroTvRemoteSeriesComponent } from './retro-tv-remote-series/retro-tv-remote-series.component';
+import { RetroTvDialogsComponent } from './retro-tv-dialogs/retro-tv-dialogs.component';
 
-interface Channel { id: number; name: string; logoPath?: string; }
-interface ChannelEra { id: number; name: string; description?: string; seriesIds: number[]; }
-interface ChannelState {
-  channelId: number; episodeId: number; episodeTitle: string;
-  filePath: string; seriesName: string; seriesLogoPath?: string;
-  currentSecond: number; nextEpisodeId: number;
-  nextEpisodeTitle: string | null; secondsUntilNext: number;
-  isBumper?: boolean; bumperTitle?: string;
+interface Channel {
+  id: number;
+  name: string;
+  logoPath?: string;
 }
-interface EpisodeType { id: number; name: string; }
+interface ChannelEra {
+  id: number;
+  name: string;
+  description?: string;
+  seriesIds: number[];
+}
+interface ChannelState {
+  channelId: number;
+  episodeId: number;
+  episodeTitle: string;
+  filePath: string;
+  seriesName: string;
+  seriesLogoPath?: string;
+  currentSecond: number;
+  nextEpisodeId: number;
+  nextEpisodeTitle: string | null;
+  secondsUntilNext: number;
+  isBumper?: boolean;
+  bumperTitle?: string;
+}
+interface EpisodeType {
+  id: number;
+  name: string;
+}
 interface EpisodeResponse {
-  id: number; title: string; filePath?: string;
-  season: number; episodeNumber: number;
-  episodeTypeId: number; episodeTypeName: string; seriesId: number;
+  id: number;
+  title: string;
+  filePath?: string;
+  season: number;
+  episodeNumber: number;
+  episodeTypeId: number;
+  episodeTypeName: string;
+  seriesId: number;
 }
 interface PagedResult<T> {
-  items: T[]; totalCount: number; page: number; pageSize: number; totalPages: number;
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 type AppMode = 'channels' | 'series';
@@ -63,9 +94,10 @@ type AppMode = 'channels' | 'series';
     RetroTvFiltersPanelComponent,
     RetroTvRemoteChannelsComponent,
     RetroTvRemoteSeriesComponent,
-    RetroTvDialogsComponent
-],
+    RetroTvDialogsComponent,
+  ],
   templateUrl: './retro-tv.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './retro-tv.component.scss',
 })
 export class RetroTvComponent implements AfterViewInit, OnDestroy {
@@ -80,6 +112,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   private tvSettings = inject(TvSettingsService);
   private watchedService = inject(WatchedService);
   private ngZone = inject(NgZone);
+  private destroyRef = inject(DestroyRef);
 
   apiUrl = environment.apiUrl;
 
@@ -128,15 +161,18 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   watchedMap = signal<Record<number, boolean>>({});
 
   private readonly supportsAV1 = this.detectAV1Support();
-  readonly isIOSDevice: boolean = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  readonly isIOSDevice: boolean =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
   private readonly bestVideoType: string = this.detectBestVideoType();
   iosNeedsPlay = signal<boolean>(false);
 
   seasonGroups = computed(() => {
     const eps = this.seriesEpisodes();
-    return [...new Set(
-      eps.filter(e => e.episodeTypeName.toLowerCase() === 'regular').map(e => e.season)
-    )].sort((a, b) => a - b);
+    return [
+      ...new Set(
+        eps.filter((e) => e.episodeTypeName.toLowerCase() === 'regular').map((e) => e.season),
+      ),
+    ].sort((a, b) => a - b);
   });
 
   episodesForView = computed(() => {
@@ -145,26 +181,30 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     const season = this.selectedSeason();
     const s = this.settings();
     if (type === 'normal')
-      return eps.filter(e => e.episodeTypeName.toLowerCase() === 'regular' && e.season === season);
+      return eps.filter(
+        (e) => e.episodeTypeName.toLowerCase() === 'regular' && e.season === season,
+      );
     if (type === 'special' && s.includeSpecials)
-      return eps.filter(e => e.episodeTypeName.toLowerCase() === 'special');
+      return eps.filter((e) => e.episodeTypeName.toLowerCase() === 'special');
     if (type === 'movie' && s.includeMovies)
-      return eps.filter(e => e.episodeTypeName.toLowerCase() === 'movie');
+      return eps.filter((e) => e.episodeTypeName.toLowerCase() === 'movie');
     return [];
   });
 
-  hasSpecials = computed(() =>
-    this.settings().includeSpecials &&
-    this.seriesEpisodes().some(e => e.episodeTypeName.toLowerCase() === 'special')
+  hasSpecials = computed(
+    () =>
+      this.settings().includeSpecials &&
+      this.seriesEpisodes().some((e) => e.episodeTypeName.toLowerCase() === 'special'),
   );
 
-  hasMovies = computed(() =>
-    this.settings().includeMovies &&
-    this.seriesEpisodes().some(e => e.episodeTypeName.toLowerCase() === 'movie')
+  hasMovies = computed(
+    () =>
+      this.settings().includeMovies &&
+      this.seriesEpisodes().some((e) => e.episodeTypeName.toLowerCase() === 'movie'),
   );
 
   activeFilters = computed(() =>
-    this.isFullscreen() ? this.settings().filtersFullscreen : this.settings().filters
+    this.isFullscreen() ? this.settings().filtersFullscreen : this.settings().filters,
   );
 
   settings = this.tvSettings.settings;
@@ -199,19 +239,20 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       document.addEventListener('fullscreenchange', this.fullscreenHandler);
     });
 
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       if (params['serie']) {
-        this.http.get<PagedResult<SeriesResponse>>(`${this.apiUrl}/api/v1/public/series`, {
-          params: { name: params['serie'].replace(/-/g, ' '), pageSize: 1 },
-        }).subscribe({ next: result => { if (result.items.length) this.enterSeriesMode(result.items[0]); } });
+        this.http
+          .get<PagedResult<SeriesResponse>>(`${this.apiUrl}/api/v1/public/series`, {
+            params: { name: params['serie'].replace(/-/g, ' '), pageSize: 1 },
+          })
+          .subscribe({
+            next: (result) => {
+              if (result.items.length) this.enterSeriesMode(result.items[0]);
+            },
+          });
       }
     });
 
-    if (window.screen?.orientation && window.innerWidth <= 768) {
-      (window.screen.orientation as any).lock('portrait').catch(() => {
-        // API no soportada en todos los browsers, ignorar silenciosamente
-      });
-    }
   }
 
   ngOnDestroy(): void {
@@ -227,8 +268,10 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
 
   private detectAV1Support(): boolean {
     const video = document.createElement('video');
-    return video.canPlayType('video/webm; codecs="av01.0.05M.08"') !== '' ||
-           video.canPlayType('video/mp4; codecs="av01.0.05M.08"') !== '';
+    return (
+      video.canPlayType('video/webm; codecs="av01.0.05M.08"') !== '' ||
+      video.canPlayType('video/mp4; codecs="av01.0.05M.08"') !== ''
+    );
   }
 
   private detectBestVideoType(): string {
@@ -251,8 +294,9 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       'video/mp4; codecs="hev1"',
       'video/mp4',
     ];
-    const best = types.find(t => video.canPlayType(t) === 'probably' || video.canPlayType(t) === 'maybe');
-    console.log('[NostalgiaTV] iOS best video type:', best ?? 'none');
+    const best = types.find(
+      (t) => video.canPlayType(t) === 'probably' || video.canPlayType(t) === 'maybe',
+    );
     return best ?? 'video/mp4';
   }
 
@@ -271,7 +315,10 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
 
   private initAudioTracks(video: HTMLVideoElement): void {
     const tracks = (video as any).audioTracks;
-    if (!tracks || tracks.length === 0) { this.audioTracks.set([]); return; }
+    if (!tracks || tracks.length === 0) {
+      this.audioTracks.set([]);
+      return;
+    }
     const list: any[] = [];
     for (let i = 0; i < tracks.length; i++) list.push(tracks[i]);
     this.audioTracks.set(list);
@@ -286,7 +333,10 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     for (let i = 0; i < tracks.length; i++) {
       const lang = (tracks[i].language || tracks[i].lang || '').toLowerCase();
       const label = (tracks[i].label || '').toLowerCase();
-      if (keywords.some(kw => lang.includes(kw) || label.includes(kw))) { spanishIndex = i; break; }
+      if (keywords.some((kw) => lang.includes(kw) || label.includes(kw))) {
+        spanishIndex = i;
+        break;
+      }
     }
     const target = spanishIndex >= 0 ? spanishIndex : 0;
     this.activateAudioTrack(video, target);
@@ -312,14 +362,19 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     const video = this.videoPlayer?.nativeElement;
     if (!video) return;
     this.iosNeedsPlay.set(false);
-    video.play().catch(err => console.error('iOS play failed:', err));
+    video.play().catch((err) => console.error('iOS play failed:', err));
   }
 
   togglePlayPause(): void {
     const video = this.videoPlayer?.nativeElement;
     if (!video) return;
-    if (video.paused) { video.play(); this.isPaused.set(false); }
-    else { video.pause(); this.isPaused.set(true); }
+    if (video.paused) {
+      video.play();
+      this.isPaused.set(false);
+    } else {
+      video.pause();
+      this.isPaused.set(true);
+    }
   }
 
   seekTo(event: MouseEvent): void {
@@ -331,8 +386,14 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   }
 
   onProgressKeydown(e: KeyboardEvent): void {
-    if (e.key === 'ArrowRight') { e.preventDefault(); this.seekRelative(5); }
-    if (e.key === 'ArrowLeft')  { e.preventDefault(); this.seekRelative(-5); }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      this.seekRelative(5);
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      this.seekRelative(-5);
+    }
   }
 
   private seekRelative(seconds: number): void {
@@ -391,44 +452,59 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
 
   volumeUp(): void {
     const v = this.videoPlayer?.nativeElement;
-    if (v) { v.volume = Math.min(1, v.volume + 0.1); this.volumeLevel.set(v.volume); }
+    if (v) {
+      v.volume = Math.min(1, v.volume + 0.1);
+      this.volumeLevel.set(v.volume);
+    }
   }
 
   volumeDown(): void {
     const v = this.videoPlayer?.nativeElement;
-    if (v) { v.volume = Math.max(0, v.volume - 0.1); this.volumeLevel.set(v.volume); }
+    if (v) {
+      v.volume = Math.max(0, v.volume - 0.1);
+      this.volumeLevel.set(v.volume);
+    }
   }
 
   // ── Filters ───────────────────────────────────────────────────────────────
 
-  private applyVideoFilters(intensity: number, density: number, curvature: boolean, vignette: boolean): void {
+  private applyVideoFilters(
+    intensity: number,
+    density: number,
+    curvature: boolean,
+    vignette: boolean,
+  ): void {
     const el = this.videoFilters?.nativeElement;
     if (!el) return;
     const enabled = this.settings().alwaysShowFilters;
     el.style.setProperty('--scanline-opacity', enabled ? (intensity / 100).toString() : '0');
     el.style.setProperty('--scanline-size', `${density * 2}px`);
-    el.style.setProperty('--curvature', (enabled && curvature) ? '1' : '0');
-    el.style.setProperty('--vignette', (enabled && vignette) ? '1' : '0');
+    el.style.setProperty('--curvature', enabled && curvature ? '1' : '0');
+    el.style.setProperty('--vignette', enabled && vignette ? '1' : '0');
   }
 
   updateFilter(key: string, value: boolean | number): void {
     this.tvSettings.updateFilter({ [key]: value } as any, this.isFullscreen());
   }
 
-  toggleFiltersPanel(): void { this.showFiltersPanel.update(v => !v); }
-  closeFiltersPanel(): void  { this.showFiltersPanel.set(false); }
+  toggleFiltersPanel(): void {
+    this.showFiltersPanel.update((v) => !v);
+  }
+  closeFiltersPanel(): void {
+    this.showFiltersPanel.set(false);
+  }
 
   // ── Channels ──────────────────────────────────────────────────────────────
 
   private loadChannels(): void {
     this.http.get<Channel[]>(`${this.apiUrl}/api/v1/public/channels`).subscribe({
-      next: data => this.channels.set(data),
+      next: (data) => this.channels.set(data),
     });
   }
 
   private loadEpisodeTypes(): void {
     this.http.get<EpisodeType[]>(`${this.apiUrl}/api/v1/public/episode-types`).subscribe({
-      next: data => this.episodeTypes.set(data),
+      next: (data) => this.episodeTypes.set(data),
     });
   }
 
@@ -439,14 +515,16 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.channelEras.set([]);
     this.showStatic.set(false);
     this.hubConnection?.stop();
-    this.http.get<ChannelEra[]>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/eras`).subscribe({
-      next: (eras) => {
-        this.channelEras.set(eras);
-        if (eras.length === 1) {
-          this.selectEra(eras[0]);
-        }
-      },
-    });
+    this.http
+      .get<ChannelEra[]>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/eras`)
+      .subscribe({
+        next: (eras) => {
+          this.channelEras.set(eras);
+          if (eras.length === 1) {
+            this.selectEra(eras[0]);
+          }
+        },
+      });
   }
 
   selectEra(era: ChannelEra): void {
@@ -454,12 +532,17 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     const channel = this.currentChannel();
     if (!channel) return;
     this.hubConnection?.stop();
-    this.http.get<ChannelState>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/state`).subscribe({
-      next: state => {
-        this.currentState.set(state);
-        setTimeout(() => { this.loadChannelEpisode(state); this.connectToHub(channel.id); }, 100);
-      },
-    });
+    this.http
+      .get<ChannelState>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/state`)
+      .subscribe({
+        next: (state) => {
+          this.currentState.set(state);
+          setTimeout(() => {
+            this.loadChannelEpisode(state);
+            this.connectToHub(channel.id);
+          }, 100);
+        },
+      });
   }
 
   private loadChannelEpisode(state: ChannelState): void {
@@ -545,37 +628,41 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     const slug = serie.name.toLowerCase().replace(/\s+/g, '-');
     this.router.navigate([], { queryParams: { serie: slug }, replaceUrl: true });
 
-    this.http.get<EpisodeResponse[]>(`${this.apiUrl}/api/v1/public/series/${serie.id}/episodes`).subscribe({
-      next: episodes => {
-        this.seriesEpisodes.set(episodes);
-        this.selectedSeason.set(this.seasonGroups()[0] ?? null);
+    this.http
+      .get<EpisodeResponse[]>(`${this.apiUrl}/api/v1/public/series/${serie.id}/episodes`)
+      .subscribe({
+        next: (episodes) => {
+          this.seriesEpisodes.set(episodes);
+          this.selectedSeason.set(this.seasonGroups()[0] ?? null);
 
-        const progress = this.watchedService.getProgress(serie.id);
-        const map: Record<number, boolean> = {};
-        episodes.forEach(e => { map[e.id] = progress[e.id]?.completed ?? false; });
-        this.watchedMap.set(map);
+          const progress = this.watchedService.getProgress(serie.id);
+          const map: Record<number, boolean> = {};
+          episodes.forEach((e) => {
+            map[e.id] = progress[e.id]?.completed ?? false;
+          });
+          this.watchedMap.set(map);
 
-        const inProgress = episodes.find(e =>
-          progress[e.id] && !progress[e.id].completed && progress[e.id].currentSecond > 0
-        );
-        const target = inProgress ?? this.watchedService.getNextUnwatched(serie.id, episodes);
+          const inProgress = episodes.find(
+            (e) => progress[e.id] && !progress[e.id].completed && progress[e.id].currentSecond > 0,
+          );
+          const target = inProgress ?? this.watchedService.getNextUnwatched(serie.id, episodes);
 
-        if (target) {
-          const ep = episodes.find(e => e.id === (inProgress?.id ?? (target as any).id));
-          if (ep) {
-            if (ep.episodeTypeName.toLowerCase() === 'regular') {
-              this.selectedSeason.set(ep.season);
-              this.selectedEpisodeType.set('normal');
-            } else if (ep.episodeTypeName.toLowerCase() === 'special') {
-              this.selectEpisodeType('special');
-            } else {
-              this.selectEpisodeType('movie');
+          if (target) {
+            const ep = episodes.find((e) => e.id === (inProgress?.id ?? (target as any).id));
+            if (ep) {
+              if (ep.episodeTypeName.toLowerCase() === 'regular') {
+                this.selectedSeason.set(ep.season);
+                this.selectedEpisodeType.set('normal');
+              } else if (ep.episodeTypeName.toLowerCase() === 'special') {
+                this.selectEpisodeType('special');
+              } else {
+                this.selectEpisodeType('movie');
+              }
+              this.playEpisode(ep);
             }
-            this.playEpisode(ep);
           }
-        }
-      },
-    });
+        },
+      });
   }
 
   backToChannels(): void {
@@ -589,7 +676,10 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.hubConnection?.stop();
     this.router.navigate([], { queryParams: {}, replaceUrl: true });
     const video = this.videoPlayer?.nativeElement;
-    if (video) { this.setVideoSrc(''); video.load(); }
+    if (video) {
+      this.setVideoSrc('');
+      video.load();
+    }
     clearInterval(this.uiUpdateInterval);
   }
 
@@ -619,10 +709,14 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
         this.setVideoSrc(this.buildVideoSrc(episode.filePath!));
         video.load();
 
-        video.addEventListener('loadedmetadata', () => {
-          this.initAudioTracks(video);
-          video.currentTime = savedSecond > 0 ? savedSecond : 0;
-        }, { once: true });
+        video.addEventListener(
+          'loadedmetadata',
+          () => {
+            this.initAudioTracks(video);
+            video.currentTime = savedSecond > 0 ? savedSecond : 0;
+          },
+          { once: true },
+        );
 
         const wasMuted = this.isMuted();
         video.muted = wasMuted;
@@ -701,19 +795,19 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     const seriesId = this.selectedSeries()?.id;
     if (!seriesId) return;
     this.watchedService.markProgress(seriesId, episode.id, 0, true);
-    this.watchedMap.update(map => ({ ...map, [episode.id]: true }));
+    this.watchedMap.update((map) => ({ ...map, [episode.id]: true }));
   }
 
   private playNextEpisode(current: EpisodeResponse): void {
     const list = this.episodesForView();
-    const next = list[list.findIndex(e => e.id === current.id) + 1];
+    const next = list[list.findIndex((e) => e.id === current.id) + 1];
     if (next) this.playEpisode(next);
   }
 
   playRandomEpisode(): void {
     // Aleatorio de TODOS los episodios de la serie (todas las temporadas)
-    const all = this.seriesEpisodes().filter(e => !!e.filePath);
-    const pool = all.filter(e => !this.watchedMap()[e.id]);
+    const all = this.seriesEpisodes().filter((e) => !!e.filePath);
+    const pool = all.filter((e) => !this.watchedMap()[e.id]);
     const source = pool.length > 0 ? pool : all;
     const random = source[Math.floor(Math.random() * source.length)];
     if (random) this.playEpisode(random);
@@ -729,7 +823,9 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     if (!serie) return;
     this.watchedService.resetSeries(serie.id);
     const map: Record<number, boolean> = {};
-    this.seriesEpisodes().forEach(e => { map[e.id] = false; });
+    this.seriesEpisodes().forEach((e) => {
+      map[e.id] = false;
+    });
     this.watchedMap.set(map);
   }
 
@@ -744,7 +840,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.showSeriesDialog.set(true);
     this.loadSeries();
     setTimeout(() => {
-      document.querySelector<HTMLElement>('.dialog-panel button[tabindex="10"]')?.focus();
+      document.querySelector<HTMLElement>('.dialog-panel button')?.focus();
     }, 50);
   }
 
@@ -761,15 +857,17 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     const params: any = { page: this.seriesPage(), pageSize: 10 };
     if (this.seriesSearchName()) params['name'] = this.seriesSearchName();
     if (this.seriesFilterChannelId()) params['channelId'] = this.seriesFilterChannelId();
-    this.http.get<PagedResult<SeriesResponse>>(`${this.apiUrl}/api/v1/public/series`, { params }).subscribe({
-      next: result => {
-        this.allSeries.set(result.items);
-        this.seriesTotalPages.set(result.totalPages);
-        this.seriesTotalCount.set(result.totalCount);
-        this.seriesLoading.set(false);
-      },
-      error: () => this.seriesLoading.set(false),
-    });
+    this.http
+      .get<PagedResult<SeriesResponse>>(`${this.apiUrl}/api/v1/public/series`, { params })
+      .subscribe({
+        next: (result) => {
+          this.allSeries.set(result.items);
+          this.seriesTotalPages.set(result.totalPages);
+          this.seriesTotalCount.set(result.totalCount);
+          this.seriesLoading.set(false);
+        },
+        error: () => this.seriesLoading.set(false),
+      });
   }
 
   onSeriesSearchChange(value: string): void {
@@ -785,11 +883,17 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   }
 
   seriesNextPage(): void {
-    if (this.seriesPage() < this.seriesTotalPages()) { this.seriesPage.update(p => p + 1); this.loadSeries(); }
+    if (this.seriesPage() < this.seriesTotalPages()) {
+      this.seriesPage.update((p) => p + 1);
+      this.loadSeries();
+    }
   }
 
   seriesPrevPage(): void {
-    if (this.seriesPage() > 1) { this.seriesPage.update(p => p - 1); this.loadSeries(); }
+    if (this.seriesPage() > 1) {
+      this.seriesPage.update((p) => p - 1);
+      this.loadSeries();
+    }
   }
 
   openSettingsDialog(): void {
@@ -799,7 +903,9 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     }, 50);
   }
 
-  closeSettingsDialog(): void { this.showSettingsDialog.set(false); }
+  closeSettingsDialog(): void {
+    this.showSettingsDialog.set(false);
+  }
 
   updateSetting(key: string, value: boolean | number): void {
     this.tvSettings.update({ [key]: value } as any);
@@ -810,10 +916,15 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     if (!channel) return;
     this.showScheduleDialog.set(true);
     this.scheduleLoading.set(true);
-    this.http.get<ScheduleEntry[]>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/schedule`).subscribe({
-      next: data => { this.scheduleEntries.set(data); this.scheduleLoading.set(false); },
-      error: () => this.scheduleLoading.set(false),
-    });
+    this.http
+      .get<ScheduleEntry[]>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/schedule`)
+      .subscribe({
+        next: (data) => {
+          this.scheduleEntries.set(data);
+          this.scheduleLoading.set(false);
+        },
+        error: () => this.scheduleLoading.set(false),
+      });
     setTimeout(() => {
       document.querySelector<HTMLElement>('.dialog-panel--schedule button')?.focus();
     }, 50);
@@ -825,14 +936,19 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   }
 
   onScheduleChannelChange(channelId: number): void {
-    const channel = this.channels().find(c => c.id === channelId);
+    const channel = this.channels().find((c) => c.id === channelId);
     if (!channel) return;
     this.currentChannel.set(channel);
     this.scheduleLoading.set(true);
-    this.http.get<ScheduleEntry[]>(`${this.apiUrl}/api/v1/public/channels/${channelId}/schedule`).subscribe({
-      next: data => { this.scheduleEntries.set(data); this.scheduleLoading.set(false); },
-      error: () => this.scheduleLoading.set(false),
-    });
+    this.http
+      .get<ScheduleEntry[]>(`${this.apiUrl}/api/v1/public/channels/${channelId}/schedule`)
+      .subscribe({
+        next: (data) => {
+          this.scheduleEntries.set(data);
+          this.scheduleLoading.set(false);
+        },
+        error: () => this.scheduleLoading.set(false),
+      });
   }
 
   // ── Screen overlay mouse handlers ─────────────────────────────────────────
@@ -857,15 +973,16 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     else document.exitFullscreen();
   }
 
-  goToLogin(): void { this.router.navigate(['dashboard/login']); }
+  goToLogin(): void {
+    this.router.navigate(['dashboard/login']);
+  }
 
   private setupResizeObserver(): void {
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() =>
-        requestAnimationFrame(() => this.adjustOverlay())
+        requestAnimationFrame(() => this.adjustOverlay()),
       );
       this.resizeObserver.observe(this.tvContainer.nativeElement);
-      window.addEventListener('resize', () => requestAnimationFrame(() => this.adjustOverlay()));
     }
   }
 
@@ -882,20 +999,27 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    const cw = container.offsetWidth, ch = container.offsetHeight;
-    const ow = 650, oh = 759;
+    const cw = container.offsetWidth,
+      ch = container.offsetHeight;
+    const ow = 650,
+      oh = 759;
     const imageAspect = ow / oh;
     const containerAspect = cw / ch;
     let rw: number, rh: number;
-    if (containerAspect > imageAspect) { rh = ch; rw = rh * imageAspect; }
-    else { rw = cw; rh = rw / imageAspect; }
+    if (containerAspect > imageAspect) {
+      rh = ch;
+      rw = rh * imageAspect;
+    } else {
+      rw = cw;
+      rh = rw / imageAspect;
+    }
     const scale = rw / ow;
     const left = (cw - rw) / 2;
-    const top  = (ch - rh) / 2;
-    overlay.style.width  = `${255 * scale}px`;
+    const top = (ch - rh) / 2;
+    overlay.style.width = `${255 * scale}px`;
     overlay.style.height = `${199 * scale}px`;
-    overlay.style.left   = `${left + 198 * scale}px`;
-    overlay.style.top    = `${top  +  27 * scale}px`;
+    overlay.style.left = `${left + 198 * scale}px`;
+    overlay.style.top = `${top + 27 * scale}px`;
     overlay.style.setProperty('--screen-scale', scale.toString());
   }
 
@@ -909,5 +1033,4 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       this.showOverlay.set(false);
     });
   };
-
 }

@@ -1,29 +1,6 @@
-name: nostalgiatv
+name: nostalgia-tv
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Compose de PRODUCCIÓN para la VPS. Se coloca en /opt/nostalgiatv/docker-compose.yml
-# junto a su .env. No construye imágenes: las descarga de GHCR. El despliegue es
-# MANUAL (sin Watchtower, para no correr un contenedor con acceso a docker.sock):
-# cuando el CI publique una nueva :latest, hacés 'docker compose pull && up -d'.
-# El monitoreo (Loki/Alloy/Grafana/Uptime Kuma) corre APARTE en su propio stack;
-# aquí sólo se conecta la red externa 'monitoring-net' para que pueda sondear/recolectar.
-#
-# Preparación (una sola vez) en la VPS:
-#   docker login ghcr.io -u <usuario> --password-stdin   # token classic (read:packages)
-#   docker network create monitoring-net    # si aún no existe (la comparte tu stack de monitoreo)
-#   mkdir -p /opt/nostalgiatv/{data/sqlserver,logs/webapi,media,uploads}
-#   chown -R 10001:0     /opt/nostalgiatv/data/sqlserver              # contenedor mssql
-#   chown -R 1654:1654   /opt/nostalgiatv/logs /opt/nostalgiatv/media /opt/nostalgiatv/uploads   # 'app' del contenedor .NET
-#   cp env.js /opt/nostalgiatv/env.js                     # apiUrl:'' (mismo origen, no requiere IP)
-#
-# Nada se publica al exterior salvo la webapp en 127.0.0.1:${WEB_HTTP_PORT:-8090}.
-# El nginx del HOST termina TLS y enruta tu dominio hacia ese puerto (ver
-# deploy/nginx-host/nostalgiatv.conf). API y BD quedan ocultas.
-#
-# Desplegar:  cd /opt/nostalgiatv && docker compose pull && docker compose up -d
-# ─────────────────────────────────────────────────────────────────────────────
-
-x-log-options: &default-log-options
+x-logging: &default-logging
   driver: local
   options:
     max-size: "10m"
@@ -31,126 +8,103 @@ x-log-options: &default-log-options
 
 services:
   sqlserver:
-    image: ${SQLSERVER_IMAGE:-mcr.microsoft.com/mssql/server:2022-latest}
-    container_name: nostalgia-db
+    image: ${SQLSERVER_IMAGE:?Set SQLSERVER_IMAGE in .env.production}
     restart: unless-stopped
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Express
-      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD}
-      TZ: ${TIME_ZONE:-America/Guatemala}
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env.production}
     volumes:
-      - ./data/sqlserver:/var/opt/mssql
+      - sqlserver_data:/var/opt/mssql
     networks:
-      - data-net
-    security_opt:
-      - no-new-privileges:true
-    # Límites de recursos (§3.17 del documento de seguridad). Ajustá según la VPS.
-    mem_limit: 2g
-    cpus: 2.0
-    logging: *default-log-options
+      - data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -No || exit 1"]
+      test:
+        - CMD-SHELL
+        - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -Q "SELECT 1" -No >/dev/null || exit 1
       interval: 10s
       timeout: 5s
-      retries: 15
+      retries: 12
       start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
 
   webapi:
-    image: ${API_IMAGE:?Defina API_IMAGE}
-    container_name: nostalgia-api
+    image: ${API_IMAGE:?Set API_IMAGE in .env.production}
+    pull_policy: always
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
-      TZ: ${TIME_ZONE:-America/Guatemala}
-      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=NostalgiaTV;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True;Encrypt=True
-      # Mismo origen vía Nginx: CORS casi no interviene, pero se deja el origen público por seguridad.
-      Cors__AllowedOrigins__0: ${APP_PUBLIC_URL:?Defina APP_PUBLIC_URL}
-      Jwt__Key: ${JWT_SECRET_KEY:?Defina JWT_SECRET_KEY}
-      # Issuer/Audience fijos (no dependen de la IP/dominio) para que funcione en cualquier host.
-      Jwt__Issuer: ${JWT_ISSUER:-nostalgiatv}
-      Jwt__Audience: ${JWT_ISSUER:-nostalgiatv}
-      # Nginx es el único borde: la API confía en X-Forwarded-Proto/For.
-      ReverseProxy__TrustForwardedHeaders: "true"
+      AllowedHosts: ${ALLOWED_HOSTS:?Set ALLOWED_HOSTS in .env.production}
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=NostalgiaTV;User Id=sa;Password=${DB_PASSWORD:?Set DB_PASSWORD in .env.production};Encrypt=True;TrustServerCertificate=True
+      Cors__AllowedOrigins__0: ${APP_ORIGIN:?Set APP_ORIGIN in .env.production}
+      Jwt__Key: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env.production}
+      Jwt__Issuer: ${JWT_ISSUER:?Set JWT_ISSUER in .env.production}
+      Jwt__Audience: ${JWT_AUDIENCE:?Set JWT_AUDIENCE in .env.production}
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads
-    # Sin 'ports': la API NO se publica al host, sólo es visible dentro de las redes docker.
-    expose:
-      - "8080"
+    ports:
+      - 127.0.0.1:${API_HTTP_PORT:-8081}:8080
     volumes:
-      - ./logs/webapi:/app/Logs
-      - ./media:/app/wwwroot/uploads/media
-      - ./uploads:/app/wwwroot/uploads
+      - ${UPLOADS_PATH:-./uploads}:/app/wwwroot/uploads
     depends_on:
       sqlserver:
         condition: service_healthy
     networks:
-      - web-net
-      - data-net
-      - monitoring
+      web:
+      data:
+      monitoring-nostalgia:
+        aliases:
+          - nostalgia-tv-api
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    mem_limit: 1g
-    cpus: 1.5
-    logging: *default-log-options
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent --show-error http://127.0.0.1:8080/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
+    logging: *default-logging
 
-  # Sirve la SPA + reverse proxy a la API (oculta). Publica sólo en localhost:
-  # el nginx del host termina TLS y enruta el dominio hacia aquí. No expone 80/443
-  # al exterior, así no choca con otros proyectos ya publicados en la VPS.
   webapp:
-    image: ${WEB_IMAGE:?Defina WEB_IMAGE}
-    container_name: nostalgia-web
+    image: ${WEB_IMAGE:?Set WEB_IMAGE in .env.production}
+    pull_policy: always
     restart: unless-stopped
     environment:
-      TZ: ${TIME_ZONE:-America/Guatemala}
+      API_PUBLIC_URL: ${API_PUBLIC_URL:?Set API_PUBLIC_URL in .env.production}
     ports:
-      - "127.0.0.1:${WEB_HTTP_PORT:-8090}:80"
-    volumes:
-      - ${ENV_JS_PATH:-./env.js}:/usr/share/nginx/html/assets/env.js:ro
+      - 127.0.0.1:${WEB_HTTP_PORT:-8082}:80
     depends_on:
       webapi:
         condition: service_healthy
     networks:
-      - web-net
-      - monitoring
+      web:
+      monitoring-nostalgia:
+        aliases:
+          - nostalgia-tv-web
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     security_opt:
       - no-new-privileges:true
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - SETUID
-      - SETGID
-      - NET_BIND_SERVICE
-    mem_limit: 256m
-    cpus: 0.5
-    logging: *default-log-options
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 15s
+    logging: *default-logging
+
+volumes:
+  sqlserver_data:
 
 networks:
-  web-net:
+  web:
     driver: bridge
-  data-net:
+  data:
     driver: bridge
     internal: true
-  # Red compartida donde ya corren Loki/Alloy/Grafana/Uptime Kuma (stack de
-  # monitoreo aparte). webapi y webapp se conectan a ella para que ese stack
-  # los sondee (/health) y recolecte sus logs. Debe existir previamente:
-  #   docker network create monitoring-net
-  monitoring:
+  monitoring-nostalgia:
     external: true
-    name: monitoring-net
+    name: monitoring-nostalgia

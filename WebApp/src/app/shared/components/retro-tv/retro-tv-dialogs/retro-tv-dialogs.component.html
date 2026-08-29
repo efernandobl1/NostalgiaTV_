@@ -1,19 +1,19 @@
 <!-- Series Dialog -->
 @if (showSeriesDialog()) {
   <div class="dialog-backdrop" (click)="closeSeriesDialog.emit()">
-    <div class="dialog-panel" (click)="$event.stopPropagation()">
+    <div class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="series-dialog-title" (click)="$event.stopPropagation()">
       <div class="dialog-header">
-        <span class="dialog-title">SERIES</span>
-        <button mat-icon-button (click)="closeSeriesDialog.emit()" [tabindex]="10">
+        <span class="dialog-title" id="series-dialog-title">SERIES</span>
+        <button mat-icon-button (click)="closeSeriesDialog.emit()" aria-label="Cerrar selector de series">
           <mat-icon>close</mat-icon>
         </button>
       </div>
       <div class="dialog-filters">
-        <input class="retro-input" placeholder="Buscar por nombre..."
+        <input class="retro-input" placeholder="Buscar por nombre..." aria-label="Buscar serie por nombre"
           [value]="seriesSearchName()"
           (input)="searchChange.emit($any($event.target).value)"
         />
-        <select class="retro-select" (change)="channelFilterChange.emit($any($event.target).value)">
+        <select class="retro-select" aria-label="Filtrar series por canal" (change)="channelFilterChange.emit($any($event.target).value)">
           <option value="">Todos los canales</option>
           @for (channel of channels(); track channel.id) {
             <option [value]="channel.id">{{ channel.name }}</option>
@@ -25,9 +25,9 @@
       } @else {
         <div class="dialog-list">
           @for (serie of allSeries(); track serie.id) {
-            <div class="series-item" (click)="enterSeries.emit(serie)" [tabindex]="10">
+            <div class="series-item" role="button" (click)="enterSeries.emit(serie)" (keydown.enter)="enterSeries.emit(serie)" tabindex="0">
               @if (serie.logoPath) {
-                <img [src]="apiUrl() + serie.logoPath" class="series-item-logo" />
+                <img [src]="apiUrl() + serie.logoPath" [alt]="serie.name + ' logo'" loading="lazy" decoding="async" class="series-item-logo" />
               } @else {
                 <div class="series-item-logo-placeholder">
                   <mat-icon>tv</mat-icon>
@@ -46,12 +46,12 @@
         </div>
         <div class="dialog-pagination">
           <button mat-icon-button [disabled]="seriesPage() === 1"
-            (click)="prevPage.emit()" [tabindex]="10">
+            (click)="prevPage.emit()" aria-label="Página anterior">
             <mat-icon>chevron_left</mat-icon>
           </button>
           <span class="pagination-info">{{ seriesPage() }} / {{ seriesTotalPages() }}</span>
           <button mat-icon-button [disabled]="seriesPage() === seriesTotalPages()"
-            (click)="nextPage.emit()" [tabindex]="10">
+            (click)="nextPage.emit()" aria-label="Página siguiente">
             <mat-icon>chevron_right</mat-icon>
           </button>
         </div>
@@ -63,10 +63,10 @@
 <!-- Settings Dialog -->
 @if (showSettingsDialog()) {
   <div class="dialog-backdrop" (click)="closeSettingsDialog.emit()">
-    <div class="dialog-panel dialog-panel--settings" (click)="$event.stopPropagation()">
+    <div class="dialog-panel dialog-panel--settings" role="dialog" aria-modal="true" aria-labelledby="settings-dialog-title" (click)="$event.stopPropagation()">
       <div class="dialog-header">
-        <span class="dialog-title">CONFIGURACIÓN</span>
-        <button mat-icon-button (click)="closeSettingsDialog.emit()" [tabindex]="10">
+        <span class="dialog-title" id="settings-dialog-title">CONFIGURACIÓN</span>
+        <button mat-icon-button (click)="closeSettingsDialog.emit()" aria-label="Cerrar configuración">
           <mat-icon>close</mat-icon>
         </button>
       </div>
@@ -110,6 +110,7 @@
         <div class="setting-item setting-item--action">
           <span>Reiniciar todo lo visto</span>
           <button class="reset-btn"
+            aria-label="Reiniciar todo lo visto"
             (click)="resetAll.emit(); closeSettingsDialog.emit()">↺</button>
         </div>
       </div>
@@ -124,15 +125,15 @@
       @if (currentEntryIndex() >= 0) {
         <div class="schedule-external-indicator" [style.top.px]="currentEntryPosition()"></div>
       }
-      <div class="dialog-panel dialog-panel--schedule" (click)="$event.stopPropagation()">
+      <div class="dialog-panel dialog-panel--schedule" role="dialog" aria-modal="true" aria-labelledby="schedule-dialog-title" (click)="$event.stopPropagation()">
         <div class="dialog-header">
-          <span class="dialog-title">PROGRAMACIÓN</span>
-          <button mat-icon-button (click)="closeScheduleDialog.emit()" [tabindex]="10">
+          <span class="dialog-title" id="schedule-dialog-title">PROGRAMACIÓN</span>
+          <button mat-icon-button (click)="closeScheduleDialog.emit()" aria-label="Cerrar programación">
             <mat-icon>close</mat-icon>
           </button>
         </div>
         <div class="dialog-filters">
-          <select class="retro-select" [value]="scheduleChannelId() ?? ''" (change)="scheduleChannelChange.emit(+$any($event.target).value)">
+          <select class="retro-select" aria-label="Canal de programación" [value]="scheduleChannelId() ?? ''" (change)="scheduleChannelChange.emit(+$any($event.target).value)">
             @for (channel of channels(); track channel.id) {
               <option [value]="channel.id">{{ channel.name }}</option>
             }
@@ -162,7 +163,7 @@
                     }
                   </div>
                   @if (entry.seriesLogoPath) {
-                    <img [src]="apiUrl() + entry.seriesLogoPath" class="schedule-logo" />
+                    <img [src]="apiUrl() + entry.seriesLogoPath" [alt]="entry.seriesName + ' logo'" loading="lazy" decoding="async" class="schedule-logo" />
                   }
                 </div>
               } @empty {

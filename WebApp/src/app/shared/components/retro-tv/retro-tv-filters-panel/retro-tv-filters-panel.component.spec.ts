@@ -13,6 +13,13 @@ describe('RetroTvFiltersPanelComponent', () => {
 
     fixture = TestBed.createComponent(RetroTvFiltersPanelComponent);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('activeFilters', {
+      scanlineIntensity: 15,
+      scanlineDensity: 1,
+      crtCurvature: true,
+      vignette: true,
+      scanlineAnimation: true,
+    });
     fixture.detectChanges();
   });
 

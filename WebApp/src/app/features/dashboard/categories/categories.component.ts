@@ -1,4 +1,13 @@
-import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  inject,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,84 +18,122 @@ import { MatCardModule } from '@angular/material/card';
 import { Validators } from '@angular/forms';
 import { CategoriesService } from './categories.service';
 import { CategoryResponse } from '../../../shared/models/category.model';
-import { DialogConfig, GenericFormDialogComponent } from '../../../shared/components/dialogs/generic-form-dialog/generic-form-dialog.component';
+import {
+  DialogConfig,
+  GenericFormDialogComponent,
+} from '../../../shared/components/dialogs/generic-form-dialog/generic-form-dialog.component';
 import { CustomizerSettingsService } from '../../../shared/components/customizer-settings/customizer-settings.service';
+import { DashboardPageHeaderComponent } from '../../../shared/components/dashboard-page-header/dashboard-page-header.component';
 
 @Component({
-    selector: 'app-categories',
-    imports: [MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, MatCardModule],
-    templateUrl: './categories.component.html',
-    styleUrl: './categories.component.scss'
+  selector: 'app-categories',
+  imports: [
+    MatTableModule,
+    MatPaginatorModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDialogModule,
+    MatSnackBarModule,
+    MatCardModule,
+    DashboardPageHeaderComponent,
+  ],
+  changeDetection: ChangeDetectionStrategy.Eager,
+  templateUrl: './categories.component.html',
 })
 export class CategoriesComponent implements OnInit, AfterViewInit {
+  private readonly destroyRef = inject(DestroyRef);
 
-    @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
 
-    displayedColumns = ['id', 'name', 'actions'];
-    dataSource = new MatTableDataSource<CategoryResponse>([]);
+  displayedColumns = ['id', 'name', 'actions'];
+  dataSource = new MatTableDataSource<CategoryResponse>([]);
 
-    constructor(
-        private categoriesService: CategoriesService,
-        private dialog: MatDialog,
-        private snackBar: MatSnackBar,
-        public themeService: CustomizerSettingsService
-    ) {}
+  constructor(
+    private categoriesService: CategoriesService,
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar,
+    public themeService: CustomizerSettingsService,
+  ) {}
 
-    ngOnInit() { this.loadCategories(); }
+  ngOnInit() {
+    this.loadCategories();
+  }
 
-    ngAfterViewInit() { this.dataSource.paginator = this.paginator; }
+  ngAfterViewInit() {
+    this.dataSource.paginator = this.paginator;
+  }
 
-    loadCategories() {
-        this.categoriesService.getAll().subscribe({
-            next: data => this.dataSource.data = data,
-            error: () => this.showError('Error al cargar las categorías')
+  loadCategories() {
+    this.categoriesService.getAll().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (data) => (this.dataSource.data = data),
+      error: () => this.showError('Error loading categories'),
+    });
+  }
+
+  openForm(category?: CategoryResponse) {
+    const config: DialogConfig = {
+      title: 'Category',
+      fields: [
+        {
+          key: 'name',
+          label: 'Name',
+          type: 'text',
+          validators: [Validators.required, Validators.maxLength(100)],
+        },
+      ],
+      data: category ?? null,
+    };
+
+    const dialogRef = this.dialog.open(GenericFormDialogComponent, {
+      width: '400px',
+      data: config,
+      panelClass: this.themeService.isDark() ? 'dark-theme' : '',
+    });
+
+    dialogRef.afterClosed().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((result) => {
+      if (!result) return;
+      if (category) {
+        this.categoriesService
+          .update(category.id, result.data)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+          next: (updated) => {
+            this.dataSource.data = this.dataSource.data.map((c) =>
+              c.id === updated.id ? updated : c,
+            );
+            this.showSuccess('Category updated');
+          },
+          error: () => this.showError('Error updating category'),
         });
-    }
-
-    openForm(category?: CategoryResponse) {
-        const config: DialogConfig = {
-            title: 'categoría',
-            fields: [{ key: 'name', label: 'Nombre', type: 'text', validators: [Validators.required, Validators.maxLength(100)] }],
-            data: category ?? null
-        };
-
-        const dialogRef = this.dialog.open(GenericFormDialogComponent, {
-            width: '400px', data: config,
-            panelClass: this.themeService.isDark() ? 'dark-theme' : ''
+      } else {
+        this.categoriesService
+          .create(result.data)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+          next: (created) => {
+            this.dataSource.data = [...this.dataSource.data, created];
+            this.showSuccess('Category created');
+          },
+          error: () => this.showError('Error creating category'),
         });
+      }
+    });
+  }
 
-        dialogRef.afterClosed().subscribe(result => {
-            if (!result) return;
-            if (category) {
-                this.categoriesService.update(category.id, result.data).subscribe({
-                    next: updated => {
-                        this.dataSource.data = this.dataSource.data.map(c => c.id === updated.id ? updated : c);
-                        this.showSuccess('Categoría actualizada');
-                    },
-                    error: () => this.showError('Error al actualizar la categoría')
-                });
-            } else {
-                this.categoriesService.create(result.data).subscribe({
-                    next: created => {
-                        this.dataSource.data = [...this.dataSource.data, created];
-                        this.showSuccess('Categoría creada');
-                    },
-                    error: () => this.showError('Error al crear la categoría')
-                });
-            }
-        });
-    }
+  delete(id: number) {
+    this.categoriesService.delete(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.dataSource.data = this.dataSource.data.filter((c) => c.id !== id);
+        this.showSuccess('Category deleted');
+      },
+      error: () => this.showError('Error deleting category'),
+    });
+  }
 
-    delete(id: number) {
-        this.categoriesService.delete(id).subscribe({
-            next: () => {
-                this.dataSource.data = this.dataSource.data.filter(c => c.id !== id);
-                this.showSuccess('Categoría eliminada');
-            },
-            error: () => this.showError('Error al eliminar la categoría')
-        });
-    }
-
-    private showSuccess(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 3000 }); }
-    private showError(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 3000, panelClass: 'error-snack' }); }
+  private showSuccess(msg: string) {
+    this.snackBar.open(msg, 'Close', { duration: 3000 });
+  }
+  private showError(msg: string) {
+    this.snackBar.open(msg, 'Close', { duration: 3000, panelClass: 'error-snack' });
+  }
 }
