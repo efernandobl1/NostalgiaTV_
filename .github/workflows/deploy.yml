@@ -2,7 +2,13 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: nostalgiatv-production
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -11,27 +17,27 @@ env:
 
 jobs:
   build-and-push:
+    name: Build and push images
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     permissions:
       contents: read
       packages: write
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Scan filesystem for HIGH and CRITICAL vulnerabilities
+      - name: Scan filesystem vulnerabilities
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
           severity: HIGH,CRITICAL
           ignore-unfixed: true
-          exit-code: '1'
+          exit-code: "1"
           format: table
-          # WebApp = toolchain de build de Angular (devDependencies). Sus paquetes
-          # npm NO llegan a la imagen final (solo nginx + estáticos ya compilados),
-          # así que sus CVEs son de build, no de runtime. El backend .NET sí se escanea.
           skip-dirs: WebApp
 
       - name: Login to GitHub Container Registry
@@ -71,3 +77,53 @@ jobs:
           sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to production
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    environment:
+      name: production
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Configure SSH
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+
+          install -d -m 700 "$HOME/.ssh"
+
+          printf '%s\n' "$SSH_PRIVATE_KEY" \
+            > "$HOME/.ssh/deploy_key"
+
+          printf '%s\n' "$SSH_KNOWN_HOSTS" \
+            > "$HOME/.ssh/known_hosts"
+
+          chmod 600 "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Deploy NostalgiaTV
+        shell: bash
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
+          VPS_USER: ${{ vars.VPS_USER }}
+        run: |
+          set -euo pipefail
+
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -p "$VPS_PORT" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            "$VPS_USER@$VPS_HOST"
