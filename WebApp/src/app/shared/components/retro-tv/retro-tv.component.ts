@@ -275,6 +275,15 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.volume.set(v.volume); this.muted.set(v.muted);
   }
 
+  /** Slider de volumen: subir desde el mute lo desmutea. */
+  setVolume(value: number): void {
+    const v = this.videoRef?.nativeElement;
+    if (!v) return;
+    v.volume = value;
+    v.muted = value === 0;
+    this.volume.set(value); this.muted.set(value === 0);
+  }
+
   toggleFullscreen(): void {
     const el = this.stageRef?.nativeElement;
     if (!el) return;

@@ -38,18 +38,23 @@
                   class="grid h-12 w-12 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
             <span class="material-symbols-outlined text-3xl">tune</span>
           </button>
-          <button type="button" (click)="toggleMute()" aria-label="Silenciar"
-                  class="grid h-12 w-12 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
-            <span class="material-symbols-outlined text-3xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span>
-          </button>
+          <div class="flex items-center gap-2 rounded-xl border border-text-mute/40 px-2">
+            <button type="button" (click)="toggleMute()" aria-label="Silenciar" class="grid h-10 w-10 place-items-center text-retro-green">
+              <span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span>
+            </button>
+            <input type="range" min="0" max="1" step="0.05" [value]="muted() ? 0 : volume()" (input)="setVolume(+$any($event.target).value)" aria-label="Volumen"
+                   class="w-24 cursor-pointer accent-[color:var(--color-retro-green)]">
+          </div>
           <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
                   class="grid h-12 w-12 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
             <span class="material-symbols-outlined text-3xl">{{ fullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</span>
           </button>
-          <button type="button" (click)="exitTvMode()"
-                  class="inline-flex h-12 items-center gap-2 rounded-xl border-2 border-retro-gold bg-retro-gold/15 px-5 text-lg font-semibold text-retro-gold transition hover:bg-retro-gold/25">
-            <span class="material-symbols-outlined text-2xl">tv_off</span>Salir del modo TV
-          </button>
+          @if (!fullscreen()) {
+            <button type="button" (click)="exitTvMode()"
+                    class="inline-flex h-12 items-center gap-2 rounded-xl border-2 border-retro-gold bg-retro-gold/15 px-5 text-lg font-semibold text-retro-gold transition hover:bg-retro-gold/25">
+              <span class="material-symbols-outlined text-2xl">tv_off</span>Salir del modo TV
+            </button>
+          }
         </div>
       </div>
 
@@ -86,27 +91,33 @@
           <div class="flex gap-4 overflow-x-auto pb-2">
             @for (ch of channels(); track ch.id) {
               <button type="button" (click)="tune(ch); focusedIndex.set($index)"
-                      class="flex h-28 w-56 shrink-0 flex-col justify-between rounded-2xl border-[3px] p-4 text-left ring-retro-gold transition"
+                      class="flex h-28 w-56 shrink-0 flex-col justify-between rounded-2xl border-[3px] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] p-4 text-left ring-retro-cyan transition"
                       [class.ring-2]="$index === focusedIndex() && current()?.id !== ch.id"
                       [class.scale-105]="$index === focusedIndex()"
-                      [ngClass]="current()?.id === ch.id
-                        ? 'border-retro-red bg-[linear-gradient(145deg,#2f3050,#1a1a2e)] shadow-[0_0_30px_rgba(255,107,107,.35)]'
-                        : 'border-[#2a2a44] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] hover:border-retro-gold'">
-                <span class="font-pixel text-xs text-retro-gold">{{ ($index + 3).toString().padStart(2,'0') }}</span>
+                      [ngClass]="current()?.id === ch.id ? 'border-retro-green' : 'border-[#2a2a44] hover:border-retro-cyan/55'">
+                <span class="font-pixel text-xs text-text-dim">{{ ($index + 3).toString().padStart(2,'0') }}</span>
                 <span class="truncate font-crt text-2xl leading-none text-retro-green">{{ ch.name }}</span>
               </button>
             } @empty { <span class="text-sm text-text-dim">Cargando canales…</span> }
           </div>
         </div>
 
-        <!-- leyenda de controles (D-pad del control remoto) -->
-        <div class="flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-text-dim md:text-base">
-          <span class="flex items-center gap-2"><span class="rounded bg-retro-green px-2 py-0.5 font-crt text-lg text-ink">OK</span>Sintonizar</span>
-          <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">◀ ▶</span>Cambiar canal</span>
-          <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">▲</span>Series</span>
-          <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">▼</span>Imagen</span>
-          <span class="flex items-center gap-2"><span class="rounded bg-retro-red/80 px-2 py-0.5 font-crt text-lg text-ink">Esc</span>Ocultar tira</span>
-        </div>
+        @if (!fullscreen()) {
+          <!-- leyenda de controles (D-pad del control remoto) — solo en modo TV, no en fullscreen -->
+          <div class="flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-text-dim md:text-base">
+            <span class="flex items-center gap-2"><span class="rounded bg-retro-green px-2 py-0.5 font-crt text-lg text-ink">OK</span>Sintonizar</span>
+            <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">◀ ▶</span>Cambiar canal</span>
+            <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">▲</span>Series</span>
+            <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">▼</span>Imagen</span>
+            <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">Esc</span>Ocultar tira</span>
+          </div>
+        } @else {
+          <!-- en fullscreen (mouse): botón clickeable para ver series -->
+          <button type="button" (click)="openBrowser()"
+                  class="inline-flex w-fit items-center gap-2 rounded-full border border-retro-cyan/50 bg-transparent px-5 py-2 text-base text-retro-cyan transition hover:bg-retro-cyan/10">
+            <span class="material-symbols-outlined text-xl">grid_view</span>Series
+          </button>
+        }
       </div>
     </div>
   </div>
@@ -247,13 +258,13 @@
             <div class="flex flex-col gap-2 overflow-y-auto max-lg:max-h-56 lg:min-h-0 lg:flex-1">
               @for (ch of channels(); track ch.id) {
                 <button type="button" (click)="tune(ch)"
-                        class="flex items-center gap-2.5 rounded-lg border-2 p-2.5 text-left transition"
+                        class="flex items-center gap-2.5 rounded-lg border-2 bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] p-2.5 text-left transition"
                         [ngClass]="current()?.id === ch.id
-                          ? 'border-retro-red bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)] shadow-[0_0_20px_rgba(255,107,107,.35)]'
-                          : 'border-[#1a1a2e] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] hover:border-retro-cyan/55 focus-visible:border-retro-cyan/55 focus-visible:outline-none'">
-                  <span class="font-pixel text-[8px] text-retro-gold">{{ ($index + 3).toString().padStart(2,'0') }}</span>
+                          ? 'border-retro-green'
+                          : 'border-[#1a1a2e] hover:border-retro-cyan/55 focus-visible:border-retro-cyan/55 focus-visible:outline-none'">
+                  <span class="font-pixel text-[8px] text-text-dim">{{ ($index + 3).toString().padStart(2,'0') }}</span>
                   <span class="flex-1 truncate font-crt text-lg text-retro-green">{{ ch.name }}</span>
-                  <span class="material-symbols-outlined text-lg" [ngClass]="current()?.id === ch.id ? 'text-retro-red' : 'text-retro-cyan'">
+                  <span class="material-symbols-outlined text-lg" [ngClass]="current()?.id === ch.id ? 'text-retro-green' : 'text-retro-cyan'">
                     {{ current()?.id === ch.id ? 'sensors' : 'play_arrow' }}
                   </span>
                 </button>
@@ -267,15 +278,13 @@
           }
 
           <!-- controles de volumen / pantalla (compartidos) -->
-          <div class="mt-auto flex items-center justify-between gap-1.5 border-t border-retro-green/20 pt-3">
+          <div class="mt-auto flex items-center gap-2 border-t border-retro-green/20 pt-3">
             <button type="button" (click)="toggleMute()" aria-label="Silenciar"
-                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span></button>
-            <button type="button" (click)="changeVolume(-0.1)" aria-label="Bajar volumen"
-                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">volume_down</span></button>
-            <button type="button" (click)="changeVolume(0.1)" aria-label="Subir volumen"
-                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">volume_up</span></button>
+                    class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span></button>
+            <input type="range" min="0" max="1" step="0.05" [value]="muted() ? 0 : volume()" (input)="setVolume(+$any($event.target).value)" aria-label="Volumen"
+                   class="h-1.5 flex-1 cursor-pointer accent-[color:var(--color-retro-green)]">
             <button type="button" (click)="goFullscreenCinema()" aria-label="Pantalla completa"
-                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">fullscreen</span></button>
+                    class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">fullscreen</span></button>
           </div>
         </div>
       </aside>
