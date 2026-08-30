@@ -30,7 +30,8 @@ interface Episode {
 }
 interface Paged<T> { items: T[]; totalCount: number; totalPages: number; page: number; }
 interface GuideEntry {
-  episodeTitle?: string; seriesName?: string; startTime: string; endTime: string;
+  episodeTitle?: string; seriesName?: string; seriesLogoPath?: string;
+  startTime: string; endTime: string;
   isBumper?: boolean; bumperTitle?: string;
 }
 interface GuideRow { channel: Channel; entries: GuideEntry[]; }
@@ -168,7 +169,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       case 'channelNext': this.moveFocus(1); break;
       case 'channelPrev': this.moveFocus(-1); break;
       case 'ok': this.tuneFocused(); break;
-      case 'guide': this.openGuide(); break;
+      case 'guide': this.mode() === 'series' ? this.toggleEpisodes() : this.openGuide(); break;
       case 'image': this.toggleFilters(); break;
       case 'hide': this.showOverlay.set(false); break;
     }
@@ -364,17 +365,24 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
 
   // ── Guía de programación ─────────────────────────────────────────────────
   openGuide(): void {
+    if (this.mode() === 'series') return;   // series no tiene programación
     this.showGuide.set(true);
     const chs = this.channels();
     if (!chs.length) return;
     this.guideLoading.set(true);
     forkJoin(chs.map(ch =>
       this.http.get<GuideEntry[]>(`${this.apiUrl}/api/v1/public/channels/${ch.id}/schedule`).pipe(
-        map(entries => ({ channel: ch, entries: (entries ?? []).slice(0, 6) }) as GuideRow),
+        map(entries => ({ channel: ch, entries: entries ?? [] }) as GuideRow),
         catchError(() => of({ channel: ch, entries: [] } as GuideRow)),
       ),
     )).subscribe({
-      next: rows => { this.guideRows.set(rows); this.guideLoading.set(false); },
+      next: rows => {
+        this.guideRows.set(rows);
+        this.guideLoading.set(false);
+        // Centrar cada fila en el programa "AHORA".
+        setTimeout(() => document.querySelectorAll('[data-guide-now]')
+          .forEach(el => el.scrollIntoView({ inline: 'center', block: 'nearest' })), 50);
+      },
       error: () => this.guideLoading.set(false),
     });
   }
@@ -385,6 +393,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     const now = Date.now();
     return new Date(e.startTime).getTime() <= now && now < new Date(e.endTime).getTime();
   }
+  guideIsPast(e: GuideEntry): boolean { return new Date(e.endTime).getTime() < Date.now(); }
   guideTime(e: GuideEntry): string {
     return new Intl.DateTimeFormat('es-GT', { hour: '2-digit', minute: '2-digit', hour12: false })
       .format(new Date(e.startTime));

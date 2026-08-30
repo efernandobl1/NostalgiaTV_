@@ -36,18 +36,19 @@ namespace Infrastructure.Services
             }
         }
 
-        // Returns schedule for next 24h for a channel
+        // Returns the schedule from 24h ago to 24h ahead (for the guide, centered on "now").
         public async Task<List<ChannelScheduleEntryResponse>> GetScheduleAsync(int channelId)
         {
             var now = DateTime.UtcNow;
+            var from = now.AddHours(-24);
             var until = now.AddHours(24);
 
-            _logger.LogInformation("[SCHEDULE] GetScheduleAsync channelId={ch} from={from} to={to}", channelId, now, until);
+            _logger.LogInformation("[SCHEDULE] GetScheduleAsync channelId={ch} from={from} to={to}", channelId, from, until);
 
             await EnsureScheduleGeneratedAsync(channelId, until);
 
             var entries = await _context.ChannelScheduleEntries
-                .Where(e => e.ChannelId == channelId && e.EndTime >= now && e.StartTime <= until)
+                .Where(e => e.ChannelId == channelId && e.EndTime >= from && e.StartTime <= until)
                 .Include(e => e.Episode).ThenInclude(e => e.Series)
                 .Include(e => e.Bumper)
                 .OrderBy(e => e.StartTime)

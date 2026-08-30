@@ -75,10 +75,12 @@
                   </div>
                   <div class="flex items-center gap-2.5">
                     <span class="mr-2 font-crt text-2xl text-text-mute md:text-3xl">{{ clock() }}</span>
-                    <button type="button" (click)="openGuide()" title="Guía"
-                            class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-gold transition hover:bg-white/10">
-                      <span class="material-symbols-outlined text-3xl">calendar_month</span>
-                    </button>
+                    @if (mode() !== 'series') {
+                      <button type="button" (click)="openGuide()" title="Guía"
+                              class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-gold transition hover:bg-white/10">
+                        <span class="material-symbols-outlined text-3xl">calendar_month</span>
+                      </button>
+                    }
                     @if (tv.enabled()) {
                       <button type="button" (click)="openControls()" title="Controles"
                               class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-cyan transition hover:bg-white/10">
@@ -127,17 +129,14 @@
                   @if (!hasMedia()) {
                     <span class="font-crt text-4xl text-retro-green/80">Elegí un canal para sintonizar</span>
                   } @else {
-                    <div class="flex items-end gap-4">
+                    <div class="flex flex-col items-start gap-2">
                       @if (overlayLogo()) {
                         <img [src]="logo(overlayLogo())" [alt]="overlayName()"
-                             class="h-20 w-auto max-w-[240px] rounded-lg object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,.6)] md:h-24">
-                      } @else {
-                        <span class="font-crt text-5xl leading-none text-retro-green md:text-6xl">{{ overlayName() }}</span>
+                             class="object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,.6)]"
+                             style="height:6rem;width:auto;max-width:min(40vw,320px)">
                       }
-                      <div class="flex flex-col gap-1 pb-1">
-                        <span class="font-pixel text-sm text-retro-red">{{ mode() === 'series' ? (state()?.seriesName ?? selectedSeries()?.name) : overlayName() }}</span>
-                        <span class="text-xl text-text md:text-2xl">{{ mode() === 'series' ? currentEpisode()?.title : (state()?.isBumper ? state()?.bumperTitle : state()?.episodeTitle) }}</span>
-                      </div>
+                      <span class="font-crt text-4xl leading-none text-retro-green md:text-5xl">{{ mode() === 'series' ? (state()?.seriesName ?? selectedSeries()?.name) : overlayName() }}</span>
+                      <span class="text-xl text-text md:text-2xl">{{ mode() === 'series' ? currentEpisode()?.title : (state()?.isBumper ? state()?.bumperTitle : state()?.episodeTitle) }}</span>
                     </div>
                     <!-- transporte: sólo series (canal = EN VIVO) -->
                     @if (mode() === 'series') {
@@ -181,7 +180,7 @@
                     <div class="flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-text-dim md:text-base">
                       <span class="flex items-center gap-2"><span class="rounded bg-retro-green px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().ok) }}</span>Sintonizar</span>
                       <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().channelPrev) }} {{ controls.keyLabel(controls.bindings().channelNext) }}</span>Cambiar canal</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().guide) }}</span>Guía</span>
+                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().guide) }}</span>{{ mode() === 'series' ? 'Episodios' : 'Guía' }}</span>
                       <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().image) }}</span>Imagen</span>
                       <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().hide) }}</span>Ocultar tira</span>
                     </div>
@@ -399,32 +398,39 @@
 
   <!-- ══════════════════ Guía de programación ══════════════════ -->
   @if (showGuide()) {
-    <div class="fixed inset-0 z-[70] flex flex-col overflow-hidden bg-ink/95 p-4 backdrop-blur-sm md:p-8" (click)="closeGuide()">
-      <div class="mx-auto flex min-h-0 w-full max-w-6xl flex-col gap-4" (click)="$event.stopPropagation()">
+    <div class="fixed inset-0 z-[70] flex flex-col overflow-hidden bg-[rgba(6,6,14,.96)] p-4 backdrop-blur-md md:p-6" (click)="closeGuide()">
+      <div class="mx-auto flex min-h-0 w-full max-w-7xl flex-col gap-5" (click)="$event.stopPropagation()">
         <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-retro-gold">calendar_month</span>
-          <span class="font-crt text-3xl text-retro-green">Guía de programación</span>
-          <span class="ml-2 font-crt text-2xl text-text-mute">{{ clock() }}</span>
+          <span class="material-symbols-outlined text-3xl text-retro-gold">calendar_month</span>
+          <span class="font-crt text-4xl text-retro-green [text-shadow:0_0_18px_rgba(142,232,159,.4)]">Guía de programación</span>
+          <span class="ml-1 rounded-lg border-2 border-retro-gold/50 px-3 py-0.5 font-crt text-2xl text-retro-gold">{{ clock() }}</span>
+          <span class="hidden text-sm text-text-dim sm:inline">· 24 h atrás y adelante</span>
           <button type="button" (click)="closeGuide()" aria-label="Cerrar"
                   class="ml-auto grid h-11 w-11 place-items-center rounded-full border border-retro-green/40 bg-transparent text-text-mute transition hover:bg-white/10"><span class="material-symbols-outlined">close</span></button>
         </div>
-        <div class="flex min-h-0 flex-col gap-2 overflow-y-auto pb-2">
+        <div class="flex min-h-0 flex-col gap-3 overflow-y-auto pb-2">
           @for (row of guideRows(); track row.channel.id) {
-            <div class="flex flex-col gap-2 rounded-xl border border-retro-purple/20 bg-panel/60 p-3 lg:flex-row lg:items-center">
+            <div class="flex items-stretch gap-3 rounded-2xl border border-retro-purple/25 bg-[linear-gradient(145deg,#20223a,#141629)] p-3">
               <button type="button" (click)="tuneFromGuide(row.channel)"
-                      class="flex w-full shrink-0 items-center gap-2 text-left lg:w-52"
-                      [ngClass]="current()?.id === row.channel.id ? 'text-retro-green' : 'text-text'">
-                <span class="font-pixel text-[9px] text-text-dim">{{ ($index + 3).toString().padStart(2,'0') }}</span>
+                      class="flex w-36 shrink-0 flex-col justify-center gap-1 rounded-xl border-2 p-3 text-left transition md:w-44"
+                      [ngClass]="current()?.id === row.channel.id ? 'border-retro-green bg-retro-green/10' : 'border-retro-purple/20 bg-surface-deep hover:border-retro-cyan/55'">
+                <span class="font-pixel text-[9px] text-text-dim">CH {{ ($index + 3).toString().padStart(2,'0') }}</span>
                 <span class="truncate font-crt text-xl text-retro-green">{{ row.channel.name }}</span>
+                @if (current()?.id === row.channel.id) {
+                  <span class="inline-flex items-center gap-1 text-xs text-retro-red"><span class="h-2 w-2 animate-pulse rounded-full bg-retro-red"></span>EN VIVO</span>
+                }
               </button>
-              <div class="flex min-w-0 flex-1 gap-2 overflow-x-auto">
+              <div class="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
                 @for (e of row.entries; track $index) {
-                  <div class="flex w-44 shrink-0 flex-col gap-0.5 rounded-lg border p-2"
-                       [ngClass]="guideIsNow(e) ? 'border-retro-green bg-retro-green/10' : 'border-retro-purple/20 bg-surface-deep'">
-                    <span class="font-crt text-lg" [ngClass]="guideIsNow(e) ? 'text-retro-green' : 'text-retro-gold'">
-                      {{ guideTime(e) }}@if (guideIsNow(e)) { <span class="ml-1 text-retro-red">• AHORA</span> }
-                    </span>
-                    <span class="truncate text-sm text-text">{{ guideTitle(e) }}</span>
+                  <div [attr.data-guide-now]="guideIsNow(e) ? '' : null"
+                       class="flex w-52 shrink-0 flex-col gap-1.5 rounded-xl border p-3 transition"
+                       [ngClass]="guideIsNow(e) ? 'border-retro-green bg-retro-green/15 shadow-[0_0_22px_rgba(142,232,159,.28)]'
+                         : (guideIsPast(e) ? 'border-white/5 bg-white/[.02] opacity-45' : 'border-retro-purple/20 bg-surface-deep')">
+                    <div class="flex items-center gap-2">
+                      <span class="font-crt text-xl" [ngClass]="guideIsNow(e) ? 'text-retro-green' : (guideIsPast(e) ? 'text-text-dim' : 'text-retro-gold')">{{ guideTime(e) }}</span>
+                      @if (guideIsNow(e)) { <span class="rounded bg-retro-red px-1.5 py-0.5 font-pixel text-[8px] text-ink">AHORA</span> }
+                    </div>
+                    <span class="line-clamp-2 text-sm leading-snug text-text">{{ guideTitle(e) }}</span>
                   </div>
                 } @empty { <span class="px-2 py-3 text-sm text-text-dim">Sin programación.</span> }
               </div>
