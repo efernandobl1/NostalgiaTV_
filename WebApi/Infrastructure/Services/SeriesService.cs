@@ -24,9 +24,11 @@ namespace Infrastructure.Services
             _folderService = folderService;
         }
 
-        // Extensiones de video reales que el scanner acepta como episodios.
+        // Sólo formatos reproducibles directamente en un <video> HTML5. Se omiten
+        // contenedores/códecs que el navegador no reproduce (.flv, .avi, .wmv, .mkv):
+        // indexarlos generaba episodios que fallaban al reproducir en la web.
         private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
-            { ".mp4", ".mkv", ".avi", ".webm", ".mov", ".wmv", ".flv" };
+            { ".mp4", ".m4v", ".webm", ".ogg", ".ogv", ".mov" };
 
         // Devuelve sólo archivos de video reales, ignorando artefactos de
         // transcodificación (p. ej. "X.mp4.transcoding.mp4", "X.mp4.web-compatible")
@@ -45,6 +47,22 @@ namespace Infrastructure.Services
                     return false;
                 return VideoExtensions.Contains(Path.GetExtension(path));
             });
+        }
+
+        // Corrige nombres mal decodificados (UTF-8 leído como Latin-1): "correrÃ­a"
+        // -> "correría". Ocurre al escanear en contenedores sin locale UTF-8. Sólo
+        // re-decodifica cuando aparecen los patrones típicos de mojibake y el
+        // resultado no introduce caracteres inválidos (así no daña nombres correctos).
+        private static string FixMojibake(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            if (text.IndexOf('Ã') < 0 && text.IndexOf('Â') < 0 && !text.Contains("â€")) return text;
+            try
+            {
+                var repaired = System.Text.Encoding.UTF8.GetString(System.Text.Encoding.Latin1.GetBytes(text));
+                return repaired.Contains('�') ? text : repaired;
+            }
+            catch { return text; }
         }
 
         public async Task<List<SeriesResponse>> GetAllAsync() => await _context.Series.ProjectToType<SeriesResponse>().ToListAsync();
@@ -182,7 +200,7 @@ namespace Infrastructure.Services
             foreach (var (filePath, season, episodeTypeId) in scannedFiles)
             {
                 var key = NormalizePath(filePath);
-                var fileTitle = Path.GetFileNameWithoutExtension(filePath);
+                var fileTitle = FixMojibake(Path.GetFileNameWithoutExtension(filePath));
                 var relativePath = ToRelativePath(filePath);
 
                 if (existingByPath.TryGetValue(key, out var existing))

@@ -75,6 +75,16 @@
                   </div>
                   <div class="flex items-center gap-2.5">
                     <span class="mr-2 font-crt text-2xl text-text-mute md:text-3xl">{{ clock() }}</span>
+                    <button type="button" (click)="openGuide()" title="Guía"
+                            class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-gold transition hover:bg-white/10">
+                      <span class="material-symbols-outlined text-3xl">calendar_month</span>
+                    </button>
+                    @if (tv.enabled()) {
+                      <button type="button" (click)="openControls()" title="Controles"
+                              class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-cyan transition hover:bg-white/10">
+                        <span class="material-symbols-outlined text-3xl">settings_remote</span>
+                      </button>
+                    }
                     <!-- Episodios (series) / Series (canales) -->
                     @if (mode() === 'series') {
                       <button type="button" (click)="toggleEpisodes()" title="Episodios"
@@ -97,10 +107,12 @@
                     </button>
                     <input type="range" min="0" max="1" step="0.05" [value]="muted() ? 0 : volume()" (input)="setVolume(+$any($event.target).value)" aria-label="Volumen"
                            class="w-24 cursor-pointer accent-[color:var(--color-retro-green)]">
-                    <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
-                            class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-green transition hover:bg-white/10">
-                      <span class="material-symbols-outlined text-3xl">{{ fullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</span>
-                    </button>
+                    @if (!tv.enabled()) {
+                      <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
+                              class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-green transition hover:bg-white/10">
+                        <span class="material-symbols-outlined text-3xl">{{ fullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</span>
+                      </button>
+                    }
                     @if (tv.enabled() && !fullscreen()) {
                       <button type="button" (click)="exitTvMode()"
                               class="inline-flex h-12 items-center gap-2 rounded-xl border-2 border-retro-gold bg-retro-gold/15 px-5 text-lg font-semibold text-retro-gold transition hover:bg-retro-gold/25">
@@ -115,10 +127,17 @@
                   @if (!hasMedia()) {
                     <span class="font-crt text-4xl text-retro-green/80">Elegí un canal para sintonizar</span>
                   } @else {
-                    <div class="flex flex-col gap-1.5">
-                      <span class="font-pixel text-sm text-retro-red">{{ current()?.name ?? selectedSeries()?.name }}</span>
-                      <span class="font-crt text-5xl leading-none text-retro-green md:text-6xl">{{ state()?.seriesName ?? selectedSeries()?.name }}</span>
-                      <span class="text-xl text-text md:text-2xl">{{ mode() === 'series' ? currentEpisode()?.title : (state()?.isBumper ? state()?.bumperTitle : state()?.episodeTitle) }}</span>
+                    <div class="flex items-end gap-4">
+                      @if (overlayLogo()) {
+                        <img [src]="logo(overlayLogo())" [alt]="overlayName()"
+                             class="h-20 w-auto max-w-[240px] rounded-lg object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,.6)] md:h-24">
+                      } @else {
+                        <span class="font-crt text-5xl leading-none text-retro-green md:text-6xl">{{ overlayName() }}</span>
+                      }
+                      <div class="flex flex-col gap-1 pb-1">
+                        <span class="font-pixel text-sm text-retro-red">{{ mode() === 'series' ? (state()?.seriesName ?? selectedSeries()?.name) : overlayName() }}</span>
+                        <span class="text-xl text-text md:text-2xl">{{ mode() === 'series' ? currentEpisode()?.title : (state()?.isBumper ? state()?.bumperTitle : state()?.episodeTitle) }}</span>
+                      </div>
                     </div>
                     <!-- transporte: sólo series (canal = EN VIVO) -->
                     @if (mode() === 'series') {
@@ -160,11 +179,11 @@
                   @if (tv.enabled() && !fullscreen()) {
                     <!-- leyenda D-pad (control remoto) — sólo en modo TV, no en fullscreen -->
                     <div class="flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-text-dim md:text-base">
-                      <span class="flex items-center gap-2"><span class="rounded bg-retro-green px-2 py-0.5 font-crt text-lg text-ink">OK</span>Sintonizar</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">◀ ▶</span>Cambiar canal</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">▲</span>{{ mode() === 'series' ? 'Episodios' : 'Series' }}</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">▼</span>Imagen</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">Esc</span>Ocultar tira</span>
+                      <span class="flex items-center gap-2"><span class="rounded bg-retro-green px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().ok) }}</span>Sintonizar</span>
+                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().channelPrev) }} {{ controls.keyLabel(controls.bindings().channelNext) }}</span>Cambiar canal</span>
+                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().guide) }}</span>Guía</span>
+                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().image) }}</span>Imagen</span>
+                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().hide) }}</span>Ocultar tira</span>
                     </div>
                   }
                 </div>
@@ -374,6 +393,78 @@
             <span class="col-span-full py-10 text-center text-text-dim">{{ seriesLoading() ? 'Cargando…' : 'Sin resultados.' }}</span>
           }
         </div>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════ Guía de programación ══════════════════ -->
+  @if (showGuide()) {
+    <div class="fixed inset-0 z-[70] flex flex-col overflow-hidden bg-ink/95 p-4 backdrop-blur-sm md:p-8" (click)="closeGuide()">
+      <div class="mx-auto flex min-h-0 w-full max-w-6xl flex-col gap-4" (click)="$event.stopPropagation()">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-retro-gold">calendar_month</span>
+          <span class="font-crt text-3xl text-retro-green">Guía de programación</span>
+          <span class="ml-2 font-crt text-2xl text-text-mute">{{ clock() }}</span>
+          <button type="button" (click)="closeGuide()" aria-label="Cerrar"
+                  class="ml-auto grid h-11 w-11 place-items-center rounded-full border border-retro-green/40 bg-transparent text-text-mute transition hover:bg-white/10"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="flex min-h-0 flex-col gap-2 overflow-y-auto pb-2">
+          @for (row of guideRows(); track row.channel.id) {
+            <div class="flex flex-col gap-2 rounded-xl border border-retro-purple/20 bg-panel/60 p-3 lg:flex-row lg:items-center">
+              <button type="button" (click)="tuneFromGuide(row.channel)"
+                      class="flex w-full shrink-0 items-center gap-2 text-left lg:w-52"
+                      [ngClass]="current()?.id === row.channel.id ? 'text-retro-green' : 'text-text'">
+                <span class="font-pixel text-[9px] text-text-dim">{{ ($index + 3).toString().padStart(2,'0') }}</span>
+                <span class="truncate font-crt text-xl text-retro-green">{{ row.channel.name }}</span>
+              </button>
+              <div class="flex min-w-0 flex-1 gap-2 overflow-x-auto">
+                @for (e of row.entries; track $index) {
+                  <div class="flex w-44 shrink-0 flex-col gap-0.5 rounded-lg border p-2"
+                       [ngClass]="guideIsNow(e) ? 'border-retro-green bg-retro-green/10' : 'border-retro-purple/20 bg-surface-deep'">
+                    <span class="font-crt text-lg" [ngClass]="guideIsNow(e) ? 'text-retro-green' : 'text-retro-gold'">
+                      {{ guideTime(e) }}@if (guideIsNow(e)) { <span class="ml-1 text-retro-red">• AHORA</span> }
+                    </span>
+                    <span class="truncate text-sm text-text">{{ guideTitle(e) }}</span>
+                  </div>
+                } @empty { <span class="px-2 py-3 text-sm text-text-dim">Sin programación.</span> }
+              </div>
+            </div>
+          } @empty {
+            <span class="py-10 text-center text-text-dim">{{ guideLoading() ? 'Cargando guía…' : 'Sin canales.' }}</span>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════════ Remapeo de teclas (tipo emulador) ══════════════════ -->
+  @if (showControls()) {
+    <div class="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-4 sm:items-center" (click)="closeControls()">
+      <div class="w-full max-w-md rounded-2xl border border-retro-purple/30 bg-panel p-5 text-text shadow-2xl" (click)="$event.stopPropagation()">
+        <div class="mb-1 flex items-center gap-2">
+          <span class="material-symbols-outlined text-retro-cyan">settings_remote</span>
+          <span class="font-crt text-2xl text-retro-green">Controles del mando</span>
+          <button type="button" (click)="closeControls()" aria-label="Cerrar"
+                  class="ml-auto grid h-9 w-9 place-items-center rounded-full border border-retro-green/40 bg-transparent text-text-mute hover:bg-white/10"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <p class="mb-4 text-xs text-text-dim">Tocá “Asignar” y presioná la tecla que quieras para esa acción.</p>
+        <div class="flex flex-col gap-2">
+          @for (a of tvActions; track a.action) {
+            <div class="flex items-center gap-3 rounded-lg border border-retro-purple/20 bg-surface-deep p-2.5">
+              <span class="flex-1 text-sm">{{ a.label }}</span>
+              <span class="min-w-14 rounded bg-text-mute px-2.5 py-0.5 text-center font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings()[a.action]) }}</span>
+              <button type="button" (click)="startCapture(a.action)"
+                      class="rounded-lg border px-3 py-1 text-xs transition"
+                      [ngClass]="capturingAction() === a.action ? 'border-retro-gold bg-retro-gold/15 text-retro-gold' : 'border-retro-green/40 bg-transparent text-retro-green hover:bg-white/10'">
+                {{ capturingAction() === a.action ? 'Presioná…' : 'Asignar' }}
+              </button>
+            </div>
+          }
+        </div>
+        <button type="button" (click)="resetControls()"
+                class="mt-4 inline-flex items-center gap-2 rounded-lg border border-retro-cyan/50 bg-transparent px-3 py-2 text-sm text-retro-cyan transition hover:bg-retro-cyan/10">
+          <span class="material-symbols-outlined text-lg">restart_alt</span>Restablecer por defecto
+        </button>
       </div>
     </div>
   }

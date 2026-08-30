@@ -6,11 +6,14 @@ import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { forkJoin, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import * as signalR from '@microsoft/signalr';
 import { environment } from '../../../../environments/environment';
 import { TvModeService } from '../../../core/services/tv-mode.service';
 import { TvSettingsService } from '../../../core/services/tv-settings.service';
 import { WatchedService } from '../../../core/services/watched.service';
+import { ControlBindingsService, TvAction, TV_ACTIONS } from '../../../core/services/control-bindings.service';
 import { SeriesResponse } from '../../models/serie.model';
 
 interface Channel { id: number; name: string; logoPath?: string; }
@@ -26,6 +29,11 @@ interface Episode {
   season: number; episodeNumber: number; episodeTypeName: string; seriesId: number;
 }
 interface Paged<T> { items: T[]; totalCount: number; totalPages: number; page: number; }
+interface GuideEntry {
+  episodeTitle?: string; seriesName?: string; startTime: string; endTime: string;
+  isBumper?: boolean; bumperTitle?: string;
+}
+interface GuideRow { channel: Channel; entries: GuideEntry[]; }
 type Mode = 'channels' | 'series';
 
 const slug = (s: string): string => s.toLowerCase().replace(/\s+/g, '');
@@ -53,6 +61,8 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   readonly tv = inject(TvModeService);
   private readonly tvSettings = inject(TvSettingsService);
   private readonly watched = inject(WatchedService);
+  readonly controls = inject(ControlBindingsService);
+  readonly tvActions = TV_ACTIONS;
 
   private readonly apiUrl = environment.apiUrl;
   private hub?: signalR.HubConnection;
@@ -73,6 +83,11 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   readonly showOverlay = signal(true);
   readonly showFilters = signal(false);
   readonly showEpisodes = signal(false);   // lista de episodios en cine
+  readonly showGuide = signal(false);      // guía de programación
+  readonly showControls = signal(false);   // remapeo de teclas
+  readonly guideRows = signal<GuideRow[]>([]);
+  readonly guideLoading = signal(false);
+  readonly capturingAction = signal<TvAction | null>(null);
 
   /** Modo cine (video full-bleed + overlay): modo TV o pantalla completa. */
   readonly cinema = computed(() => this.tv.enabled() || this.fullscreen());
@@ -116,6 +131,14 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
 
   readonly focusedIndex = signal(0);
 
+  /** Logo/nombre de lo que se está viendo, para el overlay (canal o serie). */
+  readonly overlayLogo = computed(() =>
+    this.mode() === 'series'
+      ? this.selectedSeries()?.logoPath ?? ''
+      : this.current()?.logoPath ?? this.state()?.seriesLogoPath ?? '');
+  readonly overlayName = computed(() =>
+    this.mode() === 'series' ? this.selectedSeries()?.name ?? '' : this.current()?.name ?? '');
+
   // Actividad del puntero fuera de la zona de Angular (no dispara CD por píxel).
   private readonly activity = (): void => {
     if (!this.cinema()) return;
@@ -125,16 +148,29 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
+    // Captura de tecla al remapear: cualquier tecla queda asignada a la acción.
+    if (this.capturingAction()) {
+      e.preventDefault(); e.stopPropagation();
+      const action = this.capturingAction()!;
+      if (e.key !== 'Escape') this.controls.set(action, e.key);
+      this.capturingAction.set(null);
+      return;
+    }
     if (!this.cinema()) return;
     this.pokeOverlay();
-    if (this.browserOpen() || this.showFilters() || this.showEpisodes()) return;
-    switch (e.key) {
-      case 'ArrowRight': e.preventDefault(); this.moveFocus(1); break;
-      case 'ArrowLeft':  e.preventDefault(); this.moveFocus(-1); break;
-      case 'Enter': e.preventDefault(); this.tuneFocused(); break;
-      case 'ArrowUp': e.preventDefault(); this.mode() === 'series' ? this.toggleEpisodes() : this.openBrowser(); break;
-      case 'ArrowDown': e.preventDefault(); this.toggleFilters(); break;
-      case 'Escape': case 'Backspace': e.preventDefault(); this.showOverlay.set(false); break;
+    if (this.browserOpen() || this.showFilters() || this.showEpisodes() ||
+        this.showGuide() || this.showControls()) return;
+
+    const action = this.controls.actionFor(e.key) ?? (e.key === 'Backspace' ? 'hide' : undefined);
+    if (!action) return;
+    e.preventDefault();
+    switch (action) {
+      case 'channelNext': this.moveFocus(1); break;
+      case 'channelPrev': this.moveFocus(-1); break;
+      case 'ok': this.tuneFocused(); break;
+      case 'guide': this.openGuide(); break;
+      case 'image': this.toggleFilters(); break;
+      case 'hide': this.showOverlay.set(false); break;
     }
   }
 
@@ -325,6 +361,44 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   // ── Modo TV / cine ──────────────────────────────────────────────────────
   enterTvMode(): void { this.tv.setEnabled(true); this.pokeOverlay(); }
   exitTvMode(): void { this.tv.setEnabled(false); }
+
+  // ── Guía de programación ─────────────────────────────────────────────────
+  openGuide(): void {
+    this.showGuide.set(true);
+    const chs = this.channels();
+    if (!chs.length) return;
+    this.guideLoading.set(true);
+    forkJoin(chs.map(ch =>
+      this.http.get<GuideEntry[]>(`${this.apiUrl}/api/v1/public/channels/${ch.id}/schedule`).pipe(
+        map(entries => ({ channel: ch, entries: (entries ?? []).slice(0, 6) }) as GuideRow),
+        catchError(() => of({ channel: ch, entries: [] } as GuideRow)),
+      ),
+    )).subscribe({
+      next: rows => { this.guideRows.set(rows); this.guideLoading.set(false); },
+      error: () => this.guideLoading.set(false),
+    });
+  }
+  closeGuide(): void { this.showGuide.set(false); }
+  tuneFromGuide(ch: Channel): void { this.showGuide.set(false); this.tune(ch); }
+
+  guideIsNow(e: GuideEntry): boolean {
+    const now = Date.now();
+    return new Date(e.startTime).getTime() <= now && now < new Date(e.endTime).getTime();
+  }
+  guideTime(e: GuideEntry): string {
+    return new Intl.DateTimeFormat('es-GT', { hour: '2-digit', minute: '2-digit', hour12: false })
+      .format(new Date(e.startTime));
+  }
+  guideTitle(e: GuideEntry): string {
+    if (e.isBumper) return e.bumperTitle || 'Bumper';
+    return e.seriesName ? `${e.seriesName} — ${e.episodeTitle ?? ''}`.trim() : (e.episodeTitle ?? 'Programa');
+  }
+
+  // ── Remapeo de teclas (tipo emulador) ────────────────────────────────────
+  openControls(): void { this.showControls.set(true); }
+  closeControls(): void { this.showControls.set(false); this.capturingAction.set(null); }
+  startCapture(action: TvAction): void { this.capturingAction.set(action); }
+  resetControls(): void { this.controls.reset(); this.capturingAction.set(null); }
 
   // ── Series ──────────────────────────────────────────────────────────────
   openBrowser(): void { this.browserOpen.set(true); if (!this.seriesList().length) this.searchSeries(); }

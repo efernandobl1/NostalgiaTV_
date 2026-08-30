@@ -7,6 +7,11 @@ RUN apt-get update \
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
+# Locale UTF-8: sin esto .NET decodifica los nombres de archivo con acentos como
+# Latin-1 al escanear ("correría" -> "correrÃ­a"). Fuerza UTF-8 en todo el runtime.
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
