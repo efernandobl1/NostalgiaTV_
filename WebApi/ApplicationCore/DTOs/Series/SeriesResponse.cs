@@ -17,5 +17,8 @@ namespace ApplicationCore.DTOs.Series
         public int Seasons { get; set; }
         public string? FolderPath { get; set; }
         public List<int> CategoryIds { get; set; } = [];
+        public List<string> CategoryNames { get; set; } = [];
+        public string? ChannelName { get; set; }
+        public int EpisodeCount { get; set; }
     }
 }

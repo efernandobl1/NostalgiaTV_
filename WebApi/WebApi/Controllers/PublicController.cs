@@ -53,6 +53,10 @@ namespace WebApi.Controllers
         [HttpGet("series")]
         public async Task<IActionResult> GetSeries([FromQuery] SeriesFilterRequest filter) => Ok(await _seriesService.GetPublicAsync(filter));
 
+        [HttpGet("categories")]
+        public async Task<IActionResult> GetCategories([FromServices] ICategoryService categoryService) =>
+            Ok(await categoryService.GetAllAsync());
+
         [HttpGet("series/{seriesId}/episodes")]
         public async Task<IActionResult> GetEpisodesBySeries(int seriesId) => Ok(await _episodeService.GetBySeriesPublicAsync(seriesId));
 

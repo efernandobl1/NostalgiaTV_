@@ -19,4 +19,7 @@ export interface SeriesResponse {
     seasons?: number;
     folderPath?: string;
     categoryIds: number[];
+    categoryNames?: string[];
+    channelName?: string;
+    episodeCount?: number;
 }

@@ -277,6 +277,9 @@ namespace Infrastructure.Services
             if (filter.ChannelId.HasValue)
                 query = query.Where(s => s.Channels.Any(c => c.Id == filter.ChannelId));
 
+            if (filter.CategoryId.HasValue)
+                query = query.Where(s => s.Categories.Any(c => c.Id == filter.CategoryId));
+
             if (filter.EpisodeTypeId.HasValue)
                 query = query.Where(s => s.Episodes.Any(e => e.EpisodeTypeId == filter.EpisodeTypeId));
 

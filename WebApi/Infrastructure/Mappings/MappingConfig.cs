@@ -45,6 +45,9 @@ namespace Infrastructure.Mappings
 
             TypeAdapterConfig<Series, SeriesResponse>.NewConfig()
                 .Map(dest => dest.CategoryIds, src => src.Categories.Select(c => c.Id).ToList())
+                .Map(dest => dest.CategoryNames, src => src.Categories.Select(c => c.Name).ToList())
+                .Map(dest => dest.ChannelName, src => src.Channels.Select(c => c.Name).FirstOrDefault())
+                .Map(dest => dest.EpisodeCount, src => src.Episodes.Count(e => e.EpisodeType.Name == "Regular"))
                 .Map(dest => dest.StartDate, src => src.StartDate.ToString("yyyy-MM-dd"))
                 .Map(dest => dest.EndDate, src => src.EndDate.HasValue ? src.EndDate.Value.ToString("yyyy-MM-dd") : null);
 
