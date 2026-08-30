@@ -1,81 +1,98 @@
-<!-- Experiencia pública retro TV — Tailwind v4, sin SCSS. -->
+<!-- Experiencia pública retro TV — Tailwind v4, sin SCSS de componente. -->
 @if (tv.enabled()) {
-  <!-- ══════════════════ MODO TV · 10 pies (botones en pantalla) ══════════════════ -->
-  <div class="relative min-h-dvh w-full overflow-hidden text-text"
-       style="background:radial-gradient(ellipse at 50% 30%,#1e2b4a,#0a0a14 70%)">
+  <!-- ══════════════════ MODO TV · 10 pies (overlay único auto-ocultable) ══════════════════ -->
+  <div #stage class="relative min-h-dvh w-full overflow-hidden bg-black text-text">
     <!-- media -->
-    <div #stage class="absolute inset-0">
-      @if (hasMedia()) {
-        <video #video class="h-full w-full object-contain bg-black" playsinline
-               (click)="togglePlay()"></video>
-      } @else {
-        <div class="flex h-full w-full items-center justify-center"
-             style="background:repeating-linear-gradient(0deg,#12122a 0 2px,#1a1a3a 2px 4px)">
-          <span class="font-crt text-4xl text-retro-green/70">Elegí un canal para sintonizar</span>
-        </div>
-      }
-    </div>
-    <!-- degradado inferior para legibilidad -->
-    <div class="pointer-events-none absolute inset-0"
-         style="background:linear-gradient(0deg,rgba(6,6,14,.96) 0%,rgba(6,6,14,.2) 45%,transparent 65%)"></div>
-    <div class="pointer-events-none absolute inset-0 opacity-40"
-         style="background:repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0 1px,transparent 1px 3px)"></div>
-
-    <!-- barra superior (marca + controles en pantalla, sin control remoto) -->
-    <div class="absolute left-14 right-14 top-9 flex items-center justify-between gap-4">
-      <div class="flex items-center gap-5">
-        <span class="flex items-center gap-3 font-pixel text-base text-retro-red">
-          <span class="h-3.5 w-3.5 rounded-full bg-retro-red shadow-[0_0_16px_rgba(255,107,107,.9)]"></span>
-          NOSTALGIA TV
-        </span>
-        @if (channelNumber()) {
-          <span class="rounded-lg border-2 border-retro-gold/50 px-4 py-0.5 font-crt text-3xl text-retro-gold">CH {{ channelNumber() }}</span>
-        }
-      </div>
-      <div class="flex items-center gap-3">
-        <span class="mr-2 font-crt text-3xl text-text-mute">{{ clock() }}</span>
-        <button type="button" (click)="toggleMute()" aria-label="Silenciar"
-                class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
-          <span class="material-symbols-outlined text-3xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span>
-        </button>
-        <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
-                class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
-          <span class="material-symbols-outlined text-3xl">{{ fullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</span>
-        </button>
-        <button type="button" (click)="exitTvMode()"
-                class="inline-flex h-14 items-center gap-2 rounded-xl border-2 border-retro-gold bg-retro-gold/15 px-6 text-xl font-semibold text-retro-gold transition hover:bg-retro-gold/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-retro-gold">
-          <span class="material-symbols-outlined text-3xl">tv_off</span>
-          Salir del modo TV
-        </button>
-      </div>
-    </div>
-
-    <!-- info del programa en emisión -->
-    @if (state(); as s) {
-      <div class="absolute bottom-[360px] left-14 flex max-w-4xl flex-col gap-3">
-        <span class="font-pixel text-base text-retro-red">{{ current()?.name }}</span>
-        <span class="font-crt text-7xl leading-none text-retro-green">{{ s.seriesName }}</span>
-        <span class="text-3xl text-text">{{ s.isBumper ? s.bumperTitle : s.episodeTitle }}</span>
+    @if (hasMedia()) {
+      <video #video class="absolute inset-0 h-full w-full bg-black object-contain" playsinline></video>
+    } @else {
+      <div class="absolute inset-0 flex items-center justify-center"
+           style="background:radial-gradient(ellipse at 50% 30%,#1e2b4a,#0a0a14 70%)">
+        <span class="font-crt text-4xl text-retro-green/70">Elegí un canal para sintonizar</span>
       </div>
     }
+    <!-- filtros CRT -->
+    <div class="video-filters"
+         [class.vignette]="settings().alwaysShowFilters && activeFilters().vignette"
+         [class.curvature]="settings().alwaysShowFilters && activeFilters().crtCurvature"
+         [style.--scanline-opacity]="scanlineOpacity()"
+         [style.--scanline-size]="(activeFilters().scanlineDensity * 4) + 'px'"></div>
 
-    <!-- tira de canales -->
-    <div class="absolute bottom-40 left-14 right-14 flex flex-col gap-4">
-      <span class="font-pixel text-sm text-retro-gold">CANALES</span>
-      <div class="flex gap-5 overflow-x-auto pb-2">
-        @for (ch of channels(); track ch.id) {
-          <button type="button" (click)="tune(ch)"
-                  class="flex h-40 w-72 shrink-0 flex-col justify-between rounded-2xl border-[3px] p-4 text-left transition"
-                  [ngClass]="current()?.id === ch.id
-                    ? 'border-retro-red bg-[linear-gradient(145deg,#2f3050,#1a1a2e)] shadow-[0_0_30px_rgba(255,107,107,.35)]'
-                    : 'border-[#2a2a44] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] hover:border-retro-gold focus-visible:border-retro-gold focus-visible:outline-none'">
-            <span class="font-pixel text-sm text-retro-gold">{{ ($index + 3).toString().padStart(2,'0') }}</span>
-            <span class="font-crt text-3xl leading-none text-retro-green">{{ ch.name }}</span>
+    <!-- OVERLAY ÚNICO: se desvanece tras ~4s de inactividad (vuelve al mover el mouse/tocar) -->
+    <div class="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between transition-opacity duration-500"
+         [class.opacity-0]="!showOverlay()"
+         style="background:linear-gradient(180deg,rgba(6,6,14,.8) 0%,transparent 22%,transparent 55%,rgba(6,6,14,.92) 100%)">
+      <!-- barra superior -->
+      <div class="pointer-events-auto flex items-center justify-between gap-4 px-8 pt-7 md:px-14">
+        <div class="flex items-center gap-5">
+          <span class="flex items-center gap-3 font-pixel text-sm text-retro-red md:text-base">
+            <span class="h-3 w-3 rounded-full bg-retro-red shadow-[0_0_16px_rgba(255,107,107,.9)]"></span>NOSTALGIA TV
+          </span>
+          @if (channelNumber()) {
+            <span class="rounded-lg border-2 border-retro-gold/50 px-3 py-0.5 font-crt text-2xl text-retro-gold md:text-3xl">CH {{ channelNumber() }}</span>
+          }
+        </div>
+        <div class="flex items-center gap-2.5">
+          <span class="mr-2 font-crt text-2xl text-text-mute md:text-3xl">{{ clock() }}</span>
+          <button type="button" (click)="toggleFilters()" title="Filtros CRT"
+                  class="grid h-12 w-12 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
+            <span class="material-symbols-outlined text-3xl">tune</span>
           </button>
+          <button type="button" (click)="toggleMute()" aria-label="Silenciar"
+                  class="grid h-12 w-12 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
+            <span class="material-symbols-outlined text-3xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span>
+          </button>
+          <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
+                  class="grid h-12 w-12 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
+            <span class="material-symbols-outlined text-3xl">{{ fullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</span>
+          </button>
+          <button type="button" (click)="exitTvMode()"
+                  class="inline-flex h-12 items-center gap-2 rounded-xl border-2 border-retro-gold bg-retro-gold/15 px-5 text-lg font-semibold text-retro-gold transition hover:bg-retro-gold/25">
+            <span class="material-symbols-outlined text-2xl">tv_off</span>Salir del modo TV
+          </button>
+        </div>
+      </div>
+
+      <!-- zona inferior: info + controles + tira de canales -->
+      <div class="pointer-events-auto flex flex-col gap-6 px-8 pb-8 md:px-14">
+        @if (hasMedia()) {
+          <div class="flex flex-col gap-1.5">
+            <span class="font-pixel text-sm text-retro-red">{{ current()?.name ?? selectedSeries()?.name }}</span>
+            <span class="font-crt text-5xl leading-none text-retro-green md:text-6xl">{{ state()?.seriesName ?? selectedSeries()?.name }}</span>
+            <span class="text-xl text-text md:text-2xl">{{ mode() === 'series' ? currentEpisode()?.title : (state()?.isBumper ? state()?.bumperTitle : state()?.episodeTitle) }}</span>
+          </div>
+          <!-- controles del reproductor (botones en pantalla) -->
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" (click)="seekRelative(-10)" aria-label="Retroceder 10s"
+                    class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/30 bg-transparent text-text transition hover:bg-white/10"><span class="material-symbols-outlined text-3xl">replay_10</span></button>
+            <button type="button" (click)="togglePlay()" aria-label="Reproducir/Pausar"
+                    class="grid h-16 w-16 place-items-center rounded-2xl border-2 border-retro-gold bg-retro-gold/15 text-retro-gold transition hover:bg-retro-gold/25"><span class="material-symbols-outlined text-4xl">{{ playing() ? 'pause' : 'play_arrow' }}</span></button>
+            <button type="button" (click)="seekRelative(10)" aria-label="Adelantar 10s"
+                    class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/30 bg-transparent text-text transition hover:bg-white/10"><span class="material-symbols-outlined text-3xl">forward_10</span></button>
+            @if (mode() === 'series') {
+              <button type="button" (click)="playRandom()"
+                      class="ml-2 inline-flex h-14 items-center gap-2 rounded-xl border border-retro-cyan/50 bg-transparent px-5 text-lg text-retro-cyan transition hover:bg-retro-cyan/10"><span class="material-symbols-outlined text-2xl">skip_next</span>Siguiente</button>
+            }
+          </div>
         }
+        <!-- tira de canales -->
+        <div class="flex flex-col gap-3">
+          <span class="font-pixel text-xs text-retro-gold">CANALES · OK sintoniza al instante</span>
+          <div class="flex gap-4 overflow-x-auto pb-2">
+            @for (ch of channels(); track ch.id) {
+              <button type="button" (click)="tune(ch)"
+                      class="flex h-28 w-56 shrink-0 flex-col justify-between rounded-2xl border-[3px] p-4 text-left transition"
+                      [ngClass]="current()?.id === ch.id
+                        ? 'border-retro-red bg-[linear-gradient(145deg,#2f3050,#1a1a2e)] shadow-[0_0_30px_rgba(255,107,107,.35)]'
+                        : 'border-[#2a2a44] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] hover:border-retro-gold'">
+                <span class="font-pixel text-xs text-retro-gold">{{ ($index + 3).toString().padStart(2,'0') }}</span>
+                <span class="truncate font-crt text-2xl leading-none text-retro-green">{{ ch.name }}</span>
+              </button>
+            } @empty { <span class="text-sm text-text-dim">Cargando canales…</span> }
+          </div>
+        </div>
       </div>
     </div>
-
   </div>
 
 } @else {
@@ -83,15 +100,13 @@
   <div class="relative flex min-h-dvh w-full flex-col overflow-hidden text-text"
        style="background:linear-gradient(135deg,#1a1a2e 0%,#0f0f1e 50%,#16213e 100%)">
 
-    <!-- barra superior pública -->
     <header class="z-20 flex h-16 shrink-0 items-center justify-between px-5 md:px-7">
       <span class="flex items-center gap-3 font-pixel text-[11px] text-retro-red">
-        <span class="h-2.5 w-2.5 rounded-full bg-retro-red shadow-[0_0_10px_rgba(255,107,107,.9)]"></span>
-        NOSTALGIA TV
+        <span class="h-2.5 w-2.5 rounded-full bg-retro-red shadow-[0_0_10px_rgba(255,107,107,.9)]"></span>NOSTALGIA TV
       </span>
       <nav class="flex items-center gap-2">
-        <button type="button" disabled
-                class="hidden h-10 items-center gap-2 rounded-full border border-retro-green/35 bg-retro-green/[.06] px-3.5 text-sm text-retro-green/60 sm:inline-flex">
+        <button type="button" (click)="openBrowser()"
+                class="hidden h-10 items-center gap-2 rounded-full border border-retro-green/35 bg-retro-green/[.06] px-3.5 text-sm text-retro-green transition hover:bg-retro-green/15 sm:inline-flex">
           <span class="material-symbols-outlined text-[19px]">search</span>Buscar
         </button>
         <button type="button" (click)="enterTvMode()"
@@ -105,20 +120,13 @@
       </nav>
     </header>
 
-    <!-- cuerpo: escena TV + panel de control -->
     <div class="relative z-10 flex flex-1 flex-col lg:flex-row lg:items-stretch">
       <!-- escena TV -->
       <div class="relative flex flex-1 items-start justify-center px-4 pt-2 lg:pr-0">
         <div class="relative w-[min(560px,86vw)] max-w-full"
              style="aspect-ratio:650/758;filter:drop-shadow(0 20px 40px rgba(0,0,0,.7))">
-          <img src="images/tv-setup.png" alt="Televisor retro con VHS y estantería"
-               class="block h-full w-full object-contain">
+          <img src="images/tv-setup.png" alt="Televisor retro con VHS y estantería" class="block h-full w-full object-contain">
           <!-- pantalla del televisor -->
-          <!-- Pantalla del televisor. Tamaño/posición: left/top/width/height (% de la imagen).
-               El texto usa unidades de container (cqw) para escalar con la pantalla y no desbordar. -->
-          <!-- Fondo transparente: se usa la pantalla pintada del propio televisor.
-               El video sí lleva fondo negro. Ajustá left/top/width/height/border-radius
-               para calzar exactamente con el vidrio del tubo. -->
           <div #stage class="@container absolute overflow-hidden"
                style="left:31%;top:4.2%;width:38%;height:25.3%;border-radius:10%/14%;border:5px solid #0b0b16;box-shadow:inset 0 0 24px rgba(0,0,0,.7)">
             @if (hasMedia()) {
@@ -130,8 +138,12 @@
                 <span class="font-crt text-[6cqw] leading-none text-retro-gold">EN VIVO · {{ clock() }}</span>
               </div>
             }
-            <div class="pointer-events-none absolute inset-0"
-                 style="background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px)"></div>
+            <!-- filtros CRT -->
+            <div class="video-filters"
+                 [class.vignette]="settings().alwaysShowFilters && activeFilters().vignette"
+                 [class.curvature]="settings().alwaysShowFilters && activeFilters().crtCurvature"
+                 [style.--scanline-opacity]="scanlineOpacity()"
+                 [style.--scanline-size]="(activeFilters().scanlineDensity * 4) + 'px'"></div>
           </div>
         </div>
         <img src="images/kid-watching.png" alt="Niño viendo televisión"
@@ -140,26 +152,35 @@
       </div>
 
       <!-- CONTROL: panel derecho en desktop, hoja inferior en móvil/tablet -->
-      <aside class="z-20 flex shrink-0 flex-col gap-2.5 border-retro-purple/30 bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)] p-4
+      <aside class="z-20 flex shrink-0 flex-col gap-3 border-retro-purple/30 bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)] p-4
                     max-lg:sticky max-lg:bottom-0 max-lg:rounded-t-3xl max-lg:border-t-[3px]
                     lg:m-4 lg:w-64 lg:rounded-3xl lg:border-[3px]">
         <div class="flex items-center justify-between">
           <span class="font-pixel text-[9px] text-retro-green">CONTROL</span>
-          <button type="button" (click)="togglePanel()"
-                  class="inline-flex items-center gap-1 rounded-full border border-retro-green/40 bg-transparent px-2.5 py-1 text-xs text-retro-green transition hover:bg-white/10 lg:hidden">
-            <span class="material-symbols-outlined text-lg">{{ panelOpen() ? 'expand_more' : 'expand_less' }}</span>
-            {{ panelOpen() ? 'Ocultar' : 'Ver' }}
-          </button>
+          <div class="flex items-center gap-1.5">
+            <button type="button" (click)="toggleFilters()" title="Filtros CRT"
+                    class="grid h-8 w-8 place-items-center rounded-lg border border-retro-green/40 bg-transparent text-retro-green transition hover:bg-white/10">
+              <span class="material-symbols-outlined text-lg">tune</span>
+            </button>
+            <button type="button" (click)="togglePanel()"
+                    class="inline-flex items-center gap-1 rounded-full border border-retro-green/40 bg-transparent px-2.5 py-1 text-xs text-retro-green transition hover:bg-white/10 lg:hidden">
+              <span class="material-symbols-outlined text-lg">{{ panelOpen() ? 'expand_more' : 'expand_less' }}</span>{{ panelOpen() ? 'Ocultar' : 'Ver' }}
+            </button>
+          </div>
         </div>
 
-        <div class="flex-col gap-2.5" [ngClass]="panelOpen() ? 'flex' : 'hidden lg:flex'">
+        <div class="flex-col gap-3" [ngClass]="panelOpen() ? 'flex' : 'hidden lg:flex'">
           @if (mode() === 'series') {
             <!-- ── Panel de serie ── -->
             <button type="button" (click)="backToChannels()"
                     class="inline-flex items-center gap-1.5 self-start rounded-full border border-retro-cyan/50 bg-transparent px-3 py-1.5 text-xs text-retro-cyan transition hover:bg-retro-cyan/10">
               <span class="material-symbols-outlined text-base">arrow_back</span>Volver a canales
             </button>
-            <div class="font-crt text-2xl leading-none text-retro-green">{{ selectedSeries()?.name }}</div>
+            <div class="flex flex-col gap-0.5">
+              <span class="font-pixel text-[7px] tracking-widest text-retro-red">REPRODUCIENDO</span>
+              <span class="font-crt text-2xl leading-none text-retro-green">{{ selectedSeries()?.name }}</span>
+              @if (currentEpisode(); as ep) { <span class="truncate text-xs text-text-dim">{{ ep.title }}</span> }
+            </div>
             @if (seasons().length > 1) {
               <div class="flex gap-1.5 overflow-x-auto pb-1">
                 @for (s of seasons(); track s) {
@@ -177,10 +198,14 @@
                           ? 'border-retro-red bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)]'
                           : 'border-[#1a1a2e] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] hover:border-retro-cyan/55'">
                   <span class="font-pixel text-[8px] text-retro-gold">{{ ep.episodeNumber.toString().padStart(2,'0') }}</span>
-                  <span class="flex-1 truncate text-sm text-text">{{ ep.title }}</span>
-                  <span class="material-symbols-outlined text-lg" [ngClass]="currentEpisode()?.id === ep.id ? 'text-retro-red' : 'text-retro-cyan'">
-                    {{ currentEpisode()?.id === ep.id ? 'graphic_eq' : 'play_arrow' }}
-                  </span>
+                  <span class="flex-1 truncate text-sm" [ngClass]="watchedMap()[ep.id] ? 'text-text-dim' : 'text-text'">{{ ep.title }}</span>
+                  @if (currentEpisode()?.id === ep.id) {
+                    <span class="material-symbols-outlined text-lg text-retro-red">graphic_eq</span>
+                  } @else if (watchedMap()[ep.id]) {
+                    <span class="material-symbols-outlined text-lg text-retro-green" title="Visto">check_circle</span>
+                  } @else {
+                    <span class="material-symbols-outlined text-lg text-retro-cyan">play_arrow</span>
+                  }
                 </button>
               } @empty {
                 <span class="px-1 py-2 text-xs text-text-dim">Sin episodios en esta temporada.</span>
@@ -189,22 +214,18 @@
           } @else {
             <!-- ── EN EMISIÓN ── -->
             @if (state(); as s) {
-              <div class="flex flex-col gap-1.5 rounded-xl border-2 border-retro-red/45 bg-[rgba(10,14,26,.75)] p-2.5">
+              <div class="flex flex-col gap-2 rounded-xl border-2 border-retro-red/45 bg-[rgba(10,14,26,.75)] p-3">
                 <span class="font-pixel text-[7px] tracking-widest text-retro-red">EN EMISIÓN · CH {{ channelNumber() }}</span>
-                <div class="flex items-center gap-2">
-                  <span class="grid h-8 w-8 place-items-center rounded-md border border-retro-red/35 bg-[#12162a] text-retro-red">
-                    <span class="material-symbols-outlined text-xl">sensors</span>
-                  </span>
-                  <div class="min-w-0">
-                    <div class="font-crt text-xl leading-none text-retro-green">{{ current()?.name }}</div>
-                    <div class="truncate text-xs text-text-dim">{{ s.isBumper ? s.bumperTitle : s.seriesName }}</div>
-                  </div>
+                <div class="flex flex-col gap-0.5">
+                  <span class="font-crt text-2xl leading-none text-retro-green">{{ current()?.name }}</span>
+                  <span class="truncate text-sm text-text">{{ s.isBumper ? s.bumperTitle : s.seriesName }}</span>
+                  @if (!s.isBumper && s.episodeTitle) { <span class="truncate text-xs text-text-dim">{{ s.episodeTitle }}</span> }
                 </div>
               </div>
             }
 
-            <!-- ── CANALES: un clic sintoniza ── -->
-            <div class="mt-0.5 flex items-baseline justify-between">
+            <!-- ── CANALES ── -->
+            <div class="flex items-baseline justify-between">
               <span class="font-pixel text-[7px] tracking-widest text-retro-gold">CANALES</span>
               <span class="text-[11px] text-text-dim">Un clic sintoniza</span>
             </div>
@@ -221,48 +242,60 @@
                     {{ current()?.id === ch.id ? 'sensors' : 'play_arrow' }}
                   </span>
                 </button>
-              } @empty {
-                <span class="px-1 py-2 text-xs text-text-dim">Cargando canales…</span>
-              }
+              } @empty { <span class="px-1 py-2 text-xs text-text-dim">Cargando canales…</span> }
             </div>
 
-            <!-- ir al catálogo de series -->
             <button type="button" (click)="openBrowser()"
                     class="inline-flex items-center justify-center gap-2 rounded-lg border border-retro-gold/55 bg-retro-gold/[.08] py-2.5 text-sm font-medium text-retro-gold transition hover:bg-retro-gold/15">
               <span class="material-symbols-outlined text-lg">grid_view</span>Explorar series
             </button>
           }
 
-          <!-- controles de volumen / pantalla -->
-          <div class="mt-auto flex items-center justify-between gap-1.5 border-t border-retro-green/20 pt-2.5">
+          <!-- controles de volumen / pantalla (compartidos) -->
+          <div class="mt-auto flex items-center justify-between gap-1.5 border-t border-retro-green/20 pt-3">
             <button type="button" (click)="toggleMute()" aria-label="Silenciar"
-                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10">
-              <span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span>
-            </button>
+                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span></button>
             <button type="button" (click)="changeVolume(-0.1)" aria-label="Bajar volumen"
-                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10">
-              <span class="material-symbols-outlined text-2xl">volume_down</span>
-            </button>
+                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">volume_down</span></button>
             <button type="button" (click)="changeVolume(0.1)" aria-label="Subir volumen"
-                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10">
-              <span class="material-symbols-outlined text-2xl">volume_up</span>
-            </button>
+                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">volume_up</span></button>
             <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
-                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10">
-              <span class="material-symbols-outlined text-2xl">fullscreen</span>
-            </button>
+                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">fullscreen</span></button>
           </div>
         </div>
       </aside>
     </div>
 
-    <!-- estante inferior decorativo (solo desktop) -->
     <div class="pointer-events-none absolute inset-x-0 bottom-0 -z-0 hidden h-[22%] lg:block"
          style="background:linear-gradient(180deg,transparent,rgba(42,42,62,.85)),repeating-linear-gradient(90deg,#2a2a3e 0 2px,#32325a 2px 4px);box-shadow:inset 0 30px 50px rgba(0,0,0,.5)"></div>
   </div>
 }
 
-<!-- ══════════════════ Explorador de series (overlay, ambos modos) ══════════════════ -->
+<!-- ══════════════════ Panel de filtros CRT (popover) ══════════════════ -->
+@if (showFilters()) {
+  <div class="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 sm:items-center" (click)="toggleFilters()">
+    <div class="w-full max-w-sm rounded-2xl border border-retro-purple/30 bg-panel p-5 text-text shadow-2xl" (click)="$event.stopPropagation()">
+      <div class="mb-4 flex items-center justify-between">
+        <span class="font-crt text-2xl text-retro-green">Imagen CRT</span>
+        <button type="button" (click)="toggleFilters()" aria-label="Cerrar" class="grid h-9 w-9 place-items-center rounded-full border border-text-mute/40 bg-transparent text-text-mute hover:bg-white/10"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <label class="mb-3 flex items-center justify-between text-sm">Efecto CRT
+        <input type="checkbox" [checked]="settings().alwaysShowFilters" (change)="toggleCrt()" class="h-5 w-5 accent-[color:var(--color-retro-purple)]">
+      </label>
+      <label class="mb-3 flex items-center justify-between text-sm">Curvatura
+        <input type="checkbox" [checked]="activeFilters().crtCurvature" (change)="setFilter('crtCurvature', $any($event.target).checked)" class="h-5 w-5 accent-[color:var(--color-retro-purple)]">
+      </label>
+      <label class="mb-3 flex items-center justify-between text-sm">Viñeta
+        <input type="checkbox" [checked]="activeFilters().vignette" (change)="setFilter('vignette', $any($event.target).checked)" class="h-5 w-5 accent-[color:var(--color-retro-purple)]">
+      </label>
+      <label class="mb-1 flex flex-col gap-1 text-sm">Intensidad de scanlines: {{ activeFilters().scanlineIntensity }}
+        <input type="range" min="0" max="50" [value]="activeFilters().scanlineIntensity" (input)="setFilter('scanlineIntensity', +$any($event.target).value)" class="accent-[color:var(--color-retro-purple)]">
+      </label>
+    </div>
+  </div>
+}
+
+<!-- ══════════════════ Explorador de series (overlay) ══════════════════ -->
 @if (browserOpen()) {
   <div class="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink/95 p-4 backdrop-blur-sm md:p-8" role="dialog" aria-label="Explorar series">
     <div class="mx-auto flex min-h-0 w-full max-w-6xl flex-col gap-4">
@@ -270,8 +303,7 @@
         <span class="font-crt text-3xl text-retro-green">Series</span>
         <div class="relative ml-auto w-full max-w-sm">
           <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-dim">search</span>
-          <input type="text" [ngModel]="seriesQuery()" (ngModelChange)="onSeriesQuery($event)"
-                 placeholder="Buscar serie…"
+          <input type="text" [ngModel]="seriesQuery()" (ngModelChange)="onSeriesQuery($event)" placeholder="Buscar serie…"
                  class="h-11 w-full rounded-full border border-retro-purple/40 bg-panel pl-10 pr-4 text-text placeholder:text-text-dim focus:border-retro-cyan focus:outline-none">
         </div>
         <button type="button" (click)="closeBrowser()" aria-label="Cerrar"
@@ -284,11 +316,8 @@
           <button type="button" (click)="enterSeries(s)"
                   class="flex flex-col overflow-hidden rounded-xl border border-retro-purple/20 bg-panel text-left transition hover:border-retro-cyan/60 focus-visible:border-retro-cyan focus-visible:outline-none">
             <div class="flex aspect-[2/3] items-center justify-center overflow-hidden bg-surface-deep">
-              @if (s.logoPath) {
-                <img [src]="logo(s.logoPath)" [alt]="s.name" class="h-full w-full object-cover">
-              } @else {
-                <span class="material-symbols-outlined text-4xl text-retro-green/50">movie</span>
-              }
+              @if (s.logoPath) { <img [src]="logo(s.logoPath)" [alt]="s.name" class="h-full w-full object-cover"> }
+              @else { <span class="material-symbols-outlined text-4xl text-retro-green/50">movie</span> }
             </div>
             <span class="truncate p-2 text-sm text-text">{{ s.name }}</span>
           </button>

@@ -26,3 +26,29 @@
   --color-text-dim: #aab0c6;
   --color-text-mute: #c3c8db;
 }
+
+/* ── Filtros CRT del reproductor (scanlines / viñeta / curvatura) ──
+   Se activan con clases .vignette/.curvature y variables CSS desde el componente. */
+.video-filters { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.video-filters::before {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, var(--scanline-opacity, 0.15)),
+    rgba(0, 0, 0, var(--scanline-opacity, 0.15)) 1px,
+    transparent 1px, transparent var(--scanline-size, 4px));
+}
+.video-filters.vignette:not(.curvature)::after {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.7) 100%);
+}
+.video-filters.curvature:not(.vignette)::after {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.5) 100%);
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(0, 0, 0, 0.4);
+}
+.video-filters.curvature.vignette::after {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.8) 100%);
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(0, 0, 0, 0.4);
+}
