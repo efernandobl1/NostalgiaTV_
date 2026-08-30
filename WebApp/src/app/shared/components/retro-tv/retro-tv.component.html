@@ -16,7 +16,7 @@
          [class.curvature]="settings().alwaysShowFilters && activeFilters().crtCurvature && !fullscreen()"
          [class.animate]="settings().alwaysShowFilters && activeFilters().scanlineAnimation"
          [style.--scanline-opacity]="scanlineOpacity()"
-         [style.--scanline-size]="(activeFilters().scanlineDensity * 4) + 'px'"></div>
+         [style.--scanline-size]="(activeFilters().scanlineDensity * 2) + 'px'"></div>
 
     <!-- OVERLAY ÚNICO: se desvanece tras ~4s de inactividad (vuelve al mover el mouse/tocar) -->
     <div class="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between transition-opacity duration-500"
@@ -82,12 +82,12 @@
         }
         <!-- tira de canales -->
         <div class="flex flex-col gap-3">
-          <span class="font-pixel text-xs text-retro-gold">CANALES · OK sintoniza al instante</span>
+          <span class="font-pixel text-xs text-retro-gold">CANALES</span>
           <div class="flex gap-4 overflow-x-auto pb-2">
             @for (ch of channels(); track ch.id) {
               <button type="button" (click)="tune(ch); focusedIndex.set($index)"
                       class="flex h-28 w-56 shrink-0 flex-col justify-between rounded-2xl border-[3px] p-4 text-left ring-retro-gold transition"
-                      [class.ring-4]="$index === focusedIndex()"
+                      [class.ring-2]="$index === focusedIndex() && current()?.id !== ch.id"
                       [class.scale-105]="$index === focusedIndex()"
                       [ngClass]="current()?.id === ch.id
                         ? 'border-retro-red bg-[linear-gradient(145deg,#2f3050,#1a1a2e)] shadow-[0_0_30px_rgba(255,107,107,.35)]'
@@ -158,7 +158,7 @@
                  [class.vignette]="settings().alwaysShowFilters && activeFilters().vignette"
                  [class.curvature]="settings().alwaysShowFilters && activeFilters().crtCurvature"
                  [style.--scanline-opacity]="scanlineOpacity()"
-                 [style.--scanline-size]="(activeFilters().scanlineDensity * 4) + 'px'"></div>
+                 [style.--scanline-size]="(activeFilters().scanlineDensity * 2) + 'px'"></div>
           </div>
         </div>
         <img src="images/kid-watching.png" alt="Niño viendo televisión"
