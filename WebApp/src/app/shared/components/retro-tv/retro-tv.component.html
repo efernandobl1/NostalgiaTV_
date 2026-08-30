@@ -120,7 +120,7 @@
                El video sí lleva fondo negro. Ajustá left/top/width/height/border-radius
                para calzar exactamente con el vidrio del tubo. -->
           <div #stage class="@container absolute overflow-hidden"
-               style="left:31%;top:4.2%;width:38%;height:25.3%;border-radius:10%/14%">
+               style="left:31%;top:4.2%;width:38%;height:25.3%;border-radius:10%/14%;border:10px solid #0b0b16;box-shadow:inset 0 0 24px rgba(0,0,0,.7)">
             @if (hasMedia()) {
               <video #video class="h-full w-full bg-black object-cover" playsinline (click)="togglePlay()"></video>
             } @else {
