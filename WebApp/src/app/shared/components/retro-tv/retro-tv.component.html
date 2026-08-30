@@ -5,7 +5,7 @@
        style="background:radial-gradient(ellipse at 50% 30%,#1e2b4a,#0a0a14 70%)">
     <!-- media -->
     <div #stage class="absolute inset-0">
-      @if (state()) {
+      @if (hasMedia()) {
         <video #video class="h-full w-full object-contain bg-black" playsinline
                (click)="togglePlay()"></video>
       } @else {
@@ -35,11 +35,11 @@
       <div class="flex items-center gap-3">
         <span class="mr-2 font-crt text-3xl text-text-mute">{{ clock() }}</span>
         <button type="button" (click)="toggleMute()" aria-label="Silenciar"
-                class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/40 text-retro-green transition hover:bg-white/5">
+                class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
           <span class="material-symbols-outlined text-3xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span>
         </button>
         <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
-                class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/40 text-retro-green transition hover:bg-white/5">
+                class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
           <span class="material-symbols-outlined text-3xl">{{ fullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</span>
         </button>
         <button type="button" (click)="exitTvMode()"
@@ -114,15 +114,17 @@
           <img src="images/tv-setup.png" alt="Televisor retro con VHS y estantería"
                class="block h-full w-full object-contain">
           <!-- pantalla del televisor -->
-          <div #stage class="absolute overflow-hidden rounded-lg"
-               style="left:25.8%;top:2.9%;width:48.4%;height:27.2%;background:radial-gradient(ellipse at center,#1a2e2a,#0a0a1e)">
-            @if (state(); as s) {
+          <!-- Pantalla del televisor. Tamaño/posición: left/top/width/height (% de la imagen).
+               El texto usa unidades de container (cqw) para escalar con la pantalla y no desbordar. -->
+          <div #stage class="@container absolute overflow-hidden rounded-[6px]"
+               style="left:29.5%;top:4%;width:43.5%;height:27%;background:radial-gradient(ellipse at center,#1a2e2a,#0a0a1e)">
+            @if (hasMedia()) {
               <video #video class="h-full w-full object-cover" playsinline (click)="togglePlay()"></video>
             } @else {
-              <div class="flex h-full w-full flex-col items-center justify-center gap-1.5 px-2 text-center">
-                <span class="font-pixel text-[13px] text-retro-red [text-shadow:0_0_18px_rgba(255,107,107,.8)]">NOSTALGIA TV</span>
-                <span class="font-crt text-2xl leading-none text-retro-green">Elegí un canal</span>
-                <span class="font-crt text-lg text-retro-gold">EN VIVO · {{ clock() }}</span>
+              <div class="flex h-full w-full flex-col items-center justify-center gap-[1.5cqh] px-[6%] text-center">
+                <span class="font-pixel text-[4.5cqw] leading-none text-retro-red [text-shadow:0_0_18px_rgba(255,107,107,.8)]">NOSTALGIA TV</span>
+                <span class="font-crt text-[11cqw] leading-none text-retro-green">Elegí un canal</span>
+                <span class="font-crt text-[6cqw] leading-none text-retro-gold">EN VIVO · {{ clock() }}</span>
               </div>
             }
             <div class="pointer-events-none absolute inset-0"
@@ -148,61 +150,102 @@
         </div>
 
         <div class="flex-col gap-2.5" [ngClass]="panelOpen() ? 'flex' : 'hidden lg:flex'">
-          <!-- EN EMISIÓN -->
-          @if (state(); as s) {
-            <div class="flex flex-col gap-1.5 rounded-xl border-2 border-retro-red/45 bg-[rgba(10,14,26,.75)] p-2.5">
-              <span class="font-pixel text-[7px] tracking-widest text-retro-red">EN EMISIÓN · CH {{ channelNumber() }}</span>
-              <div class="flex items-center gap-2">
-                <span class="grid h-8 w-8 place-items-center rounded-md border border-retro-red/35 bg-[#12162a] text-retro-red">
-                  <span class="material-symbols-outlined text-xl">sensors</span>
-                </span>
-                <div class="min-w-0">
-                  <div class="font-crt text-xl leading-none text-retro-green">{{ current()?.name }}</div>
-                  <div class="truncate text-xs text-text-dim">{{ s.isBumper ? s.bumperTitle : s.seriesName }}</div>
+          @if (mode() === 'series') {
+            <!-- ── Panel de serie ── -->
+            <button type="button" (click)="backToChannels()"
+                    class="inline-flex items-center gap-1.5 self-start rounded-full border border-retro-cyan/50 bg-transparent px-3 py-1.5 text-xs text-retro-cyan transition hover:bg-retro-cyan/10">
+              <span class="material-symbols-outlined text-base">arrow_back</span>Volver a canales
+            </button>
+            <div class="font-crt text-2xl leading-none text-retro-green">{{ selectedSeries()?.name }}</div>
+            @if (seasons().length > 1) {
+              <div class="flex gap-1.5 overflow-x-auto pb-1">
+                @for (s of seasons(); track s) {
+                  <button type="button" (click)="selectSeason(s)"
+                          class="shrink-0 rounded-lg px-3 py-1 font-crt text-lg transition"
+                          [ngClass]="selectedSeason() === s ? 'bg-retro-green text-ink' : 'border border-text-mute/30 text-text-mute'">T{{ s }}</button>
+                }
+              </div>
+            }
+            <div class="flex max-h-72 flex-col gap-2 overflow-y-auto">
+              @for (ep of seasonEpisodes(); track ep.id) {
+                <button type="button" (click)="playEpisode(ep)" [disabled]="!ep.filePath"
+                        class="flex items-center gap-2.5 rounded-lg border-2 p-2.5 text-left transition disabled:opacity-40"
+                        [ngClass]="currentEpisode()?.id === ep.id
+                          ? 'border-retro-red bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)]'
+                          : 'border-[#1a1a2e] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] hover:border-retro-cyan/55'">
+                  <span class="font-pixel text-[8px] text-retro-gold">{{ ep.episodeNumber.toString().padStart(2,'0') }}</span>
+                  <span class="flex-1 truncate text-sm text-text">{{ ep.title }}</span>
+                  <span class="material-symbols-outlined text-lg" [ngClass]="currentEpisode()?.id === ep.id ? 'text-retro-red' : 'text-retro-cyan'">
+                    {{ currentEpisode()?.id === ep.id ? 'graphic_eq' : 'play_arrow' }}
+                  </span>
+                </button>
+              } @empty {
+                <span class="px-1 py-2 text-xs text-text-dim">Sin episodios en esta temporada.</span>
+              }
+            </div>
+          } @else {
+            <!-- ── EN EMISIÓN ── -->
+            @if (state(); as s) {
+              <div class="flex flex-col gap-1.5 rounded-xl border-2 border-retro-red/45 bg-[rgba(10,14,26,.75)] p-2.5">
+                <span class="font-pixel text-[7px] tracking-widest text-retro-red">EN EMISIÓN · CH {{ channelNumber() }}</span>
+                <div class="flex items-center gap-2">
+                  <span class="grid h-8 w-8 place-items-center rounded-md border border-retro-red/35 bg-[#12162a] text-retro-red">
+                    <span class="material-symbols-outlined text-xl">sensors</span>
+                  </span>
+                  <div class="min-w-0">
+                    <div class="font-crt text-xl leading-none text-retro-green">{{ current()?.name }}</div>
+                    <div class="truncate text-xs text-text-dim">{{ s.isBumper ? s.bumperTitle : s.seriesName }}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          }
-
-          <!-- CANALES: un clic sintoniza -->
-          <div class="mt-0.5 flex items-baseline justify-between">
-            <span class="font-pixel text-[7px] tracking-widest text-retro-gold">CANALES</span>
-            <span class="text-[11px] text-text-dim">Un clic sintoniza</span>
-          </div>
-          <div class="flex max-h-64 flex-col gap-2 overflow-y-auto">
-            @for (ch of channels(); track ch.id) {
-              <button type="button" (click)="tune(ch)"
-                      class="flex items-center gap-2.5 rounded-lg border-2 p-2.5 text-left transition"
-                      [ngClass]="current()?.id === ch.id
-                        ? 'border-retro-red bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)] shadow-[0_0_20px_rgba(255,107,107,.35)]'
-                        : 'border-[#1a1a2e] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] hover:border-retro-cyan/55 focus-visible:border-retro-cyan/55 focus-visible:outline-none'">
-                <span class="font-pixel text-[8px] text-retro-gold">{{ ($index + 3).toString().padStart(2,'0') }}</span>
-                <span class="flex-1 truncate font-crt text-lg text-retro-green">{{ ch.name }}</span>
-                <span class="material-symbols-outlined text-lg" [ngClass]="current()?.id === ch.id ? 'text-retro-red' : 'text-retro-cyan'">
-                  {{ current()?.id === ch.id ? 'sensors' : 'play_arrow' }}
-                </span>
-              </button>
-            } @empty {
-              <span class="px-1 py-2 text-xs text-text-dim">Cargando canales…</span>
             }
-          </div>
+
+            <!-- ── CANALES: un clic sintoniza ── -->
+            <div class="mt-0.5 flex items-baseline justify-between">
+              <span class="font-pixel text-[7px] tracking-widest text-retro-gold">CANALES</span>
+              <span class="text-[11px] text-text-dim">Un clic sintoniza</span>
+            </div>
+            <div class="flex max-h-56 flex-col gap-2 overflow-y-auto">
+              @for (ch of channels(); track ch.id) {
+                <button type="button" (click)="tune(ch)"
+                        class="flex items-center gap-2.5 rounded-lg border-2 p-2.5 text-left transition"
+                        [ngClass]="current()?.id === ch.id
+                          ? 'border-retro-red bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)] shadow-[0_0_20px_rgba(255,107,107,.35)]'
+                          : 'border-[#1a1a2e] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] hover:border-retro-cyan/55 focus-visible:border-retro-cyan/55 focus-visible:outline-none'">
+                  <span class="font-pixel text-[8px] text-retro-gold">{{ ($index + 3).toString().padStart(2,'0') }}</span>
+                  <span class="flex-1 truncate font-crt text-lg text-retro-green">{{ ch.name }}</span>
+                  <span class="material-symbols-outlined text-lg" [ngClass]="current()?.id === ch.id ? 'text-retro-red' : 'text-retro-cyan'">
+                    {{ current()?.id === ch.id ? 'sensors' : 'play_arrow' }}
+                  </span>
+                </button>
+              } @empty {
+                <span class="px-1 py-2 text-xs text-text-dim">Cargando canales…</span>
+              }
+            </div>
+
+            <!-- ir al catálogo de series -->
+            <button type="button" (click)="openBrowser()"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-retro-gold/55 bg-retro-gold/[.08] py-2.5 text-sm font-medium text-retro-gold transition hover:bg-retro-gold/15">
+              <span class="material-symbols-outlined text-lg">grid_view</span>Explorar series
+            </button>
+          }
 
           <!-- controles de volumen / pantalla -->
           <div class="mt-auto flex items-center justify-between gap-1.5 border-t border-retro-green/20 pt-2.5">
             <button type="button" (click)="toggleMute()" aria-label="Silenciar"
-                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 text-retro-green transition hover:bg-white/5">
+                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10">
               <span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span>
             </button>
             <button type="button" (click)="changeVolume(-0.1)" aria-label="Bajar volumen"
-                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 text-retro-green transition hover:bg-white/5">
+                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10">
               <span class="material-symbols-outlined text-2xl">volume_down</span>
             </button>
             <button type="button" (click)="changeVolume(0.1)" aria-label="Subir volumen"
-                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 text-retro-green transition hover:bg-white/5">
+                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10">
               <span class="material-symbols-outlined text-2xl">volume_up</span>
             </button>
             <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
-                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 text-retro-green transition hover:bg-white/5">
+                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10">
               <span class="material-symbols-outlined text-2xl">fullscreen</span>
             </button>
           </div>
@@ -213,5 +256,43 @@
     <!-- estante inferior decorativo (solo desktop) -->
     <div class="pointer-events-none absolute inset-x-0 bottom-0 -z-0 hidden h-[22%] lg:block"
          style="background:linear-gradient(180deg,transparent,rgba(42,42,62,.85)),repeating-linear-gradient(90deg,#2a2a3e 0 2px,#32325a 2px 4px);box-shadow:inset 0 30px 50px rgba(0,0,0,.5)"></div>
+  </div>
+}
+
+<!-- ══════════════════ Explorador de series (overlay, ambos modos) ══════════════════ -->
+@if (browserOpen()) {
+  <div class="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink/95 p-4 backdrop-blur-sm md:p-8" role="dialog" aria-label="Explorar series">
+    <div class="mx-auto flex min-h-0 w-full max-w-6xl flex-col gap-4">
+      <div class="flex items-center gap-3">
+        <span class="font-crt text-3xl text-retro-green">Series</span>
+        <div class="relative ml-auto w-full max-w-sm">
+          <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-dim">search</span>
+          <input type="text" [ngModel]="seriesQuery()" (ngModelChange)="onSeriesQuery($event)"
+                 placeholder="Buscar serie…"
+                 class="h-11 w-full rounded-full border border-retro-purple/40 bg-panel pl-10 pr-4 text-text placeholder:text-text-dim focus:border-retro-cyan focus:outline-none">
+        </div>
+        <button type="button" (click)="closeBrowser()" aria-label="Cerrar"
+                class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-text-mute/40 bg-transparent text-text-mute transition hover:bg-white/10">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="grid min-h-0 grid-cols-2 gap-3 overflow-y-auto pb-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        @for (s of seriesList(); track s.id) {
+          <button type="button" (click)="enterSeries(s)"
+                  class="flex flex-col overflow-hidden rounded-xl border border-retro-purple/20 bg-panel text-left transition hover:border-retro-cyan/60 focus-visible:border-retro-cyan focus-visible:outline-none">
+            <div class="flex aspect-[2/3] items-center justify-center overflow-hidden bg-surface-deep">
+              @if (s.logoPath) {
+                <img [src]="logo(s.logoPath)" [alt]="s.name" class="h-full w-full object-cover">
+              } @else {
+                <span class="material-symbols-outlined text-4xl text-retro-green/50">movie</span>
+              }
+            </div>
+            <span class="truncate p-2 text-sm text-text">{{ s.name }}</span>
+          </button>
+        } @empty {
+          <span class="col-span-full py-10 text-center text-text-dim">{{ seriesLoading() ? 'Cargando…' : 'Sin resultados.' }}</span>
+        }
+      </div>
+    </div>
   </div>
 }

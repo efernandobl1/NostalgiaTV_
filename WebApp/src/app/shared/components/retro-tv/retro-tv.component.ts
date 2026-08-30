@@ -6,10 +6,18 @@ import { NgClass } from '@angular/common';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import * as signalR from '@microsoft/signalr';
+import { FormsModule } from '@angular/forms';
 import { environment } from '../../../../environments/environment';
 import { TvModeService } from '../../../core/services/tv-mode.service';
+import { SeriesResponse } from '../../models/serie.model';
 
 interface Channel { id: number; name: string; logoPath?: string; }
+interface Episode {
+  id: number; title: string; filePath?: string;
+  season: number; episodeNumber: number; episodeTypeName: string; seriesId: number;
+}
+interface Paged<T> { items: T[]; totalCount: number; totalPages: number; page: number; }
+type Mode = 'channels' | 'series';
 interface ChannelState {
   channelId: number; episodeId: number; episodeTitle: string;
   filePath: string; seriesName: string; seriesLogoPath?: string;
@@ -27,7 +35,7 @@ interface ChannelState {
 @Component({
   selector: 'app-retro-tv',
   standalone: true,
-  imports: [NgClass],
+  imports: [NgClass, FormsModule],
   templateUrl: './retro-tv.component.html',
 })
 export class RetroTvComponent implements AfterViewInit, OnDestroy {
@@ -52,6 +60,30 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   readonly fullscreen = signal(false);
   readonly panelOpen = signal(true);      // hoja de control en móvil/tablet
   readonly clock = signal(this.formatClock());
+
+  // ── Modo series (reproducción por episodios) ──
+  readonly mode = signal<Mode>('channels');
+  readonly browserOpen = signal(false);
+  readonly seriesQuery = signal('');
+  readonly seriesList = signal<SeriesResponse[]>([]);
+  readonly seriesLoading = signal(false);
+  readonly selectedSeries = signal<SeriesResponse | null>(null);
+  readonly episodes = signal<Episode[]>([]);
+  readonly selectedSeason = signal<number | null>(null);
+  readonly currentEpisode = signal<Episode | null>(null);
+
+  readonly seasons = computed(() =>
+    [...new Set(this.episodes()
+      .filter(e => e.episodeTypeName?.toLowerCase() === 'regular')
+      .map(e => e.season))].sort((a, b) => a - b));
+
+  readonly seasonEpisodes = computed(() =>
+    this.episodes()
+      .filter(e => e.episodeTypeName?.toLowerCase() === 'regular' && e.season === this.selectedSeason())
+      .sort((a, b) => a.episodeNumber - b.episodeNumber));
+
+  /** Hay algo reproduciéndose (canal en vivo o episodio de serie). */
+  readonly hasMedia = computed(() => !!this.state() || !!this.currentEpisode());
 
   /** Número de canal mostrado (CH 03, …). Base 3 como en el diseño. */
   channelNumber = computed(() => {
@@ -84,6 +116,9 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
 
   /** Un clic sintoniza: carga el estado en vivo del canal y reproduce. */
   tune(channel: Channel): void {
+    this.mode.set('channels');
+    this.currentEpisode.set(null);
+    this.selectedSeries.set(null);
     this.current.set(channel);
     this.hub?.stop();
     this.http.get<ChannelState>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/state`)
@@ -169,7 +204,73 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   exitTvMode(): void { this.tv.setEnabled(false); this.retune(); }
 
   /** El layout cambia entre modos, así que recargamos el video en el nuevo DOM. */
-  private retune(): void { const c = this.current(); if (c) setTimeout(() => this.tune(c), 0); }
+  private retune(): void {
+    if (this.mode() === 'series') { const ep = this.currentEpisode(); if (ep) setTimeout(() => this.playEpisode(ep), 0); }
+    else { const c = this.current(); if (c) setTimeout(() => this.tune(c), 0); }
+  }
+
+  // ── Series ────────────────────────────────────────────────────────────────
+  openBrowser(): void { this.browserOpen.set(true); if (!this.seriesList().length) this.searchSeries(); }
+  closeBrowser(): void { this.browserOpen.set(false); }
+
+  onSeriesQuery(value: string): void { this.seriesQuery.set(value); this.searchSeries(); }
+
+  searchSeries(): void {
+    this.seriesLoading.set(true);
+    const params: Record<string, string | number> = { pageSize: 24 };
+    if (this.seriesQuery()) params['name'] = this.seriesQuery();
+    this.http.get<Paged<SeriesResponse>>(`${this.apiUrl}/api/v1/public/series`, { params }).subscribe({
+      next: r => { this.seriesList.set(r.items); this.seriesLoading.set(false); },
+      error: () => this.seriesLoading.set(false),
+    });
+  }
+
+  enterSeries(serie: SeriesResponse): void {
+    this.hub?.stop();
+    this.current.set(null);
+    this.state.set(null);
+    this.browserOpen.set(false);
+    this.selectedSeries.set(serie);
+    this.mode.set('series');
+    this.http.get<Episode[]>(`${this.apiUrl}/api/v1/public/series/${serie.id}/episodes`).subscribe({
+      next: eps => {
+        this.episodes.set(eps);
+        this.selectedSeason.set(this.seasons()[0] ?? null);
+        const first = this.seasonEpisodes()[0] ?? eps.find(e => e.filePath);
+        if (first) this.playEpisode(first);
+      },
+    });
+  }
+
+  selectSeason(season: number): void { this.selectedSeason.set(season); }
+
+  playEpisode(ep: Episode): void {
+    if (!ep.filePath) return;
+    this.currentEpisode.set(ep);
+    setTimeout(() => {
+      const v = this.videoRef?.nativeElement;
+      if (!v) return;
+      v.src = this.videoSrc(ep.filePath!);
+      v.load();
+      v.muted = this.muted();
+      v.play().then(() => this.playing.set(true)).catch((err: Error) => {
+        if (err.name === 'AbortError') return;
+        v.muted = true; this.muted.set(true);
+        v.play().then(() => this.playing.set(true)).catch(() => this.playing.set(false));
+      });
+      if (window.innerWidth < 1024) this.panelOpen.set(false);
+    }, 0);
+  }
+
+  backToChannels(): void {
+    this.mode.set('channels');
+    this.selectedSeries.set(null);
+    this.episodes.set([]);
+    this.currentEpisode.set(null);
+    const v = this.videoRef?.nativeElement;
+    if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
+    this.playing.set(false);
+  }
 
   // ── Navegación de accesos ("IR A") ──────────────────────────────────────
   goToLogin(): void { this.router.navigate(['dashboard/login']); }
