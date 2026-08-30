@@ -15,6 +15,7 @@
     <div class="video-filters"
          [class.vignette]="settings().alwaysShowFilters && activeFilters().vignette"
          [class.curvature]="settings().alwaysShowFilters && activeFilters().crtCurvature"
+         [class.animate]="settings().alwaysShowFilters && activeFilters().scanlineAnimation"
          [style.--scanline-opacity]="scanlineOpacity()"
          [style.--scanline-size]="(activeFilters().scanlineDensity * 4) + 'px'"></div>
 
@@ -80,8 +81,10 @@
           <span class="font-pixel text-xs text-retro-gold">CANALES · OK sintoniza al instante</span>
           <div class="flex gap-4 overflow-x-auto pb-2">
             @for (ch of channels(); track ch.id) {
-              <button type="button" (click)="tune(ch)"
-                      class="flex h-28 w-56 shrink-0 flex-col justify-between rounded-2xl border-[3px] p-4 text-left transition"
+              <button type="button" (click)="tune(ch); focusedIndex.set($index)"
+                      class="flex h-28 w-56 shrink-0 flex-col justify-between rounded-2xl border-[3px] p-4 text-left ring-retro-gold transition"
+                      [class.ring-4]="$index === focusedIndex()"
+                      [class.scale-105]="$index === focusedIndex()"
                       [ngClass]="current()?.id === ch.id
                         ? 'border-retro-red bg-[linear-gradient(145deg,#2f3050,#1a1a2e)] shadow-[0_0_30px_rgba(255,107,107,.35)]'
                         : 'border-[#2a2a44] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] hover:border-retro-gold'">
@@ -90,6 +93,15 @@
               </button>
             } @empty { <span class="text-sm text-text-dim">Cargando canales…</span> }
           </div>
+        </div>
+
+        <!-- leyenda de controles (D-pad del control remoto) -->
+        <div class="flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-text-dim md:text-base">
+          <span class="flex items-center gap-2"><span class="rounded bg-retro-green px-2 py-0.5 font-crt text-lg text-ink">OK</span>Sintonizar</span>
+          <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">◀ ▶</span>Cambiar canal</span>
+          <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">▲</span>Series</span>
+          <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">▼</span>Imagen</span>
+          <span class="flex items-center gap-2"><span class="rounded bg-retro-red/80 px-2 py-0.5 font-crt text-lg text-ink">Esc</span>Ocultar tira</span>
         </div>
       </div>
     </div>
@@ -288,8 +300,14 @@
       <label class="mb-3 flex items-center justify-between text-sm">Viñeta
         <input type="checkbox" [checked]="activeFilters().vignette" (change)="setFilter('vignette', $any($event.target).checked)" class="h-5 w-5 accent-[color:var(--color-retro-purple)]">
       </label>
-      <label class="mb-1 flex flex-col gap-1 text-sm">Intensidad de scanlines: {{ activeFilters().scanlineIntensity }}
-        <input type="range" min="0" max="50" [value]="activeFilters().scanlineIntensity" (input)="setFilter('scanlineIntensity', +$any($event.target).value)" class="accent-[color:var(--color-retro-purple)]">
+      <label class="mb-3 flex items-center justify-between text-sm">Scanline animado
+        <input type="checkbox" [checked]="activeFilters().scanlineAnimation" (change)="setFilter('scanlineAnimation', $any($event.target).checked)" class="h-5 w-5 accent-[color:var(--color-retro-purple)]">
+      </label>
+      <label class="mb-3 flex flex-col gap-1 text-sm">Intensidad de líneas: {{ activeFilters().scanlineIntensity }}%
+        <input type="range" min="0" max="100" [value]="activeFilters().scanlineIntensity" (input)="setFilter('scanlineIntensity', +$any($event.target).value)" class="accent-[color:var(--color-retro-purple)]">
+      </label>
+      <label class="mb-1 flex flex-col gap-1 text-sm">Densidad de líneas: {{ activeFilters().scanlineDensity }}
+        <input type="range" min="1" max="10" [value]="activeFilters().scanlineDensity" (input)="setFilter('scanlineDensity', +$any($event.target).value)" class="accent-[color:var(--color-retro-purple)]">
       </label>
     </div>
   </div>

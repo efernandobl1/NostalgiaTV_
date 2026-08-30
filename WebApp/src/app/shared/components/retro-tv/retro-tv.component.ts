@@ -109,13 +109,40 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     return idx < 0 ? null : String(idx + 3).padStart(2, '0');
   });
 
+  /** Canal enfocado por el D-pad en modo TV. */
+  readonly focusedIndex = signal(0);
+
   // ── Auto-ocultar el overlay del modo TV tras inactividad ──
   @HostListener('document:mousemove')
-  @HostListener('document:keydown')
   @HostListener('document:click')
-  onActivity(): void {
+  onPointerActivity(): void {
+    if (this.tv.enabled()) this.pokeOverlay();
+  }
+
+  // ── D-pad / teclado del control remoto (Android TV manda flechas + Enter) ──
+  @HostListener('document:keydown', ['$event'])
+  onKey(e: KeyboardEvent): void {
     if (!this.tv.enabled()) return;
     this.pokeOverlay();
+    if (this.browserOpen() || this.showFilters()) return; // esos overlays manejan sus teclas
+    switch (e.key) {
+      case 'ArrowRight': e.preventDefault(); this.moveFocus(1); break;
+      case 'ArrowLeft':  e.preventDefault(); this.moveFocus(-1); break;
+      case 'Enter': e.preventDefault(); this.tuneFocused(); break;
+      case 'ArrowUp': e.preventDefault(); this.openBrowser(); break;      // Guía y series
+      case 'ArrowDown': e.preventDefault(); this.toggleFilters(); break;   // Ajustes de imagen
+      case 'Escape': case 'Backspace': e.preventDefault(); this.showOverlay.set(false); break; // Ocultar tira
+    }
+  }
+
+  private moveFocus(delta: number): void {
+    const n = this.channels().length;
+    if (!n) return;
+    this.focusedIndex.set((this.focusedIndex() + delta + n) % n);
+  }
+  private tuneFocused(): void {
+    const ch = this.channels()[this.focusedIndex()];
+    if (ch) this.tune(ch);
   }
 
   private pokeOverlay(): void {
@@ -245,7 +272,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   // ── Filtros CRT ─────────────────────────────────────────────────────────
   toggleFilters(): void { this.showFilters.update(v => !v); }
   toggleCrt(): void { this.tvSettings.update({ alwaysShowFilters: !this.settings().alwaysShowFilters }); }
-  setFilter(key: 'scanlineIntensity' | 'scanlineDensity' | 'crtCurvature' | 'vignette', value: number | boolean): void {
+  setFilter(key: 'scanlineIntensity' | 'scanlineDensity' | 'crtCurvature' | 'vignette' | 'scanlineAnimation', value: number | boolean): void {
     this.tvSettings.updateFilter({ [key]: value } as any, this.fullscreen());
   }
 

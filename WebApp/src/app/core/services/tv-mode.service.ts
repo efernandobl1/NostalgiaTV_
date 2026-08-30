@@ -41,6 +41,17 @@ export class TvModeService {
 
   private detectTv(): boolean {
     if (typeof navigator === 'undefined') return false;
-    return TV_USER_AGENT.test(navigator.userAgent);
+    const ua = navigator.userAgent;
+    if (TV_USER_AGENT.test(ua)) return true;
+    try {
+      const noTouch = (navigator.maxTouchPoints ?? 0) === 0;
+      // Android sin capacidad táctil = casi siempre Android TV (los móviles/tablets sí tienen touch).
+      if (/android/i.test(ua) && noTouch) return true;
+      // Pantalla grande + sin mouse fino (control remoto) → TV.
+      const bigScreen = (window.screen?.width ?? 0) >= 1920;
+      const noFinePointer = !window.matchMedia?.('(pointer: fine)')?.matches;
+      if (bigScreen && noFinePointer && noTouch) return true;
+    } catch { /* ignore */ }
+    return false;
   }
 }
