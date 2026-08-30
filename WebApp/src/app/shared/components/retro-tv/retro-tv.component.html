@@ -508,7 +508,7 @@
             @for (row of guideDayRows(); track row.channel.id) {
               <div class="flex items-stretch gap-3 rounded-2xl border border-retro-purple/25 bg-[linear-gradient(145deg,#1b1d31,#141629)] p-3">
                 <button type="button" (click)="tuneFromGuide(row.channel)"
-                        class="flex w-44 shrink-0 flex-col justify-center gap-1 text-left md:w-56">
+                        class="flex w-44 shrink-0 flex-col justify-center gap-1 border-0 bg-transparent text-left md:w-56">
                   <span class="truncate font-crt text-2xl"
                         [ngClass]="current()?.id === row.channel.id ? 'text-retro-green' : 'text-retro-gold'">CH {{ ($index + 3).toString().padStart(2,'0') }} · {{ row.channel.name }}</span>
                   @if (current()?.id === row.channel.id) {
