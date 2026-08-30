@@ -25,6 +25,7 @@ namespace Infrastructure
             //Configurations
             services.Configure<FileUploadSettings>(configuration.GetSection("FileUpload"));
             services.Configure<MediaSettings>(configuration.GetSection("MediaSettings"));
+            services.Configure<ChannelSchedulingSettings>(configuration.GetSection("ChannelScheduling"));
 
             //Services
             services.AddSingleton<ChannelBroadcastService>();

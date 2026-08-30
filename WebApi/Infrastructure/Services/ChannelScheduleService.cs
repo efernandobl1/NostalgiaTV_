@@ -1,9 +1,11 @@
 using ApplicationCore.DTOs.Channel;
 using ApplicationCore.Entities;
+using ApplicationCore.Settings;
 using Infrastructure.Contexts;
 using Infrastructure.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -14,14 +16,24 @@ namespace Infrastructure.Services
     {
         private readonly NostalgiaTVContext _context;
         private readonly ILogger<ChannelScheduleService> _logger;
+        private readonly ChannelSchedulingSettings _rules;
         private static readonly Dictionary<int, SemaphoreSlim> _locks = new();
         private static readonly object _lockDict = new();
 
-        public ChannelScheduleService(NostalgiaTVContext context, ILogger<ChannelScheduleService> logger)
+        public ChannelScheduleService(
+            NostalgiaTVContext context,
+            ILogger<ChannelScheduleService> logger,
+            IOptions<ChannelSchedulingSettings> rules)
         {
             _context = context;
             _logger = logger;
+            _rules = rules.Value;
         }
+
+        private static bool IsMovieType(string? name) =>
+            string.Equals(name, "Movie", StringComparison.OrdinalIgnoreCase);
+        private static bool IsSpecialType(string? name) =>
+            name != null && name.Contains("Special", StringComparison.OrdinalIgnoreCase);
 
         private static SemaphoreSlim GetLock(int channelId)
         {
@@ -134,29 +146,44 @@ namespace Infrastructure.Services
 
             var random = new Random();
             var current = from;
+            var noRepeat = TimeSpan.FromHours(Math.Max(0, _rules.NoRepeatWindowHours));
 
-            var seriesLastEpisodes = await _context.ChannelScheduleEntries
+            // Siembra desde lo ya generado, para respetar "no repetir en 24h" y los
+            // cupos diarios de especiales/películas cruzando una regeneración.
+            var seed = await _context.ChannelScheduleEntries
                 .AsNoTracking()
-                .Where(e => e.ChannelId == channelId && e.EpisodeId != null)
-                .Include(e => e.Episode)
-                .Where(e => e.Episode != null)
-                .GroupBy(e => e.Episode!.SeriesId)
-                .ToDictionaryAsync(
-                    g => g.Key,
-                    g => g.OrderByDescending(e => e.EndTime).Select(e => e.Episode).First()
-                );
+                .Where(e => e.ChannelId == channelId && e.EpisodeId != null
+                         && e.StartTime >= from.Add(-noRepeat))
+                .Include(e => e.Episode).ThenInclude(e => e!.EpisodeType)
+                .Select(e => new { EpisodeId = e.EpisodeId!.Value, e.StartTime, e.Episode!.SeriesId, TypeName = e.Episode.EpisodeType.Name })
+                .ToListAsync();
 
-            var recentlyUsed = await _context.ChannelScheduleEntries
-                .Where(e => e.ChannelId == channelId && e.StartTime >= DateTime.UtcNow.AddHours(-24))
-                .Where(e => e.EpisodeId != null)
-                .Select(e => e.EpisodeId!.Value)
-                .ToHashSetAsync();
+            // Última vez que se programó cada episodio (para la ventana de no-repetición).
+            var lastScheduled = seed
+                .GroupBy(x => x.EpisodeId)
+                .ToDictionary(g => g.Key, g => g.Max(x => x.StartTime));
+
+            // Cupos por día (y por serie/día) ya consumidos por lo existente.
+            var specialsPerDay = new Dictionary<DateOnly, int>();
+            var moviesPerDay = new Dictionary<DateOnly, int>();
+            var specialsPerSeriesDay = new Dictionary<(DateOnly, int), int>();
+            var moviesPerSeriesDay = new Dictionary<(DateOnly, int), int>();
+            foreach (var x in seed.Where(x => x.StartTime >= from.Date))
+            {
+                var day = DateOnly.FromDateTime(x.StartTime);
+                if (IsMovieType(x.TypeName))
+                {
+                    moviesPerDay[day] = moviesPerDay.GetValueOrDefault(day) + 1;
+                    moviesPerSeriesDay[(day, x.SeriesId)] = moviesPerSeriesDay.GetValueOrDefault((day, x.SeriesId)) + 1;
+                }
+                else if (IsSpecialType(x.TypeName))
+                {
+                    specialsPerDay[day] = specialsPerDay.GetValueOrDefault(day) + 1;
+                    specialsPerSeriesDay[(day, x.SeriesId)] = specialsPerSeriesDay.GetValueOrDefault((day, x.SeriesId)) + 1;
+                }
+            }
 
             int? lastEpisodeId = null;
-            int? lastSeriesId = null;
-            double lastDuration = 0;
-            bool lastWasSpecial = false;
-            const double MinDurationForSeriesRule = 1200;
             var durationCache = new Dictionary<string, double>();
             var batch = new List<ChannelScheduleEntry>();
             var totalGenerated = 0;
@@ -221,100 +248,38 @@ namespace Infrastructure.Services
                     continue;
                 }
 
-                // If last was special/movie, prefer regular episodes
-                var preferredEpisodes = lastWasSpecial
-                    ? episodes.Where(e => e.EpisodeType.Name.ToLower() == "regular").ToList()
-                    : episodes;
+                // Selección ALEATORIA respetando, en orden de prioridad, estas reglas
+                // (si nada es elegible se van relajando): no repetir un episodio dentro
+                // de la ventana; cupos de especiales/películas por serie y totales por
+                // día; y no repetir el episodio inmediatamente anterior.
+                var day = DateOnly.FromDateTime(current);
+                var windowStart = current - noRepeat;
 
-                var pool = preferredEpisodes.Any() ? preferredEpisodes : episodes;
-
-                var availableSeries = pool
-                    .GroupBy(e => e.SeriesId)
-                    .Where(g =>
-                    {
-                        var seriesId = g.Key;
-                        var hasFreshEpisodes = g.Any(e => !recentlyUsed.Contains(e.Id));
-                        var avoidsConsecutive = !g.Any(e => e.Id == lastEpisodeId);
-                        var respectsSeriesRule = lastDuration < MinDurationForSeriesRule || seriesId != lastSeriesId;
-                        return hasFreshEpisodes && avoidsConsecutive && respectsSeriesRule;
-                    })
-                    .Select(g => g.Key)
-                    .ToList();
-
-                if (!availableSeries.Any())
+                bool WithinCaps(Episode e)
                 {
-                    availableSeries = pool
-                        .Where(e => !recentlyUsed.Contains(e.Id)
-                                 && e.Id != lastEpisodeId
-                                 && (lastDuration < MinDurationForSeriesRule || e.SeriesId != lastSeriesId))
-                        .Select(e => e.SeriesId)
-                        .Distinct()
-                        .ToList();
+                    if (IsMovieType(e.EpisodeType.Name))
+                        return moviesPerDay.GetValueOrDefault(day) < _rules.MaxMoviesPerDay
+                            && moviesPerSeriesDay.GetValueOrDefault((day, e.SeriesId)) < _rules.MaxMoviesPerSeriesPerDay;
+                    if (IsSpecialType(e.EpisodeType.Name))
+                        return specialsPerDay.GetValueOrDefault(day) < _rules.MaxSpecialsPerDay
+                            && specialsPerSeriesDay.GetValueOrDefault((day, e.SeriesId)) < _rules.MaxSpecialsPerSeriesPerDay;
+                    return true;
                 }
+                bool NotRepeated(Episode e) =>
+                    !lastScheduled.TryGetValue(e.Id, out var t) || t <= windowStart;
 
-                if (!availableSeries.Any())
-                {
-                    availableSeries = pool
-                        .Where(e => e.Id != lastEpisodeId
-                                 && (lastDuration < MinDurationForSeriesRule || e.SeriesId != lastSeriesId))
-                        .Select(e => e.SeriesId)
-                        .Distinct()
-                        .ToList();
-                    recentlyUsed.Clear();
-                }
+                var pool = episodes.Where(e => e.Id != lastEpisodeId && WithinCaps(e) && NotRepeated(e)).ToList();
+                if (pool.Count == 0) pool = episodes.Where(e => e.Id != lastEpisodeId && WithinCaps(e)).ToList();
+                if (pool.Count == 0) pool = episodes.Where(e => e.Id != lastEpisodeId && NotRepeated(e)).ToList();
+                if (pool.Count == 0) pool = episodes.Where(e => e.Id != lastEpisodeId).ToList();
+                if (pool.Count == 0) pool = episodes;
 
-                if (!availableSeries.Any())
-                {
-                    availableSeries = pool
-                        .Where(e => e.Id != lastEpisodeId)
-                        .Select(e => e.SeriesId)
-                        .Distinct()
-                        .ToList();
-                }
+                var episode = pool[random.Next(pool.Count)];
 
-                if (!availableSeries.Any())
-                {
-                    availableSeries = pool.Select(e => e.SeriesId).Distinct().ToList();
-                }
-
-                var selectedSeriesId = availableSeries[random.Next(availableSeries.Count)];
-                var seriesEpisodes = pool.Where(e => e.SeriesId == selectedSeriesId).ToList();
-                if (!seriesEpisodes.Any())
-                {
-                    seriesEpisodes = episodes.Where(e => e.SeriesId == selectedSeriesId).ToList();
-                }
-
-                Episode? episode;
-                if (seriesLastEpisodes.TryGetValue(selectedSeriesId, out var lastEpisode))
-                {
-                    episode = seriesEpisodes
-                        .Where(e => e.Season > lastEpisode.Season ||
-                                   (e.Season == lastEpisode.Season && e.EpisodeNumber > lastEpisode.EpisodeNumber))
-                        .OrderBy(e => e.Season)
-                        .ThenBy(e => e.EpisodeNumber)
-                        .FirstOrDefault();
-
-                    if (episode == null)
-                    {
-                        episode = seriesEpisodes
-                            .OrderBy(e => e.Season)
-                            .ThenBy(e => e.EpisodeNumber)
-                            .First();
-                    }
-                }
-                else
-                {
-                    // First time scheduling this series: start from a random episode
-                    episode = seriesEpisodes[random.Next(seriesEpisodes.Count)];
-                }
-
-                _logger.LogInformation("[SCHEDULE] Iteration {iter}: Selected episode={ep} series={s} duration getting...",
+                _logger.LogInformation("[SCHEDULE] Iteration {iter}: Selected episode={ep} series={s}",
                     iterationCount, episode.Title, episode.Series.Name);
 
                 var duration = GetCachedDuration(episode.FilePath!, durationCache);
-
-                _logger.LogInformation("[SCHEDULE] Iteration {iter}: Duration={dur}s for episode={ep}", iterationCount, duration, episode.Title);
-
                 var end = current.AddSeconds(duration);
                 batch.Add(new ChannelScheduleEntry
                 {
@@ -324,14 +289,20 @@ namespace Infrastructure.Services
                     EndTime = end,
                 });
 
-                recentlyUsed.Add(episode.Id);
+                // Contabilidad para las reglas.
+                lastScheduled[episode.Id] = current;
                 lastEpisodeId = episode.Id;
-                lastSeriesId = episode.SeriesId;
-                lastDuration = duration;
-                lastWasSpecial = episode.EpisodeType.Name.ToLower() != "regular";
+                if (IsMovieType(episode.EpisodeType.Name))
+                {
+                    moviesPerDay[day] = moviesPerDay.GetValueOrDefault(day) + 1;
+                    moviesPerSeriesDay[(day, episode.SeriesId)] = moviesPerSeriesDay.GetValueOrDefault((day, episode.SeriesId)) + 1;
+                }
+                else if (IsSpecialType(episode.EpisodeType.Name))
+                {
+                    specialsPerDay[day] = specialsPerDay.GetValueOrDefault(day) + 1;
+                    specialsPerSeriesDay[(day, episode.SeriesId)] = specialsPerSeriesDay.GetValueOrDefault((day, episode.SeriesId)) + 1;
+                }
                 current = end;
-
-                seriesLastEpisodes[selectedSeriesId] = episode;
 
                 // Insert bumper after every episode if available
                 if (eraBumpers.Any())
