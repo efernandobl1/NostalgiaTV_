@@ -12,8 +12,8 @@
     }
     <!-- filtros CRT -->
     <div class="video-filters"
-         [class.vignette]="settings().alwaysShowFilters && activeFilters().vignette"
-         [class.curvature]="settings().alwaysShowFilters && activeFilters().crtCurvature"
+         [class.vignette]="settings().alwaysShowFilters && activeFilters().vignette && !fullscreen()"
+         [class.curvature]="settings().alwaysShowFilters && activeFilters().crtCurvature && !fullscreen()"
          [class.animate]="settings().alwaysShowFilters && activeFilters().scanlineAnimation"
          [style.--scanline-opacity]="scanlineOpacity()"
          [style.--scanline-size]="(activeFilters().scanlineDensity * 4) + 'px'"></div>
@@ -113,7 +113,7 @@
 
 } @else {
   <!-- ══════════════════ MODO NORMAL (desktop / tablet / móvil) ══════════════════ -->
-  <div class="relative flex min-h-dvh w-full flex-col overflow-hidden text-text"
+  <div class="relative flex h-dvh w-full flex-col overflow-hidden text-text"
        style="background:linear-gradient(135deg,#1a1a2e 0%,#0f0f1e 50%,#16213e 100%)">
 
     <header class="z-20 flex h-16 shrink-0 items-center justify-between px-5 md:px-7">
@@ -139,7 +139,7 @@
     <div class="relative z-10 flex flex-1 flex-col lg:flex-row lg:items-stretch">
       <!-- escena TV -->
       <div class="relative flex flex-1 items-start justify-center px-4 pt-2 lg:pr-0">
-        <div class="relative w-[min(1000px,66vw)] max-w-full"
+        <div class="relative w-[min(1000px,64vw,74vh)] max-w-full"
              style="aspect-ratio:650/758;filter:drop-shadow(0 20px 40px rgba(0,0,0,.7))">
           <img src="images/tv-setup.png" alt="Televisor retro con VHS y estantería" class="block h-full w-full object-contain">
           <!-- pantalla del televisor -->
@@ -197,7 +197,7 @@
               @if (currentEpisode(); as ep) { <span class="truncate text-xs text-text-dim">{{ ep.title }}</span> }
             </div>
             @if (seasons().length > 1) {
-              <div class="flex gap-1.5 overflow-x-auto pb-1">
+              <div class="flex flex-wrap gap-1.5">
                 @for (s of seasons(); track s) {
                   <button type="button" (click)="selectSeason(s)"
                           class="shrink-0 rounded-lg px-3 py-1 font-crt text-lg transition"
@@ -274,7 +274,7 @@
                     class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">volume_down</span></button>
             <button type="button" (click)="changeVolume(0.1)" aria-label="Subir volumen"
                     class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">volume_up</span></button>
-            <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
+            <button type="button" (click)="goFullscreenCinema()" aria-label="Pantalla completa"
                     class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">fullscreen</span></button>
           </div>
         </div>

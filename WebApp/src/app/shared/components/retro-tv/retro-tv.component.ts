@@ -282,8 +282,22 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     else document.exitFullscreen?.();
   }
 
-  private onFsChange = (): void =>
-    this.zone.run(() => this.fullscreen.set(!!document.fullscreenElement));
+  // Pantalla completa desde el modo ilustración: entra al modo cine (TV) —video
+  // full-bleed, sin marco/curvatura, con el overlay auto-ocultable— y va a fullscreen.
+  private cinemaFromIllustration = false;
+  goFullscreenCinema(): void {
+    if (this.tv.enabled()) { this.toggleFullscreen(); return; }
+    this.cinemaFromIllustration = true;
+    this.enterTvMode();
+    setTimeout(() => this.toggleFullscreen(), 80);
+  }
+
+  private onFsChange = (): void => this.zone.run(() => {
+    const fs = !!document.fullscreenElement;
+    this.fullscreen.set(fs);
+    // Si el usuario entró a cine desde la ilustración, al salir de fullscreen volvemos.
+    if (!fs && this.cinemaFromIllustration) { this.cinemaFromIllustration = false; this.exitTvMode(); }
+  });
 
   // ── Filtros CRT ─────────────────────────────────────────────────────────
   toggleFilters(): void { this.showFilters.update(v => !v); }
