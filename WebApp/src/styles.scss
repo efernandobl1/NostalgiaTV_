@@ -177,8 +177,10 @@ html, body { height: 100%; }
 // Antes forzaba Roboto y pisaba la tipografía Outfit del tema; se conserva Outfit.
 body { margin: 0; }
 
-// Accesibilidad: foco visible de alto contraste en todo el sitio.
-:focus-visible {
+// Accesibilidad: foco visible de alto contraste para botones/enlaces/navegación TV.
+// Los campos de texto quedan excluidos (usan su propio estilo de foco Material/nativo),
+// así no muestran el borde dorado.
+:focus-visible:not(input):not(textarea):not(select) {
   outline: 2px solid #ffd93d !important;
   outline-offset: 2px;
   box-shadow: 0 0 8px rgba(255, 217, 61, 0.6) !important;
