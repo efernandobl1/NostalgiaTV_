@@ -61,19 +61,24 @@
             <span class="font-crt text-5xl leading-none text-retro-green md:text-6xl">{{ state()?.seriesName ?? selectedSeries()?.name }}</span>
             <span class="text-xl text-text md:text-2xl">{{ mode() === 'series' ? currentEpisode()?.title : (state()?.isBumper ? state()?.bumperTitle : state()?.episodeTitle) }}</span>
           </div>
-          <!-- controles del reproductor (botones en pantalla) -->
-          <div class="flex flex-wrap items-center gap-3">
-            <button type="button" (click)="seekRelative(-10)" aria-label="Retroceder 10s"
-                    class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/30 bg-transparent text-text transition hover:bg-white/10"><span class="material-symbols-outlined text-3xl">replay_10</span></button>
-            <button type="button" (click)="togglePlay()" aria-label="Reproducir/Pausar"
-                    class="grid h-16 w-16 place-items-center rounded-2xl border-2 border-retro-gold bg-retro-gold/15 text-retro-gold transition hover:bg-retro-gold/25"><span class="material-symbols-outlined text-4xl">{{ playing() ? 'pause' : 'play_arrow' }}</span></button>
-            <button type="button" (click)="seekRelative(10)" aria-label="Adelantar 10s"
-                    class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/30 bg-transparent text-text transition hover:bg-white/10"><span class="material-symbols-outlined text-3xl">forward_10</span></button>
-            @if (mode() === 'series') {
+          <!-- controles del reproductor: solo en SERIES (on-demand).
+               El canal simula EN VIVO, así que no se pausa/adelanta/atrasa. -->
+          @if (mode() === 'series') {
+            <div class="flex flex-wrap items-center gap-3">
+              <button type="button" (click)="seekRelative(-10)" aria-label="Retroceder 10s"
+                      class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/30 bg-transparent text-text transition hover:bg-white/10"><span class="material-symbols-outlined text-3xl">replay_10</span></button>
+              <button type="button" (click)="togglePlay()" aria-label="Reproducir/Pausar"
+                      class="grid h-16 w-16 place-items-center rounded-2xl border-2 border-retro-gold bg-retro-gold/15 text-retro-gold transition hover:bg-retro-gold/25"><span class="material-symbols-outlined text-4xl">{{ playing() ? 'pause' : 'play_arrow' }}</span></button>
+              <button type="button" (click)="seekRelative(10)" aria-label="Adelantar 10s"
+                      class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/30 bg-transparent text-text transition hover:bg-white/10"><span class="material-symbols-outlined text-3xl">forward_10</span></button>
               <button type="button" (click)="playRandom()"
                       class="ml-2 inline-flex h-14 items-center gap-2 rounded-xl border border-retro-cyan/50 bg-transparent px-5 text-lg text-retro-cyan transition hover:bg-retro-cyan/10"><span class="material-symbols-outlined text-2xl">skip_next</span>Siguiente</button>
-            }
-          </div>
+            </div>
+          } @else {
+            <span class="inline-flex w-fit items-center gap-2 rounded-full border border-retro-red/50 bg-retro-red/10 px-4 py-1.5 text-lg text-retro-red">
+              <span class="h-2.5 w-2.5 animate-pulse rounded-full bg-retro-red"></span>EN VIVO
+            </span>
+          }
         }
         <!-- tira de canales -->
         <div class="flex flex-col gap-3">
@@ -134,13 +139,13 @@
     <div class="relative z-10 flex flex-1 flex-col lg:flex-row lg:items-stretch">
       <!-- escena TV -->
       <div class="relative flex flex-1 items-start justify-center px-4 pt-2 lg:pr-0">
-        <div class="relative w-[min(560px,86vw)] max-w-full"
+        <div class="relative w-[min(1000px,66vw)] max-w-full"
              style="aspect-ratio:650/758;filter:drop-shadow(0 20px 40px rgba(0,0,0,.7))">
           <img src="images/tv-setup.png" alt="Televisor retro con VHS y estantería" class="block h-full w-full object-contain">
           <!-- pantalla del televisor -->
           <div #stage class="@container absolute overflow-hidden"
                style="left:31%;top:4.2%;width:38%;height:25.3%;border-radius:10%/14%;border:5px solid #0b0b16;box-shadow:inset 0 0 24px rgba(0,0,0,.7)">
-            <video #video class="h-full w-full bg-black object-cover" [class.hidden]="!hasMedia()" playsinline (click)="togglePlay()"></video>
+            <video #video class="h-full w-full bg-black object-cover" [class.hidden]="!hasMedia()" playsinline (click)="onVideoClick()"></video>
             @if (!hasMedia()) {
               <div class="absolute inset-0 flex flex-col items-center justify-center gap-[1.5cqh] px-[6%] text-center">
                 <span class="font-pixel text-[4.5cqw] leading-none text-retro-red [text-shadow:0_0_18px_rgba(255,107,107,.8)]">NOSTALGIA TV</span>

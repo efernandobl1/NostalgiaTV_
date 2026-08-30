@@ -112,12 +112,14 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   /** Canal enfocado por el D-pad en modo TV. */
   readonly focusedIndex = signal(0);
 
-  // ── Auto-ocultar el overlay del modo TV tras inactividad ──
-  @HostListener('document:mousemove')
-  @HostListener('document:click')
-  onPointerActivity(): void {
-    if (this.tv.enabled()) this.pokeOverlay();
-  }
+  // Actividad del puntero registrada FUERA de la zona de Angular: así mousemove
+  // NO dispara detección de cambios en cada píxel (clave para no ralentizar la TV).
+  // Solo entramos a la zona cuando el overlay realmente cambia de estado.
+  private readonly activity = (): void => {
+    if (!this.tv.enabled()) return;
+    if (!this.showOverlay()) this.zone.run(() => this.showOverlay.set(true));
+    this.scheduleHide();
+  };
 
   // ── D-pad / teclado del control remoto (Android TV manda flechas + Enter) ──
   @HostListener('document:keydown', ['$event'])
@@ -147,15 +149,22 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
 
   private pokeOverlay(): void {
     this.showOverlay.set(true);
+    this.scheduleHide();
+  }
+  private scheduleHide(): void {
     clearTimeout(this.overlayTimer);
-    this.overlayTimer = setTimeout(() => this.showOverlay.set(false), 4000);
+    this.overlayTimer = setTimeout(() => this.zone.run(() => this.showOverlay.set(false)), 4000);
   }
 
   ngAfterViewInit(): void {
     this.loadChannels();
     this.clockTimer = setInterval(() => this.clock.set(this.formatClock()), 30_000);
-    this.zone.runOutsideAngular(() =>
-      document.addEventListener('fullscreenchange', this.onFsChange));
+    this.zone.runOutsideAngular(() => {
+      document.addEventListener('fullscreenchange', this.onFsChange);
+      document.addEventListener('mousemove', this.activity, { passive: true });
+      document.addEventListener('click', this.activity);
+      document.addEventListener('touchstart', this.activity, { passive: true });
+    });
     if (this.tv.enabled()) this.pokeOverlay();
   }
 
@@ -165,6 +174,9 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     clearInterval(this.progressTimer);
     clearTimeout(this.overlayTimer);
     document.removeEventListener('fullscreenchange', this.onFsChange);
+    document.removeEventListener('mousemove', this.activity);
+    document.removeEventListener('click', this.activity);
+    document.removeEventListener('touchstart', this.activity);
   }
 
   // ── Datos ───────────────────────────────────────────────────────────────
@@ -238,6 +250,10 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     if (v.paused) { v.play(); this.playing.set(true); }
     else { v.pause(); this.playing.set(false); }
   }
+
+  /** El canal simula emisión EN VIVO: no se pausa ni se busca. Sólo las series
+   *  (contenido on-demand) permiten pausa/seek. */
+  onVideoClick(): void { if (this.mode() === 'series') this.togglePlay(); }
 
   seekRelative(seconds: number): void {
     const v = this.videoRef?.nativeElement;

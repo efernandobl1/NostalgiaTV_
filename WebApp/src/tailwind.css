@@ -31,7 +31,7 @@
    Se activan con clases .vignette/.curvature y variables CSS desde el componente. */
 .video-filters { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .video-filters::before {
-  content: ""; position: absolute; inset: 0;
+  content: ""; position: absolute; inset: -6px;
   background: repeating-linear-gradient(
     0deg,
     rgba(0, 0, 0, var(--scanline-opacity, 0.15)),
@@ -54,5 +54,5 @@
 }
 
 /* Scanlines animadas (rodando) cuando el usuario activa "Scanline animado". */
-@keyframes crt-roll { to { background-position-y: var(--scanline-size, 4px); } }
-.video-filters.animate::before { animation: crt-roll 0.35s linear infinite; }
+@keyframes crt-roll { from { transform: translateY(0); } to { transform: translateY(var(--scanline-size, 4px)); } }
+.video-filters.animate::before { animation: crt-roll 0.6s steps(4) infinite; will-change: transform; }
