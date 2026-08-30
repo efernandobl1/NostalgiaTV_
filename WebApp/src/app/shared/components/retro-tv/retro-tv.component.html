@@ -41,7 +41,7 @@
                   class="grid h-12 w-12 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
             <span class="material-symbols-outlined text-3xl">tune</span>
           </button>
-          <div class="flex items-center gap-2 rounded-xl border border-text-mute/40 px-2">
+          <div class="flex items-center gap-2 px-2">
             <button type="button" (click)="toggleMute()" aria-label="Silenciar" class="grid h-10 w-10 place-items-center bg-transparent text-retro-green">
               <span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span>
             </button>
@@ -149,9 +149,9 @@
       </nav>
     </header>
 
-    <div class="relative z-10 flex flex-1 flex-col lg:flex-row lg:items-stretch">
+    <div class="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row lg:items-stretch">
       <!-- escena TV -->
-      <div class="relative flex flex-1 items-start justify-center px-4 pt-2 lg:pr-0">
+      <div class="relative flex min-h-0 flex-1 items-start justify-center px-4 pt-2 lg:pr-0">
         <div class="relative w-[min(1000px,64vw,74vh)] max-w-full"
              style="aspect-ratio:650/758;filter:drop-shadow(0 20px 40px rgba(0,0,0,.7))">
           <img src="images/tv-setup.png" alt="Televisor retro con VHS y estantería" class="block h-full w-full object-contain">
@@ -182,7 +182,7 @@
       <!-- CONTROL: panel derecho en desktop, hoja inferior en móvil/tablet -->
       <aside class="z-20 flex shrink-0 flex-col gap-3 border-retro-purple/30 bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)] p-4
                     max-lg:sticky max-lg:bottom-0 max-lg:rounded-t-3xl max-lg:border-t-[3px]
-                    lg:m-4 lg:w-64 lg:rounded-3xl lg:border-[3px]">
+                    lg:m-4 lg:min-h-0 lg:w-64 lg:overflow-hidden lg:rounded-3xl lg:border-[3px]">
         <div class="flex items-center justify-between">
           <span class="font-pixel text-[9px] text-retro-green">CONTROL</span>
           <div class="flex items-center gap-1.5">
@@ -282,7 +282,7 @@
           <!-- controles de volumen / pantalla (compartidos) -->
           <div class="mt-auto flex items-center gap-2 border-t border-retro-green/20 pt-3">
             <button type="button" (click)="toggleMute()" aria-label="Silenciar"
-                    class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span></button>
+                    class="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span></button>
             <input type="range" min="0" max="1" step="0.05" [value]="muted() ? 0 : volume()" (input)="setVolume(+$any($event.target).value)" aria-label="Volumen"
                    class="h-1.5 min-w-0 flex-1 cursor-pointer accent-[color:var(--color-retro-green)]">
             <button type="button" (click)="goFullscreenCinema()" aria-label="Pantalla completa"
