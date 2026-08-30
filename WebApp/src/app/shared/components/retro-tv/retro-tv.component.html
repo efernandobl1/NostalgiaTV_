@@ -165,7 +165,8 @@
                     }
                   }
 
-                  <!-- tira de canales -->
+                  <!-- tira de canales (sólo en modo canales, no en series) -->
+                  @if (mode() !== 'series') {
                   <div class="flex flex-col gap-3">
                     <span class="font-pixel text-xs text-retro-gold">CANALES</span>
                     <div class="flex gap-4 overflow-x-auto pb-2">
@@ -180,6 +181,7 @@
                       } @empty { <span class="text-sm text-text-dim">Cargando canales…</span> }
                     </div>
                   </div>
+                  }
 
                   @if (tv.enabled() && !fullscreen()) {
                     <!-- leyenda D-pad (control remoto) — sólo en modo TV, no en fullscreen -->
