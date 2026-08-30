@@ -128,13 +128,12 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
           VPS_USER: ${{ secrets.VPS_USER }}
-          # Directorio del compose en la VPS (opcional; por defecto /opt/nostalgiatv).
-          DEPLOY_DIR: ${{ vars.VPS_DEPLOY_DIR }}
         run: |
           set -euo pipefail
 
-          dir="${DEPLOY_DIR:-/opt/nostalgiatv}"
-
+          # authorized_keys en la VPS usa un comando forzado
+          # (command="sudo /usr/local/sbin/deploy-nostalgiatv"), así que solo hace
+          # falta CONECTAR: el servidor ejecuta el script de despliegue por su cuenta.
           ssh \
             -i "$HOME/.ssh/deploy_key" \
             -p "$VPS_PORT" \
@@ -142,5 +141,4 @@ jobs:
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
             -o ConnectTimeout=15 \
-            "$VPS_USER@$VPS_HOST" \
-            "cd '$dir' && sudo docker compose -f docker-compose.production.yml pull && sudo docker compose -f docker-compose.production.yml up -d --remove-orphans && sudo docker image prune -f"
+            "$VPS_USER@$VPS_HOST"
