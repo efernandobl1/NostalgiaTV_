@@ -383,3 +383,8 @@ appsettings.Local.json
 .env.*
 !.env.example
 !.env.production.example
+
+# Artefactos locales de Claude Code / editor (no versionar)
+/.claude/settings.json
+/.claude/settings.local.json
+/CLAUDE.md
