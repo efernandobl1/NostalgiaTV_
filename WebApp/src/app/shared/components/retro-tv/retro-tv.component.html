@@ -116,10 +116,13 @@
           <!-- pantalla del televisor -->
           <!-- Pantalla del televisor. Tamaño/posición: left/top/width/height (% de la imagen).
                El texto usa unidades de container (cqw) para escalar con la pantalla y no desbordar. -->
+          <!-- Fondo transparente: se usa la pantalla pintada del propio televisor.
+               El video sí lleva fondo negro. Ajustá left/top/width/height/border-radius
+               para calzar exactamente con el vidrio del tubo. -->
           <div #stage class="@container absolute overflow-hidden"
-               style="left:29%;top:4.8%;width:39%;height:25%;border-radius:10%/14%;background:radial-gradient(ellipse at center,#1a2e2a,#0a0a1e)">
+               style="left:29%;top:4.8%;width:39%;height:25%;border-radius:10%/14%">
             @if (hasMedia()) {
-              <video #video class="h-full w-full object-cover" playsinline (click)="togglePlay()"></video>
+              <video #video class="h-full w-full bg-black object-cover" playsinline (click)="togglePlay()"></video>
             } @else {
               <div class="flex h-full w-full flex-col items-center justify-center gap-[1.5cqh] px-[6%] text-center">
                 <span class="font-pixel text-[4.5cqw] leading-none text-retro-red [text-shadow:0_0_18px_rgba(255,107,107,.8)]">NOSTALGIA TV</span>
