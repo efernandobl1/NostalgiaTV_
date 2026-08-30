@@ -2,10 +2,9 @@
 @if (tv.enabled()) {
   <!-- ══════════════════ MODO TV · 10 pies (overlay único auto-ocultable) ══════════════════ -->
   <div #stage class="relative min-h-dvh w-full overflow-hidden bg-black text-text">
-    <!-- media -->
-    @if (hasMedia()) {
-      <video #video class="absolute inset-0 h-full w-full bg-black object-contain" playsinline></video>
-    } @else {
+    <!-- media (el <video> se mantiene siempre en el DOM para reproducir al primer clic) -->
+    <video #video class="absolute inset-0 h-full w-full bg-black object-contain" [class.hidden]="!hasMedia()" playsinline></video>
+    @if (!hasMedia()) {
       <div class="absolute inset-0 flex items-center justify-center"
            style="background:radial-gradient(ellipse at 50% 30%,#1e2b4a,#0a0a14 70%)">
         <span class="font-crt text-4xl text-retro-green/70">Elegí un canal para sintonizar</span>
@@ -141,10 +140,9 @@
           <!-- pantalla del televisor -->
           <div #stage class="@container absolute overflow-hidden"
                style="left:31%;top:4.2%;width:38%;height:25.3%;border-radius:10%/14%;border:5px solid #0b0b16;box-shadow:inset 0 0 24px rgba(0,0,0,.7)">
-            @if (hasMedia()) {
-              <video #video class="h-full w-full bg-black object-cover" playsinline (click)="togglePlay()"></video>
-            } @else {
-              <div class="flex h-full w-full flex-col items-center justify-center gap-[1.5cqh] px-[6%] text-center">
+            <video #video class="h-full w-full bg-black object-cover" [class.hidden]="!hasMedia()" playsinline (click)="togglePlay()"></video>
+            @if (!hasMedia()) {
+              <div class="absolute inset-0 flex flex-col items-center justify-center gap-[1.5cqh] px-[6%] text-center">
                 <span class="font-pixel text-[4.5cqw] leading-none text-retro-red [text-shadow:0_0_18px_rgba(255,107,107,.8)]">NOSTALGIA TV</span>
                 <span class="font-crt text-[11cqw] leading-none text-retro-green">Elegí un canal</span>
                 <span class="font-crt text-[6cqw] leading-none text-retro-gold">EN VIVO · {{ clock() }}</span>
@@ -181,7 +179,7 @@
           </div>
         </div>
 
-        <div class="flex-col gap-3" [ngClass]="panelOpen() ? 'flex' : 'hidden lg:flex'">
+        <div class="flex-col gap-3 lg:min-h-0 lg:flex-1" [ngClass]="panelOpen() ? 'flex' : 'hidden lg:flex'">
           @if (mode() === 'series') {
             <!-- ── Panel de serie ── -->
             <button type="button" (click)="backToChannels()"
@@ -202,7 +200,7 @@
                 }
               </div>
             }
-            <div class="flex max-h-72 flex-col gap-2 overflow-y-auto">
+            <div class="flex flex-col gap-2 overflow-y-auto max-lg:max-h-72 lg:min-h-0 lg:flex-1">
               @for (ep of seasonEpisodes(); track ep.id) {
                 <button type="button" (click)="playEpisode(ep)" [disabled]="!ep.filePath"
                         class="flex items-center gap-2.5 rounded-lg border-2 p-2.5 text-left transition disabled:opacity-40"
@@ -241,7 +239,7 @@
               <span class="font-pixel text-[7px] tracking-widest text-retro-gold">CANALES</span>
               <span class="text-[11px] text-text-dim">Un clic sintoniza</span>
             </div>
-            <div class="flex max-h-56 flex-col gap-2 overflow-y-auto">
+            <div class="flex flex-col gap-2 overflow-y-auto max-lg:max-h-56 lg:min-h-0 lg:flex-1">
               @for (ch of channels(); track ch.id) {
                 <button type="button" (click)="tune(ch)"
                         class="flex items-center gap-2.5 rounded-lg border-2 p-2.5 text-left transition"
