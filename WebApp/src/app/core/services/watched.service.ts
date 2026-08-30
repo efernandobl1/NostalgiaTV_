@@ -1,19 +1,37 @@
 import { Injectable } from '@angular/core';
 
 export interface WatchProgress {
-    episodeId: number;
     currentSecond: number;
     completed: boolean;
     updatedAt?: number;
 }
 
+/** Identidad mínima de un episodio para calcular su clave estable. */
+export interface EpisodeRef {
+    id: number;
+    season: number;
+    episodeNumber: number;
+}
+
+/**
+ * Progreso de reproducción por serie, en localStorage.
+ *
+ * IMPORTANTE: la clave NO es el episodeId (que cambia al re-escanear archivos)
+ * sino "temporada+número" (estable entre escaneos). Si un episodio no tiene número
+ * parseado (0), cae a "id<episodeId>" como último recurso.
+ */
 @Injectable({ providedIn: 'root' })
 export class WatchedService {
     private key(seriesId: number): string {
         return `watched_${seriesId}`;
     }
 
-    getProgress(seriesId: number): Record<number, WatchProgress> {
+    /** Clave estable de un episodio dentro de su serie. */
+    private epKey(ep: EpisodeRef): string {
+        return ep.episodeNumber > 0 ? `s${ep.season}e${ep.episodeNumber}` : `id${ep.id}`;
+    }
+
+    getProgress(seriesId: number): Record<string, WatchProgress> {
         try {
             const raw = localStorage.getItem(this.key(seriesId));
             return raw ? JSON.parse(raw) : {};
@@ -22,18 +40,18 @@ export class WatchedService {
         }
     }
 
-    markProgress(seriesId: number, episodeId: number, currentSecond: number, completed: boolean): void {
+    markProgress(seriesId: number, ep: EpisodeRef, currentSecond: number, completed: boolean): void {
         const progress = this.getProgress(seriesId);
-        progress[episodeId] = { episodeId, currentSecond, completed, updatedAt: Date.now() };
+        progress[this.epKey(ep)] = { currentSecond, completed, updatedAt: Date.now() };
         localStorage.setItem(this.key(seriesId), JSON.stringify(progress));
     }
 
-    isWatched(seriesId: number, episodeId: number): boolean {
-        return this.getProgress(seriesId)[episodeId]?.completed ?? false;
+    isWatched(seriesId: number, ep: EpisodeRef): boolean {
+        return this.getProgress(seriesId)[this.epKey(ep)]?.completed ?? false;
     }
 
-    getLastProgress(seriesId: number, episodeId: number): number {
-        return this.getProgress(seriesId)[episodeId]?.currentSecond ?? 0;
+    getLastProgress(seriesId: number, ep: EpisodeRef): number {
+        return this.getProgress(seriesId)[this.epKey(ep)]?.currentSecond ?? 0;
     }
 
     resetSeries(seriesId: number): void {
@@ -41,13 +59,12 @@ export class WatchedService {
     }
 
     resetAll(): void {
-        const keys = Object.keys(localStorage).filter(k => k.startsWith('watched_'));
-        keys.forEach(k => localStorage.removeItem(k));
+        Object.keys(localStorage).filter(k => k.startsWith('watched_')).forEach(k => localStorage.removeItem(k));
     }
 
-    getNextUnwatched(seriesId: number, episodes: { id: number }[]): { id: number } | null {
+    getNextUnwatched<T extends EpisodeRef>(seriesId: number, episodes: T[]): T | null {
         const progress = this.getProgress(seriesId);
-        return episodes.find(e => !progress[e.id]?.completed) ?? episodes[0] ?? null;
+        return episodes.find(e => !progress[this.epKey(e)]?.completed) ?? episodes[0] ?? null;
     }
 
     /**
@@ -55,10 +72,10 @@ export class WatchedService {
      * completo, avanza al siguiente de la lista; si no hay progreso con marca de
      * tiempo, cae en el primero sin ver.
      */
-    getResume<T extends { id: number }>(seriesId: number, episodes: T[]): T | null {
+    getResume<T extends EpisodeRef>(seriesId: number, episodes: T[]): T | null {
         const progress = this.getProgress(seriesId);
         const withProgress = episodes
-            .map(e => ({ ep: e, p: progress[e.id] }))
+            .map(e => ({ ep: e, p: progress[this.epKey(e)] }))
             .filter((x): x is { ep: T; p: WatchProgress } => !!x.p && (x.p.updatedAt ?? 0) > 0)
             .sort((a, b) => (b.p.updatedAt ?? 0) - (a.p.updatedAt ?? 0));
 
@@ -68,6 +85,6 @@ export class WatchedService {
             const idx = episodes.findIndex(e => e.id === last.ep.id);
             return episodes[idx + 1] ?? last.ep;
         }
-        return (this.getNextUnwatched(seriesId, episodes) as T | null);
+        return this.getNextUnwatched(seriesId, episodes);
     }
 }

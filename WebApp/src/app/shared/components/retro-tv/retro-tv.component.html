@@ -423,7 +423,7 @@
       <div class="mx-auto flex min-h-0 w-full max-w-6xl flex-col gap-5 rounded-3xl border border-retro-purple/25 bg-[linear-gradient(160deg,#1b1d31,#12131f)] p-5 md:p-7">
         <div class="flex flex-wrap items-center gap-3">
           <button type="button" (click)="closeBrowser()" aria-label="Volver"
-                  class="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-retro-purple/25 bg-transparent text-text-mute transition hover:bg-white/10"><span class="material-symbols-outlined">arrow_back</span></button>
+                  class="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-text-mute transition hover:bg-white/10"><span class="material-symbols-outlined">arrow_back</span></button>
           <span class="font-crt text-3xl text-retro-green">Catálogo de series</span>
           <div class="relative ml-auto w-full max-w-xs">
             <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-dim">search</span>
@@ -431,27 +431,27 @@
                    class="h-11 w-full rounded-full border border-retro-purple/40 bg-surface-deep pl-10 pr-4 text-text placeholder:text-text-dim focus:border-retro-cyan focus:outline-none">
           </div>
           <select [ngModel]="selectedChannel()" (ngModelChange)="setChannelFilter($event)"
-                  class="h-11 shrink-0 rounded-full border border-retro-purple/40 bg-surface-deep px-4 text-sm text-text focus:border-retro-cyan focus:outline-none">
+                  class="h-11 shrink-0 rounded-full border border-retro-green/40 bg-surface-deep px-4 text-sm text-text focus:border-retro-cyan focus:outline-none">
             <option [ngValue]="null">Canal: Todos</option>
             @for (ch of channels(); track ch.id) { <option [ngValue]="ch.id">{{ ch.name }}</option> }
           </select>
         </div>
 
         <div class="flex flex-wrap gap-2">
-          <button type="button" (click)="setCategory(null)" class="rounded-full px-4 py-1.5 text-sm transition"
-                  [ngClass]="catalogTab() === 'todas' && selectedCategory() === null ? 'bg-retro-green text-ink' : 'bg-panel-2 text-text-mute hover:bg-white/10'">Todas</button>
+          <button type="button" (click)="setCategory(null)" class="rounded-full border px-4 py-1.5 text-sm transition"
+                  [ngClass]="catalogTab() === 'todas' && selectedCategory() === null ? 'border-retro-green bg-retro-green text-ink' : 'border-retro-green/40 bg-transparent text-text-mute hover:bg-white/10'">Todas</button>
           @for (cat of catalogCategories(); track cat.id) {
-            <button type="button" (click)="setCategory(cat.id)" class="rounded-full px-4 py-1.5 text-sm transition"
-                    [ngClass]="catalogTab() === 'todas' && selectedCategory() === cat.id ? 'bg-retro-green text-ink' : 'bg-panel-2 text-text-mute hover:bg-white/10'">{{ cat.name }}</button>
+            <button type="button" (click)="setCategory(cat.id)" class="rounded-full border px-4 py-1.5 text-sm transition"
+                    [ngClass]="catalogTab() === 'todas' && selectedCategory() === cat.id ? 'border-retro-green bg-retro-green text-ink' : 'border-retro-green/40 bg-transparent text-text-mute hover:bg-white/10'">{{ cat.name }}</button>
           }
-          <button type="button" (click)="setCatalogTab('continuar')" class="rounded-full px-4 py-1.5 text-sm transition"
-                  [ngClass]="catalogTab() === 'continuar' ? 'bg-retro-green text-ink' : 'bg-panel-2 text-text-mute hover:bg-white/10'">Continuar viendo</button>
+          <button type="button" (click)="setCatalogTab('continuar')" class="rounded-full border px-4 py-1.5 text-sm transition"
+                  [ngClass]="catalogTab() === 'continuar' ? 'border-retro-green bg-retro-green text-ink' : 'border-retro-green/40 bg-transparent text-text-mute hover:bg-white/10'">Continuar viendo</button>
         </div>
 
         <div class="grid min-h-0 grid-cols-2 gap-4 overflow-y-auto pb-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           @for (s of catalogSeries(); track s.id) {
             <button type="button" (click)="enterSeries(s)"
-                    class="flex flex-col gap-2 text-left transition focus-visible:outline-none">
+                    class="flex flex-col gap-2 border-0 bg-transparent p-0 text-left transition focus-visible:outline-none">
               <div class="flex aspect-[2/3] items-center justify-center overflow-hidden rounded-xl border border-retro-purple/20 bg-surface-deep transition hover:border-retro-cyan/60">
                 @if (s.logoPath) { <img [src]="logo(s.logoPath)" [alt]="s.name" class="object-contain" style="max-height:100%;width:auto"> }
                 @else { <span class="material-symbols-outlined text-5xl text-retro-green/50">movie</span> }
@@ -504,10 +504,10 @@
         </div>
 
         <div class="min-h-0 flex-1 overflow-auto pb-2">
-          <div class="grid gap-3" style="grid-template-columns:220px repeat(48,minmax(210px,1fr))">
+          <div class="grid gap-3" [style.grid-template-columns]="'220px repeat(' + visibleSlots().length + ',minmax(210px,1fr))'">
             <!-- esquina + cabecera de horas -->
             <div class="sticky left-0 top-0 z-20 bg-ink"></div>
-            @for (slot of guideSlots(); track slot) {
+            @for (slot of visibleSlots(); track slot) {
               <div [attr.data-guide-now]="slotIsNow(slot) ? '' : null"
                    class="sticky top-0 z-10 bg-ink pb-1 font-crt text-2xl"
                    [ngClass]="slotIsNow(slot) ? 'text-retro-green' : 'text-text-dim'">{{ slotLabel(slot) }}</div>
@@ -519,7 +519,7 @@
                 <span class="truncate font-crt text-2xl"
                       [ngClass]="current()?.id === row.channel.id ? 'text-retro-green' : 'text-retro-gold'">CH {{ ($index + 3).toString().padStart(2,'0') }} · {{ row.channel.name }}</span>
               </button>
-              @for (slot of guideSlots(); track slot) {
+              @for (slot of visibleSlots(); track slot) {
                 @let e = entryAt(row.entries, slot);
                 <button type="button" (click)="tuneFromGuide(row.channel)"
                         class="flex min-h-[86px] flex-col justify-center gap-1 rounded-2xl border-2 px-5 py-3 text-left transition"

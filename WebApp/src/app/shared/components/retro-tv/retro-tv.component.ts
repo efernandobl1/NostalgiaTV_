@@ -108,6 +108,19 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     return Array.from({ length: 48 }, (_, i) => start + i * 30 * 60_000);
   });
 
+  /** Slots visibles: recorta las franjas vacías del inicio y del final. */
+  readonly visibleSlots = computed<number[]>(() => {
+    const slots = this.guideSlots();
+    const rows = this.guideRows();
+    if (!rows.length) return slots;
+    const has = (slot: number) => rows.some(r => !!this.entryAt(r.entries, slot));
+    let start = slots.findIndex(has);
+    if (start < 0) return slots;
+    let end = slots.length - 1;
+    while (end > start && !has(slots[end])) end--;
+    return slots.slice(start, end + 1);
+  });
+
   /** Modo cine (video full-bleed + overlay): modo TV o pantalla completa. */
   readonly cinema = computed(() => this.tv.enabled() || this.fullscreen());
 
@@ -574,9 +587,8 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.http.get<Episode[]>(`${this.apiUrl}/api/v1/public/series/${serie.id}/episodes`).subscribe({
       next: eps => {
         this.episodes.set(eps);
-        const progress = this.watched.getProgress(serie.id);
         const map: Record<number, boolean> = {};
-        eps.forEach(e => (map[e.id] = progress[e.id]?.completed ?? false));
+        eps.forEach(e => (map[e.id] = this.watched.isWatched(serie.id, e)));
         this.watchedMap.set(map);
 
         const target = this.watched.getResume(serie.id, eps);
@@ -617,7 +629,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       this.selectedSeason.set(ep.season);
     setTimeout(() => {
       const seriesId = this.selectedSeries()?.id;
-      const resumeAt = seriesId ? this.watched.getLastProgress(seriesId, ep.id) : 0;
+      const resumeAt = seriesId ? this.watched.getLastProgress(seriesId, ep) : 0;
       this.playVideo(this.videoSrc(ep.filePath!), resumeAt);
       this.startProgress(ep);
       if (window.innerWidth < 1024) this.panelOpen.set(false);
@@ -641,7 +653,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
         const vid = this.videoRef?.nativeElement;
         if (!vid || !vid.duration) return;
         const pct = vid.currentTime / vid.duration;
-        this.watched.markProgress(seriesId, ep.id, vid.currentTime, pct >= 0.95);
+        this.watched.markProgress(seriesId, ep, vid.currentTime, pct >= 0.95);
         if (pct >= 0.95 && !marked) {
           marked = true;
           this.zone.run(() => this.watchedMap.update(m => ({ ...m, [ep.id]: true })));
