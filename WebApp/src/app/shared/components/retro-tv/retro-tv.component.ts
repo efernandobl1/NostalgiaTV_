@@ -31,7 +31,7 @@ interface Episode {
 interface Paged<T> { items: T[]; totalCount: number; totalPages: number; page: number; }
 interface GuideEntry {
   episodeTitle?: string; seriesName?: string; seriesLogoPath?: string;
-  startTime: string; endTime: string;
+  startTime: string; endTime: string; season?: number; episodeNumber?: number;
   isBumper?: boolean; bumperTitle?: string;
 }
 interface GuideRow { channel: Channel; entries: GuideEntry[]; }
@@ -88,7 +88,25 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   readonly showControls = signal(false);   // remapeo de teclas
   readonly guideRows = signal<GuideRow[]>([]);
   readonly guideLoading = signal(false);
+  readonly guideDay = signal<0 | 1>(0);    // 0 = hoy, 1 = mañana
   readonly capturingAction = signal<TvAction | null>(null);
+
+  // Barra de progreso del reproductor (series).
+  readonly videoTime = signal(0);
+  readonly videoDuration = signal(0);
+  readonly progressPct = computed(() => {
+    const d = this.videoDuration();
+    return d > 0 ? Math.min(100, (this.videoTime() / d) * 100) : 0;
+  });
+
+  /** Franjas de 30 min del día seleccionado (para la grilla de la guía). */
+  readonly guideSlots = computed<number[]>(() => {
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    base.setDate(base.getDate() + this.guideDay());
+    const start = base.getTime();
+    return Array.from({ length: 48 }, (_, i) => start + i * 30 * 60_000);
+  });
 
   /** Modo cine (video full-bleed + overlay): modo TV o pantalla completa. */
   readonly cinema = computed(() => this.tv.enabled() || this.fullscreen());
@@ -159,8 +177,16 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     }
     if (!this.cinema()) return;
     this.pokeOverlay();
-    if (this.browserOpen() || this.showFilters() || this.showEpisodes() ||
-        this.showGuide() || this.showControls()) return;
+    const anyOverlay = this.browserOpen() || this.showFilters() || this.showEpisodes() ||
+        this.showGuide() || this.showControls();
+    if (anyOverlay) {
+      if (e.key === 'Escape' || e.key === 'Backspace') {
+        e.preventDefault();
+        this.browserOpen.set(false); this.showFilters.set(false); this.showEpisodes.set(false);
+        this.showGuide.set(false); this.showControls.set(false);
+      }
+      return;
+    }
 
     const action = this.controls.actionFor(e.key) ?? (e.key === 'Backspace' ? 'hide' : undefined);
     if (!action) return;
@@ -199,6 +225,13 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       document.addEventListener('mousemove', this.activity, { passive: true });
       document.addEventListener('click', this.activity);
       document.addEventListener('touchstart', this.activity, { passive: true });
+      const v = this.videoRef?.nativeElement;
+      if (v) {
+        const dur = () => this.zone.run(() => this.videoDuration.set(isFinite(v.duration) ? v.duration : 0));
+        v.addEventListener('timeupdate', () => this.zone.run(() => this.videoTime.set(v.currentTime)));
+        v.addEventListener('loadedmetadata', dur);
+        v.addEventListener('durationchange', dur);
+      }
     });
     if (this.cinema()) this.pokeOverlay();
   }
@@ -366,6 +399,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   // ── Guía de programación ─────────────────────────────────────────────────
   openGuide(): void {
     if (this.mode() === 'series') return;   // series no tiene programación
+    this.guideDay.set(0);
     this.showGuide.set(true);
     const chs = this.channels();
     if (!chs.length) return;
@@ -400,7 +434,43 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   }
   guideTitle(e: GuideEntry): string {
     if (e.isBumper) return e.bumperTitle || 'Bumper';
-    return e.seriesName ? `${e.seriesName} — ${e.episodeTitle ?? ''}`.trim() : (e.episodeTitle ?? 'Programa');
+    return e.seriesName || e.episodeTitle || 'Programa';
+  }
+  /** Etiqueta "TxEy" del programa (para el subtítulo "Ahora"). */
+  guideEpTag(e: GuideEntry): string {
+    if (e.isBumper || !e.season || !e.episodeNumber) return '';
+    return `T${e.season}E${e.episodeNumber}`;
+  }
+
+  // ── Grilla de la guía (columnas de 30 min) ────────────────────────────────
+  slotLabel(ms: number): string {
+    return new Intl.DateTimeFormat('es-GT', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ms));
+  }
+  entryAt(entries: GuideEntry[], slotMs: number): GuideEntry | undefined {
+    return entries.find(e => new Date(e.startTime).getTime() <= slotMs && slotMs < new Date(e.endTime).getTime());
+  }
+  slotIsNow(slotMs: number): boolean {
+    if (this.guideDay() !== 0) return false;
+    const now = Date.now();
+    return slotMs <= now && now < slotMs + 30 * 60_000;
+  }
+  setGuideDay(day: 0 | 1): void {
+    this.guideDay.set(day);
+    setTimeout(() => document.querySelector('[data-guide-now]')?.scrollIntoView({ inline: 'center', block: 'nearest' }), 30);
+  }
+
+  // ── Barra de progreso ─────────────────────────────────────────────────────
+  fmtTime(sec: number): string {
+    if (!isFinite(sec) || sec < 0) sec = 0;
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.floor(sec % 60);
+    const mm = String(m).padStart(2, '0'), ss = String(s).padStart(2, '0');
+    return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  }
+  seekBar(e: MouseEvent): void {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const v = this.videoRef?.nativeElement;
+    if (!v || !v.duration) return;
+    v.currentTime = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * v.duration;
   }
 
   // ── Remapeo de teclas (tipo emulador) ────────────────────────────────────
