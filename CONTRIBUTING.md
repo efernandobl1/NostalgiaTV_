@@ -96,9 +96,9 @@ git rebase develop      # o: git merge develop
   (incluyendo el tag `:latest`) y **despliega automáticamente en la VPS** por SSH
   (job `deploy` de `.github/workflows/deploy.yml`): baja las imágenes y reinicia el
   stack (`docker compose pull` + `up -d`).
-- Requiere en GitHub, entorno **`production`**: secrets `VPS_SSH_PRIVATE_KEY` y
-  `VPS_KNOWN_HOSTS`, y variables `VPS_HOST`, `VPS_PORT`, `VPS_USER` (opcional
-  `VPS_DEPLOY_DIR`, por defecto `/opt/nostalgiatv`).
+- Requiere en GitHub, entorno **`production`**: secrets `VPS_SSH_PRIVATE_KEY`,
+  `VPS_KNOWN_HOSTS`, `VPS_HOST`, `VPS_PORT` y `VPS_USER` (opcional, como *variable*,
+  `VPS_DEPLOY_DIR`; por defecto `/opt/nostalgiatv`).
 - Despliegue **manual** en la VPS (fallback si hiciera falta):
 
   ```bash
