@@ -504,37 +504,36 @@
         </div>
 
         <div class="min-h-0 flex-1 overflow-auto pb-2">
-          <div class="grid gap-3" [style.grid-template-columns]="'220px repeat(' + visibleSlots().length + ',minmax(210px,1fr))'">
-            <!-- esquina + cabecera de horas -->
-            <div class="sticky left-0 top-0 z-20 bg-ink"></div>
-            @for (slot of visibleSlots(); track slot) {
-              <div [attr.data-guide-now]="slotIsNow(slot) ? '' : null"
-                   class="sticky top-0 z-10 bg-ink pb-1 font-crt text-2xl"
-                   [ngClass]="slotIsNow(slot) ? 'text-retro-green' : 'text-text-dim'">{{ slotLabel(slot) }}</div>
-            }
-            <!-- filas de canales -->
-            @for (row of guideRows(); track row.channel.id) {
-              <button type="button" (click)="tuneFromGuide(row.channel)"
-                      class="sticky left-0 z-10 flex flex-col justify-center gap-1 bg-ink pr-3 text-left">
-                <span class="truncate font-crt text-2xl"
-                      [ngClass]="current()?.id === row.channel.id ? 'text-retro-green' : 'text-retro-gold'">CH {{ ($index + 3).toString().padStart(2,'0') }} · {{ row.channel.name }}</span>
-              </button>
-              @for (slot of visibleSlots(); track slot) {
-                @let e = entryAt(row.entries, slot);
+          <div class="flex flex-col gap-3">
+            @for (row of guideDayRows(); track row.channel.id) {
+              <div class="flex items-stretch gap-3 rounded-2xl border border-retro-purple/25 bg-[linear-gradient(145deg,#1b1d31,#141629)] p-3">
                 <button type="button" (click)="tuneFromGuide(row.channel)"
-                        class="flex min-h-[86px] flex-col justify-center gap-1 rounded-2xl border-2 px-5 py-3 text-left transition"
-                        [ngClass]="slotIsNow(slot) ? 'border-retro-gold bg-[linear-gradient(145deg,#2d2d44,#20223a)] shadow-[0_0_22px_rgba(255,217,61,.2)]'
-                          : 'border-retro-purple/15 bg-[linear-gradient(145deg,#1b1d31,#141629)] hover:border-retro-cyan/40'">
-                  @if (e) {
-                    <span class="truncate text-2xl" [ngClass]="slotIsNow(slot) ? 'text-text' : 'text-text-mute'">{{ guideTitle(e) }}</span>
-                    @if (slotIsNow(slot)) {
-                      <span class="truncate text-lg text-retro-green">Ahora@if (guideEpTag(e)) { <span> · {{ guideEpTag(e) }}</span> }</span>
-                    }
+                        class="flex w-44 shrink-0 flex-col justify-center gap-1 text-left md:w-56">
+                  <span class="truncate font-crt text-2xl"
+                        [ngClass]="current()?.id === row.channel.id ? 'text-retro-green' : 'text-retro-gold'">CH {{ ($index + 3).toString().padStart(2,'0') }} · {{ row.channel.name }}</span>
+                  @if (current()?.id === row.channel.id) {
+                    <span class="inline-flex items-center gap-1 text-xs text-retro-red"><span class="h-2 w-2 animate-pulse rounded-full bg-retro-red"></span>EN VIVO</span>
                   }
                 </button>
-              }
+                <div class="flex min-w-0 flex-1 gap-3 overflow-x-auto pb-1">
+                  @for (e of row.entries; track $index) {
+                    <button type="button" (click)="tuneFromGuide(row.channel)"
+                            [attr.data-guide-now]="guideIsNow(e) ? '' : null"
+                            class="flex w-56 shrink-0 flex-col gap-1 rounded-2xl border-2 px-5 py-3 text-left transition"
+                            [ngClass]="guideIsNow(e) ? 'border-retro-gold bg-[linear-gradient(145deg,#2d2d44,#20223a)] shadow-[0_0_22px_rgba(255,217,61,.2)]'
+                              : (guideIsPast(e) ? 'border-retro-purple/10 bg-[linear-gradient(145deg,#161829,#111220)] opacity-55' : 'border-retro-purple/15 bg-[linear-gradient(145deg,#1b1d31,#141629)] hover:border-retro-cyan/40')">
+                      <span class="font-crt text-xl" [ngClass]="guideIsNow(e) ? 'text-retro-green' : 'text-retro-gold'">
+                        {{ guideTime(e) }}@if (guideIsNow(e)) { <span class="ml-2 rounded bg-retro-red px-1.5 py-0.5 align-middle font-pixel text-[8px] text-ink">AHORA</span> }
+                      </span>
+                      <span class="truncate text-lg text-text">{{ e.isBumper ? (e.bumperTitle || 'Bumper') : (e.seriesName || guideTitle(e)) }}</span>
+                      @if (e.episodeTitle && !e.isBumper) { <span class="line-clamp-2 text-sm text-text-mute">{{ e.episodeTitle }}</span> }
+                      @if (guideEpTag(e)) { <span class="text-xs text-retro-cyan">{{ guideEpTag(e) }}</span> }
+                    </button>
+                  } @empty { <span class="px-3 py-4 text-sm text-text-dim">Sin programación.</span> }
+                </div>
+              </div>
             } @empty {
-              <span class="col-span-full py-10 text-center text-text-dim">{{ guideLoading() ? 'Cargando guía…' : 'Sin canales.' }}</span>
+              <span class="py-10 text-center text-text-dim">{{ guideLoading() ? 'Cargando guía…' : 'Sin canales.' }}</span>
             }
           </div>
         </div>

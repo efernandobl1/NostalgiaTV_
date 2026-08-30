@@ -108,17 +108,19 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     return Array.from({ length: 48 }, (_, i) => start + i * 30 * 60_000);
   });
 
-  /** Slots visibles: recorta las franjas vacías del inicio y del final. */
-  readonly visibleSlots = computed<number[]>(() => {
-    const slots = this.guideSlots();
-    const rows = this.guideRows();
-    if (!rows.length) return slots;
-    const has = (slot: number) => rows.some(r => !!this.entryAt(r.entries, slot));
-    let start = slots.findIndex(has);
-    if (start < 0) return slots;
-    let end = slots.length - 1;
-    while (end > start && !has(slots[end])) end--;
-    return slots.slice(start, end + 1);
+  /** Entradas reales de cada canal para el día seleccionado (sin huecos de franjas). */
+  readonly guideDayRows = computed<GuideRow[]>(() => {
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    dayStart.setDate(dayStart.getDate() + this.guideDay());
+    const s = dayStart.getTime();
+    const e = s + 24 * 3600_000;
+    return this.guideRows().map(row => ({
+      channel: row.channel,
+      entries: row.entries
+        .filter(en => new Date(en.startTime).getTime() < e && new Date(en.endTime).getTime() > s)
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
+    }));
   });
 
   /** Modo cine (video full-bleed + overlay): modo TV o pantalla completa. */
