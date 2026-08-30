@@ -131,9 +131,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          # authorized_keys en la VPS usa un comando forzado
-          # (command="sudo /usr/local/sbin/deploy-nostalgiatv"), así que solo hace
-          # falta CONECTAR: el servidor ejecuta el script de despliegue por su cuenta.
+          # La clave 'deploy' en la VPS usa un comando forzado (dispatcher) que lee
+          # el proyecto desde SSH_ORIGINAL_COMMAND. Mandamos "nostalgiatv" para que
+          # el servidor ejecute su script de despliegue. (Si en su lugar la clave
+          # tuviera un comando fijo, este argumento es ignorado: sigue funcionando.)
           ssh \
             -i "$HOME/.ssh/deploy_key" \
             -p "$VPS_PORT" \
@@ -141,4 +142,5 @@ jobs:
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
             -o ConnectTimeout=15 \
-            "$VPS_USER@$VPS_HOST"
+            "$VPS_USER@$VPS_HOST" \
+            nostalgiatv
