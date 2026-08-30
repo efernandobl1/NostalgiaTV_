@@ -337,67 +337,135 @@
     </div>
   }
 
-  <!-- ══════════════════ Episodios (cine, serie) ══════════════════ -->
+  <!-- ══════════════════ Serie y episodios (pantalla TV) ══════════════════ -->
   @if (showEpisodes()) {
-    <div class="fixed inset-0 z-[70] flex flex-col overflow-hidden bg-ink/95 p-4 backdrop-blur-sm md:p-8" (click)="toggleEpisodes()">
-      <div class="mx-auto flex min-h-0 w-full max-w-3xl flex-col gap-4" (click)="$event.stopPropagation()">
-        <div class="flex items-center gap-3">
-          <span class="font-crt text-3xl text-retro-green">{{ selectedSeries()?.name }} · Episodios</span>
-          <button type="button" (click)="toggleEpisodes()" aria-label="Cerrar" class="ml-auto grid h-11 w-11 place-items-center rounded-full border border-retro-green/40 bg-transparent text-text-mute transition hover:bg-white/10"><span class="material-symbols-outlined">close</span></button>
-        </div>
-        @if (seasons().length > 1) {
-          <div class="flex flex-wrap gap-2">
-            @for (s of seasons(); track s) {
-              <button type="button" (click)="selectSeason(s)" class="rounded-lg px-3 py-1 font-crt text-lg transition"
-                      [ngClass]="selectedSeason() === s ? 'bg-retro-green text-ink' : 'border border-text-mute/30 bg-transparent text-text-mute hover:bg-white/10'">T{{ s }}</button>
+    <div class="fixed inset-0 z-[70] flex flex-col overflow-auto bg-[rgba(6,6,14,.97)] p-6 backdrop-blur-md md:p-10" (click)="toggleEpisodes()">
+      <div class="mx-auto flex w-full max-w-[1400px] flex-col gap-8" (click)="$event.stopPropagation()">
+        <!-- cabecera: póster + metadata + acciones -->
+        <div class="flex flex-col gap-8 rounded-3xl border border-retro-purple/25 bg-[linear-gradient(160deg,#241f45,#141629)] p-6 md:flex-row md:p-10">
+          <div class="flex aspect-[2/3] w-48 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-retro-purple/25 bg-surface-deep md:w-56">
+            @if (selectedSeries()?.logoPath) {
+              <img [src]="logo(selectedSeries()!.logoPath)" [alt]="selectedSeries()?.name" class="object-contain" style="max-height:100%;width:auto">
+            } @else {
+              <span class="material-symbols-outlined text-6xl text-retro-green/50">movie</span>
             }
           </div>
-        }
-        <div class="grid min-h-0 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
-          @for (ep of seasonEpisodes(); track ep.id) {
+          <div class="flex min-w-0 flex-1 flex-col gap-4">
+            <div class="flex items-start gap-3">
+              <div class="flex min-w-0 flex-col gap-2">
+                <span class="font-pixel text-xs text-retro-red">SERIE</span>
+                <span class="font-crt text-5xl leading-none text-retro-green [text-shadow:0_0_18px_rgba(142,232,159,.35)] md:text-6xl">{{ selectedSeries()?.name }}</span>
+              </div>
+              <button type="button" (click)="toggleEpisodes()" aria-label="Cerrar"
+                      class="ml-auto grid h-11 w-11 shrink-0 place-items-center rounded-full border border-retro-green/40 bg-transparent text-text-mute transition hover:bg-white/10"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <span class="text-lg text-text-dim md:text-xl">
+              {{ serieYears() }}@if (seasons().length) { <span> · {{ seasons().length }} temporadas</span> }@if (regularCount()) { <span> · {{ regularCount() }} episodios</span> }@if (selectedSeries()?.rating) { <span> · ★ {{ selectedSeries()?.rating }}</span> }
+            </span>
+            @if (selectedSeries()?.description) {
+              <p class="max-w-3xl text-base text-text md:text-lg">{{ selectedSeries()?.description }}</p>
+            }
+            <div class="flex flex-wrap items-center gap-3 pt-1">
+              <button type="button" (click)="continueSeries()"
+                      class="inline-flex h-14 items-center gap-3 rounded-2xl border-2 border-retro-gold bg-retro-purple px-7 text-xl font-semibold text-white transition hover:brightness-110">
+                <span class="material-symbols-outlined text-3xl">play_arrow</span>{{ resumeTag() ? 'Continuar ' + resumeTag() : 'Reproducir' }}
+              </button>
+              <button type="button" (click)="playRandom()"
+                      class="inline-flex h-14 items-center gap-3 rounded-2xl border-2 border-retro-green/50 bg-transparent px-7 text-xl text-retro-green transition hover:bg-retro-green/10">
+                <span class="material-symbols-outlined text-3xl">shuffle</span>Aleatorio
+              </button>
+              <button type="button" (click)="resetWatched()"
+                      class="inline-flex h-14 items-center gap-3 rounded-2xl border-2 border-text-mute/35 bg-transparent px-7 text-xl text-text-mute transition hover:bg-white/10">
+                <span class="material-symbols-outlined text-3xl">restart_alt</span>Reiniciar vistos
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- temporadas -->
+        <div class="flex flex-wrap gap-2">
+          @for (s of seasons(); track s) {
+            <button type="button" (click)="selectSeason(s)" class="rounded-xl px-5 py-2 font-crt text-2xl transition"
+                    [ngClass]="!showSpecials() && selectedSeason() === s ? 'bg-retro-green text-ink' : 'border border-text-mute/30 bg-transparent text-text-mute hover:bg-white/10'">T{{ s }}</button>
+          }
+          @if (hasSpecials()) {
+            <button type="button" (click)="selectSpecials()" class="rounded-xl px-5 py-2 font-crt text-2xl transition"
+                    [ngClass]="showSpecials() ? 'bg-retro-green text-ink' : 'border border-text-mute/30 bg-transparent text-text-mute hover:bg-white/10'">Especiales</button>
+          }
+        </div>
+
+        <!-- episodios -->
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          @for (ep of displayedEpisodes(); track ep.id) {
             <button type="button" (click)="playEpisode(ep)" [disabled]="!ep.filePath"
-                    class="flex items-center gap-3 rounded-lg border-2 bg-panel p-3 text-left transition disabled:opacity-40"
-                    [ngClass]="currentEpisode()?.id === ep.id ? 'border-retro-green' : 'border-retro-purple/20 hover:border-retro-cyan/60'">
-              <span class="font-pixel text-[9px] text-text-dim">{{ ep.episodeNumber.toString().padStart(2,'0') }}</span>
-              <span class="flex-1 truncate" [ngClass]="watchedMap()[ep.id] ? 'text-text-dim' : 'text-text'">{{ ep.title }}</span>
-              @if (watchedMap()[ep.id]) { <span class="material-symbols-outlined text-retro-green">check_circle</span> }
+                    class="relative flex min-h-[128px] flex-col justify-end gap-1 rounded-2xl border-2 bg-[linear-gradient(160deg,#20223a,#141629)] p-5 text-left transition disabled:opacity-40"
+                    [ngClass]="currentEpisode()?.id === ep.id ? 'border-retro-gold' : 'border-retro-purple/20 hover:border-retro-cyan/55'">
+              @if (watchedMap()[ep.id]) { <span class="material-symbols-outlined absolute left-4 top-4 text-2xl text-retro-green">check_circle</span> }
+              <span class="font-pixel text-[10px] text-retro-gold">{{ showSpecials() ? ep.episodeTypeName : ('T' + ep.season + ' · E' + ep.episodeNumber.toString().padStart(2,'0')) }}</span>
+              <span class="text-xl text-text">{{ ep.title }}</span>
             </button>
           } @empty { <span class="col-span-full py-6 text-center text-text-dim">Sin episodios.</span> }
+        </div>
+
+        <div class="flex flex-wrap items-center gap-x-8 gap-y-2 text-lg text-text-dim">
+          <span class="flex items-center gap-2"><span class="rounded-lg bg-retro-green px-3 py-0.5 font-crt text-2xl text-ink">OK</span>Reproducir</span>
+          <span class="flex items-center gap-2"><span class="rounded-lg bg-retro-red px-3 py-0.5 font-crt text-2xl text-ink">Esc</span>Volver</span>
         </div>
       </div>
     </div>
   }
 
-  <!-- ══════════════════ Explorador de series ══════════════════ -->
+  <!-- ══════════════════ Catálogo de series ══════════════════ -->
   @if (browserOpen()) {
-    <div class="fixed inset-0 z-[70] flex flex-col overflow-hidden bg-ink/95 p-4 backdrop-blur-sm md:p-8" role="dialog" aria-label="Explorar series">
-      <div class="mx-auto flex min-h-0 w-full max-w-6xl flex-col gap-4">
-        <div class="flex items-center gap-3">
-          <span class="font-crt text-3xl text-retro-green">Series</span>
-          <div class="relative ml-auto w-full max-w-sm">
+    <div class="fixed inset-0 z-[70] flex flex-col overflow-hidden bg-[rgba(6,6,14,.97)] p-4 backdrop-blur-md md:p-8" role="dialog" aria-label="Catálogo de series">
+      <div class="mx-auto flex min-h-0 w-full max-w-6xl flex-col gap-5 rounded-3xl border border-retro-purple/25 bg-[linear-gradient(160deg,#1b1d31,#12131f)] p-5 md:p-7">
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="button" (click)="closeBrowser()" aria-label="Volver"
+                  class="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-retro-purple/25 bg-transparent text-text-mute transition hover:bg-white/10"><span class="material-symbols-outlined">arrow_back</span></button>
+          <span class="font-crt text-3xl text-retro-green">Catálogo de series</span>
+          <div class="relative ml-auto w-full max-w-xs">
             <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-dim">search</span>
             <input type="text" [ngModel]="seriesQuery()" (ngModelChange)="onSeriesQuery($event)" placeholder="Buscar serie…"
-                   class="h-11 w-full rounded-full border border-retro-purple/40 bg-panel pl-10 pr-4 text-text placeholder:text-text-dim focus:border-retro-cyan focus:outline-none">
+                   class="h-11 w-full rounded-full border border-retro-purple/40 bg-surface-deep pl-10 pr-4 text-text placeholder:text-text-dim focus:border-retro-cyan focus:outline-none">
           </div>
-          <button type="button" (click)="closeBrowser()" aria-label="Cerrar"
-                  class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-retro-green/40 bg-transparent text-text-mute transition hover:bg-white/10">
-            <span class="material-symbols-outlined">close</span>
-          </button>
         </div>
-        <div class="grid min-h-0 grid-cols-2 gap-3 overflow-y-auto pb-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          @for (s of seriesList(); track s.id) {
+
+        <div class="flex flex-wrap gap-2">
+          <button type="button" (click)="setCatalogTab('todas')" class="rounded-full px-4 py-1.5 text-sm transition"
+                  [ngClass]="catalogTab() === 'todas' ? 'bg-retro-green text-ink' : 'bg-panel-2 text-text-mute hover:bg-white/10'">Todas</button>
+          <button type="button" (click)="setCatalogTab('continuar')" class="rounded-full px-4 py-1.5 text-sm transition"
+                  [ngClass]="catalogTab() === 'continuar' ? 'bg-retro-green text-ink' : 'bg-panel-2 text-text-mute hover:bg-white/10'">Continuar viendo</button>
+        </div>
+
+        <div class="grid min-h-0 grid-cols-2 gap-4 overflow-y-auto pb-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          @for (s of catalogSeries(); track s.id) {
             <button type="button" (click)="enterSeries(s)"
-                    class="flex flex-col overflow-hidden rounded-xl border border-retro-purple/20 bg-panel text-left transition hover:border-retro-cyan/60 focus-visible:border-retro-cyan focus-visible:outline-none">
-              <div class="flex aspect-[2/3] items-center justify-center overflow-hidden bg-surface-deep">
-                @if (s.logoPath) { <img [src]="logo(s.logoPath)" [alt]="s.name" class="h-full w-full object-cover"> }
-                @else { <span class="material-symbols-outlined text-4xl text-retro-green/50">movie</span> }
+                    class="flex flex-col gap-2 text-left transition focus-visible:outline-none">
+              <div class="flex aspect-[2/3] items-center justify-center overflow-hidden rounded-xl border border-retro-purple/20 bg-surface-deep transition hover:border-retro-cyan/60">
+                @if (s.logoPath) { <img [src]="logo(s.logoPath)" [alt]="s.name" class="object-contain" style="max-height:100%;width:auto"> }
+                @else { <span class="material-symbols-outlined text-5xl text-retro-green/50">movie</span> }
               </div>
-              <span class="truncate p-2 text-sm text-text">{{ s.name }}</span>
+              <span class="truncate text-sm text-text">{{ s.name }}</span>
+              @if (hasResume(s.id)) {
+                <span class="text-xs text-retro-red">Continuar viendo</span>
+              } @else if (s.seasons) {
+                <span class="text-xs text-text-dim">{{ s.seasons }} temporada{{ s.seasons > 1 ? 's' : '' }}</span>
+              }
             </button>
           } @empty {
             <span class="col-span-full py-10 text-center text-text-dim">{{ seriesLoading() ? 'Cargando…' : 'Sin resultados.' }}</span>
           }
         </div>
+
+        @if (catalogTab() === 'todas' && seriesTotalPages() > 1) {
+          <div class="flex items-center justify-center gap-4">
+            <button type="button" (click)="goCatalogPage(-1)" [disabled]="seriesPage() <= 1" aria-label="Anterior"
+                    class="grid h-10 w-10 place-items-center rounded-xl border border-retro-purple/30 bg-transparent text-text-mute transition hover:bg-white/10 disabled:opacity-30"><span class="material-symbols-outlined">chevron_left</span></button>
+            <span class="text-sm text-text-dim">Página {{ seriesPage() }} de {{ seriesTotalPages() }}</span>
+            <button type="button" (click)="goCatalogPage(1)" [disabled]="seriesPage() >= seriesTotalPages()" aria-label="Siguiente"
+                    class="grid h-10 w-10 place-items-center rounded-xl border border-retro-purple/30 bg-transparent text-text-mute transition hover:bg-white/10 disabled:opacity-30"><span class="material-symbols-outlined">chevron_right</span></button>
+          </div>
+        }
       </div>
     </div>
   }

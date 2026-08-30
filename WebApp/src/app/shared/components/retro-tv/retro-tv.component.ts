@@ -124,6 +124,9 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   readonly seriesList = signal<SeriesResponse[]>([]);
   readonly seriesLoading = signal(false);
   readonly selectedSeries = signal<SeriesResponse | null>(null);
+  readonly catalogTab = signal<'todas' | 'continuar'>('todas');
+  readonly seriesPage = signal(1);
+  readonly seriesTotalPages = signal(1);
   readonly episodes = signal<Episode[]>([]);
   readonly selectedSeason = signal<number | null>(null);
   readonly currentEpisode = signal<Episode | null>(null);
@@ -138,6 +141,28 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.episodes()
       .filter(e => e.episodeTypeName?.toLowerCase() === 'regular' && e.season === this.selectedSeason())
       .sort((a, b) => a.episodeNumber - b.episodeNumber));
+
+  // ── Detalle de serie (pantalla TV) ────────────────────────────────────────
+  readonly showSpecials = signal(false);
+  readonly hasSpecials = computed(() =>
+    this.episodes().some(e => e.episodeTypeName && e.episodeTypeName.toLowerCase() !== 'regular'));
+  readonly specialEpisodes = computed(() =>
+    this.episodes().filter(e => e.episodeTypeName && e.episodeTypeName.toLowerCase() !== 'regular'));
+  readonly displayedEpisodes = computed(() =>
+    this.showSpecials() ? this.specialEpisodes() : this.seasonEpisodes());
+  readonly regularCount = computed(() =>
+    this.episodes().filter(e => e.episodeTypeName?.toLowerCase() === 'regular').length);
+  readonly serieYears = computed(() => {
+    const s = this.selectedSeries();
+    if (!s) return '';
+    const y = (d?: string) => (d ? new Date(d).getFullYear() : null);
+    const a = y(s.startDate), b = y(s.endDate);
+    return a && b && b !== a ? `${a} – ${b}` : (a ? `${a}` : '');
+  });
+  readonly resumeTag = computed(() => {
+    const ep = this.currentEpisode();
+    return ep && ep.episodeTypeName?.toLowerCase() === 'regular' ? `T${ep.season}E${ep.episodeNumber}` : '';
+  });
 
   readonly hasMedia = computed(() => !!this.state() || !!this.currentEpisode());
 
@@ -483,17 +508,36 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   openBrowser(): void { this.browserOpen.set(true); if (!this.seriesList().length) this.searchSeries(); }
   closeBrowser(): void { this.browserOpen.set(false); }
   toggleEpisodes(): void { this.showEpisodes.update(v => !v); }
-  onSeriesQuery(value: string): void { this.seriesQuery.set(value); this.searchSeries(); }
+  onSeriesQuery(value: string): void { this.seriesQuery.set(value); this.seriesPage.set(1); this.searchSeries(); }
 
   searchSeries(): void {
     this.seriesLoading.set(true);
-    const params: Record<string, string | number> = { pageSize: 24 };
+    const params: Record<string, string | number> = { pageSize: 18, page: this.seriesPage() };
     if (this.seriesQuery()) params['name'] = this.seriesQuery();
     this.http.get<Paged<SeriesResponse>>(`${this.apiUrl}/api/v1/public/series`, { params }).subscribe({
-      next: r => { this.seriesList.set(r.items); this.seriesLoading.set(false); },
+      next: r => {
+        this.seriesList.set(r.items);
+        this.seriesTotalPages.set(r.totalPages || 1);
+        this.seriesLoading.set(false);
+      },
       error: () => this.seriesLoading.set(false),
     });
   }
+  goCatalogPage(delta: number): void {
+    const next = this.seriesPage() + delta;
+    if (next < 1 || next > this.seriesTotalPages()) return;
+    this.seriesPage.set(next);
+    this.searchSeries();
+  }
+  setCatalogTab(tab: 'todas' | 'continuar'): void { this.catalogTab.set(tab); }
+
+  /** Series (de la página actual) con progreso sin terminar. */
+  hasResume(seriesId: number): boolean {
+    return Object.values(this.watched.getProgress(seriesId))
+      .some(x => x.currentSecond > 0 && !x.completed);
+  }
+  readonly catalogSeries = computed(() =>
+    this.catalogTab() === 'continuar' ? this.seriesList().filter(s => this.hasResume(s.id)) : this.seriesList());
 
   enterSeries(serie: SeriesResponse): void {
     this.stopProgress();
@@ -518,11 +562,29 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
         else this.selectedSeason.set(this.seasons()[0] ?? null);
         const toPlay = target?.filePath ? target : this.seasonEpisodes()[0] ?? eps.find(e => e.filePath);
         if (toPlay) this.playEpisode(toPlay as Episode);
+        // En modo TV/cine, al entrar mostramos la pantalla de detalle de la serie.
+        if (this.cinema()) this.showEpisodes.set(true);
       },
     });
   }
 
-  selectSeason(season: number): void { this.selectedSeason.set(season); }
+  selectSeason(season: number): void { this.showSpecials.set(false); this.selectedSeason.set(season); }
+  selectSpecials(): void { this.showSpecials.set(true); }
+
+  /** "Continuar": reproduce el episodio de resume (o el siguiente sin ver). */
+  continueSeries(): void {
+    const ep = this.currentEpisode() ?? (this.watched.getNextUnwatched(
+      this.selectedSeries()?.id ?? 0, this.episodes()) as Episode | null);
+    if (ep?.filePath) this.playEpisode(ep);
+  }
+
+  /** "Reiniciar vistos": borra el progreso guardado de la serie. */
+  resetWatched(): void {
+    const id = this.selectedSeries()?.id;
+    if (!id) return;
+    this.watched.resetSeries(id);
+    this.watchedMap.set({});
+  }
 
   playEpisode(ep: Episode): void {
     if (!ep.filePath) return;
