@@ -1,7 +1,10 @@
-<!-- Experiencia pública retro TV — Tailwind v4, sin SCSS de componente. -->
+<!-- Experiencia pública retro TV — Tailwind v4, sin SCSS de componente.
+     Todo va dentro de #stage: es el elemento que entra a fullscreen, así los
+     overlays (filtros/series) se ven también en pantalla completa. -->
+<div #stage class="relative bg-ink">
 @if (tv.enabled()) {
   <!-- ══════════════════ MODO TV · 10 pies (overlay único auto-ocultable) ══════════════════ -->
-  <div #stage class="relative min-h-dvh w-full overflow-hidden bg-black text-text">
+  <div class="relative min-h-dvh w-full overflow-hidden bg-black text-text">
     <!-- media (el <video> se mantiene siempre en el DOM para reproducir al primer clic) -->
     <video #video class="absolute inset-0 h-full w-full bg-black object-contain" [class.hidden]="!hasMedia()" playsinline></video>
     @if (!hasMedia()) {
@@ -39,16 +42,22 @@
             <span class="material-symbols-outlined text-3xl">tune</span>
           </button>
           <div class="flex items-center gap-2 rounded-xl border border-text-mute/40 px-2">
-            <button type="button" (click)="toggleMute()" aria-label="Silenciar" class="grid h-10 w-10 place-items-center text-retro-green">
+            <button type="button" (click)="toggleMute()" aria-label="Silenciar" class="grid h-10 w-10 place-items-center bg-transparent text-retro-green">
               <span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span>
             </button>
             <input type="range" min="0" max="1" step="0.05" [value]="muted() ? 0 : volume()" (input)="setVolume(+$any($event.target).value)" aria-label="Volumen"
                    class="w-24 cursor-pointer accent-[color:var(--color-retro-green)]">
           </div>
-          <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
-                  class="grid h-12 w-12 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
-            <span class="material-symbols-outlined text-3xl">{{ fullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</span>
-          </button>
+          @if (fullscreen()) {
+            <button type="button" (click)="openBrowser()" title="Series"
+                    class="grid h-12 w-12 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-cyan transition hover:bg-white/10">
+              <span class="material-symbols-outlined text-3xl">grid_view</span>
+            </button>
+            <button type="button" (click)="toggleFullscreen()" aria-label="Salir de pantalla completa"
+                    class="grid h-12 w-12 place-items-center rounded-xl border border-text-mute/40 bg-transparent text-retro-green transition hover:bg-white/10">
+              <span class="material-symbols-outlined text-3xl">fullscreen_exit</span>
+            </button>
+          }
           @if (!fullscreen()) {
             <button type="button" (click)="exitTvMode()"
                     class="inline-flex h-12 items-center gap-2 rounded-xl border-2 border-retro-gold bg-retro-gold/15 px-5 text-lg font-semibold text-retro-gold transition hover:bg-retro-gold/25">
@@ -91,10 +100,9 @@
           <div class="flex gap-4 overflow-x-auto pb-2">
             @for (ch of channels(); track ch.id) {
               <button type="button" (click)="tune(ch); focusedIndex.set($index)"
-                      class="flex h-28 w-56 shrink-0 flex-col justify-between rounded-2xl border-[3px] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] p-4 text-left ring-retro-cyan transition"
-                      [class.ring-2]="$index === focusedIndex() && current()?.id !== ch.id"
-                      [class.scale-105]="$index === focusedIndex()"
-                      [ngClass]="current()?.id === ch.id ? 'border-retro-green' : 'border-[#2a2a44] hover:border-retro-cyan/55'">
+                      class="flex h-28 w-56 shrink-0 flex-col justify-between rounded-2xl border-[3px] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] p-4 text-left transition"
+                      [ngClass]="current()?.id === ch.id ? 'border-retro-green'
+                        : ($index === focusedIndex() ? 'border-retro-cyan' : 'border-[#2a2a44] hover:border-retro-cyan/55')">
                 <span class="font-pixel text-xs text-text-dim">{{ ($index + 3).toString().padStart(2,'0') }}</span>
                 <span class="truncate font-crt text-2xl leading-none text-retro-green">{{ ch.name }}</span>
               </button>
@@ -111,12 +119,6 @@
             <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">▼</span>Imagen</span>
             <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">Esc</span>Ocultar tira</span>
           </div>
-        } @else {
-          <!-- en fullscreen (mouse): botón clickeable para ver series -->
-          <button type="button" (click)="openBrowser()"
-                  class="inline-flex w-fit items-center gap-2 rounded-full border border-retro-cyan/50 bg-transparent px-5 py-2 text-base text-retro-cyan transition hover:bg-retro-cyan/10">
-            <span class="material-symbols-outlined text-xl">grid_view</span>Series
-          </button>
         }
       </div>
     </div>
@@ -154,7 +156,7 @@
              style="aspect-ratio:650/758;filter:drop-shadow(0 20px 40px rgba(0,0,0,.7))">
           <img src="images/tv-setup.png" alt="Televisor retro con VHS y estantería" class="block h-full w-full object-contain">
           <!-- pantalla del televisor -->
-          <div #stage class="@container absolute overflow-hidden"
+          <div class="@container absolute overflow-hidden"
                style="left:31%;top:4.2%;width:38%;height:25.3%;border-radius:10%/14%;border:5px solid #0b0b16;box-shadow:inset 0 0 24px rgba(0,0,0,.7)">
             <video #video class="h-full w-full bg-black object-cover" [class.hidden]="!hasMedia()" playsinline (click)="onVideoClick()"></video>
             @if (!hasMedia()) {
@@ -282,7 +284,7 @@
             <button type="button" (click)="toggleMute()" aria-label="Silenciar"
                     class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span></button>
             <input type="range" min="0" max="1" step="0.05" [value]="muted() ? 0 : volume()" (input)="setVolume(+$any($event.target).value)" aria-label="Volumen"
-                   class="h-1.5 flex-1 cursor-pointer accent-[color:var(--color-retro-green)]">
+                   class="h-1.5 min-w-0 flex-1 cursor-pointer accent-[color:var(--color-retro-green)]">
             <button type="button" (click)="goFullscreenCinema()" aria-label="Pantalla completa"
                     class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-retro-green/35 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">fullscreen</span></button>
           </div>
@@ -358,3 +360,4 @@
     </div>
   </div>
 }
+</div>
