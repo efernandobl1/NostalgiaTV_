@@ -1,0 +1,28 @@
+@layer theme, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source("./");
+
+/* Paleta retro NostalgiaTV expuesta como tokens de Tailwind v4.
+   Se usan con utilidades como text-retro-green, bg-retro-purple, etc. */
+@theme {
+  --font-sans: "Outfit", sans-serif;
+  --font-pixel: "Press Start 2P", cursive;
+  --font-crt: "VT323", monospace;
+
+  --color-retro-purple: #8b7dff;
+  --color-retro-purple-deep: #5a4fe0;
+  --color-retro-red: #ff6b6b;
+  --color-retro-green: #8ee89f;
+  --color-retro-cyan: #5be8e0;
+  --color-retro-gold: #ffd93d;
+
+  --color-ink: #08080f;
+  --color-panel: #191b2e;
+  --color-panel-2: #20223a;
+  --color-surface-deep: #141629;
+  --color-line: rgba(139, 125, 255, 0.22);
+  --color-text: #e6e8f2;
+  --color-text-dim: #aab0c6;
+  --color-text-mute: #c3c8db;
+}

@@ -1,0 +1,10 @@
+strictPeerDependencies: true
+strictDepBuilds: true
+minimumReleaseAge: 1440
+
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
+  core-js: true
