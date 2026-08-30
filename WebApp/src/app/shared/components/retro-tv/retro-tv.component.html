@@ -116,8 +116,8 @@
           <!-- pantalla del televisor -->
           <!-- Pantalla del televisor. Tamaño/posición: left/top/width/height (% de la imagen).
                El texto usa unidades de container (cqw) para escalar con la pantalla y no desbordar. -->
-          <div #stage class="@container absolute overflow-hidden rounded-[6px]"
-               style="left:30%;top:6%;width:37.5%;height:22%;background:radial-gradient(ellipse at center,#1a2e2a,#0a0a1e)">
+          <div #stage class="@container absolute overflow-hidden"
+               style="left:29%;top:4.8%;width:39%;height:25%;border-radius:10%/14%;background:radial-gradient(ellipse at center,#1a2e2a,#0a0a1e)">
             @if (hasMedia()) {
               <video #video class="h-full w-full object-cover" playsinline (click)="togglePlay()"></video>
             } @else {
