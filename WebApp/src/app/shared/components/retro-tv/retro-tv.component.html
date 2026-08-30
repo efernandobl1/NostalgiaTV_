@@ -1,269 +1,217 @@
-<nav class="public-actions" aria-label="Opciones de visualización">
-  <div class="brand-group">
-    <a class="brand" routerLink="/" aria-label="Nostalgia TV, inicio"><span class="brand-led"></span>NOSTALGIA TV</a>
-    @if (tvMode.enabled()) {
-      <span class="tv-channel">CH {{ currentChannel()?.id ?? '--' }}</span>
-    }
-  </div>
-  <div class="public-actions__buttons">
-    @if (tvMode.suggested() && !tvMode.enabled()) {
-      <button class="tv-suggestion" type="button" (click)="tvMode.setEnabled(true)">
-        Este navegador parece una TV · Activar modo TV
-      </button>
-      <button class="dismiss-suggestion" type="button" (click)="tvMode.dismissSuggestion()" aria-label="Cerrar sugerencia">×</button>
-    }
-    @if (tvMode.enabled()) {
-      <button class="tv-clock" type="button" (click)="tvMode.setEnabled(false)" aria-label="Salir del modo TV">{{ currentClock() }}</button>
-    } @else {
-      <button class="header-action search-action" type="button" (click)="openSeriesDialog()"><mat-icon>search</mat-icon><span>Buscar serie o canal</span></button>
-      <button class="header-action accessibility-action" type="button" (click)="tvMode.setEnabled(true)"><mat-icon>accessibility_new</mat-icon><span>Accesibilidad</span></button>
-      <button class="header-action login-action" type="button" (click)="goToLogin()"><mat-icon>person</mat-icon><span>Entrar</span></button>
-    }
-  </div>
-</nav>
-
-<div class="tv-setup">
-  <div class="tv-container" #tvContainer>
-    <div
-    class="screen-overlay"
-    #screenOverlay
-    (click)="onScreenClick()"
-  >
-      <div class="static-noise" [class.hidden]="!showStatic()"></div>
-
-      @if (currentState() || currentEpisode()) {
-        <video
-          #videoPlayer
-          class="video-player"
-          [class.video-player--cover]="!isFullscreen()"
-          [class.video-player--contain]="isFullscreen()"
-          [muted]="isMuted()"
-          playsinline
-          [attr.autoplay]="isIOSDevice ? null : ''"
-          disablePictureInPicture
-          controlslist="nodownload nofullscreen noremoteplayback"
-        >
-          <source>
-        </video>
-
-        @if (isIOSDevice && iosNeedsPlay()) {
-          <button class="ios-play-btn" (click)="iosStartPlay()" aria-label="Reproducir">
-            <mat-icon>play_circle</mat-icon>
-          </button>
-        }
-
-        <div
-          class="video-filters"
-          #videoFilters
-          [class.curvature]="activeFilters().crtCurvature"
-          [class.vignette]="activeFilters().vignette"
-          [style.--scanline-opacity]="activeFilters().scanlineIntensity / 100"
-          [style.--scanline-size.px]="activeFilters().scanlineDensity"
-        ></div>
-
-        @if (settings().alwaysShowFilters) {
-          <button
-            class="overlay-filter-btn"
-            [class.visible]="true"
-            (click)="toggleFiltersPanel()"
-          >
-            <mat-icon>tune</mat-icon>
-          </button>
-        }
-
-        @if (mode() === 'channels' && currentChannel()?.logoPath) {
-          <div class="corner-logo" [class.visible]="showOverlay()" [class.corner-logo--fs]="isFullscreen()">
-            <img [src]="apiUrl + currentChannel()!.logoPath" [alt]="'Logo del canal ' + currentChannel()!.name" class="corner-logo-img" />
-          </div>
-        }
-
-        @if (mode() === 'series' && selectedSeries()?.logoPath) {
-          <div class="corner-logo" [class.visible]="showOverlay()" [class.corner-logo--fs]="isFullscreen()">
-            <img [src]="apiUrl + selectedSeries()!.logoPath" [alt]="'Logo de la serie ' + selectedSeries()!.name" class="corner-logo-img" />
-          </div>
-        }
-
-        <div
-          class="series-overlay"
-          [class.visible]="showOverlay()"
-          [class.series-overlay--fs]="isFullscreen()"
-          [class.series-overlay--with-controls]="!!currentEpisode() || !!currentState()"
-        >
-          <div class="overlay-info">
-            @if (mode() === 'channels') {
-              @if (currentState()!.isBumper) {
-                <span class="overlay-series">BUMPER</span>
-              } @else {
-                <span class="overlay-series">{{ currentState()!.seriesName }}</span>
-                <span class="overlay-episode">{{ currentState()!.episodeTitle }}</span>
-              }
-            } @else {
-              <span class="overlay-series">{{ selectedSeries()!.name }}</span>
-              <span class="overlay-episode">{{ currentEpisode()!.title }}</span>
-            }
-          </div>
-        </div>
-
-        @if (mode() === 'series' && currentEpisode()) {
-          <app-retro-tv-controls
-            [visible]="showOverlay()"
-            [isPaused]="isPaused()"
-            [isMuted]="isMuted()"
-            [volumeLevel]="volumeLevel()"
-            [progressPercent]="progressPercent()"
-            [currentTimeFormatted]="currentTimeFormatted()"
-            [durationFormatted]="durationFormatted()"
-            [audioTracks]="audioTracks()"
-            [currentAudioTrack]="currentAudioTrack()"
-            [isFullscreen]="isFullscreen()"
-            [showProgress]="false"
-            (playPause)="togglePlayPause()"
-            (toggleMute)="toggleMute()"
-            (setVolume)="setVolume($event)"
-            (toggleFullscreen)="toggleFullscreen()"
-          />
-        }
-
-        @if (mode() === 'channels' && currentChannel()) {
-          <app-retro-tv-controls
-            [visible]="showOverlay()"
-            [isPaused]="isPaused()"
-            [isMuted]="isMuted()"
-            [volumeLevel]="volumeLevel()"
-            [progressPercent]="progressPercent()"
-            [currentTimeFormatted]="currentTimeFormatted()"
-            [durationFormatted]="durationFormatted()"
-            [audioTracks]="audioTracks()"
-            [currentAudioTrack]="currentAudioTrack()"
-            [isFullscreen]="isFullscreen()"
-            [showProgress]="false"
-            (playPause)="togglePlayPause()"
-            (toggleMute)="toggleMute()"
-            (setVolume)="setVolume($event)"
-            (toggleFullscreen)="toggleFullscreen()"
-          />
-        }
-
-        @if (showFiltersPanel()) {
-          <app-retro-tv-filters-panel
-            [isFullscreen]="isFullscreen()"
-            [activeFilters]="activeFilters()"
-            [filtersEnabled]="settings().alwaysShowFilters"
-            (updateFilter)="updateFilter($event.key, $event.value)"
-            (filtersEnabledChange)="updateSetting('alwaysShowFilters', $event)"
-            (close)="closeFiltersPanel()"
-          />
-        }
-
+<!-- Experiencia pública retro TV — Tailwind v4, sin SCSS. -->
+@if (tv.enabled()) {
+  <!-- ══════════════════ MODO TV · 10 pies (botones en pantalla) ══════════════════ -->
+  <div class="relative min-h-dvh w-full overflow-hidden text-text"
+       style="background:radial-gradient(ellipse at 50% 30%,#1e2b4a,#0a0a14 70%)">
+    <!-- media -->
+    <div #stage class="absolute inset-0">
+      @if (state()) {
+        <video #video class="h-full w-full object-contain bg-black" playsinline
+               (click)="togglePlay()"></video>
       } @else {
-        <div class="tv-content">
-          <div class="series-logo">NOSTALGIA TV</div>
-          <div class="episode-title">Selecciona un canal</div>
+        <div class="flex h-full w-full items-center justify-center"
+             style="background:repeating-linear-gradient(0deg,#12122a 0 2px,#1a1a3a 2px 4px)">
+          <span class="font-crt text-4xl text-retro-green/70">Elegí un canal para sintonizar</span>
         </div>
       }
-
-      <div class="crt-scanlines" [class.hidden]="!activeFilters().scanlineAnimation"></div>
     </div>
+    <!-- degradado inferior para legibilidad -->
+    <div class="pointer-events-none absolute inset-0"
+         style="background:linear-gradient(0deg,rgba(6,6,14,.96) 0%,rgba(6,6,14,.2) 45%,transparent 65%)"></div>
+    <div class="pointer-events-none absolute inset-0 opacity-40"
+         style="background:repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0 1px,transparent 1px 3px)"></div>
+
+    <!-- barra superior (marca + controles en pantalla, sin control remoto) -->
+    <div class="absolute left-14 right-14 top-9 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-5">
+        <span class="flex items-center gap-3 font-pixel text-base text-retro-red">
+          <span class="h-3.5 w-3.5 rounded-full bg-retro-red shadow-[0_0_16px_rgba(255,107,107,.9)]"></span>
+          NOSTALGIA TV
+        </span>
+        @if (channelNumber()) {
+          <span class="rounded-lg border-2 border-retro-gold/50 px-4 py-0.5 font-crt text-3xl text-retro-gold">CH {{ channelNumber() }}</span>
+        }
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="mr-2 font-crt text-3xl text-text-mute">{{ clock() }}</span>
+        <button type="button" (click)="toggleMute()" aria-label="Silenciar"
+                class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/40 text-retro-green transition hover:bg-white/5">
+          <span class="material-symbols-outlined text-3xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span>
+        </button>
+        <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
+                class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/40 text-retro-green transition hover:bg-white/5">
+          <span class="material-symbols-outlined text-3xl">{{ fullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</span>
+        </button>
+        <button type="button" (click)="exitTvMode()"
+                class="inline-flex h-14 items-center gap-2 rounded-xl border-2 border-retro-gold bg-retro-gold/15 px-6 text-xl font-semibold text-retro-gold transition hover:bg-retro-gold/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-retro-gold">
+          <span class="material-symbols-outlined text-3xl">tv_off</span>
+          Salir del modo TV
+        </button>
+      </div>
+    </div>
+
+    <!-- info del programa en emisión -->
+    @if (state(); as s) {
+      <div class="absolute bottom-[360px] left-14 flex max-w-4xl flex-col gap-3">
+        <span class="font-pixel text-base text-retro-red">{{ current()?.name }}</span>
+        <span class="font-crt text-7xl leading-none text-retro-green">{{ s.seriesName }}</span>
+        <span class="text-3xl text-text">{{ s.isBumper ? s.bumperTitle : s.episodeTitle }}</span>
+      </div>
+    }
+
+    <!-- tira de canales -->
+    <div class="absolute bottom-40 left-14 right-14 flex flex-col gap-4">
+      <span class="font-pixel text-sm text-retro-gold">CANALES</span>
+      <div class="flex gap-5 overflow-x-auto pb-2">
+        @for (ch of channels(); track ch.id) {
+          <button type="button" (click)="tune(ch)"
+                  class="flex h-40 w-72 shrink-0 flex-col justify-between rounded-2xl border-[3px] p-4 text-left transition"
+                  [ngClass]="current()?.id === ch.id
+                    ? 'border-retro-red bg-[linear-gradient(145deg,#2f3050,#1a1a2e)] shadow-[0_0_30px_rgba(255,107,107,.35)]'
+                    : 'border-[#2a2a44] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] hover:border-retro-gold focus-visible:border-retro-gold focus-visible:outline-none'">
+            <span class="font-pixel text-sm text-retro-gold">{{ ($index + 3).toString().padStart(2,'0') }}</span>
+            <span class="font-crt text-3xl leading-none text-retro-green">{{ ch.name }}</span>
+          </button>
+        }
+      </div>
+    </div>
+
   </div>
-</div>
 
-<div class="tv-light"></div>
-<div class="floor"></div>
-<div class="scene-overlay" [class.no-glow]="!settings().tvGlowEffect"></div>
-<div class="kid-section">
-  <img src="images/kid-watching.png" alt="Kid watching TV" class="kid-image" />
-</div>
+} @else {
+  <!-- ══════════════════ MODO NORMAL (desktop / tablet / móvil) ══════════════════ -->
+  <div class="relative flex min-h-dvh w-full flex-col overflow-hidden text-text"
+       style="background:linear-gradient(135deg,#1a1a2e 0%,#0f0f1e 50%,#16213e 100%)">
 
-@if (mode() === 'channels') {
-  <app-retro-tv-remote-channels
-    [channels]="channels()"
-    [currentChannelId]="currentChannel()?.id ?? null"
-    [channelEras]="channelEras()"
-    [selectedEraId]="selectedEraId()"
-    [isMuted]="isMuted()"
-    [hasChannel]="!!currentChannel()"
-    [apiUrl]="apiUrl"
-    [currentSeriesName]="currentState()?.seriesName ?? ''"
-    [currentEpisodeTitle]="currentState()?.episodeTitle ?? ''"
-    (selectChannel)="selectChannel($event)"
-    (selectEra)="selectEra($event)"
-    (toggleMute)="toggleMute()"
-    (volumeDown)="volumeDown()"
-    (volumeUp)="volumeUp()"
-    (toggleFullscreen)="toggleFullscreen()"
-    (openSeries)="openSeriesDialog()"
-    (openSchedule)="openScheduleDialog()"
-    (openFilters)="toggleFiltersPanel()"
-    (goToLogin)="goToLogin()"
-    (openSettings)="openSettingsDialog()"
-  />
-}
+    <!-- barra superior pública -->
+    <header class="z-20 flex h-16 shrink-0 items-center justify-between px-5 md:px-7">
+      <span class="flex items-center gap-3 font-pixel text-[11px] text-retro-red">
+        <span class="h-2.5 w-2.5 rounded-full bg-retro-red shadow-[0_0_10px_rgba(255,107,107,.9)]"></span>
+        NOSTALGIA TV
+      </span>
+      <nav class="flex items-center gap-2">
+        <button type="button" disabled
+                class="hidden h-10 items-center gap-2 rounded-full border border-retro-green/35 bg-retro-green/[.06] px-3.5 text-sm text-retro-green/60 sm:inline-flex">
+          <span class="material-symbols-outlined text-[19px]">search</span>Buscar
+        </button>
+        <button type="button" (click)="enterTvMode()"
+                class="inline-flex h-10 items-center gap-2 rounded-full border border-retro-gold/45 bg-retro-gold/[.08] px-3.5 text-sm text-retro-gold transition hover:bg-retro-gold/15">
+          <span class="material-symbols-outlined text-[19px]">tv</span><span class="hidden sm:inline">Modo TV</span>
+        </button>
+        <button type="button" (click)="goToLogin()"
+                class="inline-flex h-10 items-center gap-2 rounded-full border border-retro-purple bg-retro-purple/[.16] px-4 text-sm text-[#c9c2ff] transition hover:bg-retro-purple/25">
+          <span class="material-symbols-outlined text-[19px]">person</span><span class="hidden sm:inline">Entrar</span>
+        </button>
+      </nav>
+    </header>
 
-@if (mode() === 'series') {
-  <app-retro-tv-remote-series
-    [selectedSeries]="selectedSeries()"
-    [seasonGroups]="seasonGroups()"
-    [selectedSeason]="selectedSeason()"
-    [selectedEpisodeType]="selectedEpisodeType()"
-    [episodesForView]="episodesForView()"
-    [currentEpisodeId]="currentEpisode()?.id ?? null"
-    [watchedMap]="watchedMap()"
-    [hasSpecials]="hasSpecials()"
-    [hasMovies]="hasMovies()"
-    [isMuted]="isMuted()"
-    [settings]="settings()"
-    [apiUrl]="apiUrl"
-    (selectSeason)="selectSeason($event)"
-    (selectEpisodeType)="selectEpisodeType($event)"
-    (playEpisode)="playEpisode($event)"
-    (onRandomToggle)="onRandomToggleChange($event)"
-    (resetSeries)="resetSeriesProgress()"
-    (toggleMute)="toggleMute()"
-    (volumeDown)="volumeDown()"
-    (volumeUp)="volumeUp()"
-    (toggleFullscreen)="toggleFullscreen()"
-    (openFilters)="toggleFiltersPanel()"
-    (backToChannels)="backToChannels()"
-    (goToLogin)="goToLogin()"
-    (openSettings)="openSettingsDialog()"
-    (changeSeries)="openSeriesDialog()"
-  />
-}
+    <!-- cuerpo: escena TV + panel de control -->
+    <div class="relative z-10 flex flex-1 flex-col lg:flex-row lg:items-stretch">
+      <!-- escena TV -->
+      <div class="relative flex flex-1 items-start justify-center px-4 pt-2 lg:pr-0">
+        <div class="relative w-[min(560px,86vw)] max-w-full"
+             style="aspect-ratio:650/758;filter:drop-shadow(0 20px 40px rgba(0,0,0,.7))">
+          <img src="images/tv-setup.png" alt="Televisor retro con VHS y estantería"
+               class="block h-full w-full object-contain">
+          <!-- pantalla del televisor -->
+          <div #stage class="absolute overflow-hidden rounded-lg"
+               style="left:25.8%;top:2.9%;width:48.4%;height:27.2%;background:radial-gradient(ellipse at center,#1a2e2a,#0a0a1e)">
+            @if (state(); as s) {
+              <video #video class="h-full w-full object-cover" playsinline (click)="togglePlay()"></video>
+            } @else {
+              <div class="flex h-full w-full flex-col items-center justify-center gap-1.5 px-2 text-center">
+                <span class="font-pixel text-[13px] text-retro-red [text-shadow:0_0_18px_rgba(255,107,107,.8)]">NOSTALGIA TV</span>
+                <span class="font-crt text-2xl leading-none text-retro-green">Elegí un canal</span>
+                <span class="font-crt text-lg text-retro-gold">EN VIVO · {{ clock() }}</span>
+              </div>
+            }
+            <div class="pointer-events-none absolute inset-0"
+                 style="background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px)"></div>
+          </div>
+        </div>
+        <img src="images/kid-watching.png" alt="Niño viendo televisión"
+             class="pointer-events-none absolute bottom-0 left-1/2 z-[5] hidden h-[220px] -translate-x-[62%] brightness-90 lg:block"
+             style="filter:drop-shadow(0 -10px 20px rgba(0,0,0,.5))">
+      </div>
 
-<app-retro-tv-dialogs
-  [showSeriesDialog]="showSeriesDialog()"
-  [allSeries]="allSeries()"
-  [seriesLoading]="seriesLoading()"
-  [seriesPage]="seriesPage()"
-  [seriesTotalPages]="seriesTotalPages()"
-  [seriesSearchName]="seriesSearchName()"
-  [channels]="channels()"
-  [apiUrl]="apiUrl"
-  [showSettingsDialog]="showSettingsDialog()"
-  [settings]="settings()"
-  [showScheduleDialog]="showScheduleDialog()"
-  [scheduleEntries]="scheduleEntries()"
-  [scheduleLoading]="scheduleLoading()"
-  [scheduleChannelId]="currentChannel()?.id ?? null"
-  [showBumpers]="settings().showBumpers"
-  (closeSeriesDialog)="closeSeriesDialog()"
-  (enterSeries)="enterSeriesMode($event)"
-  (searchChange)="onSeriesSearchChange($event)"
-  (channelFilterChange)="onChannelFilterChange($event)"
-  (nextPage)="seriesNextPage()"
-  (prevPage)="seriesPrevPage()"
-  (closeSettingsDialog)="closeSettingsDialog()"
-  (updateSetting)="updateSetting($event.key, $event.value)"
-  (resetAll)="resetAllProgress()"
-  (closeScheduleDialog)="closeScheduleDialog()"
-  (scheduleChannelChange)="onScheduleChannelChange($event)"
-/>
+      <!-- CONTROL: panel derecho en desktop, hoja inferior en móvil/tablet -->
+      <aside class="z-20 flex shrink-0 flex-col gap-2.5 border-retro-purple/30 bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)] p-4
+                    max-lg:sticky max-lg:bottom-0 max-lg:rounded-t-3xl max-lg:border-t-[3px]
+                    lg:m-4 lg:w-64 lg:rounded-3xl lg:border-[3px]">
+        <div class="flex items-center justify-between">
+          <span class="font-pixel text-[9px] text-retro-green">CONTROL</span>
+          <button type="button" (click)="togglePanel()"
+                  class="inline-flex items-center gap-1 rounded-full border border-retro-green/40 px-2.5 py-1 text-xs text-retro-green lg:hidden">
+            <span class="material-symbols-outlined text-lg">{{ panelOpen() ? 'expand_more' : 'expand_less' }}</span>
+            {{ panelOpen() ? 'Ocultar' : 'Ver' }}
+          </button>
+        </div>
 
-@if (tvMode.enabled()) {
-  <div class="tv-help" aria-hidden="true">
-    <span><kbd>OK</kbd>Sintonizar</span>
-    <span><kbd>▲</kbd>Guía y series</span>
-    <span><kbd>▼</kbd>Ajustes de imagen</span>
-    <span><kbd>←</kbd>Ocultar tira</span>
+        <div class="flex-col gap-2.5" [ngClass]="panelOpen() ? 'flex' : 'hidden lg:flex'">
+          <!-- EN EMISIÓN -->
+          @if (state(); as s) {
+            <div class="flex flex-col gap-1.5 rounded-xl border-2 border-retro-red/45 bg-[rgba(10,14,26,.75)] p-2.5">
+              <span class="font-pixel text-[7px] tracking-widest text-retro-red">EN EMISIÓN · CH {{ channelNumber() }}</span>
+              <div class="flex items-center gap-2">
+                <span class="grid h-8 w-8 place-items-center rounded-md border border-retro-red/35 bg-[#12162a] text-retro-red">
+                  <span class="material-symbols-outlined text-xl">sensors</span>
+                </span>
+                <div class="min-w-0">
+                  <div class="font-crt text-xl leading-none text-retro-green">{{ current()?.name }}</div>
+                  <div class="truncate text-xs text-text-dim">{{ s.isBumper ? s.bumperTitle : s.seriesName }}</div>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- CANALES: un clic sintoniza -->
+          <div class="mt-0.5 flex items-baseline justify-between">
+            <span class="font-pixel text-[7px] tracking-widest text-retro-gold">CANALES</span>
+            <span class="text-[11px] text-text-dim">Un clic sintoniza</span>
+          </div>
+          <div class="flex max-h-64 flex-col gap-2 overflow-y-auto">
+            @for (ch of channels(); track ch.id) {
+              <button type="button" (click)="tune(ch)"
+                      class="flex items-center gap-2.5 rounded-lg border-2 p-2.5 text-left transition"
+                      [ngClass]="current()?.id === ch.id
+                        ? 'border-retro-red bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)] shadow-[0_0_20px_rgba(255,107,107,.35)]'
+                        : 'border-[#1a1a2e] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] hover:border-retro-cyan/55 focus-visible:border-retro-cyan/55 focus-visible:outline-none'">
+                <span class="font-pixel text-[8px] text-retro-gold">{{ ($index + 3).toString().padStart(2,'0') }}</span>
+                <span class="flex-1 truncate font-crt text-lg text-retro-green">{{ ch.name }}</span>
+                <span class="material-symbols-outlined text-lg" [ngClass]="current()?.id === ch.id ? 'text-retro-red' : 'text-retro-cyan'">
+                  {{ current()?.id === ch.id ? 'sensors' : 'play_arrow' }}
+                </span>
+              </button>
+            } @empty {
+              <span class="px-1 py-2 text-xs text-text-dim">Cargando canales…</span>
+            }
+          </div>
+
+          <!-- controles de volumen / pantalla -->
+          <div class="mt-auto flex items-center justify-between gap-1.5 border-t border-retro-green/20 pt-2.5">
+            <button type="button" (click)="toggleMute()" aria-label="Silenciar"
+                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 text-retro-green transition hover:bg-white/5">
+              <span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span>
+            </button>
+            <button type="button" (click)="changeVolume(-0.1)" aria-label="Bajar volumen"
+                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 text-retro-green transition hover:bg-white/5">
+              <span class="material-symbols-outlined text-2xl">volume_down</span>
+            </button>
+            <button type="button" (click)="changeVolume(0.1)" aria-label="Subir volumen"
+                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 text-retro-green transition hover:bg-white/5">
+              <span class="material-symbols-outlined text-2xl">volume_up</span>
+            </button>
+            <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
+                    class="grid h-11 w-11 place-items-center rounded-lg border border-retro-green/35 text-retro-green transition hover:bg-white/5">
+              <span class="material-symbols-outlined text-2xl">fullscreen</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- estante inferior decorativo (solo desktop) -->
+    <div class="pointer-events-none absolute inset-x-0 bottom-0 -z-0 hidden h-[22%] lg:block"
+         style="background:linear-gradient(180deg,transparent,rgba(42,42,62,.85)),repeating-linear-gradient(90deg,#2a2a3e 0 2px,#32325a 2px 4px);box-shadow:inset 0 30px 50px rgba(0,0,0,.5)"></div>
   </div>
 }

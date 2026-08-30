@@ -5,6 +5,5 @@ import { RetroTvComponent } from "../../../shared/components/retro-tv/retro-tv.c
   selector: 'app-home',
   imports: [RetroTvComponent],
   templateUrl: './home.component.html',
-  styleUrl: './home.component.scss',
 })
 export class HomeComponent {}
