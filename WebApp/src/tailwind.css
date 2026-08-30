@@ -1,7 +1,26 @@
-@layer theme, components, utilities;
+@layer theme, base, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities) source("./");
+
+/* No cargamos el preflight de Tailwind, así que los controles nativos muestran
+   fondo/borde gris del navegador. Reset mínimo (en capa base, para que cualquier
+   utilidad bg-*/border-* lo sobreescriba) acotado a la superficie retro pública. */
+@layer base {
+  .retro-surface button,
+  .retro-surface select {
+    background-color: transparent;
+    border: 0;
+    color: inherit;
+  }
+}
+
+/* Scrollbar retro dentro de la experiencia pública (el blanco por defecto resalta). */
+.retro-surface { scrollbar-width: thin; scrollbar-color: rgba(139, 125, 255, 0.45) rgba(255, 255, 255, 0.05); }
+.retro-surface *::-webkit-scrollbar { width: 10px; height: 10px; }
+.retro-surface *::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 8px; }
+.retro-surface *::-webkit-scrollbar-thumb { background: rgba(139, 125, 255, 0.45); border-radius: 8px; }
+.retro-surface *::-webkit-scrollbar-thumb:hover { background: rgba(139, 125, 255, 0.65); }
 
 /* Paleta retro NostalgiaTV expuesta como tokens de Tailwind v4.
    Se usan con utilidades como text-retro-green, bg-retro-purple, etc. */

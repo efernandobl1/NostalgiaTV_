@@ -259,10 +259,22 @@ namespace Infrastructure.Services
 
         private static (string Title, int EpisodeNumber) ParseFileName(string fileName)
         {
-            var match = System.Text.RegularExpressions.Regex.Match(
+            // Patrón "1x10", "S01E10", "1E10" en cualquier parte del nombre
+            // (p. ej. "Los Simpsons 1x10 - La correría"): tomamos el nº de episodio.
+            var se = System.Text.RegularExpressions.Regex.Match(
+                fileName, @"[Ss]?\d{1,2}[xXeE](\d{1,3})");
+            if (se.Success && int.TryParse(se.Groups[1].Value, out var epNum))
+            {
+                var title = fileName.Substring(se.Index + se.Length)
+                    .Trim().Trim('-', '–', '—', '.', '_', ' ').Trim();
+                return (string.IsNullOrWhiteSpace(title) ? fileName : title.Replace("_", " "), epNum);
+            }
+
+            // Patrón "10 - Título" (número al inicio del nombre).
+            var lead = System.Text.RegularExpressions.Regex.Match(
                 fileName, @"^(?:[Ss]\d+)?[Ee]?(\d{1,3})[\s\.\-_]+(.+)$");
-            if (match.Success && int.TryParse(match.Groups[1].Value, out var num))
-                return (match.Groups[2].Value.Trim().Replace("_", " "), num);
+            if (lead.Success && int.TryParse(lead.Groups[1].Value, out var num))
+                return (lead.Groups[2].Value.Trim().Replace("_", " "), num);
 
             return (fileName, 0);
         }
