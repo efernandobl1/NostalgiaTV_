@@ -117,7 +117,7 @@
           <!-- Pantalla del televisor. Tamaño/posición: left/top/width/height (% de la imagen).
                El texto usa unidades de container (cqw) para escalar con la pantalla y no desbordar. -->
           <div #stage class="@container absolute overflow-hidden rounded-[6px]"
-               style="left:29.5%;top:4%;width:43.5%;height:27%;background:radial-gradient(ellipse at center,#1a2e2a,#0a0a1e)">
+               style="left:30%;top:6%;width:37.5%;height:22%;background:radial-gradient(ellipse at center,#1a2e2a,#0a0a1e)">
             @if (hasMedia()) {
               <video #video class="h-full w-full object-cover" playsinline (click)="togglePlay()"></video>
             } @else {
@@ -143,7 +143,7 @@
         <div class="flex items-center justify-between">
           <span class="font-pixel text-[9px] text-retro-green">CONTROL</span>
           <button type="button" (click)="togglePanel()"
-                  class="inline-flex items-center gap-1 rounded-full border border-retro-green/40 px-2.5 py-1 text-xs text-retro-green lg:hidden">
+                  class="inline-flex items-center gap-1 rounded-full border border-retro-green/40 bg-transparent px-2.5 py-1 text-xs text-retro-green transition hover:bg-white/10 lg:hidden">
             <span class="material-symbols-outlined text-lg">{{ panelOpen() ? 'expand_more' : 'expand_less' }}</span>
             {{ panelOpen() ? 'Ocultar' : 'Ver' }}
           </button>
@@ -162,7 +162,7 @@
                 @for (s of seasons(); track s) {
                   <button type="button" (click)="selectSeason(s)"
                           class="shrink-0 rounded-lg px-3 py-1 font-crt text-lg transition"
-                          [ngClass]="selectedSeason() === s ? 'bg-retro-green text-ink' : 'border border-text-mute/30 text-text-mute'">T{{ s }}</button>
+                          [ngClass]="selectedSeason() === s ? 'bg-retro-green text-ink' : 'border border-text-mute/30 bg-transparent text-text-mute hover:bg-white/10'">T{{ s }}</button>
                 }
               </div>
             }
