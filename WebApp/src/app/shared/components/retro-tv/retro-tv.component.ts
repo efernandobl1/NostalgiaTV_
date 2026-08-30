@@ -4,7 +4,7 @@ import {
 } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import * as signalR from '@microsoft/signalr';
 import { environment } from '../../../../environments/environment';
@@ -28,13 +28,13 @@ interface Episode {
 interface Paged<T> { items: T[]; totalCount: number; totalPages: number; page: number; }
 type Mode = 'channels' | 'series';
 
+const slug = (s: string): string => s.toLowerCase().replace(/\s+/g, '');
+
 /**
  * Experiencia pública de TV retro (Tailwind, sin SCSS de componente).
- * - Un clic sintoniza; estado en vivo por SignalR.
- * - Modo series con vistos/resume (localStorage) y auto-avance.
- * - Filtros CRT (scanlines/curvatura/viñeta) persistidos.
- * - Modo TV (10 pies): un overlay único que se auto-oculta y se controla con
- *   botones en pantalla (no hay control remoto).
+ * Un solo <video> persistente: al pasar a cine/fullscreen sólo cambia de
+ * posición (tubo ↔ full-bleed), nunca se recrea, así no recarga. Deep-links
+ * ?channel= y ?series= para compartir. Vistos/resume + filtros CRT en localStorage.
  */
 @Component({
   selector: 'app-retro-tv',
@@ -44,10 +44,11 @@ type Mode = 'channels' | 'series';
 })
 export class RetroTvComponent implements AfterViewInit, OnDestroy {
   @ViewChild('video') videoRef?: ElementRef<HTMLVideoElement>;
-  @ViewChild('stage') stageRef?: ElementRef<HTMLDivElement>;
+  @ViewChild('fsRoot') fsRootRef?: ElementRef<HTMLDivElement>;
 
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly zone = inject(NgZone);
   readonly tv = inject(TvModeService);
   private readonly tvSettings = inject(TvSettingsService);
@@ -69,8 +70,12 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   readonly fullscreen = signal(false);
   readonly panelOpen = signal(true);
   readonly clock = signal(this.formatClock());
-  readonly showOverlay = signal(true);   // chrome del modo TV
-  readonly showFilters = signal(false);  // panel de filtros CRT
+  readonly showOverlay = signal(true);
+  readonly showFilters = signal(false);
+  readonly showEpisodes = signal(false);   // lista de episodios en cine
+
+  /** Modo cine (video full-bleed + overlay): modo TV o pantalla completa. */
+  readonly cinema = computed(() => this.tv.enabled() || this.fullscreen());
 
   readonly settings = this.tvSettings.settings;
   readonly activeFilters = computed(() =>
@@ -109,31 +114,27 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     return idx < 0 ? null : String(idx + 3).padStart(2, '0');
   });
 
-  /** Canal enfocado por el D-pad en modo TV. */
   readonly focusedIndex = signal(0);
 
-  // Actividad del puntero registrada FUERA de la zona de Angular: así mousemove
-  // NO dispara detección de cambios en cada píxel (clave para no ralentizar la TV).
-  // Solo entramos a la zona cuando el overlay realmente cambia de estado.
+  // Actividad del puntero fuera de la zona de Angular (no dispara CD por píxel).
   private readonly activity = (): void => {
-    if (!this.tv.enabled()) return;
+    if (!this.cinema()) return;
     if (!this.showOverlay()) this.zone.run(() => this.showOverlay.set(true));
     this.scheduleHide();
   };
 
-  // ── D-pad / teclado del control remoto (Android TV manda flechas + Enter) ──
   @HostListener('document:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
-    if (!this.tv.enabled()) return;
+    if (!this.cinema()) return;
     this.pokeOverlay();
-    if (this.browserOpen() || this.showFilters()) return; // esos overlays manejan sus teclas
+    if (this.browserOpen() || this.showFilters() || this.showEpisodes()) return;
     switch (e.key) {
       case 'ArrowRight': e.preventDefault(); this.moveFocus(1); break;
       case 'ArrowLeft':  e.preventDefault(); this.moveFocus(-1); break;
       case 'Enter': e.preventDefault(); this.tuneFocused(); break;
-      case 'ArrowUp': e.preventDefault(); this.openBrowser(); break;      // Guía y series
-      case 'ArrowDown': e.preventDefault(); this.toggleFilters(); break;   // Ajustes de imagen
-      case 'Escape': case 'Backspace': e.preventDefault(); this.showOverlay.set(false); break; // Ocultar tira
+      case 'ArrowUp': e.preventDefault(); this.mode() === 'series' ? this.toggleEpisodes() : this.openBrowser(); break;
+      case 'ArrowDown': e.preventDefault(); this.toggleFilters(); break;
+      case 'Escape': case 'Backspace': e.preventDefault(); this.showOverlay.set(false); break;
     }
   }
 
@@ -147,10 +148,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     if (ch) this.tune(ch);
   }
 
-  private pokeOverlay(): void {
-    this.showOverlay.set(true);
-    this.scheduleHide();
-  }
+  private pokeOverlay(): void { this.showOverlay.set(true); this.scheduleHide(); }
   private scheduleHide(): void {
     clearTimeout(this.overlayTimer);
     this.overlayTimer = setTimeout(() => this.zone.run(() => this.showOverlay.set(false)), 4000);
@@ -165,7 +163,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       document.addEventListener('click', this.activity);
       document.addEventListener('touchstart', this.activity, { passive: true });
     });
-    if (this.tv.enabled()) this.pokeOverlay();
+    if (this.cinema()) this.pokeOverlay();
   }
 
   ngOnDestroy(): void {
@@ -182,7 +180,32 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   // ── Datos ───────────────────────────────────────────────────────────────
   private loadChannels(): void {
     this.http.get<Channel[]>(`${this.apiUrl}/api/v1/public/channels`)
-      .subscribe({ next: data => this.channels.set(data) });
+      .subscribe({ next: data => { this.channels.set(data); this.applyDeepLink(); } });
+  }
+
+  /** Deep-link inicial: ?channel=<slug> o ?series=<slug>. */
+  private applyDeepLink(): void {
+    const qp = this.route.snapshot.queryParamMap;
+    const chParam = qp.get('channel');
+    const seParam = qp.get('series');
+    if (chParam) {
+      const ch = this.channels().find(c => slug(c.name) === slug(chParam));
+      if (ch) { this.tune(ch); return; }
+    }
+    if (seParam) {
+      this.http.get<Paged<SeriesResponse>>(`${this.apiUrl}/api/v1/public/series`, {
+        params: { name: seParam.replace(/-/g, ' '), pageSize: 5 },
+      }).subscribe({
+        next: r => {
+          const s = r.items.find(x => slug(x.name) === slug(seParam)) ?? r.items[0];
+          if (s) this.enterSeries(s);
+        },
+      });
+    }
+  }
+
+  private setUrl(params: { channel?: string | null; series?: string | null }): void {
+    this.router.navigate([], { relativeTo: this.route, queryParams: params, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   logo(path?: string): string { return path ? `${this.apiUrl}${path}` : ''; }
@@ -193,7 +216,9 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.currentEpisode.set(null);
     this.selectedSeries.set(null);
     this.current.set(channel);
+    this.focusedIndex.set(Math.max(0, this.channels().findIndex(c => c.id === channel.id)));
     this.hub?.stop();
+    this.setUrl({ channel: slug(channel.name), series: null });
     this.http.get<ChannelState>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/state`)
       .subscribe({
         next: state => {
@@ -250,9 +275,6 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     if (v.paused) { v.play(); this.playing.set(true); }
     else { v.pause(); this.playing.set(false); }
   }
-
-  /** El canal simula emisión EN VIVO: no se pausa ni se busca. Sólo las series
-   *  (contenido on-demand) permiten pausa/seek. */
   onVideoClick(): void { if (this.mode() === 'series') this.togglePlay(); }
 
   seekRelative(seconds: number): void {
@@ -275,38 +297,23 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.volume.set(v.volume); this.muted.set(v.muted);
   }
 
-  /** Slider de volumen: subir desde el mute lo desmutea. */
   setVolume(value: number): void {
     const v = this.videoRef?.nativeElement;
     if (!v) return;
-    v.volume = value;
-    v.muted = value === 0;
+    v.volume = value; v.muted = value === 0;
     this.volume.set(value); this.muted.set(value === 0);
   }
 
   toggleFullscreen(): void {
-    const el = this.stageRef?.nativeElement;
+    const el = this.fsRootRef?.nativeElement;
     if (!el) return;
     if (!document.fullscreenElement) el.requestFullscreen?.();
     else document.exitFullscreen?.();
   }
+  /** El video es persistente, así que fullscreen NO recarga: sólo cambia el layout. */
+  goFullscreenCinema(): void { this.toggleFullscreen(); }
 
-  // Pantalla completa desde el modo ilustración: entra al modo cine (TV) —video
-  // full-bleed, sin marco/curvatura, con el overlay auto-ocultable— y va a fullscreen.
-  private cinemaFromIllustration = false;
-  goFullscreenCinema(): void {
-    if (this.tv.enabled()) { this.toggleFullscreen(); return; }
-    this.cinemaFromIllustration = true;
-    this.enterTvMode();
-    setTimeout(() => this.toggleFullscreen(), 80);
-  }
-
-  private onFsChange = (): void => this.zone.run(() => {
-    const fs = !!document.fullscreenElement;
-    this.fullscreen.set(fs);
-    // Si el usuario entró a cine desde la ilustración, al salir de fullscreen volvemos.
-    if (!fs && this.cinemaFromIllustration) { this.cinemaFromIllustration = false; this.exitTvMode(); }
-  });
+  private onFsChange = (): void => this.zone.run(() => this.fullscreen.set(!!document.fullscreenElement));
 
   // ── Filtros CRT ─────────────────────────────────────────────────────────
   toggleFilters(): void { this.showFilters.update(v => !v); }
@@ -315,17 +322,14 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.tvSettings.updateFilter({ [key]: value } as any, this.fullscreen());
   }
 
-  // ── Modo TV ─────────────────────────────────────────────────────────────
-  enterTvMode(): void { this.tv.setEnabled(true); this.pokeOverlay(); this.retune(); }
-  exitTvMode(): void { this.tv.setEnabled(false); this.retune(); }
-  private retune(): void {
-    if (this.mode() === 'series') { const ep = this.currentEpisode(); if (ep) setTimeout(() => this.playEpisode(ep), 0); }
-    else { const c = this.current(); if (c) setTimeout(() => this.tune(c), 0); }
-  }
+  // ── Modo TV / cine ──────────────────────────────────────────────────────
+  enterTvMode(): void { this.tv.setEnabled(true); this.pokeOverlay(); }
+  exitTvMode(): void { this.tv.setEnabled(false); }
 
   // ── Series ──────────────────────────────────────────────────────────────
   openBrowser(): void { this.browserOpen.set(true); if (!this.seriesList().length) this.searchSeries(); }
   closeBrowser(): void { this.browserOpen.set(false); }
+  toggleEpisodes(): void { this.showEpisodes.update(v => !v); }
   onSeriesQuery(value: string): void { this.seriesQuery.set(value); this.searchSeries(); }
 
   searchSeries(): void {
@@ -346,10 +350,10 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.browserOpen.set(false);
     this.selectedSeries.set(serie);
     this.mode.set('series');
+    this.setUrl({ series: slug(serie.name), channel: null });
     this.http.get<Episode[]>(`${this.apiUrl}/api/v1/public/series/${serie.id}/episodes`).subscribe({
       next: eps => {
         this.episodes.set(eps);
-        // Cargar vistos y elegir dónde reanudar.
         const progress = this.watched.getProgress(serie.id);
         const map: Record<number, boolean> = {};
         eps.forEach(e => (map[e.id] = progress[e.id]?.completed ?? false));
@@ -370,7 +374,10 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   playEpisode(ep: Episode): void {
     if (!ep.filePath) return;
     this.stopProgress();
+    this.showEpisodes.set(false);
     this.currentEpisode.set(ep);
+    if (ep.episodeTypeName?.toLowerCase() === 'regular' && ep.season !== this.selectedSeason())
+      this.selectedSeason.set(ep.season);
     setTimeout(() => {
       const seriesId = this.selectedSeries()?.id;
       const resumeAt = seriesId ? this.watched.getLastProgress(seriesId, ep.id) : 0;
@@ -385,7 +392,6 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     if (!seriesId) return;
     const v = this.videoRef?.nativeElement;
     let done = false;
-
     this.endedHandler = () => {
       if (done) return; done = true;
       this.zone.run(() => this.settings().randomPlayback ? this.playRandom() : this.playNext(ep));
@@ -420,6 +426,15 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     if (next) this.playEpisode(next);
   }
 
+  playNextEpisode(): void { const ep = this.currentEpisode(); if (ep) this.playNext(ep); }
+  playPrevEpisode(): void {
+    const ep = this.currentEpisode();
+    if (!ep) return;
+    const list = this.seasonEpisodes();
+    const prev = list[list.findIndex(e => e.id === ep.id) - 1];
+    if (prev) this.playEpisode(prev);
+  }
+
   playRandom(): void {
     const all = this.episodes().filter(e => !!e.filePath);
     const unseen = all.filter(e => !this.watchedMap()[e.id]);
@@ -434,6 +449,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.selectedSeries.set(null);
     this.episodes.set([]);
     this.currentEpisode.set(null);
+    this.setUrl({ series: null, channel: null });
     const v = this.videoRef?.nativeElement;
     if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
     this.playing.set(false);
