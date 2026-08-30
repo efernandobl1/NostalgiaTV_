@@ -1,13 +1,33 @@
-<main class="not-found">
-  <section class="signal-card" aria-labelledby="signal-title">
-    <div class="crt-screen">
-      <span class="error-code">404</span>
-      <h1 id="signal-title">SEÑAL PERDIDA</h1>
-    </div>
-    <p>Esta página no está en la programación. Vuelve al canal principal o busca una serie.</p>
-    <div class="error-actions">
-      <a mat-button routerLink="/">Volver al inicio</a>
-      <a mat-button routerLink="/" [queryParams]="{ search: true }" class="secondary-action">Buscar serie</a>
-    </div>
-  </section>
-</main>
+<!-- 404 "Señal perdida" — Tailwind v4, sin SCSS. Paleta/fuentes retro vía tokens. -->
+<div class="relative flex min-h-dvh w-full flex-col items-center justify-center gap-6 overflow-hidden bg-ink px-5 text-center">
+  <!-- scanlines CRT -->
+  <div class="pointer-events-none absolute inset-0 opacity-[0.12]"
+       style="background:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px)"></div>
+
+  <!-- televisor con estática -->
+  <div class="relative flex flex-col items-center justify-center gap-3 rounded-2xl border-[6px] border-[#2a2a3e] shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]"
+       [ngClass]="tv() ? 'h-[420px] w-[680px] max-w-full' : 'h-72 w-[460px] max-w-full'"
+       style="background:repeating-linear-gradient(0deg,#1a1a2e 0 3px,#22224a 3px 6px)">
+    <span class="font-pixel text-retro-red [text-shadow:0_0_20px_rgba(255,107,107,0.7)]"
+          [ngClass]="tv() ? 'text-[44px]' : 'text-[26px]'">404</span>
+    <span class="font-crt text-retro-green" [ngClass]="tv() ? 'text-5xl' : 'text-3xl'">SEÑAL PERDIDA</span>
+  </div>
+
+  <p class="m-0 max-w-[460px] leading-relaxed text-text-dim"
+     [ngClass]="tv() ? 'text-2xl' : 'text-[17px]'">
+    Esta página no está en la programación. Vuelve al canal principal o busca una serie.
+  </p>
+
+  <div class="flex flex-wrap items-center justify-center gap-3">
+    <button type="button" (click)="goHome()"
+            class="inline-flex items-center justify-center rounded-full border-0 bg-gradient-to-br from-retro-purple to-retro-purple-deep font-semibold text-white transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-retro-gold"
+            [ngClass]="tv() ? 'h-[72px] px-9 text-2xl' : 'h-[52px] px-[22px] text-base'">
+      Volver al inicio
+    </button>
+    <a routerLink="/" fragment="buscar"
+       class="inline-flex items-center justify-center rounded-full border border-retro-green/50 bg-transparent text-retro-green transition hover:bg-retro-green/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-retro-gold"
+       [ngClass]="tv() ? 'h-[72px] px-9 text-2xl' : 'h-[52px] px-[22px] text-base'">
+      Buscar serie
+    </a>
+  </div>
+</div>
