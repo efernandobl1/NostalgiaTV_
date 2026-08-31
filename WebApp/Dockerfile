@@ -6,7 +6,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm exec ng build --configuration production
 
-FROM nginx:1.27-alpine AS final
+FROM nginx:1.31-alpine AS final
 COPY --from=build /app/dist/WebApp/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
