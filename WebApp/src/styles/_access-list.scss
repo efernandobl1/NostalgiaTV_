@@ -1,0 +1,13 @@
+.access-module { display:flex; flex-direction:column; gap:14px; }
+.access-list { display:flex; flex-direction:column; overflow:hidden; border:1px solid rgba(139,125,255,.22); border-radius:14px; background:var(--dashboard-surface); }
+.access-row { display:flex; min-height:72px; align-items:center; gap:14px; padding:12px 18px; border-bottom:1px solid rgba(139,125,255,.14); }
+.access-row:last-child { border-bottom:0; }
+.access-avatar { display:grid; width:42px; height:42px; flex:0 0 42px; place-items:center; border-radius:50%; color:#fff; background:linear-gradient(135deg,#8b7dff,#5a4fe0); font-size:.8125rem; font-weight:600; }
+.access-row > div:nth-child(2) { display:flex; min-width:0; flex:1; flex-direction:column; gap:3px; }
+.access-row strong { font-size:1rem; font-weight:400; }
+.access-row div span { color:var(--dashboard-muted); font-size:.8125rem; }
+.access-badge { padding:5px 10px; border-radius:999px; color:var(--dashboard-purple-soft); background:rgba(139,125,255,.14); font-size:.75rem; }
+.access-actions { display:flex; gap:4px; }
+.access-actions button { display:grid; width:44px; height:44px; place-items:center; border:0; border-radius:10px; color:var(--dashboard-purple-soft); background:transparent; }
+.access-actions button.is-danger { color:var(--dashboard-red); }
+@media(max-width:48rem){ .access-badge{display:none}.access-row{padding:12px 14px}.access-actions button:last-child{display:none} }

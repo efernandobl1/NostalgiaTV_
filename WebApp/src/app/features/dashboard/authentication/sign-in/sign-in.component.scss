@@ -32,7 +32,8 @@ input.mat-mdc-input-element { color: #e6e8f2 !important; -webkit-text-fill-color
   .access-label, .mobile-title { display: none; }
   .login-panel form { order: 2; }
   .mobile-back { display: block; order: 3; width: auto; text-align: center; }
-  .login-options { margin-top: 0; }
+  .login-options { flex-wrap: wrap; gap: 12px 18px; margin-top: 0; }
+  .password-help { margin-left: auto; white-space: nowrap; }
   .submit-button.mat-mdc-button { min-height: 54px; }
 }
 

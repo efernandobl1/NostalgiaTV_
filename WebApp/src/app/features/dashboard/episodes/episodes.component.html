@@ -1,112 +1,28 @@
-<div
-    [class.component-dark-theme]="themeService.isDark()"
-    [class.card-borderd-theme]="themeService.isCardBorder()"
-    [class.rtl-enabled]="themeService.isRTLEnabled()">
-
-    <div class="breadcrumb-card mb-25 d-md-flex align-items-center justify-content-between">
-        <div class="d-flex align-items-center" style="gap: 6px;">
-            <a mat-icon-button routerLink="/dashboard/series" matTooltip="Volver a series" aria-label="Volver a series">
-                <mat-icon>arrow_back</mat-icon>
-            </a>
-            <h5 class="mb-0">
-                Episodios@if (selectedSeriesName()) {<span style="opacity: .8;"> — {{ selectedSeriesName() }}</span>}
-            </h5>
-        </div>
+<section class="catalog-page episodes-page">
+  <header class="catalog-toolbar">
+    <a routerLink="/dashboard/series" class="admin-back" aria-label="Volver a series"><span class="material-symbols-outlined">arrow_back</span></a>
+    <div class="catalog-toolbar__title">
+      <span class="catalog-kicker">CATÁLOGO</span>
+      <strong>Episodios@if (selectedSeriesName()) { · {{ selectedSeriesName() }}}</strong>
     </div>
-
-    <mat-card class="daxa-card mb-25 border-radius bg-white border-none d-block">
-        <mat-card-content>
-            <div class="filters-bar">
-                <mat-form-field appearance="outline">
-                    <mat-label>Serie</mat-label>
-                    <mat-select [value]="selectedSeriesId()" (selectionChange)="onSeriesChange($event.value)">
-                        @for (s of series(); track s.id) {
-                            <mat-option [value]="s.id">{{ s.name }}</mat-option>
-                        }
-                    </mat-select>
-                </mat-form-field>
-
-                @if (selectedSeriesId()) {
-                    <mat-form-field appearance="outline">
-                        <mat-label>Temporada</mat-label>
-                        <mat-select [value]="selectedSeason()" (selectionChange)="onSeasonChange($event.value)">
-                            <mat-option [value]="null">Todas las temporadas</mat-option>
-                            @for (s of seasons(); track s) {
-                                <mat-option [value]="s">
-                                    @if (s > 0) { Temporada {{ s }} } @else { Especiales / Películas }
-                                </mat-option>
-                            }
-                        </mat-select>
-                    </mat-form-field>
-                }
-
-                <button mat-flat-button color="accent" (click)="scan()" [disabled]="!selectedSeriesId()">
-                    <mat-icon>refresh</mat-icon> Sincronizar carpeta
-                </button>
-            </div>
-
-            <div class="table-responsive">
-                <table mat-table [dataSource]="dataSource">
-
-                    <ng-container matColumnDef="id">
-                        <th mat-header-cell *matHeaderCellDef>#</th>
-                        <td mat-cell *matCellDef="let e">{{ e.id }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="season">
-                        <th mat-header-cell *matHeaderCellDef>Temporada</th>
-                        <td mat-cell *matCellDef="let e">
-                            @if (e.season > 0) { Temporada {{ e.season }} } @else { — }
-                        </td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="episodeNumber">
-                        <th mat-header-cell *matHeaderCellDef>Ep #</th>
-                        <td mat-cell *matCellDef="let e">
-                            @if (e.episodeNumber > 0) { {{ e.episodeNumber }} } @else { — }
-                        </td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="title">
-                        <th mat-header-cell *matHeaderCellDef>Título</th>
-                        <td mat-cell *matCellDef="let e">{{ e.title }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="type">
-                        <th mat-header-cell *matHeaderCellDef>Tipo</th>
-                        <td mat-cell *matCellDef="let e">{{ e.episodeTypeName }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="filePath">
-                        <th mat-header-cell *matHeaderCellDef>Archivo</th>
-                        <td mat-cell *matCellDef="let e">
-                            <span class="truncated-cell" [title]="e.filePath ?? ''">
-                                {{ e.filePath ?? '—' }}
-                            </span>
-                        </td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                        <td mat-cell *matCellDef="let e">
-                            <button mat-icon-button color="primary" (click)="editEpisode(e)" matTooltip="Editar">
-                                <mat-icon>edit</mat-icon>
-                            </button>
-                        </td>
-                    </ng-container>
-
-                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-
-                    <tr class="mat-row" *matNoDataRow>
-                        <td class="mat-cell" colspan="7">
-                            @if (!selectedSeriesId()) { Seleccioná una serie para ver sus episodios. }
-                            @else { No hay episodios. }
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
-        </mat-card-content>
-    </mat-card>
-</div>
+    <button type="button" class="admin-button admin-button--primary" (click)="scan()" [disabled]="!selectedSeriesId()"><span class="material-symbols-outlined">sync</span>Sincronizar carpeta</button>
+  </header>
+  <div class="episode-filters">
+    <mat-form-field appearance="outline"><mat-label>Serie</mat-label><mat-select [value]="selectedSeriesId()" (selectionChange)="onSeriesChange($event.value)">@for (item of series(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
+    @if (selectedSeriesId()) {
+      <mat-form-field appearance="outline"><mat-label>Temporada</mat-label><mat-select [value]="selectedSeason()" (selectionChange)="onSeasonChange($event.value)"><mat-option [value]="null">Todas las temporadas</mat-option>@for (season of seasons(); track season) { <mat-option [value]="season">{{ season > 0 ? 'Temporada ' + season : 'Especiales y películas' }}</mat-option> }</mat-select></mat-form-field>
+    }
+  </div>
+  @if (selectedSeriesId()) {
+    <div class="episode-list">
+      @for (episode of dataSource.filteredData; track episode.id) {
+        <article class="episode-card">
+          <div class="episode-card__number">{{ episode.episodeNumber || '—' }}</div>
+          <div class="episode-card__copy"><strong>{{ episode.title }}</strong><span>Temporada {{ episode.season || 'especial' }} · {{ episode.episodeTypeName }}</span><small [title]="episode.filePath ?? ''">{{ episode.filePath ?? 'Archivo pendiente' }}</small></div>
+          <button type="button" class="episode-card__edit" (click)="editEpisode(episode)" aria-label="Editar episodio"><mat-icon>edit</mat-icon></button>
+        </article>
+      } @empty { <div class="admin-empty"><span class="material-symbols-outlined">video_library</span><strong>No hay episodios</strong><span>Sincroniza la carpeta para encontrarlos.</span></div> }
+    </div>
+  } @else { <div class="admin-empty"><span class="material-symbols-outlined">live_tv</span><strong>Selecciona una serie</strong><span>Sus temporadas y episodios aparecerán aquí.</span></div> }
+  <mat-paginator [pageSizeOptions]="[10,25,50]" showFirstLastButtons />
+</section>

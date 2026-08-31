@@ -17,6 +17,7 @@ import { CategoryResponse } from '../../../shared/models/category.model';
 import { DialogConfig, GenericFormDialogComponent } from '../../../shared/components/dialogs/generic-form-dialog/generic-form-dialog.component';
 import { CustomizerSettingsService } from '../../../shared/components/customizer-settings/customizer-settings.service';
 import { DatePipe } from '@angular/common';
+import { environment } from '../../../../environments/environment';
 
 @Component({
     selector: 'app-series',
@@ -25,6 +26,8 @@ import { DatePipe } from '@angular/common';
     styleUrl: './series.component.scss',
 })
 export class SeriesComponent implements OnInit, AfterViewInit {
+
+    readonly apiUrl = environment.apiUrl;
 
     @ViewChild(MatPaginator) paginator!: MatPaginator;
 

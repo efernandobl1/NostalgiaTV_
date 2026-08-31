@@ -80,6 +80,7 @@ namespace WebApi
             app.UseAuthentication();
             app.UseSecureRequestLogging();
             app.UseAuthorization();
+            app.UseMiddleware<Middleware.ActivityLoggingMiddleware>();
             app.UseRateLimiter();
             app.UseStaticFiles();
             app.MapControllers();

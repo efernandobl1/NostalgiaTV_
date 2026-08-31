@@ -24,6 +24,7 @@ namespace Infrastructure.Contexts
         public DbSet<ChannelScheduleEntry> ChannelScheduleEntries { get; set; }
         public DbSet<ChannelEra> ChannelEras { get; set; }
         public DbSet<ChannelBumper> ChannelBumpers { get; set; }
+        public DbSet<ActivityLog> ActivityLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -119,6 +120,9 @@ namespace Infrastructure.Contexts
                 .WithMany()
                 .HasForeignKey(e => e.EpisodeId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ActivityLog>()
+                .HasIndex(activity => activity.CreatedAtUtc);
 
             modelBuilder.Entity<ChannelScheduleEntry>()
                 .HasOne(e => e.Bumper)

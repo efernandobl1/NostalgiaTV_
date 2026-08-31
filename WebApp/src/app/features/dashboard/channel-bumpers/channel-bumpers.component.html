@@ -1,104 +1,19 @@
-<div
-    [class.component-dark-theme]="themeService.isDark()"
-    [class.card-borderd-theme]="themeService.isCardBorder()"
-    [class.rtl-enabled]="themeService.isRTLEnabled()">
-
-    <div class="breadcrumb-card mb-25 d-md-flex align-items-center justify-content-between">
-        <div class="d-flex align-items-center" style="gap: 6px;">
-            <a mat-icon-button
-               [routerLink]="'/dashboard/channel-eras'"
-               [queryParams]="{ channelId: selectedChannelId() }"
-               matTooltip="Volver a eras" aria-label="Volver a eras">
-                <mat-icon>arrow_back</mat-icon>
-            </a>
-            <h5 class="mb-0">
-                Bumpers@if (selectedEraName()) {<span style="opacity: .8;"> — {{ selectedEraName() }}</span>}
-            </h5>
-        </div>
-        <button mat-flat-button color="primary" (click)="openForm()" [disabled]="!selectedEraId()">
-            <mat-icon>add</mat-icon> Nuevo bumper
-        </button>
-    </div>
-
-    <mat-card class="daxa-card mb-25 border-radius bg-white border-none d-block">
-        <mat-card-content>
-            <div class="filters-bar">
-                <mat-form-field appearance="outline">
-                    <mat-label>Canal</mat-label>
-                    <mat-select [value]="selectedChannelId()" (selectionChange)="onChannelChange($event.value)">
-                        @for (c of channels(); track c.id) {
-                            <mat-option [value]="c.id">{{ c.name }}</mat-option>
-                        }
-                    </mat-select>
-                </mat-form-field>
-
-                @if (selectedChannelId()) {
-                    <mat-form-field appearance="outline">
-                        <mat-label>Era</mat-label>
-                        <mat-select [value]="selectedEraId()" (selectionChange)="onEraChange($event.value)">
-                            @for (e of eras(); track e.id) {
-                                <mat-option [value]="e.id">{{ e.name }}</mat-option>
-                            }
-                        </mat-select>
-                    </mat-form-field>
-                }
-
-                <button mat-flat-button color="accent" (click)="scan()" [disabled]="!selectedEraId()">
-                    <mat-icon>refresh</mat-icon> Sincronizar carpeta
-                </button>
-            </div>
-
-            <div class="table-responsive">
-                <table mat-table [dataSource]="dataSource">
-
-                    <ng-container matColumnDef="id">
-                        <th mat-header-cell *matHeaderCellDef>#</th>
-                        <td mat-cell *matCellDef="let b">{{ b.id }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="title">
-                        <th mat-header-cell *matHeaderCellDef>Título</th>
-                        <td mat-cell *matCellDef="let b">{{ b.title }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="filePath">
-                        <th mat-header-cell *matHeaderCellDef>Archivo</th>
-                        <td mat-cell *matCellDef="let b">
-                            @if (b.filePath) {
-                                <video [src]="getVideoUrl(b.filePath)" style="height:60px; border-radius:4px;" controls muted></video>
-                            } @else { <span>—</span> }
-                        </td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="order">
-                        <th mat-header-cell *matHeaderCellDef>Orden</th>
-                        <td mat-cell *matCellDef="let b">{{ b.order }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                        <td mat-cell *matCellDef="let b">
-                            <button mat-icon-button (click)="openForm(b)" matTooltip="Editar">
-                                <mat-icon>edit</mat-icon>
-                            </button>
-                            <button mat-icon-button color="warn" (click)="deleteBumper(b)" matTooltip="Eliminar">
-                                <mat-icon>delete</mat-icon>
-                            </button>
-                        </td>
-                    </ng-container>
-
-                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-
-                    <tr class="mat-row" *matNoDataRow>
-                        <td class="mat-cell" colspan="5">
-                            @if (!selectedEraId()) { Seleccioná un canal y una era para ver sus bumpers. }
-                            @else { No hay bumpers. }
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
-        </mat-card-content>
-    </mat-card>
-</div>
+<section class="catalog-page">
+  <header class="catalog-toolbar">
+    <a routerLink="/dashboard/channel-eras" [queryParams]="{channelId:selectedChannelId()}" class="admin-back" aria-label="Volver a eras"><span class="material-symbols-outlined">arrow_back</span></a>
+    <mat-form-field appearance="outline"><mat-label>Canal</mat-label><mat-select [value]="selectedChannelId()" (selectionChange)="onChannelChange($event.value)">@for(channel of channels();track channel.id){<mat-option [value]="channel.id">{{channel.name}}</mat-option>}</mat-select></mat-form-field>
+    <mat-form-field appearance="outline"><mat-label>Era</mat-label><mat-select [value]="selectedEraId()" (selectionChange)="onEraChange($event.value)">@for(era of eras();track era.id){<mat-option [value]="era.id">{{era.name}}</mat-option>}</mat-select></mat-form-field>
+    <button type="button" class="admin-button admin-button--primary" (click)="openForm()" [disabled]="!selectedEraId()"><span class="material-symbols-outlined">upload</span>Subir bumper</button>
+  </header>
+  <div class="bumper-layout">
+    <section class="admin-panel">
+      <header class="admin-panel__header"><h2>Orden de emisión@if(selectedEraName()){ · {{selectedEraName()}}}</h2><button type="button" class="admin-button admin-button--secondary" (click)="scan()" [disabled]="!selectedEraId()">Sincronizar</button></header>
+      <div class="bumper-list">
+        @for(bumper of dataSource.data;track bumper.id){
+          <article class="bumper-row"><span class="material-symbols-outlined">drag_indicator</span><strong>{{($index+1).toString().padStart(2,'0')}}</strong><button type="button" class="bumper-preview" (click)="openForm(bumper)" aria-label="Editar bumper"><span class="material-symbols-outlined">play_arrow</span></button><div><span>{{bumper.title}}</span><small>{{bumper.filePath ? 'MP4 · Listo' : 'Sin archivo'}}</small></div><button type="button" class="bumper-delete" (click)="deleteBumper(bumper)" aria-label="Eliminar bumper"><mat-icon>delete</mat-icon></button></article>
+        } @empty {<div class="admin-empty"><span class="material-symbols-outlined">theaters</span><strong>No hay bumpers</strong></div>}
+      </div>
+    </section>
+    <aside class="admin-panel bumper-side"><header class="admin-panel__header"><h2>Vista previa</h2></header><div class="bumper-screen"><span class="material-symbols-outlined">play_circle</span></div><span>{{selectedEraName() || 'Selecciona una era'}}</span></aside>
+  </div>
+</section>

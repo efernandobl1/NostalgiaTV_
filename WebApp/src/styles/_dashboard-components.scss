@@ -1,0 +1,60 @@
+.admin-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(139, 125, 255, .22);
+  border-radius: 14px;
+  color: var(--dashboard-text);
+  background: var(--dashboard-surface);
+}
+
+.admin-panel__header {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  h2 { margin: 0; color: var(--dashboard-green); font: 400 1.5rem/1 VT323, monospace; }
+  a { color: #5be8e0; font-size: .875rem; }
+}
+
+.admin-attention {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 107, 107, .35);
+  border-radius: 14px;
+  color: var(--dashboard-text);
+  background: var(--dashboard-surface);
+  > .material-symbols-outlined:first-child { color: var(--dashboard-red); font-size: 26px; }
+  > .material-symbols-outlined:last-child { margin-left: auto; color: var(--dashboard-muted); }
+  div { display: flex; flex: 1; flex-direction: column; gap: 3px; }
+  strong { font-size: 1rem; font-weight: 400; }
+  span { color: var(--dashboard-muted); font-size: .8125rem; }
+}
+
+.admin-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border-radius: 999px;
+  font: 600 .9375rem/1 Outfit, sans-serif;
+}
+.admin-button--primary { border: 0; color: #fff; background: linear-gradient(135deg, #8b7dff, #5a4fe0); box-shadow: 0 6px 20px rgba(139, 125, 255, .28); }
+.admin-button--secondary { border: 1px solid rgba(142, 232, 159, .5); color: var(--dashboard-green); background: transparent; }
+.admin-state, .admin-empty {
+  display: flex; min-height: 180px; align-items: center; justify-content: center; gap: 12px;
+  padding: 24px; border: 1px solid rgba(139, 125, 255, .22); border-radius: 14px;
+  color: var(--dashboard-muted); background: var(--dashboard-surface);
+}
+.admin-state--error { border-color: rgba(255, 107, 107, .35); color: var(--dashboard-red); }
+.admin-state div, .admin-empty { flex-direction: column; }
+.admin-state div { display: flex; flex: 1; gap: 4px; }
+.admin-state strong, .admin-empty strong { color: var(--dashboard-text); font-weight: 500; }
+.admin-empty { text-align: center; }

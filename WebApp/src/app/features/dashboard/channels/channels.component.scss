@@ -1,10 +1,27 @@
-table.mat-mdc-table { table-layout: fixed; width: 100%; }
+@use '../../../../styles/dashboard-components';
+@use '../../../../styles/catalog-page';
 
-.mat-column-id        { width: 60px; }
-.mat-column-name      { width: 150px; }
-.mat-column-logo      { width: 80px; }
-.mat-column-history   { width: 200px; }
-.mat-column-startDate { width: 120px; }
-.mat-column-endDate   { width: 120px; }
-.mat-column-series    { width: 200px; }
-.mat-column-actions   { width: 100px; }
+.channel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.channel-card {
+  display: flex; align-items: center; gap: 14px; padding: 16px;
+  border: 1px solid rgba(139, 125, 255, .22); border-radius: 14px; background: var(--dashboard-surface);
+}
+.channel-card--attention { border-color: rgba(255, 107, 107, .4); }
+.channel-card__logo {
+  display: grid; width: 58px; height: 58px; flex: 0 0 58px; place-items: center;
+  overflow: hidden; border: 1px solid rgba(142, 232, 159, .25); border-radius: 12px; color: var(--dashboard-green); background: var(--dashboard-raised);
+  img { width: 100%; height: 100%; object-fit: contain; }
+  .material-symbols-outlined { font-size: 27px; }
+}
+.channel-card__body { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
+.channel-card__body strong { overflow: hidden; font-size: 1.125rem; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.channel-card__body span { color: var(--dashboard-muted); font-size: .875rem; }
+.channel-card__body small { color: var(--dashboard-red); font-size: .8125rem; }
+.channel-card__actions { display: flex; gap: 4px; }
+.channel-card__actions button { display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 10px; color: var(--dashboard-purple-soft); background: transparent; }
+@media (max-width: 70rem) { .channel-grid { grid-template-columns: 1fr; } }
+@media (max-width: 48rem) {
+  .channel-card { padding: 14px; }
+  .channel-card__actions { gap: 0; }
+  .channel-card__actions button:not(:nth-child(2)) { display: none; }
+}

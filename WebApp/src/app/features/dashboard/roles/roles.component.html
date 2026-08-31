@@ -1,53 +1,21 @@
-<div
-    [class.component-dark-theme]="themeService.isDark()"
-    [class.card-borderd-theme]="themeService.isCardBorder()"
-    [class.rtl-enabled]="themeService.isRTLEnabled()">
-
-    <div class="breadcrumb-card mb-25 d-md-flex align-items-center justify-content-between">
-        <h5 class="mb-0">Roles</h5>
-        <button mat-flat-button color="primary" (click)="openForm()">
-            <mat-icon>add</mat-icon> Nuevo rol
-        </button>
-    </div>
-
-    <mat-card class="daxa-card mb-25 border-radius bg-white border-none d-block">
-        <mat-card-content>
-            <div class="table-responsive">
-                <table mat-table [dataSource]="dataSource">
-
-                    <ng-container matColumnDef="id">
-                        <th mat-header-cell *matHeaderCellDef>#</th>
-                        <td mat-cell *matCellDef="let r">{{ r.id }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="name">
-                        <th mat-header-cell *matHeaderCellDef>Nombre</th>
-                        <td mat-cell *matCellDef="let r">{{ r.name }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="description">
-                        <th mat-header-cell *matHeaderCellDef>Descripción</th>
-                        <td mat-cell *matCellDef="let r">
-                            <span class="truncated-cell" [title]="r.description ?? ''">{{ r.description ?? '—' }}</span>
-                        </td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                        <td mat-cell *matCellDef="let r">
-                            <button mat-icon-button (click)="openForm(r)"><mat-icon>edit</mat-icon></button>
-                            <button mat-icon-button color="warn" (click)="delete(r.id)"><mat-icon>delete</mat-icon></button>
-                        </td>
-                    </ng-container>
-
-                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-                    <tr class="mat-row" *matNoDataRow>
-                        <td class="mat-cell" colspan="4">No hay roles.</td>
-                    </tr>
-                </table>
-            </div>
-            <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
-        </mat-card-content>
-    </mat-card>
-</div>
+<section class="access-module">
+  <header class="catalog-toolbar">
+    <div></div>
+    <button type="button" class="admin-button admin-button--primary" (click)="openForm()"><span class="material-symbols-outlined">add_moderator</span>Nuevo rol</button>
+  </header>
+  <div class="access-list">
+    @for (role of dataSource.data; track role.id) {
+      <article class="access-row">
+        <span class="access-avatar"><span class="material-symbols-outlined">shield</span></span>
+        <div><strong>{{ role.name }}</strong><span>{{ role.description || 'Sin descripción' }}</span></div>
+        <div class="access-actions">
+          <button type="button" (click)="openForm(role)" aria-label="Editar rol"><mat-icon>edit</mat-icon></button>
+          <button type="button" class="is-danger" (click)="delete(role.id)" aria-label="Eliminar rol"><mat-icon>delete</mat-icon></button>
+        </div>
+      </article>
+    } @empty {
+      <div class="admin-empty"><span class="material-symbols-outlined">shield</span><strong>No hay roles</strong></div>
+    }
+  </div>
+  <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons />
+</section>

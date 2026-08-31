@@ -1,98 +1,31 @@
-<div
-    [class.component-dark-theme]="themeService.isDark()"
-    [class.card-borderd-theme]="themeService.isCardBorder()"
-    [class.rtl-enabled]="themeService.isRTLEnabled()">
-
-    <div class="breadcrumb-card mb-25 d-md-flex align-items-center justify-content-between">
-        <div class="d-flex align-items-center" style="gap: 6px;">
-            <a mat-icon-button routerLink="/dashboard/channels" matTooltip="Volver a canales" aria-label="Volver a canales">
-                <mat-icon>arrow_back</mat-icon>
-            </a>
-            <h5 class="mb-0">
-                Eras@if (selectedChannelName()) {<span style="opacity: .8;"> — {{ selectedChannelName() }}</span>}
-            </h5>
-        </div>
-        <button mat-flat-button color="primary" (click)="openForm()" [disabled]="!selectedChannelId()">
-            <mat-icon>add</mat-icon> Nueva era
-        </button>
+<section class="catalog-page">
+  <header class="catalog-toolbar">
+    <a routerLink="/dashboard/channels" class="admin-back" aria-label="Volver a canales"><span class="material-symbols-outlined">arrow_back</span></a>
+    <mat-form-field appearance="outline" class="era-channel-select">
+      <mat-label>Canal</mat-label>
+      <mat-select [value]="selectedChannelId()" (selectionChange)="onChannelChange($event.value)">
+        @for (channel of channels(); track channel.id) { <mat-option [value]="channel.id">{{ channel.name }}</mat-option> }
+      </mat-select>
+    </mat-form-field>
+    <button type="button" class="admin-button admin-button--primary" (click)="openForm()" [disabled]="!selectedChannelId()"><span class="material-symbols-outlined">add</span>Nueva era</button>
+  </header>
+  @if (selectedChannelId()) {
+    <div class="era-list">
+      @for (era of dataSource.data; track era.id) {
+        <article class="era-card" [class.era-card--attention]="!era.bumpers.length">
+          <div class="era-card__heading"><strong>{{ era.name }}</strong><span>{{ era.startDate | date:'yyyy' }} – {{ era.endDate ? (era.endDate | date:'yyyy') : 'actualidad' }}</span></div>
+          <div class="era-card__meta"><span>{{ era.seriesIds.length }} series</span><span [class.is-danger]="!era.bumpers.length">{{ era.bumpers.length }} bumpers</span></div>
+          <div class="era-card__actions">
+            <button type="button" (click)="openForm(era)" aria-label="Editar era"><mat-icon>edit</mat-icon></button>
+            <button type="button" (click)="assignSeries(era)" aria-label="Asignar series"><mat-icon>movie</mat-icon></button>
+            <button type="button" (click)="manageBumpers(era)" aria-label="Gestionar bumpers"><mat-icon>theaters</mat-icon></button>
+            <button type="button" class="is-danger" (click)="deleteEra(era)" aria-label="Eliminar era"><mat-icon>delete</mat-icon></button>
+          </div>
+        </article>
+      } @empty { <div class="admin-empty"><span class="material-symbols-outlined">history</span><strong>No hay eras para este canal</strong></div> }
     </div>
-
-    <mat-card class="daxa-card mb-25 border-radius bg-white border-none d-block">
-        <mat-card-content>
-            <div class="filters-bar">
-                <mat-form-field appearance="outline">
-                    <mat-label>Canal</mat-label>
-                    <mat-select [value]="selectedChannelId()" (selectionChange)="onChannelChange($event.value)">
-                        @for (c of channels(); track c.id) {
-                            <mat-option [value]="c.id">{{ c.name }}</mat-option>
-                        }
-                    </mat-select>
-                </mat-form-field>
-            </div>
-
-            <div class="table-responsive">
-                <table mat-table [dataSource]="dataSource">
-
-                    <ng-container matColumnDef="id">
-                        <th mat-header-cell *matHeaderCellDef>#</th>
-                        <td mat-cell *matCellDef="let e">{{ e.id }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="name">
-                        <th mat-header-cell *matHeaderCellDef>Nombre</th>
-                        <td mat-cell *matCellDef="let e">{{ e.name }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="description">
-                        <th mat-header-cell *matHeaderCellDef>Descripción</th>
-                        <td mat-cell *matCellDef="let e">
-                            <span class="truncated-cell" [title]="e.description ?? ''">{{ e.description ?? '—' }}</span>
-                        </td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="startDate">
-                        <th mat-header-cell *matHeaderCellDef>Inicio</th>
-                        <td mat-cell *matCellDef="let e">{{ e.startDate | date:'dd/MM/yyyy' }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="endDate">
-                        <th mat-header-cell *matHeaderCellDef>Fin</th>
-                        <td mat-cell *matCellDef="let e">{{ e.endDate ? (e.endDate | date:'dd/MM/yyyy') : '—' }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="series">
-                        <th mat-header-cell *matHeaderCellDef>Series</th>
-                        <td mat-cell *matCellDef="let e">
-                            <span class="truncated-cell" [title]="getSeriesNames(e.seriesIds)">{{ getSeriesNames(e.seriesIds) }}</span>
-                        </td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="bumpers">
-                        <th mat-header-cell *matHeaderCellDef>Bumpers</th>
-                        <td mat-cell *matCellDef="let e">{{ e.bumpers.length }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                        <td mat-cell *matCellDef="let e">
-                            <button mat-icon-button (click)="openForm(e)" matTooltip="Editar era"><mat-icon>edit</mat-icon></button>
-                            <button mat-icon-button color="primary" (click)="assignSeries(e)" matTooltip="Asignar series"><mat-icon>playlist_add</mat-icon></button>
-                            <button mat-icon-button color="primary" (click)="manageBumpers(e)" matTooltip="Gestionar bumpers"><mat-icon>ondemand_video</mat-icon></button>
-                            <button mat-icon-button color="warn" (click)="deleteEra(e)" matTooltip="Eliminar era"><mat-icon>delete</mat-icon></button>
-                        </td>
-                    </ng-container>
-
-                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-                    <tr class="mat-row" *matNoDataRow>
-                        <td class="mat-cell" colspan="8">
-                            @if (!selectedChannelId()) { Seleccioná un canal para ver sus eras. }
-                            @else { No hay eras. }
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
-        </mat-card-content>
-    </mat-card>
-</div>
+  } @else {
+    <div class="admin-empty"><span class="material-symbols-outlined">live_tv</span><strong>Selecciona un canal</strong><span>Sus eras aparecerán aquí.</span></div>
+  }
+  <mat-paginator [pageSizeOptions]="[10,25,50]" showFirstLastButtons />
+</section>

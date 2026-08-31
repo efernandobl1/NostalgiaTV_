@@ -1,29 +1,15 @@
-<div class="logout-area">
-    <div class="d-table">
-        <div class="d-table-cell">
-            <div
-                class="daxa-form ml-auto mr-auto border-radius bg-white"
-                [class.card-borderd-theme]="themeService.isCardBorder()"
-                [class.component-dark-theme]="themeService.isDark()"
-            >
-                <div class="title text-center">
-                    <h3>NostalgiaTV</h3>
-                    <p class="ml-auto mr-auto">
-                        Your session has ended. See you next time!
-                    </p>
-                </div>
-                <div class="admin text-center">
-                    <div class="logo position-relative rounded-circle">
-                        <img src="images/logo.svg" alt="NostalgiaTV">
-                    </div>
-                    <span class="d-block fw-medium">
-                        You are logged out
-                    </span>
-                </div>
-                <a routerLink="/dashboard/login" mat-button class="btn">
-                    Sign In again
-                </a>
-            </div>
-        </div>
+<main class="signal-page" aria-labelledby="logout-title">
+  <div class="signal-page__scanlines" aria-hidden="true"></div>
+  <section class="signal-card signal-card--success">
+    <span class="signal-card__code">FIN DE TRANSMISIÓN</span>
+    <div class="signal-card__screen" aria-hidden="true">
+      <span class="material-symbols-outlined">power_settings_new</span>
     </div>
-</div>
+    <h1 id="logout-title">Sesión cerrada</h1>
+    <p>Tu sesión terminó correctamente. Puedes volver a la programación o iniciar sesión otra vez.</p>
+    <div class="signal-card__actions">
+      <a routerLink="/" class="signal-button signal-button--secondary">Volver a ver TV</a>
+      <a routerLink="/dashboard/login" class="signal-button signal-button--primary">Iniciar sesión</a>
+    </div>
+  </section>
+</main>

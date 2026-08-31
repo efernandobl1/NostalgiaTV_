@@ -1,0 +1,121 @@
+.signal-page {
+  position: relative;
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  overflow: hidden;
+  padding: 2rem 1.25rem;
+  color: #e6e8f2;
+  background:
+    radial-gradient(ellipse at 18% -10%, rgba(139, 125, 255, .18), transparent 55%),
+    linear-gradient(160deg, #15152b, #0e0e1c 58%, #101a30);
+  font-family: Outfit, sans-serif;
+}
+
+.signal-page__scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .08;
+  background: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 4px);
+}
+
+.signal-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(100%, 38rem);
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  text-align: center;
+  border: 1px solid rgba(139, 125, 255, .22);
+  border-radius: 1rem;
+  background: #191b2e;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .45);
+
+  h1 {
+    margin: 0;
+    color: #8ee89f;
+    font: 400 clamp(2.25rem, 7vw, 3.5rem)/.95 VT323, monospace;
+  }
+
+  p {
+    max-width: 31rem;
+    margin: 0;
+    color: #aab0c6;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+  }
+}
+
+.signal-card__code {
+  color: #ffd93d;
+  font: 400 .625rem/1.5 'Press Start 2P', cursive;
+  letter-spacing: .08em;
+}
+
+.signal-card__screen {
+  display: grid;
+  width: min(100%, 20rem);
+  min-height: 10rem;
+  place-items: center;
+  border: .375rem solid #2a2a3e;
+  border-radius: .875rem;
+  background: repeating-linear-gradient(0deg, #1a1a2e 0 3px, #22224a 3px 6px);
+  box-shadow: inset 0 0 3.75rem rgba(0, 0, 0, .8);
+
+  .material-symbols-outlined {
+    color: #8ee89f;
+    font-size: 4rem;
+    text-shadow: 0 0 1.25rem rgba(142, 232, 159, .55);
+  }
+}
+
+.signal-card--error .signal-card__screen .material-symbols-outlined {
+  color: #ff6b6b;
+  text-shadow: 0 0 1.25rem rgba(255, 107, 107, .6);
+}
+
+.signal-card__actions {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .75rem;
+}
+
+.signal-button {
+  display: inline-flex;
+  min-height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.375rem;
+  border-radius: 999px;
+  font: 600 1rem/1 Outfit, sans-serif;
+  cursor: pointer;
+}
+
+.signal-button--primary {
+  border: 0;
+  color: #fff;
+  background: linear-gradient(135deg, #8b7dff, #5a4fe0);
+  box-shadow: 0 6px 20px rgba(139, 125, 255, .35);
+}
+
+.signal-button--secondary {
+  border: 1px solid rgba(142, 232, 159, .5);
+  color: #8ee89f;
+  background: transparent;
+}
+
+@media (max-width: 35rem) {
+  .signal-card__actions {
+    flex-direction: column-reverse;
+  }
+
+  .signal-button {
+    width: 100%;
+  }
+}

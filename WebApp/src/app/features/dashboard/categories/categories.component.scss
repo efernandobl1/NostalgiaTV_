@@ -1,5 +1,7 @@
-table.mat-mdc-table { table-layout: fixed; width: 100%; }
-
-.mat-column-id      { width: 60px; }
-.mat-column-name    { width: 300px; }
-.mat-column-actions { width: 100px; }
+@use '../../../../styles/dashboard-components';
+@use '../../../../styles/catalog-page';
+.category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.category-card{display:flex;min-height:78px;align-items:center;gap:12px;padding:16px;border:1px solid rgba(139,125,255,.22);border-radius:12px;background:var(--dashboard-surface)}
+.category-card>div:first-child{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}.category-card strong{font-size:1.0625rem;font-weight:400}.category-card span{color:var(--dashboard-muted);font-size:.8125rem}
+.category-card>div:last-child{display:flex}.category-card button{display:grid;width:44px;height:44px;place-items:center;border:0;color:var(--dashboard-purple-soft);background:transparent}.category-card button.is-danger{color:var(--dashboard-red)}
+@media(max-width:48rem){.category-grid{grid-template-columns:1fr}.category-card{padding:14px}.category-card button.is-danger{display:none}}

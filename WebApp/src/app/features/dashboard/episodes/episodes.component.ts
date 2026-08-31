@@ -41,10 +41,10 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
 
     episodeTypes = signal<{ id: number; name: string }[]>([
         { id: 1, name: 'Regular' },
-        { id: 2, name: 'Special' },
-        { id: 3, name: 'Christmas Special' },
-        { id: 4, name: 'Halloween Special' },
-        { id: 5, name: 'Movie' }
+        { id: 2, name: 'Especial' },
+        { id: 3, name: 'Especial de Navidad' },
+        { id: 4, name: 'Especial de Halloween' },
+        { id: 5, name: 'Película' }
     ]);
 
     private allEpisodes = signal<EpisodeResponse[]>([]);

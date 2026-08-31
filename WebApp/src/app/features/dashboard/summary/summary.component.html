@@ -1,0 +1,65 @@
+@if (loading()) {
+  <div class="admin-state" role="status"><span class="material-symbols-outlined">hourglass_top</span>Cargando resumen…</div>
+} @else if (error()) {
+  <div class="admin-state admin-state--error" role="alert">
+    <span class="material-symbols-outlined">signal_disconnected</span>
+    <div><strong>No se pudo cargar el resumen</strong><span>Comprueba la conexión con la API.</span></div>
+    <button type="button" class="admin-button admin-button--secondary" (click)="load()">Reintentar</button>
+  </div>
+} @else if (summary(); as data) {
+  <section class="summary-page" aria-label="Resumen del panel">
+    @if (data.incompleteSeriesCount > 0) {
+      <a routerLink="/dashboard/series" class="admin-attention">
+        <span class="material-symbols-outlined">error</span>
+        <div><strong>{{ data.incompleteSeriesCount }} series incompletas</strong><span>Falta logo o era asignada</span></div>
+        <span class="material-symbols-outlined">chevron_right</span>
+      </a>
+    }
+
+    <div class="summary-metrics">
+      <article class="summary-metric">
+        <span>Series publicadas</span><strong>{{ data.seriesCount | number }}</strong><small>Catálogo disponible</small>
+      </article>
+      <article class="summary-metric summary-metric--cyan">
+        <span>Episodios</span><strong>{{ data.episodeCount | number }}</strong><small>{{ data.missingEpisodeFiles }} sin archivo</small>
+      </article>
+      <article class="summary-metric summary-metric--gold">
+        <span>Canales activos</span><strong>{{ data.activeChannelCount | number }}</strong><small>{{ data.eraCount }} eras configuradas</small>
+      </article>
+      <article class="summary-metric summary-metric--danger">
+        <span>Requieren atención</span><strong>{{ data.incompleteSeriesCount | number }}</strong><small>Series sin logo o era</small>
+      </article>
+    </div>
+
+    <div class="summary-grid">
+      <section class="admin-panel">
+        <header class="admin-panel__header">
+          <h2>Última actividad</h2>
+          <a routerLink="/dashboard/activity">Ver todo</a>
+        </header>
+        @if (data.latestActivity.length) {
+          <div class="activity-list">
+            @for (activity of data.latestActivity; track activity.id) {
+              <article class="activity-row">
+                <span class="material-symbols-outlined" [class.activity-row__icon--delete]="activity.action === 'delete'">{{ activityIcon(activity.action) }}</span>
+                <div><strong>{{ activity.description }}</strong><span>{{ activity.createdAtUtc | date:'dd/MM/yyyy · HH:mm' }}</span></div>
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="admin-empty"><span class="material-symbols-outlined">history</span><strong>Aún no hay actividad</strong><span>Los próximos cambios del panel aparecerán aquí.</span></div>
+        }
+      </section>
+
+      <aside class="summary-side">
+        <section class="admin-panel">
+          <header class="admin-panel__header"><h2>Estado del catálogo</h2></header>
+          <div class="summary-status"><span>Episodios listos</span><strong>{{ data.episodeCount - data.missingEpisodeFiles | number }}</strong></div>
+          <div class="summary-status"><span>Sin archivo</span><strong class="is-danger">{{ data.missingEpisodeFiles | number }}</strong></div>
+          <div class="summary-status"><span>Usuarios</span><strong>{{ data.userCount | number }}</strong></div>
+        </section>
+        <a routerLink="/dashboard/series" class="admin-button admin-button--primary">Nueva serie</a>
+      </aside>
+    </div>
+  </section>
+}

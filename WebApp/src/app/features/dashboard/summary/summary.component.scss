@@ -1,0 +1,36 @@
+@use '../../../../styles/dashboard-components';
+
+.summary-page { display: flex; flex-direction: column; gap: 20px; }
+.summary-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.summary-metric {
+  display: flex; min-width: 0; flex-direction: column; gap: 8px; padding: 18px;
+  border: 1px solid rgba(139, 125, 255, .22); border-radius: 14px; background: var(--dashboard-surface);
+  > span { color: var(--dashboard-muted); font-size: .875rem; }
+  strong { color: var(--dashboard-green); font: 400 2.75rem/1 VT323, monospace; }
+  small { color: var(--dashboard-green); font-size: .8125rem; }
+}
+.summary-metric--cyan strong { color: #5be8e0; }
+.summary-metric--gold strong { color: var(--dashboard-gold); }
+.summary-metric--danger { border-color: rgba(255, 107, 107, .35); strong, small { color: var(--dashboard-red); } }
+.summary-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(17rem, 1fr); gap: 16px; }
+.summary-side { display: flex; flex-direction: column; gap: 16px; }
+.summary-status { display: flex; align-items: center; justify-content: space-between; min-height: 48px; border-bottom: 1px solid rgba(139, 125, 255, .16); color: var(--dashboard-muted); }
+.summary-status strong { color: var(--dashboard-green); font: 400 1.75rem/1 VT323, monospace; }
+.summary-status strong.is-danger { color: var(--dashboard-red); }
+.activity-list { display: flex; flex-direction: column; gap: 10px; }
+.activity-row { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; background: var(--dashboard-raised); }
+.activity-row > .material-symbols-outlined { color: var(--dashboard-green); }
+.activity-row__icon--delete { color: var(--dashboard-red) !important; }
+.activity-row div { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
+.activity-row strong { overflow: hidden; font-size: .9375rem; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.activity-row div span { color: var(--dashboard-muted); font-size: .8125rem; }
+@media (max-width: 68rem) { .summary-metrics { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 48rem) {
+  .summary-grid { grid-template-columns: 1fr; }
+  .summary-side { display: none; }
+  .summary-metrics { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .summary-metric { padding: 14px; gap: 4px; }
+  .summary-metric > span { font-size: .8125rem; }
+  .summary-metric strong { font-size: 2.25rem; }
+  .summary-metric small { display: none; }
+}

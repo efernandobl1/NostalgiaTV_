@@ -1,0 +1,36 @@
+<section class="activity-page" aria-label="Registro de actividad">
+  <div class="activity-filters" aria-label="Periodo">
+    <button type="button" [class.is-active]="days() === 7" (click)="load(7)">7 días</button>
+    <button type="button" [class.is-active]="days() === 30" (click)="load(30)">30 días</button>
+    <button type="button" [class.is-active]="days() === 0" (click)="load(0)">Todos</button>
+  </div>
+
+  @if (loading()) {
+    <div class="admin-state" role="status"><span class="material-symbols-outlined">hourglass_top</span>Cargando actividad…</div>
+  } @else if (error()) {
+    <div class="admin-state admin-state--error" role="alert">
+      <span class="material-symbols-outlined">signal_disconnected</span>
+      <div><strong>No se pudo cargar la actividad</strong><span>Comprueba la conexión con la API.</span></div>
+      <button type="button" class="admin-button admin-button--secondary" (click)="load(days())">Reintentar</button>
+    </div>
+  } @else if (activity().length) {
+    <div class="activity-timeline">
+      @for (entry of activity(); track entry.id) {
+        <article class="activity-entry" [class.activity-entry--delete]="entry.action === 'delete'">
+          <span class="material-symbols-outlined">{{ icon(entry.action) }}</span>
+          <div>
+            <strong>{{ entry.description }}</strong>
+            <span>{{ entry.createdAtUtc | date:'dd/MM/yyyy · HH:mm' }}</span>
+          </div>
+          <span class="activity-entry__resource">{{ entry.resource }}</span>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="admin-empty">
+      <span class="material-symbols-outlined">history</span>
+      <strong>No hay actividad en este periodo</strong>
+      <span>Los cambios realizados desde el panel aparecerán aquí.</span>
+    </div>
+  }
+</section>

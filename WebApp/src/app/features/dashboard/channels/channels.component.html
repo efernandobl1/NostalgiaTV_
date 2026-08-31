@@ -1,74 +1,33 @@
-<div
-    [class.component-dark-theme]="themeService.isDark()"
-    [class.card-borderd-theme]="themeService.isCardBorder()"
-    [class.rtl-enabled]="themeService.isRTLEnabled()">
+<section class="catalog-page">
+  <header class="catalog-toolbar">
+    <div class="catalog-search"><span class="material-symbols-outlined">search</span><input type="search" placeholder="Buscar canales…" aria-label="Buscar canales"></div>
+    <button type="button" class="admin-button admin-button--primary" (click)="openForm()"><span class="material-symbols-outlined">add</span>Nuevo canal</button>
+  </header>
 
-    <div class="breadcrumb-card mb-25 d-md-flex align-items-center justify-content-between">
-        <h5 class="mb-0">Canales</h5>
-        <button mat-flat-button color="primary" (click)="openForm()">
-            <mat-icon>add</mat-icon> Nuevo canal
-        </button>
+  @if (dataSource.data.length) {
+    <div class="channel-grid">
+      @for (channel of dataSource.data; track channel.id) {
+        <article class="channel-card" [class.channel-card--attention]="!channel.logoPath">
+          <div class="channel-card__logo">
+            @if (channel.logoPath) { <img [src]="apiUrl + channel.logoPath" [alt]="'Logo de ' + channel.name"> }
+            @else { <span class="material-symbols-outlined">live_tv</span> }
+          </div>
+          <div class="channel-card__body">
+            <strong>{{ channel.name }}</strong>
+            <span>{{ channel.startDate | date:'yyyy' }} – {{ channel.endDate ? (channel.endDate | date:'yyyy') : 'actualidad' }}</span>
+            @if (!channel.logoPath) { <small>Falta logo</small> }
+          </div>
+          <div class="channel-card__actions">
+            <button type="button" (click)="openForm(channel)" aria-label="Editar canal"><mat-icon>edit</mat-icon></button>
+            <button type="button" (click)="manageEras(channel)" aria-label="Gestionar eras"><mat-icon>history</mat-icon></button>
+            <button type="button" (click)="viewSchedule(channel)" aria-label="Ver programación"><mat-icon>schedule</mat-icon></button>
+            <button type="button" (click)="refreshSchedule(channel)" aria-label="Regenerar programación"><mat-icon>refresh</mat-icon></button>
+          </div>
+        </article>
+      }
     </div>
-
-    <mat-card class="daxa-card mb-25 border-radius bg-white border-none d-block">
-        <mat-card-content>
-            <div class="table-responsive">
-                <table mat-table [dataSource]="dataSource">
-
-                    <ng-container matColumnDef="id">
-                        <th mat-header-cell *matHeaderCellDef>#</th>
-                        <td mat-cell *matCellDef="let c">{{ c.id }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="name">
-                        <th mat-header-cell *matHeaderCellDef>Nombre</th>
-                        <td mat-cell *matCellDef="let c">{{ c.name }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="logo">
-                        <th mat-header-cell *matHeaderCellDef>Logo</th>
-                        <td mat-cell *matCellDef="let c">
-                            @if (c.logoPath) {
-                                <img [src]="apiUrl + c.logoPath" alt="logo" style="height:32px; border-radius:4px;">
-                            } @else { <span>—</span> }
-                        </td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="history">
-                        <th mat-header-cell *matHeaderCellDef>Historia</th>
-                        <td mat-cell *matCellDef="let c">
-                            <span class="truncated-cell" [title]="c.history ?? ''">{{ c.history ?? '—' }}</span>
-                        </td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="startDate">
-                        <th mat-header-cell *matHeaderCellDef>Inicio</th>
-                        <td mat-cell *matCellDef="let c">{{ c.startDate | date:'dd/MM/yyyy' }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="endDate">
-                        <th mat-header-cell *matHeaderCellDef>Fin</th>
-                        <td mat-cell *matCellDef="let c">{{ c.endDate ? (c.endDate | date:'dd/MM/yyyy') : '—' }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                        <td mat-cell *matCellDef="let c">
-                            <button mat-icon-button (click)="openForm(c)" matTooltip="Editar canal"><mat-icon>edit</mat-icon></button>
-                            <button mat-icon-button color="primary" (click)="manageEras(c)" matTooltip="Gestionar eras"><mat-icon>date_range</mat-icon></button>
-                            <button mat-icon-button (click)="viewSchedule(c)" matTooltip="Ver programación"><mat-icon>schedule</mat-icon></button>
-                            <button mat-icon-button (click)="refreshSchedule(c)" matTooltip="Regenerar programación"><mat-icon>refresh</mat-icon></button>
-                        </td>
-                    </ng-container>
-
-                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-                    <tr class="mat-row" *matNoDataRow>
-                        <td class="mat-cell" colspan="6">No hay canales.</td>
-                    </tr>
-                </table>
-            </div>
-            <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
-        </mat-card-content>
-    </mat-card>
-</div>
+  } @else {
+    <div class="admin-empty"><span class="material-symbols-outlined">live_tv</span><strong>No hay canales</strong><span>Crea un canal para configurar sus eras y programación.</span></div>
+  }
+  <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons />
+</section>

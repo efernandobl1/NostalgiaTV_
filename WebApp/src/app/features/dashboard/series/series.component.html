@@ -1,77 +1,47 @@
-<div
-    [class.component-dark-theme]="themeService.isDark()"
-    [class.card-borderd-theme]="themeService.isCardBorder()"
-    [class.rtl-enabled]="themeService.isRTLEnabled()">
-
-    <div class="breadcrumb-card mb-25 d-md-flex align-items-center justify-content-between">
-        <h5 class="mb-0">Series</h5>
-        <button mat-flat-button color="primary" (click)="openForm()">
-            <mat-icon>add</mat-icon> Nueva serie
-        </button>
+<section class="catalog-page">
+  <header class="catalog-toolbar">
+    <div class="catalog-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="search" placeholder="Buscar series…" aria-label="Buscar series">
     </div>
+    <button type="button" class="catalog-filter"><span class="material-symbols-outlined">filter_list</span>Filtros</button>
+    <button type="button" class="admin-button admin-button--primary" (click)="openForm()">
+      <span class="material-symbols-outlined">add</span>Nueva serie
+    </button>
+  </header>
 
-    <mat-card class="daxa-card mb-25 border-radius bg-white border-none d-block">
-        <mat-card-content>
-            <div class="table-responsive">
-                <table mat-table [dataSource]="dataSource">
-
-                    <ng-container matColumnDef="id">
-                        <th mat-header-cell *matHeaderCellDef>#</th>
-                        <td mat-cell *matCellDef="let s">{{ s.id }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="name">
-                        <th mat-header-cell *matHeaderCellDef>Nombre</th>
-                        <td mat-cell *matCellDef="let s">{{ s.name }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="description">
-                        <th mat-header-cell *matHeaderCellDef>Descripción</th>
-                        <td mat-cell *matCellDef="let s">
-                            <span class="truncated-cell" [title]="s.description ?? ''">{{ s.description ?? '—' }}</span>
-                        </td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="startDate">
-                        <th mat-header-cell *matHeaderCellDef>Inicio</th>
-                        <td mat-cell *matCellDef="let s">{{ s.startDate | date:'dd/MM/yyyy' }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="endDate">
-                        <th mat-header-cell *matHeaderCellDef>Fin</th>
-                        <td mat-cell *matCellDef="let s">{{ s.endDate ? (s.endDate | date:'dd/MM/yyyy') : '—' }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="rating">
-                        <th mat-header-cell *matHeaderCellDef>Rating</th>
-                        <td mat-cell *matCellDef="let s">{{ s.rating ?? '—' }}</td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="categories">
-                        <th mat-header-cell *matHeaderCellDef>Categorías</th>
-                        <td mat-cell *matCellDef="let s">
-                            <span class="truncated-cell" [title]="getCategoryNames(s.categoryIds)">{{ getCategoryNames(s.categoryIds) }}</span>
-                        </td>
-                    </ng-container>
-
-                    <ng-container matColumnDef="actions">
-                        <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                        <td mat-cell *matCellDef="let s">
-                            <button mat-icon-button (click)="openForm(s)" matTooltip="Editar serie"><mat-icon>edit</mat-icon></button>
-                            <button mat-icon-button color="primary" (click)="manageEpisodes(s)" matTooltip="Gestionar episodios"><mat-icon>movie</mat-icon></button>
-                            <button mat-icon-button color="primary" (click)="assignCategories(s)" matTooltip="Asignar categorías"><mat-icon>category</mat-icon></button>
-                            <button mat-icon-button color="warn" (click)="delete(s.id)" matTooltip="Eliminar serie"><mat-icon>delete</mat-icon></button>
-                        </td>
-                    </ng-container>
-
-                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-                    <tr class="mat-row" *matNoDataRow>
-                        <td class="mat-cell" colspan="8">No hay series.</td>
-                    </tr>
-                </table>
+  @if (dataSource.data.length) {
+    <div class="catalog-table" role="table" aria-label="Series y episodios">
+      <div class="catalog-table__header" role="row">
+        <span>Serie</span><span>Estreno</span><span>Rating</span><span>Categorías</span><span>Acciones</span>
+      </div>
+      @for (series of dataSource.data; track series.id) {
+        <article class="catalog-row" role="row">
+          <div class="catalog-row__identity">
+            <div class="catalog-row__poster" [class.catalog-row__poster--missing]="!series.logoPath">
+              @if (series.logoPath) { <img [src]="apiUrl + series.logoPath" [alt]="'Logo de ' + series.name"> }
+              @else { <span class="material-symbols-outlined">image_not_supported</span> }
             </div>
-            <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons></mat-paginator>
-        </mat-card-content>
-    </mat-card>
-</div>
+            <div><strong>{{ series.name }}</strong><span>{{ series.seasons }} temporadas</span></div>
+          </div>
+          <span class="catalog-row__date">{{ series.startDate | date:'dd/MM/yyyy' }}</span>
+          <strong class="catalog-row__rating">{{ series.rating ?? '—' }}</strong>
+          <div class="catalog-row__tags">
+            @for (category of getCategoryNames(series.categoryIds).split(', '); track category) {
+              @if (category && category !== '—') { <span>{{ category }}</span> }
+            }
+          </div>
+          <div class="catalog-row__actions">
+            <button type="button" (click)="openForm(series)" matTooltip="Editar serie" aria-label="Editar serie"><mat-icon>edit</mat-icon></button>
+            <button type="button" (click)="manageEpisodes(series)" matTooltip="Gestionar episodios" aria-label="Gestionar episodios"><mat-icon>video_library</mat-icon></button>
+            <button type="button" (click)="assignCategories(series)" matTooltip="Asignar categorías" aria-label="Asignar categorías"><mat-icon>sell</mat-icon></button>
+            <button type="button" class="is-danger" (click)="delete(series.id)" matTooltip="Eliminar serie" aria-label="Eliminar serie"><mat-icon>delete</mat-icon></button>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="admin-empty"><span class="material-symbols-outlined">movie</span><strong>No hay series</strong><span>Crea la primera serie para comenzar el catálogo.</span></div>
+  }
+  <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons />
+</section>

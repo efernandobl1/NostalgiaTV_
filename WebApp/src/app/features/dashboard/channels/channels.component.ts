@@ -47,7 +47,7 @@ interface ScheduleEntry {
     </div>
     <div class="dialog-body">
       @if (entries.length === 0) {
-        <p class="empty-msg">No schedule entries found.</p>
+        <p class="empty-msg">No hay programación disponible.</p>
       } @else {
         @for (entry of entries; track entry.id) {
           <div class="schedule-item">
@@ -63,7 +63,7 @@ interface ScheduleEntry {
               </div>
             </div>
             @if (entry.seriesLogoPath) {
-              <img [src]="apiUrl + entry.seriesLogoPath" class="series-logo" />
+              <img [src]="apiUrl + entry.seriesLogoPath" [alt]="'Logo de ' + entry.seriesName" class="series-logo" />
             }
           </div>
         }

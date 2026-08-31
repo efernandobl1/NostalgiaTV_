@@ -1,0 +1,46 @@
+.catalog-page { display: flex; flex-direction: column; gap: 16px; }
+.catalog-toolbar { display: flex; align-items: center; gap: 10px; }
+.catalog-search {
+  display: flex; min-height: 44px; flex: 1; align-items: center; gap: 8px; padding: 0 14px;
+  border: 1px solid rgba(139, 125, 255, .22); border-radius: 10px; color: var(--dashboard-muted); background: var(--dashboard-surface);
+  .material-symbols-outlined { font-size: 20px; }
+  input { width: 100%; border: 0; outline: 0; color: var(--dashboard-text); background: transparent; font: 400 .9375rem/1 Outfit, sans-serif; }
+}
+.catalog-filter {
+  display: inline-flex; min-height: 44px; align-items: center; gap: 8px; padding: 0 14px;
+  border: 1px solid rgba(139, 125, 255, .22); border-radius: 10px; color: var(--dashboard-text); background: var(--dashboard-surface);
+}
+.catalog-table { overflow: hidden; border: 1px solid rgba(139, 125, 255, .22); border-radius: 14px; background: var(--dashboard-surface); }
+.catalog-table__header, .catalog-row { display: grid; grid-template-columns: 2fr .9fr .55fr 1.2fr 190px; gap: 14px; align-items: center; }
+.catalog-table__header { padding: 14px 18px; border-bottom: 1px solid rgba(139, 125, 255, .16); color: var(--dashboard-muted); font-size: .8125rem; }
+.catalog-row { min-height: 78px; padding: 12px 18px; border-bottom: 1px solid rgba(139, 125, 255, .12); }
+.catalog-row:last-child { border-bottom: 0; }
+.catalog-row__identity { display: flex; min-width: 0; align-items: center; gap: 12px; }
+.catalog-row__identity > div:last-child { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.catalog-row__identity strong { overflow: hidden; font-size: 1rem; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.catalog-row__identity span, .catalog-row__date { color: var(--dashboard-muted); font-size: .8125rem; }
+.catalog-row__poster { display: grid; width: 52px; height: 52px; flex: 0 0 52px; place-items: center; overflow: hidden; border: 1px solid rgba(142, 232, 159, .25); border-radius: 10px; color: var(--dashboard-green); background: var(--dashboard-raised); }
+.catalog-row__poster img { width: 100%; height: 100%; object-fit: contain; }
+.catalog-row__poster--missing { border-color: rgba(255, 107, 107, .4); color: var(--dashboard-red); }
+.catalog-row__rating { color: var(--dashboard-gold); font: 400 1.5rem/1 VT323, monospace; }
+.catalog-row__tags { display: flex; min-width: 0; flex-wrap: wrap; gap: 5px; }
+.catalog-row__tags span { padding: 4px 8px; border-radius: 999px; color: var(--dashboard-purple-soft); background: rgba(139, 125, 255, .14); font-size: .75rem; }
+.catalog-row__actions { display: flex; justify-content: flex-end; gap: 4px; }
+.catalog-row__actions button { display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 10px; color: var(--dashboard-purple-soft); background: transparent; }
+.catalog-row__actions button.is-danger { color: var(--dashboard-red); }
+mat-paginator { border: 1px solid rgba(139, 125, 255, .22); border-radius: 12px; background: var(--dashboard-surface) !important; }
+@media (max-width: 62rem) {
+  .catalog-table__header { display: none; }
+  .catalog-table { display: flex; flex-direction: column; gap: 10px; border: 0; background: transparent; }
+  .catalog-row { display: flex; min-height: 80px; gap: 12px; padding: 14px; border: 1px solid rgba(139, 125, 255, .22); border-radius: 12px; background: var(--dashboard-surface); }
+  .catalog-row__identity { flex: 1; }
+  .catalog-row__date, .catalog-row__rating, .catalog-row__tags { display: none; }
+  .catalog-row__actions button:not(:first-child) { display: none; }
+}
+@media (max-width: 48rem) {
+  .catalog-toolbar { align-items: stretch; flex-wrap: wrap; }
+  .catalog-search { flex-basis: calc(100% - 58px); }
+  .catalog-filter { width: 48px; padding: 0; justify-content: center; font-size: 0; }
+  .catalog-toolbar .admin-button { position: fixed; right: 18px; bottom: 96px; z-index: 20; width: 60px; height: 60px; padding: 0; border-radius: 50%; font-size: 0; }
+  .catalog-toolbar .admin-button .material-symbols-outlined { font-size: 28px; }
+}

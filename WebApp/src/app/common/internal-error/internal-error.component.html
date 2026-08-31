@@ -1,14 +1,15 @@
-<mat-card class="daxa-card error-card mb-25 pt-0 border-radius bg-white border-none d-block text-center">
-    <mat-card-content>
-        <img src="images/internal-error.png" alt="internal-error-image">
-        <h3>
-            Looks like we have an internal error, please try again later.
-        </h3>
-        <p>
-            But no worries! Our team is looking ever where while you wait safely.
-        </p>
-        <a mat-button routerLink="/">
-            Back to Home
-        </a>
-    </mat-card-content>
-</mat-card>
+<main class="signal-page" aria-labelledby="error-title">
+  <div class="signal-page__scanlines" aria-hidden="true"></div>
+  <section class="signal-card signal-card--error">
+    <span class="signal-card__code">ERROR 500</span>
+    <div class="signal-card__screen" aria-hidden="true">
+      <span class="material-symbols-outlined">signal_disconnected</span>
+    </div>
+    <h1 id="error-title">Interferencia en la señal</h1>
+    <p>No pudimos completar la operación. Intenta nuevamente o vuelve al canal principal.</p>
+    <div class="signal-card__actions">
+      <button type="button" class="signal-button signal-button--secondary" (click)="retry()">Reintentar</button>
+      <a routerLink="/" class="signal-button signal-button--primary">Volver al inicio</a>
+    </div>
+  </section>
+</main>
