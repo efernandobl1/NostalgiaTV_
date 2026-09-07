@@ -1,107 +1,110 @@
-# NostalgiaTV# 📺 NostalgiaTV
+# 📺 NostalgiaTV
 
-NostalgiaTV es una aplicación de streaming retro personal que permite organizar y transmitir series y episodios a través de canales personalizados, con sincronización en tiempo real usando SignalR.
+NostalgiaTV es una plataforma de streaming retro personal. Organiza series y
+episodios en **canales** que se transmiten como TV en vivo (programación
+generada y sincronizada en tiempo real con SignalR) y permite además ver
+**series on-demand**. Incluye una experiencia pública tipo televisor retro (modo
+TV / control remoto / guía de programación) y un panel de administración.
 
 ---
 
 ## 🚀 Tecnologías
 
-### Backend
-- **ASP.NET Core 10** — Web API REST
-- **Entity Framework Core** — ORM con migraciones
-- **SignalR** — Sincronización en tiempo real
-- **SQL Server** — Base de datos
-- **Serilog** — Logging estructurado
-- **Mapster** — Mapeo de DTOs
-- **FluentValidation** — Validación de modelos
-- **JWT + Cookies HttpOnly** — Autenticación segura
-- **Argon2id** — Hashing de contraseñas
-- **Scalar** — Documentación de API
+### Backend (`WebApi/`)
+- **ASP.NET Core 10** — Web API REST (versionada `api/v1`)
+- **Entity Framework Core** — ORM con migraciones (se aplican solas al arrancar)
+- **SQL Server** — base de datos
+- **SignalR** — estado de canal en vivo en tiempo real
+- **Serilog** — logging estructurado + middleware de request/response y auditoría
+  (`ActivityLog`)
+- **Mapster** — mapeo de DTOs · **FluentValidation** — validación
+- **JWT + cookies HttpOnly** y **Argon2id** para contraseñas
+- **Health checks** (`/health`, `/health/ready` con verificación real a SQL Server)
+- **Scalar** — documentación de API · **FFmpeg** (FFMpegCore) — duración de videos
 
-### Frontend
-- **Angular 21** — Framework frontend
-- **Angular Material** — Componentes UI
-- **SignalR Client** — Sincronización en tiempo real
-- **Daxa** — Template de dashboard Material Design
+### Frontend (`WebApp/`)
+- **Angular 21** (standalone components + signals)
+- **Angular Material** — UI del dashboard
+- **Tailwind CSS v4** — experiencia pública retro
+- **SignalR Client** — sincronización en vivo
+- **pnpm** como gestor de paquetes (vía corepack), **no npm**
+
+---
+
+## ✨ Funcionalidades
+
+### Experiencia pública (TV retro)
+- **Canales en vivo**: la programación se genera automáticamente y se sincroniza
+  con SignalR (todos ven lo mismo, al mismo tiempo). No se puede pausar/adelantar.
+- **Series on-demand**: catálogo con búsqueda, filtro por género y por canal,
+  "Continuar viendo", y pantalla de detalle (temporadas, especiales, episodios).
+- **Modo TV / cine**: video full-bleed con overlay auto-ocultable; detección de
+  dispositivo (TV/desktop/móvil) para sugerir el modo TV.
+- **Control remoto remapeable** (tipo emulador): teclas configurables guardadas en
+  el navegador.
+- **Guía de programación** (Hoy/Mañana) centrada en el programa actual.
+- **Filtros CRT** (scanlines, viñeta, curvatura) configurables.
+- **Reanudar reproducción** y marcado de vistos por episodio (persistente y estable
+  entre re-escaneos).
+- **Deep-links** para compartir: `?channel=<slug>` y `?series=<slug>`.
+
+### Programación de canales (aleatoria y configurable)
+- Selección **aleatoria** de episodios, **sin repetir** un episodio dentro de una
+  ventana (por defecto 24 h) salvo que no alcancen los capítulos.
+- Cupos diarios de **especiales** (máx. 2 por serie / 5 en total) y **películas**
+  (máx. 2 por serie / 2 en total).
+- Todo configurable por `appsettings` (`ChannelScheduling`) o variables de entorno
+  (`ChannelScheduling__*` / `SCHED_*` en Docker).
+
+### Panel de administración
+- Gestión de **series, episodios, canales, eras y bumpers, categorías, usuarios y
+  roles**; **resumen** y **registro de actividad** (auditoría).
+- Escaneo de episodios desde disco (normaliza acentos, ignora artefactos de
+  transcodificación y sólo indexa formatos reproducibles en web).
 
 ---
 
 ## 📋 Requisitos
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Node.js 20+](https://nodejs.org/)
-- [SQL Server](https://www.microsoft.com/sql-server) o SQL Server Express
-- [Angular CLI](https://angular.io/cli)
+- [Node.js 20+](https://nodejs.org/) con **pnpm** (`corepack enable`)
+- [SQL Server](https://www.microsoft.com/sql-server) (o SQL Server Express)
+- **FFmpeg** (para calcular la duración de los videos)
+- [Docker](https://www.docker.com/) — opcional, para levantar el stack completo
 
 ---
 
-## ⚙️ Instalación y configuración
+## ⚙️ Puesta en marcha
 
-### Backend
+### Opción A — Local (backend + frontend por separado)
 
-1. Clona el repositorio:
-```bash
-git clone https://github.com/tu-usuario/NostalgiaTV.git
-cd NostalgiaTV
-```
-
-2. Configura `appsettings.Development.json` en `WebApi/WebApi/`:
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost\\SQLEXPRESS;Database=NostalgiaTV;User ID=tu_usuario;Password=tu_password;TrustServerCertificate=True"
-  },
-  "Jwt": {
-    "Key": "tu-clave-secreta-minimo-32-caracteres",
-    "Issuer": "https://tu-dominio.com",
-    "Audience": "https://tu-dominio.com"
-  },
-  "Cors": {
-    "AllowedOrigins": [
-      "http://localhost:4200"
-    ]
-  }
-}
-```
-
-3. Aplica las migraciones:
-```bash
-cd WebApi/Infrastructure
-dotnet ef database update --startup-project ../WebApi
-```
-
-4. Corre el backend:
+**Backend** (aplica las migraciones EF pendientes al arrancar):
 ```bash
 cd WebApi/WebApi
-dotnet run
+cp appsettings.Local.example.json appsettings.Local.json   # y completá tus valores
+dotnet run                                                 # https://localhost:7221  (docs: /scalar/v1)
 ```
 
-La API estará disponible en `https://localhost:7221` y la documentación en `https://localhost:7221/scalar/v1`.
-
----
-
-### Frontend
-
-1. Instala dependencias:
+**Frontend** (usar **pnpm**, no npm):
 ```bash
+corepack enable
 cd WebApp
-npm install
+pnpm install
+pnpm start                                                 # http://localhost:4200
+pnpm run build                                             # build de producción
 ```
 
-2. Configura el environment en `src/environments/environment.ts`:
-```typescript
-export const environment = {
-    production: false,
-    apiUrl: 'https://localhost:7221'
-};
-```
-
-3. Corre el frontend:
+### Opción B — Stack completo con Docker (SQL Server + API + WebApp)
 ```bash
-npm start
+cp .env.example .env        # completá DB_PASSWORD, JWT_SECRET_KEY, etc.
+docker compose up --build -d
+# WebApp: http://localhost:8082   ·   API (dev): http://localhost:8080
 ```
 
-La aplicación estará disponible en `http://127.0.0.1:54636`.
+> Configuración sensible por sección de `appsettings` o variables de entorno:
+> `ConnectionStrings__DefaultConnection`, `Jwt__*`, `Cors__AllowedOrigins__0`,
+> `MediaSettings__*`, `ChannelScheduling__*`, `ReverseProxy__TrustForwardedHeaders`.
+> Nunca commitear `.env` ni `appsettings.Local.json`; usar los `*.example`.
 
 ---
 
@@ -109,83 +112,70 @@ La aplicación estará disponible en `http://127.0.0.1:54636`.
 
 ```
 NostalgiaTV/
-├── WebApi/                         # Backend ASP.NET Core
-│   ├── ApplicationCore/            # Entidades, DTOs, Interfaces, Excepciones
-│   │   ├── DTOs/
-│   │   ├── Entities/
-│   │   ├── Exceptions/
-│   │   └── Interfaces/
-│   ├── Infrastructure/             # Servicios, Contexto, Migraciones
-│   │   ├── BackgroundServices/
-│   │   ├── Contexts/
-│   │   ├── Migrations/
-│   │   └── Services/
-│   └── WebApi/                     # Controllers, Extensions, Program.cs
-│       ├── Controllers/
-│       ├── Extensions/
-│       ├── Handlers/
-│       └── Validators/
+├── WebApi/                          # Backend ASP.NET Core
+│   ├── ApplicationCore/             # Entidades, DTOs, Interfaces, Settings, Excepciones
+│   ├── Infrastructure/              # Servicios, Contexto EF, Migraciones, BackgroundServices, Mappings
+│   └── WebApi/                      # Controllers, Middleware, Logging, HealthChecks, Extensions, Program.cs
 │
-└── WebApp/                         # Frontend Angular
-    └── src/
-        └── app/
-            ├── core/               # Guards, Interceptors, Servicios globales
-            ├── features/
-            │   ├── dashboard/      # Series, Episodes, Channels, Auth
-            │   └── public/         # Home, Player
-            ├── layouts/            # PublicLayout, DashboardLayout
-            ├── shared/             # Modelos, Componentes compartidos, Dialogs
-            └── common/             # Header, Sidebar, Footer
+├── WebApp/                          # Frontend Angular (Tailwind + Material)
+│   └── src/app/
+│       ├── core/                    # Servicios globales (tv-mode, tv-settings, watched, control-bindings…)
+│       ├── features/dashboard/      # Administración (series, episodes, channels, eras, bumpers, users, roles, activity, summary)
+│       ├── shared/components/retro-tv/   # Experiencia pública retro TV
+│       ├── layouts/ · common/ · shared/
+│       └── styles/                  # Estilos compartidos (Tailwind + SCSS)
+│
+├── docker-compose.yml               # Stack de desarrollo
+├── docker-compose.production.yml    # Stack de producción (sin publicar API/DB)
+├── .github/workflows/deploy.yml     # CI/CD (scan → build/push GHCR → deploy VPS)
+└── CONTRIBUTING.md                  # Flujo de ramas, commits y despliegue
 ```
+
+---
+
+## 📡 API
+
+Rutas administrativas bajo `api/v1/*` (requieren auth) y rutas públicas bajo
+`api/v1/public/*` (sin auth). Documentación interactiva en `/scalar/v1`.
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| POST | `/api/v1/auth/token` · `/refresh` · `/revoke` | Login / refresh / logout |
+| GET/POST/PUT/DELETE | `/api/v1/series`, `/episodes`, `/channels`, `/categories`, `/channel-eras`, `/channel-bumpers`, `/users`, `/roles` | ABM del panel |
+| GET | `/api/v1/public/channels` · `/channels/{id}/state` · `/channels/{id}/schedule` | Canales, estado en vivo y guía |
+| GET | `/api/v1/public/series` · `/series/{id}/episodes` · `/categories` | Catálogo público |
+| GET | `/api/v1/public/channels/{id}/eras` · `/eras/{id}/bumpers` | Eras y bumpers |
+
+---
+
+## 🚢 CI/CD y despliegue
+
+Al integrar en `main`, `.github/workflows/deploy.yml`:
+
+1. **Escanea** el repo con Trivy (bloquea CVEs HIGH/CRITICAL).
+2. **Construye y publica** en GHCR las imágenes de API y WebApp (`:latest` y `:<sha>`).
+3. **Despliega automáticamente en la VPS** por SSH: se conecta con una clave de
+   despliegue restringida (comando forzado) que ejecuta `docker compose pull` +
+   `up -d` en el servidor.
+
+El detalle del flujo de ramas (`feature/* → develop → main`), la convención de
+commits y la configuración del despliegue (usuario `deploy`, dispatcher, secrets
+del entorno `production`) está en **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 ---
 
 ## 🔐 Credenciales por defecto
 
-Al correr las migraciones se crea un usuario administrador por defecto:
+Las migraciones crean un usuario administrador inicial (`admin`).
 
-| Campo    | Valor      |
-|----------|------------|
-| Username | `admin`    |
-| Password | `Admin123!` |
-
-> ⚠️ Cambia la contraseña después del primer inicio de sesión.
-
----
-
-## 📡 Endpoints principales
-
-| Método | Ruta                          | Descripción              |
-|--------|-------------------------------|--------------------------|
-| POST   | `/api/v1/auth/token`          | Login                    |
-| POST   | `/api/v1/auth/refresh`        | Refresh token            |
-| POST   | `/api/v1/auth/revoke`         | Logout                   |
-| GET    | `/api/v1/series`              | Listar series            |
-| POST   | `/api/v1/series`              | Crear serie              |
-| PUT    | `/api/v1/series/{id}`         | Editar serie             |
-| DELETE | `/api/v1/series/{id}`         | Eliminar serie           |
-| GET    | `/api/v1/episodes/series/{id}`| Listar episodios         |
-| POST   | `/api/v1/episodes`            | Crear episodio           |
-| GET    | `/api/v1/channels`            | Listar canales           |
-| POST   | `/api/v1/channels`            | Crear canal              |
-| PUT    | `/api/v1/channels/{id}/series`| Asignar series al canal  |
-
----
-
-## 📁 Variables de entorno sensibles
-
-Las siguientes variables **nunca** deben subirse al repositorio:
-
-- `ConnectionStrings:DefaultConnection`
-- `Jwt:Key`
-- Contraseñas de base de datos
-
-Usa `appsettings.Development.json` localmente y variables de entorno del servidor en producción.
+> ⚠️ **Cambiá la contraseña del admin inmediatamente después del primer inicio de
+> sesión.** No uses las credenciales por defecto en producción.
 
 ---
 
 ## 📄 Licencia
 
-Copyright (c) 2026 Fernando. All rights reserved.
+Copyright (c) 2026 Fernando. Todos los derechos reservados.
 
-Este código es propietario y confidencial. No está permitido su uso, copia, modificación o distribución sin autorización expresa del autor.
+Código propietario y confidencial. No se permite su uso, copia, modificación o
+distribución sin autorización expresa del autor.
