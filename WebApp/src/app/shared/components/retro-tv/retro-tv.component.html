@@ -3,7 +3,7 @@
      en el tubo (.tube-screen); en cine/fullscreen pasa a fixed full-bleed. Nunca
      se recrea, así cambiar de modo/fullscreen NO recarga el video. Todo va dentro
      de #fsRoot (el elemento que entra a fullscreen) para que los overlays se vean. -->
-<div #fsRoot class="retro-surface relative bg-ink">
+<div #fsRoot class="retro-surface relative bg-ink" [class.tv-mode]="tv.enabled()">
 
   <!-- ══════════════════ ILUSTRACIÓN (siempre montada; el cine la cubre) ══════════════════ -->
   <div class="relative flex h-dvh w-full flex-col overflow-hidden text-text"
@@ -60,11 +60,12 @@
 
             <!-- ══════════ OVERLAY DE CINE (auto-ocultable) ══════════ -->
             @if (cinema()) {
-              <div class="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between transition-opacity duration-500"
+              <div class="cinema-overlay pointer-events-none absolute inset-0 z-10 flex flex-col justify-between transition-opacity duration-500"
                    [class.opacity-0]="!showOverlay()"
+                   [attr.inert]="!showOverlay() ? '' : null"
                    style="background:linear-gradient(180deg,rgba(6,6,14,.8) 0%,transparent 22%,transparent 55%,rgba(6,6,14,.92) 100%)">
                 <!-- barra superior -->
-                <div class="pointer-events-auto flex items-center justify-between gap-4 px-8 pt-7 md:px-14">
+                <div class="cinema-toolbar pointer-events-auto flex items-center justify-between gap-4 px-8 pt-7 md:px-14">
                   <div class="flex items-center gap-5">
                     <span class="flex items-center gap-3 font-pixel text-sm text-retro-red md:text-base">
                       <span class="h-3 w-3 rounded-full bg-retro-red shadow-[0_0_16px_rgba(255,107,107,.9)]"></span>NOSTALGIA TV
@@ -73,7 +74,7 @@
                       <span class="rounded-lg border-2 border-retro-gold/50 px-3 py-0.5 font-crt text-2xl text-retro-gold md:text-3xl">CH {{ channelNumber() }}</span>
                     }
                   </div>
-                  <div class="flex items-center gap-2.5">
+                  <div class="cinema-actions flex items-center gap-2.5">
                     <span class="mr-2 font-crt text-2xl text-text-mute md:text-3xl">{{ clock() }}</span>
                     @if (mode() !== 'series') {
                       <button type="button" (click)="openGuide()" title="Guía"
@@ -117,7 +118,7 @@
                     }
                     @if (tv.enabled() && !fullscreen()) {
                       <button type="button" (click)="exitTvMode()"
-                              class="inline-flex h-12 items-center gap-2 rounded-xl border-2 border-retro-gold bg-retro-gold/15 px-5 text-lg font-semibold text-retro-gold transition hover:bg-retro-gold/25">
+                              class="cinema-exit inline-flex h-12 items-center gap-2 rounded-xl border-2 border-retro-gold bg-retro-gold/15 px-5 text-lg font-semibold text-retro-gold transition hover:bg-retro-gold/25">
                         <span class="material-symbols-outlined text-2xl">tv_off</span>Salir del modo TV
                       </button>
                     }
@@ -125,11 +126,11 @@
                 </div>
 
                 <!-- zona inferior -->
-                <div class="pointer-events-auto flex flex-col gap-6 px-8 pb-8 md:px-14">
+                <div class="cinema-bottom pointer-events-auto flex flex-col gap-6 px-8 pb-8 md:px-14">
                   @if (!hasMedia()) {
                     <span class="font-crt text-4xl text-retro-green/80">Elegí un canal para sintonizar</span>
                   } @else {
-                    <div class="flex flex-col items-start gap-2">
+                    <div class="cinema-program flex flex-col items-start gap-2">
                       @if (overlayLogo()) {
                         <img [src]="logo(overlayLogo())" [alt]="overlayName()"
                              class="object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,.6)]"
@@ -167,7 +168,7 @@
 
                   <!-- tira de canales (sólo en modo canales, no en series) -->
                   @if (mode() !== 'series') {
-                  <div class="flex flex-col gap-3">
+                  <div class="cinema-channels flex flex-col gap-3">
                     <span class="font-pixel text-xs text-retro-gold">CANALES</span>
                     <div class="flex gap-4 overflow-x-auto pb-2">
                       @for (ch of channels(); track ch.id) {
@@ -185,7 +186,7 @@
 
                   @if (tv.enabled() && !fullscreen()) {
                     <!-- leyenda D-pad (control remoto) — sólo en modo TV, no en fullscreen -->
-                    <div class="flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-text-dim md:text-base">
+                    <div class="cinema-hints flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-text-dim md:text-base">
                       <span class="flex items-center gap-2"><span class="rounded bg-retro-green px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().ok) }}</span>Sintonizar</span>
                       <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().channelPrev) }} {{ controls.keyLabel(controls.bindings().channelNext) }}</span>Cambiar canal</span>
                       <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().guide) }}</span>{{ mode() === 'series' ? 'Episodios' : 'Guía' }}</span>
@@ -205,7 +206,7 @@
       </div>
 
       <!-- CONTROL: panel derecho en desktop, hoja inferior en móvil/tablet -->
-      <aside class="z-20 flex shrink-0 flex-col gap-3 border-retro-purple/30 bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)] p-4
+      <aside [attr.inert]="cinema() ? '' : null" class="z-20 flex shrink-0 flex-col gap-3 border-retro-purple/30 bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)] p-4
                     max-lg:sticky max-lg:bottom-0 max-lg:rounded-t-3xl max-lg:border-t-[3px]
                     lg:m-4 lg:min-h-0 lg:w-64 lg:overflow-hidden lg:rounded-3xl lg:border-[3px]">
         <div class="flex items-center justify-between">

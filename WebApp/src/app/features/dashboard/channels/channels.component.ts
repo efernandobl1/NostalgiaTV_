@@ -1,3 +1,5 @@
+import { AsyncPipe } from '@angular/common';
+import { ChannelErasComponent } from '../channel-eras/channel-eras.component';
 import { Component, OnInit, signal, ViewChild, AfterViewInit, Inject } from '@angular/core';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
@@ -124,12 +126,15 @@ export class ScheduleDialogComponent {
     MatCardModule,
     MatTooltipModule,
     DatePipe,
-    ScheduleDialogComponent,
+    ChannelErasComponent,
+    AsyncPipe,
   ],
   templateUrl: './channels.component.html',
   styleUrl: './channels.component.scss',
 })
 export class ChannelsComponent implements OnInit, AfterViewInit {
+  readonly selectedChannel = signal<ChannelResponse | null>(null);
+  readonly detailTab = signal<'eras' | 'history'>('eras');
   @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   displayedColumns = ['id', 'name', 'logo', 'history', 'startDate', 'endDate', 'actions'];
@@ -161,7 +166,11 @@ export class ChannelsComponent implements OnInit, AfterViewInit {
 
   loadChannels() {
     this.channelsService.getAll().subscribe({
-      next: (data) => (this.dataSource.data = data),
+      next: (data) => {
+        this.dataSource.data = data;
+        const selectedId = this.selectedChannel()?.id;
+        this.selectedChannel.set(data.find(channel => channel.id === selectedId) ?? data[0] ?? null);
+      },
       error: () => this.showError('Error al cargar los canales'),
     });
   }
@@ -211,6 +220,7 @@ export class ChannelsComponent implements OnInit, AfterViewInit {
               c.id === updated.id ? updated : c,
             );
             this.showSuccess('Canal actualizado');
+            this.selectedChannel.set(updated);
           },
           error: () => this.showError('Error al actualizar el canal'),
         });
@@ -218,6 +228,7 @@ export class ChannelsComponent implements OnInit, AfterViewInit {
         this.channelsService.create(payload).subscribe({
           next: (created) => {
             this.dataSource.data = [...this.dataSource.data, created];
+            this.selectedChannel.set(created);
             this.showSuccess('Canal creado');
           },
           error: () => this.showError('Error al crear el canal'),

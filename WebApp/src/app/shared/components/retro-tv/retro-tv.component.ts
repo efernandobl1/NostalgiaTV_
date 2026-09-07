@@ -50,6 +50,7 @@ const slug = (s: string): string => s.toLowerCase().replace(/\s+/g, '');
   standalone: true,
   imports: [NgClass, FormsModule],
   templateUrl: './retro-tv.component.html',
+  styleUrl: './retro-tv.component.scss',
 })
 export class RetroTvComponent implements AfterViewInit, OnDestroy {
   @ViewChild('video') videoRef?: ElementRef<HTMLVideoElement>;
@@ -220,6 +221,9 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     }
     if (!this.cinema()) return;
     this.pokeOverlay();
+    const target = e.target instanceof HTMLElement ? e.target : null;
+    if (target?.closest('input, textarea, select') ||
+        (target?.closest('button, a') && ['Enter', ' '].includes(e.key))) return;
     const anyOverlay = this.browserOpen() || this.showFilters() || this.showEpisodes() ||
         this.showGuide() || this.showControls();
     if (anyOverlay) {
@@ -248,6 +252,8 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     const n = this.channels().length;
     if (!n) return;
     this.focusedIndex.set((this.focusedIndex() + delta + n) % n);
+    this.fsRootRef?.nativeElement.querySelectorAll('.cinema-channels button')[this.focusedIndex()]
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
   private tuneFocused(): void {
     const ch = this.channels()[this.focusedIndex()];

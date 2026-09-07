@@ -1,0 +1,65 @@
+:host { display: block; min-width: 0; }
+
+.cinema-overlay {
+  gap: 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #8ee89f #141629;
+}
+.cinema-toolbar, .cinema-bottom { flex-shrink: 0; min-width: 0; }
+.cinema-toolbar { flex-wrap: wrap; }
+.cinema-actions { flex-wrap: wrap; margin-left: auto; }
+.cinema-bottom { margin-top: auto; }
+.cinema-program { min-width: 0; }
+.cinema-program > span { max-width: 100%; overflow-wrap: anywhere; }
+.cinema-channels > div { scroll-snap-type: x proximity; }
+.cinema-channels button { scroll-snap-align: start; }
+.cinema-overlay button { flex-shrink: 0; min-height: 44px; }
+.cinema-overlay button:focus-visible { outline: 3px solid #ffd93d; outline-offset: 3px; }
+.retro-surface > .fixed { max-height: 100dvh; }
+.retro-surface > .fixed > div { min-width: 0; }
+.retro-surface > .fixed.items-end > div { max-height: calc(100dvh - 2rem); overflow-y: auto; }
+
+@media (max-height: 600px), (max-width: 900px) {
+  .cinema-overlay { gap: 12px; }
+  .cinema-toolbar { gap: 8px; padding: max(8px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); }
+  .cinema-toolbar > div:first-child { gap: 10px; }
+  .cinema-toolbar .font-pixel { font-size: 10px; }
+  .cinema-toolbar .font-crt { font-size: 22px; }
+  .cinema-actions { gap: 6px; }
+  .cinema-actions button { width: 44px; height: 44px; border-radius: 10px; padding: 0; }
+  .cinema-actions button.cinema-exit { width: auto; padding: 0 12px; font-size: 14px; }
+  .cinema-actions .material-symbols-outlined { font-size: 24px; }
+  .cinema-actions input { width: 72px; }
+  .cinema-bottom { gap: 10px; padding: 0 max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .cinema-bottom > .font-crt { font-size: 28px; line-height: 1.1; }
+  .cinema-program { gap: 4px; }
+  .cinema-program img { height: 40px !important; }
+  .cinema-program > .font-crt { font-size: 28px; }
+  .cinema-program > span:not(.font-crt) { font-size: 16px; line-height: 1.3; }
+  .cinema-bottom > .inline-flex { font-size: 14px; padding: 3px 10px; }
+  .cinema-channels { gap: 6px; }
+  .cinema-channels > .font-pixel { font-size: 9px; }
+  .cinema-channels > div { gap: 10px; }
+  .cinema-channels button { width: 160px; height: 72px; padding: 10px; border-width: 2px; border-radius: 12px; }
+  .cinema-channels button .font-pixel { font-size: 9px; }
+  .cinema-channels button .font-crt { font-size: 23px; }
+  .cinema-hints { gap: 6px 14px; font-size: 13px; }
+  .cinema-hints .font-crt { font-size: 16px; }
+  .cinema-bottom button.h-14, .cinema-bottom button.h-16 { width: 44px; height: 44px; }
+  .retro-surface > .fixed { padding: 12px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left)); }
+  .retro-surface > .fixed .text-6xl, .retro-surface > .fixed .text-5xl { font-size: 30px; line-height: 1.1; }
+  .retro-surface > .fixed > div > .flex:first-child { flex-wrap: wrap; gap: 8px; }
+  .retro-surface > .fixed .gap-6 { gap: 12px; }
+}
+
+@media (max-height: 450px) and (orientation: landscape) {
+  .cinema-program { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; }
+  .cinema-program img { grid-row: span 2; }
+  .cinema-program > span { grid-column: 2; }
+  .cinema-program:not(:has(img)) > span { grid-column: 1 / -1; }
+  .cinema-hints { display: none; }
+  .cinema-toolbar > div:first-child { flex: 1 1 auto; }
+  .cinema-actions { flex: 0 1 auto; }
+}

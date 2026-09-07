@@ -1,3 +1,5 @@
+import { AsyncPipe } from '@angular/common';
+import { SeriesEditorComponent } from './series-editor.component';
 import { map } from 'rxjs';
 import { Component, OnInit, ViewChild, AfterViewInit, signal } from '@angular/core';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -21,17 +23,33 @@ import { environment } from '../../../../environments/environment';
 
 @Component({
     selector: 'app-series',
-    imports: [MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, MatCardModule, MatTooltipModule, DatePipe],
+    imports: [SeriesEditorComponent, AsyncPipe, MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, MatCardModule, MatTooltipModule, DatePipe],
     templateUrl: './series.component.html',
     styleUrl: './series.component.scss',
 })
 export class SeriesComponent implements OnInit, AfterViewInit {
 
     readonly apiUrl = environment.apiUrl;
+    readonly editorOpen = signal(false);
+    readonly editingSeries = signal<SeriesResponse | null>(null);
+    readonly editorTab = signal<'data' | 'episodes'>('data');
 
-    @ViewChild(MatPaginator) paginator!: MatPaginator;
+    paginator!: MatPaginator;
+    @ViewChild(MatPaginator) set page(value: MatPaginator) {
+        if (value) { this.paginator = value; this.dataSource.paginator = value; }
+    }
 
     categories = signal<CategoryResponse[]>([]);
+    readonly filtersOpen = signal(false);
+    toggleFilters(): void { this.filtersOpen.update(value => !value); }
+
+    filterIncomplete(checked: boolean): void {
+        this.dataSource.filterPredicate = (series, search) =>
+            (!checked || !series.logoPath || !series.categoryIds.length) &&
+            series.name.toLocaleLowerCase().includes(search.trim());
+        this.dataSource.filter = this.dataSource.filter || ' ';
+        this.paginator.firstPage();
+    }
     displayedColumns = ['id', 'name', 'description', 'startDate', 'endDate', 'rating', 'categories', 'actions'];
     dataSource = new MatTableDataSource<SeriesResponse>([]);
 
@@ -47,7 +65,9 @@ export class SeriesComponent implements OnInit, AfterViewInit {
     // Los episodios son propios de cada serie: se gestionan desde la fila de la
     // serie (deep-link con la serie preseleccionada) en vez de un menú suelto.
     manageEpisodes(series: SeriesResponse) {
-        this.router.navigate(['/dashboard/episodes'], { queryParams: { seriesId: series.id } });
+        this.editingSeries.set(series);
+        this.editorTab.set('episodes');
+        this.editorOpen.set(true);
     }
 
     ngOnInit() {
@@ -77,57 +97,10 @@ export class SeriesComponent implements OnInit, AfterViewInit {
         });
     }
 
-    openForm(series?: SeriesResponse) {
-        const config: DialogConfig = {
-            title: 'serie',
-            fields: [
-                { key: 'name', label: 'Nombre', type: 'text', validators: [Validators.required, Validators.maxLength(100)] },
-                { key: 'description', label: 'Descripción', type: 'textarea' },
-                { key: 'history', label: 'Historia', type: 'textarea' },
-                { key: 'logo', label: 'Logo', type: 'file' },
-                { key: 'startDate', label: 'Fecha de inicio', type: 'datepicker', validators: [Validators.required] },
-                { key: 'endDate', label: 'Fecha de fin', type: 'datepicker' },
-                { key: 'rating', label: 'Calificación', type: 'number' },
-                { key: 'seasons', label: 'Temporadas', type: 'number', validators: [Validators.required, Validators.min(1)] },
-            ],
-            data: series ?? null,
-        };
-
-        const dialogRef = this.dialog.open(GenericFormDialogComponent, {
-            width: '500px', data: config,
-            panelClass: this.themeService.isDark() ? 'dark-theme' : '',
-        });
-
-        dialogRef.afterClosed().subscribe(result => {
-            if (!result) return;
-            let payload: FormData;
-            if (result.isMultipart) {
-                payload = result.formData;
-            } else {
-                payload = new FormData();
-                Object.keys(result.data).forEach(key => {
-                    if (result.data[key] !== null && result.data[key] !== undefined && result.data[key] !== '')
-                        payload.append(key, result.data[key]);
-                });
-            }
-            if (series) {
-                this.seriesService.update(series.id, payload).subscribe({
-                    next: updated => {
-                        this.dataSource.data = this.dataSource.data.map(s => s.id === updated.id ? updated : s);
-                        this.showSuccess('Serie actualizada');
-                    },
-                    error: () => this.showError('Error al actualizar la serie'),
-                });
-            } else {
-                this.seriesService.create(payload).subscribe({
-                    next: created => {
-                        this.dataSource.data = [...this.dataSource.data, created];
-                        this.showSuccess('Serie creada');
-                    },
-                    error: () => this.showError('Error al crear la serie'),
-                });
-            }
-        });
+    openForm(series?: SeriesResponse): void {
+        this.editingSeries.set(series ?? null);
+        this.editorTab.set('data');
+        this.editorOpen.set(true);
     }
 
     assignCategories(series: SeriesResponse) {

@@ -1,4 +1,5 @@
-import { Component, OnInit, signal, computed, ViewChild, AfterViewInit } from '@angular/core';
+import { AsyncPipe } from '@angular/common';
+import { Component, OnInit, signal, computed, ViewChild, AfterViewInit, input, effect } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -26,7 +27,7 @@ import { DatePipe } from '@angular/common';
 
 @Component({
     selector: 'app-channel-eras',
-    imports: [
+    imports: [AsyncPipe, 
         MatTableModule,
         MatPaginatorModule,
         MatButtonModule,
@@ -44,6 +45,11 @@ import { DatePipe } from '@angular/common';
     styleUrl: './channel-eras.component.scss',
 })
 export class ChannelErasComponent implements OnInit, AfterViewInit {
+    readonly channelId = input<number | null>(null);
+    private readonly syncChannel = effect(() => {
+        const id = this.channelId();
+        if (id) this.onChannelChange(id);
+    });
     @ViewChild(MatPaginator) paginator!: MatPaginator;
 
     channels = signal<ChannelResponse[]>([]);
@@ -93,7 +99,9 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
 
     loadEras(channelId: number) {
         this.channelErasService.getByChannel(channelId).subscribe({
-            next: (data) => (this.dataSource.data = data),
+            next: (data) => {
+                if (this.selectedChannelId() === channelId) this.dataSource.data = data;
+            },
             error: () => this.showError('Error al cargar las eras'),
         });
     }

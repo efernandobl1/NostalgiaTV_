@@ -1,21 +1,27 @@
+@if (editorOpen()) {
+  <app-series-editor [series]="editingSeries()" [initialTab]="editorTab()" (closed)="editorOpen.set(false); loadSeries()" (saved)="loadSeries()" />
+} @else {
 <section class="catalog-page">
   <header class="catalog-toolbar">
     <div class="catalog-search">
       <span class="material-symbols-outlined">search</span>
-      <input type="search" placeholder="Buscar series…" aria-label="Buscar series">
+      <input type="search" (input)="dataSource.filter = $any($event.target).value.trim().toLowerCase(); paginator.firstPage()" placeholder="Buscar series…" aria-label="Buscar series">
     </div>
-    <button type="button" class="catalog-filter"><span class="material-symbols-outlined">filter_list</span>Filtros</button>
+    <button type="button" class="catalog-filter" (click)="toggleFilters()" [attr.aria-expanded]="filtersOpen()" aria-label="Filtros"><span class="material-symbols-outlined">filter_list</span>Filtros</button>
     <button type="button" class="admin-button admin-button--primary" (click)="openForm()">
       <span class="material-symbols-outlined">add</span>Nueva serie
     </button>
   </header>
+  @if (filtersOpen()) {
+    <label class="catalog-filter"><input type="checkbox" (change)="filterIncomplete($any($event.target).checked)"> Solo series sin logo o categorías</label>
+  }
 
   @if (dataSource.data.length) {
     <div class="catalog-table" role="table" aria-label="Series y episodios">
       <div class="catalog-table__header" role="row">
         <span>Serie</span><span>Estreno</span><span>Rating</span><span>Categorías</span><span>Acciones</span>
       </div>
-      @for (series of dataSource.data; track series.id) {
+      @for (series of (dataSource.connect() | async); track series.id) {
         <article class="catalog-row" role="row">
           <div class="catalog-row__identity">
             <div class="catalog-row__poster" [class.catalog-row__poster--missing]="!series.logoPath">
@@ -45,3 +51,4 @@
   }
   <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons />
 </section>
+}

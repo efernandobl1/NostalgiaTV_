@@ -1,10 +1,10 @@
 <section class="catalog-page">
   <header class="catalog-toolbar">
-    <div class="catalog-search"><span class="material-symbols-outlined">search</span><input type="search" placeholder="Buscar categorías…" aria-label="Buscar categorías"></div>
+    <div class="catalog-search"><span class="material-symbols-outlined">search</span><input type="search" (input)="dataSource.filter = $any($event.target).value.trim().toLowerCase(); paginator.firstPage()" placeholder="Buscar categorías…" aria-label="Buscar categorías"></div>
     <button type="button" class="admin-button admin-button--primary" (click)="openForm()"><span class="material-symbols-outlined">add</span>Nueva categoría</button>
   </header>
   <div class="category-grid">
-    @for (category of dataSource.data; track category.id) {
+    @for (category of (dataSource.connect() | async); track category.id) {
       <article class="category-card">
         <div><strong>{{ category.name }}</strong><span>Categoría del catálogo</span></div>
         <div>

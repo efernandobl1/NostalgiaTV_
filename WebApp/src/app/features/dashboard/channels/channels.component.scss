@@ -25,3 +25,28 @@
   .channel-card__actions { gap: 0; }
   .channel-card__actions button:not(:nth-child(2)) { display: none; }
 }
+ .channel-workspace { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); min-height: 60vh; }
+ .channel-picker { display: flex; min-width: 0; flex-direction: column; gap: 10px; padding-right: 16px; border-right: 1px solid rgba(139,125,255,.16); }
+ .channel-option { display: flex; width: 100%; align-items: center; gap: 12px; padding: 12px; border: 1px solid transparent; border-radius: 12px; text-align: left; color: var(--dashboard-text); background: transparent; }
+ .channel-option.is-selected { color: var(--dashboard-green); background: rgba(139,125,255,.14); border-color: var(--dashboard-green); }
+ .channel-option > span:last-child { display: grid; min-width: 0; gap: 4px; }
+ .channel-option strong { font-size: 16px; overflow-wrap: anywhere; }
+ .channel-option small { color: var(--dashboard-muted); font-size: 13px; }
+ .channel-option__logo { display: grid; flex: 0 0 40px; width: 40px; height: 40px; place-items: center; background: var(--dashboard-raised); border-radius: 8px; }
+ .channel-option__logo img { width: 100%; height: 100%; object-fit: contain; }
+ .channel-detail { min-width: 0; padding-left: 24px; display: flex; flex-direction: column; gap: 18px; }
+ .channel-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
+ .channel-heading h2 { margin: 0; color: var(--dashboard-green); font: 30px/1.1 VT323, monospace; }
+ .channel-heading p, .channel-empty { margin: 4px 0 0; color: var(--dashboard-muted); font-size: 14px; }
+ .channel-tabs { display: flex; gap: 24px; border-bottom: 1px solid rgba(139,125,255,.16); }
+ .channel-tabs button { min-height: 44px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--dashboard-muted); }
+ .channel-tabs button[aria-selected=true] { color: var(--dashboard-green); border-bottom-color: var(--dashboard-green); }
+ .channel-schedule { display: flex; flex-wrap: wrap; gap: 12px; }
+ .channel-history { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+ @media (max-width: 1100px) {
+   .channel-workspace { grid-template-columns: minmax(0,1fr); gap: 20px; }
+   .channel-picker { flex-direction: row; flex-wrap: wrap; border: 0; padding: 0; }
+   .channel-option { width: auto; flex: 1 1 200px; }
+   .channel-picker mat-paginator { flex-basis: 100%; }
+   .channel-detail { padding: 0; }
+ }

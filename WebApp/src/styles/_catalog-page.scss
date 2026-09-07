@@ -1,4 +1,4 @@
-.catalog-page { display: flex; flex-direction: column; gap: 16px; }
+.catalog-page { display: flex; min-width: 0; flex-direction: column; gap: 16px; }
 .catalog-toolbar { display: flex; align-items: center; gap: 10px; }
 .catalog-search {
   display: flex; min-height: 44px; flex: 1; align-items: center; gap: 8px; padding: 0 14px;
@@ -35,8 +35,13 @@ mat-paginator { border: 1px solid rgba(139, 125, 255, .22); border-radius: 12px;
   .catalog-row { display: flex; min-height: 80px; gap: 12px; padding: 14px; border: 1px solid rgba(139, 125, 255, .22); border-radius: 12px; background: var(--dashboard-surface); }
   .catalog-row__identity { flex: 1; }
   .catalog-row__date, .catalog-row__rating, .catalog-row__tags { display: none; }
-  .catalog-row__actions button:not(:first-child) { display: none; }
+  .catalog-row { flex-wrap: wrap; }
+  .catalog-row__actions { flex-wrap: wrap; }
 }
+
+.catalog-search { min-width: 0; }
+.catalog-search input { min-width: 0; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--dashboard-gold); outline-offset: 3px; }
 @media (max-width: 48rem) {
   .catalog-toolbar { align-items: stretch; flex-wrap: wrap; }
   .catalog-search { flex-basis: calc(100% - 58px); }

@@ -4,7 +4,7 @@
     <button type="button" class="admin-button admin-button--primary" (click)="openForm()"><span class="material-symbols-outlined">add_moderator</span>Nuevo rol</button>
   </header>
   <div class="access-list">
-    @for (role of dataSource.data; track role.id) {
+    @for (role of (dataSource.connect() | async); track role.id) {
       <article class="access-row">
         <span class="access-avatar"><span class="material-symbols-outlined">shield</span></span>
         <div><strong>{{ role.name }}</strong><span>{{ role.description || 'Sin descripción' }}</span></div>

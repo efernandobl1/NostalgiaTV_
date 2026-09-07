@@ -15,7 +15,7 @@
   </div>
   @if (selectedSeriesId()) {
     <div class="episode-list">
-      @for (episode of dataSource.filteredData; track episode.id) {
+      @for (episode of (dataSource.connect() | async); track episode.id) {
         <article class="episode-card">
           <div class="episode-card__number">{{ episode.episodeNumber || '—' }}</div>
           <div class="episode-card__copy"><strong>{{ episode.title }}</strong><span>Temporada {{ episode.season || 'especial' }} · {{ episode.episodeTypeName }}</span><small [title]="episode.filePath ?? ''">{{ episode.filePath ?? 'Archivo pendiente' }}</small></div>

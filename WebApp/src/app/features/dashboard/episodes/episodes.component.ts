@@ -1,4 +1,5 @@
-import { Component, OnInit, signal, computed, ViewChild, AfterViewInit } from '@angular/core';
+import { AsyncPipe } from '@angular/common';
+import { Component, OnInit, signal, computed, ViewChild, AfterViewInit, input, effect } from '@angular/core';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,7 +21,7 @@ import { DialogConfig, GenericFormDialogComponent } from '../../../shared/compon
 
 @Component({
     selector: 'app-episodes',
-    imports: [
+    imports: [AsyncPipe, 
         MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule,
         MatDialogModule, MatSnackBarModule, MatCardModule, MatSelectModule,
         MatFormFieldModule, MatTooltipModule, FormsModule, RouterLink
@@ -29,6 +30,11 @@ import { DialogConfig, GenericFormDialogComponent } from '../../../shared/compon
     styleUrl: './episodes.component.scss'
 })
 export class EpisodesComponent implements OnInit, AfterViewInit {
+    readonly seriesId = input<number | null>(null);
+    private readonly syncSeries = effect(() => {
+        const id = this.seriesId();
+        if (id) this.onSeriesChange(id);
+    });
 
     @ViewChild(MatPaginator) paginator!: MatPaginator;
 
@@ -97,6 +103,7 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
     loadEpisodes(seriesId: number) {
         this.episodesService.getBySeries(seriesId).subscribe({
             next: data => {
+                if (this.selectedSeriesId() !== seriesId) return;
                 this.allEpisodes.set(data);
                 this.dataSource.data = data;
             },

@@ -1,10 +1,10 @@
 <section class="access-module">
   <header class="catalog-toolbar">
-    <div class="catalog-search"><span class="material-symbols-outlined">search</span><input type="search" placeholder="Buscar usuarios…" aria-label="Buscar usuarios"></div>
+    <div class="catalog-search"><span class="material-symbols-outlined">search</span><input type="search" (input)="dataSource.filter = $any($event.target).value.trim().toLowerCase(); paginator.firstPage()" placeholder="Buscar usuarios…" aria-label="Buscar usuarios"></div>
     <button type="button" class="admin-button admin-button--primary" (click)="openForm()"><span class="material-symbols-outlined">person_add</span>Nuevo usuario</button>
   </header>
   <div class="access-list">
-    @for (user of dataSource.data; track user.id) {
+    @for (user of (dataSource.connect() | async); track user.id) {
       <article class="access-row">
         <span class="access-avatar">{{ user.username.slice(0, 2).toUpperCase() }}</span>
         <div><strong>{{ user.username }}</strong><span>{{ user.rol.name }}</span></div>

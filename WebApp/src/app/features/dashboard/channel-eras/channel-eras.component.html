@@ -1,5 +1,6 @@
 <section class="catalog-page">
   <header class="catalog-toolbar">
+    @if (!channelId()) {
     <a routerLink="/dashboard/channels" class="admin-back" aria-label="Volver a canales"><span class="material-symbols-outlined">arrow_back</span></a>
     <mat-form-field appearance="outline" class="era-channel-select">
       <mat-label>Canal</mat-label>
@@ -7,14 +8,21 @@
         @for (channel of channels(); track channel.id) { <mat-option [value]="channel.id">{{ channel.name }}</mat-option> }
       </mat-select>
     </mat-form-field>
+    }
     <button type="button" class="admin-button admin-button--primary" (click)="openForm()" [disabled]="!selectedChannelId()"><span class="material-symbols-outlined">add</span>Nueva era</button>
   </header>
   @if (selectedChannelId()) {
     <div class="era-list">
-      @for (era of dataSource.data; track era.id) {
+      @for (era of (dataSource.connect() | async); track era.id) {
         <article class="era-card" [class.era-card--attention]="!era.bumpers.length">
           <div class="era-card__heading"><strong>{{ era.name }}</strong><span>{{ era.startDate | date:'yyyy' }} – {{ era.endDate ? (era.endDate | date:'yyyy') : 'actualidad' }}</span></div>
           <div class="era-card__meta"><span>{{ era.seriesIds.length }} series</span><span [class.is-danger]="!era.bumpers.length">{{ era.bumpers.length }} bumpers</span></div>
+          <div class="era-bumpers">
+            @for (bumper of era.bumpers; track bumper.id) {
+              <button type="button" (click)="manageBumpers(era)"><mat-icon>theaters</mat-icon>{{ bumper.title }}</button>
+            }
+            <button type="button" class="era-upload" (click)="manageBumpers(era)"><mat-icon>upload</mat-icon>{{ era.bumpers.length ? 'Gestionar bumpers' : 'Cargar bumpers' }}</button>
+          </div>
           <div class="era-card__actions">
             <button type="button" (click)="openForm(era)" aria-label="Editar era"><mat-icon>edit</mat-icon></button>
             <button type="button" (click)="assignSeries(era)" aria-label="Asignar series"><mat-icon>movie</mat-icon></button>
