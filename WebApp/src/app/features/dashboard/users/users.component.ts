@@ -1,3 +1,4 @@
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { AsyncPipe } from '@angular/common';
 import { Component, OnInit, ViewChild, AfterViewInit, signal } from '@angular/core';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -17,7 +18,7 @@ import { CustomizerSettingsService } from '../../../shared/components/customizer
 
 @Component({
     selector: 'app-users',
-    imports: [AsyncPipe, MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, MatCardModule],
+    imports: [MatTooltipModule, AsyncPipe, MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, MatCardModule],
     templateUrl: './users.component.html',
     styleUrl: './users.component.scss'
 })

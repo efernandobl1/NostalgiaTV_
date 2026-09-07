@@ -19,7 +19,7 @@
         <article class="episode-card">
           <div class="episode-card__number">{{ episode.episodeNumber || '—' }}</div>
           <div class="episode-card__copy"><strong>{{ episode.title }}</strong><span>Temporada {{ episode.season || 'especial' }} · {{ episode.episodeTypeName }}</span><small [title]="episode.filePath ?? ''">{{ episode.filePath ?? 'Archivo pendiente' }}</small></div>
-          <button type="button" class="episode-card__edit" (click)="editEpisode(episode)" aria-label="Editar episodio"><mat-icon>edit</mat-icon></button>
+          <button type="button" class="episode-card__edit" (click)="editEpisode(episode)" matTooltip="Editar episodio" aria-label="Editar episodio"><mat-icon>edit</mat-icon></button>
         </article>
       } @empty { <div class="admin-empty"><span class="material-symbols-outlined">video_library</span><strong>No hay episodios</strong><span>Sincroniza la carpeta para encontrarlos.</span></div> }
     </div>

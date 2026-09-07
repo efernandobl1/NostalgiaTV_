@@ -1,4 +1,34 @@
 :host { display: block; min-width: 0; }
+.tv-viewer { height: 220px; width: auto; max-height: 32vh; object-fit: contain; }
+
+.playback-prompt {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 16px;
+  background: rgb(0 0 0 / 80%);
+}
+.playback-card {
+  width: min(100%, 440px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid #8ee89f;
+  border-radius: 16px;
+  background: #191b2e;
+  color: #e6e8f2;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.playback-card > .material-symbols-outlined { font-size: 40px; color: #8ee89f; }
+.playback-card h2 { margin: 8px 0 12px; font-family: 'VT323', monospace; font-size: 36px; line-height: 1.1; }
+.playback-card button { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin-top: 16px; padding: 10px 16px; border-radius: 8px; background: #8ee89f; color: #141629; font: inherit; font-weight: 600; }
+.playback-card button.playback-dismiss { margin-top: 8px; background: transparent; color: #e6e8f2; }
+.playback-card button:focus-visible { outline: 3px solid #ffd93d; outline-offset: 3px; }
 
 .cinema-overlay {
   gap: 1rem;
@@ -9,6 +39,10 @@
 }
 .cinema-toolbar, .cinema-bottom { flex-shrink: 0; min-width: 0; }
 .cinema-toolbar { flex-wrap: wrap; }
+.cinema-toolbar { background: linear-gradient(#000e, #0009); padding-bottom: 12px; }
+.cinema-bottom { background: linear-gradient(transparent, #000e 35%); padding-top: 20px; }
+.cinema-program { width: fit-content; max-width: 100%; padding: 8px 12px; border-radius: 8px; background: #141629e6; }
+.cinema-channels button .font-crt { white-space: normal; overflow-wrap: anywhere; line-height: 1.1; }
 .cinema-actions { flex-wrap: wrap; margin-left: auto; }
 .cinema-bottom { margin-top: auto; }
 .cinema-program { min-width: 0; }

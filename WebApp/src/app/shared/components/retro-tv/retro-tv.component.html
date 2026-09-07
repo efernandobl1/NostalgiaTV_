@@ -5,6 +5,21 @@
      de #fsRoot (el elemento que entra a fullscreen) para que los overlays se vean. -->
 <div #fsRoot class="retro-surface relative bg-ink" [class.tv-mode]="tv.enabled()">
 
+  @if (needsPlayback() && hasMedia()) {
+    <section class="playback-prompt" role="dialog" aria-modal="true" aria-labelledby="playback-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+      <div class="playback-card">
+        <span class="material-symbols-outlined" aria-hidden="true">live_tv</span>
+        <h2 id="playback-title">Continuar viendo</h2>
+        <p role="status">{{ playbackError() || 'Pulsa el botón para reproducir con sonido.' }}</p>
+        <button type="button" (click)="resumePlayback()">
+          <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+          {{ playbackError() ? 'Reintentar reproducción' : 'Reproducir con sonido' }}
+        </button>
+        <button type="button" class="playback-dismiss" (click)="needsPlayback.set(false)">Ahora no</button>
+      </div>
+    </section>
+  }
+
   <!-- ══════════════════ ILUSTRACIÓN (siempre montada; el cine la cubre) ══════════════════ -->
   <div class="relative flex h-dvh w-full flex-col overflow-hidden text-text"
        style="background:linear-gradient(135deg,#1a1a2e 0%,#0f0f1e 50%,#16213e 100%)">
@@ -83,10 +98,6 @@
                       </button>
                     }
                     @if (tv.enabled()) {
-                      <button type="button" (click)="openControls()" title="Controles"
-                              class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-cyan transition hover:bg-white/10">
-                        <span class="material-symbols-outlined text-3xl">settings_remote</span>
-                      </button>
                     }
                     <!-- Episodios (series) / Series (canales) -->
                     @if (mode() === 'series') {
@@ -187,11 +198,11 @@
                   @if (tv.enabled() && !fullscreen()) {
                     <!-- leyenda D-pad (control remoto) — sólo en modo TV, no en fullscreen -->
                     <div class="cinema-hints flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-text-dim md:text-base">
-                      <span class="flex items-center gap-2"><span class="rounded bg-retro-green px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().ok) }}</span>Sintonizar</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().channelPrev) }} {{ controls.keyLabel(controls.bindings().channelNext) }}</span>Cambiar canal</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().guide) }}</span>{{ mode() === 'series' ? 'Episodios' : 'Guía' }}</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().image) }}</span>Imagen</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings().hide) }}</span>Ocultar tira</span>
+                      <span class="flex items-center gap-2"><span class="rounded bg-retro-green px-2 py-0.5 font-crt text-lg text-ink">Enter</span>Sintonizar</span>
+                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">← →</span>Cambiar canal</span>
+                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">↑</span>{{ mode() === 'series' ? 'Episodios' : 'Guía' }}</span>
+                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">↓</span>Imagen</span>
+                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">Esc</span>Ocultar tira</span>
                     </div>
                   }
                 </div>
@@ -201,7 +212,7 @@
           <!-- ▲▲ #stage ▲▲ -->
         </div>
         <img src="images/kid-watching.png" alt="Niño viendo televisión"
-             class="pointer-events-none absolute bottom-0 left-1/2 z-[5] hidden h-[220px] -translate-x-[62%] brightness-90 lg:block"
+             class="tv-viewer pointer-events-none absolute bottom-0 left-1/2 z-[5] hidden -translate-x-[62%] brightness-90 lg:block"
              style="filter:drop-shadow(0 -10px 20px rgba(0,0,0,.5))">
       </div>
 
@@ -549,34 +560,5 @@
   }
 
   <!-- ══════════════════ Remapeo de teclas (tipo emulador) ══════════════════ -->
-  @if (showControls()) {
-    <div class="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-4 sm:items-center" (click)="closeControls()">
-      <div class="w-full max-w-md rounded-2xl border border-retro-purple/30 bg-panel p-5 text-text shadow-2xl" (click)="$event.stopPropagation()">
-        <div class="mb-1 flex items-center gap-2">
-          <span class="material-symbols-outlined text-retro-cyan">settings_remote</span>
-          <span class="font-crt text-2xl text-retro-green">Controles del mando</span>
-          <button type="button" (click)="closeControls()" aria-label="Cerrar"
-                  class="ml-auto grid h-9 w-9 place-items-center rounded-full border border-retro-green/40 bg-transparent text-text-mute hover:bg-white/10"><span class="material-symbols-outlined">close</span></button>
-        </div>
-        <p class="mb-4 text-xs text-text-dim">Tocá “Asignar” y presioná la tecla que quieras para esa acción.</p>
-        <div class="flex flex-col gap-2">
-          @for (a of tvActions; track a.action) {
-            <div class="flex items-center gap-3 rounded-lg border border-retro-purple/20 bg-surface-deep p-2.5">
-              <span class="flex-1 text-sm">{{ a.label }}</span>
-              <span class="min-w-14 rounded bg-text-mute px-2.5 py-0.5 text-center font-crt text-lg text-ink">{{ controls.keyLabel(controls.bindings()[a.action]) }}</span>
-              <button type="button" (click)="startCapture(a.action)"
-                      class="rounded-lg border px-3 py-1 text-xs transition"
-                      [ngClass]="capturingAction() === a.action ? 'border-retro-gold bg-retro-gold/15 text-retro-gold' : 'border-retro-green/40 bg-transparent text-retro-green hover:bg-white/10'">
-                {{ capturingAction() === a.action ? 'Presioná…' : 'Asignar' }}
-              </button>
-            </div>
-          }
-        </div>
-        <button type="button" (click)="resetControls()"
-                class="mt-4 inline-flex items-center gap-2 rounded-lg border border-retro-cyan/50 bg-transparent px-3 py-2 text-sm text-retro-cyan transition hover:bg-retro-cyan/10">
-          <span class="material-symbols-outlined text-lg">restart_alt</span>Restablecer por defecto
-        </button>
-      </div>
-    </div>
-  }
+
 </div>

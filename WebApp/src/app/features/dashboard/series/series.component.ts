@@ -10,8 +10,6 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Validators } from '@angular/forms';
-import { Router } from '@angular/router';
 import { SeriesService } from './series.service';
 import { CategoriesService } from '../categories/categories.service';
 import { SeriesResponse } from '../../../shared/models/serie.model';
@@ -41,14 +39,23 @@ export class SeriesComponent implements OnInit, AfterViewInit {
 
     categories = signal<CategoryResponse[]>([]);
     readonly filtersOpen = signal(false);
+    private searchTerm = '';
+    private incompleteOnly = false;
     toggleFilters(): void { this.filtersOpen.update(value => !value); }
 
     filterIncomplete(checked: boolean): void {
-        this.dataSource.filterPredicate = (series, search) =>
-            (!checked || !series.logoPath || !series.categoryIds.length) &&
-            series.name.toLocaleLowerCase().includes(search.trim());
-        this.dataSource.filter = this.dataSource.filter || ' ';
-        this.paginator.firstPage();
+        this.incompleteOnly = checked;
+        this.applyFilter();
+    }
+
+    search(value: string): void {
+        this.searchTerm = value.trim().toLocaleLowerCase();
+        this.applyFilter();
+    }
+
+    private applyFilter(): void {
+        this.dataSource.filter = JSON.stringify([this.searchTerm, this.incompleteOnly]);
+        this.paginator?.firstPage();
     }
     displayedColumns = ['id', 'name', 'description', 'startDate', 'endDate', 'rating', 'categories', 'actions'];
     dataSource = new MatTableDataSource<SeriesResponse>([]);
@@ -58,7 +65,6 @@ export class SeriesComponent implements OnInit, AfterViewInit {
         private categoriesService: CategoriesService,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
-        private router: Router,
         public themeService: CustomizerSettingsService,
     ) {}
 
@@ -71,6 +77,9 @@ export class SeriesComponent implements OnInit, AfterViewInit {
     }
 
     ngOnInit() {
+        this.dataSource.filterPredicate = series =>
+            (!this.incompleteOnly || !series.logoPath || !series.categoryIds.length) &&
+            series.name.toLocaleLowerCase().includes(this.searchTerm);
         this.loadSeries();
         this.categoriesService.getAll().subscribe({
             next: data => this.categories.set(data),

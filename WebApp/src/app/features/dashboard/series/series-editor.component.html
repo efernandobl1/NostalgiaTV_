@@ -1,6 +1,6 @@
 <section class="series-editor">
   <header class="editor-heading">
-    <button type="button" class="editor-back" aria-label="Volver a series" (click)="closed.emit()" [disabled]="busy()"><span class="material-symbols-outlined">arrow_back</span></button>
+    <button type="button" class="editor-back" matTooltip="Volver a series" aria-label="Volver a series" (click)="closed.emit()" [disabled]="busy()"><span class="material-symbols-outlined">arrow_back</span></button>
     <div><h2>{{ current()?.name || 'Nueva serie' }}</h2><span role="status">{{ message() || (form.dirty ? 'Cambios sin guardar' : 'Editor de serie') }}</span></div>
     <button type="button" class="admin-button admin-button--primary" (click)="save()" [disabled]="busy()">{{ busy() ? 'Guardando…' : 'Guardar cambios' }}</button>
   </header>
@@ -17,11 +17,11 @@
         <div class="editor-fields">
           <label>Nombre<input formControlName="name" maxlength="100" required></label>
           @if (form.controls.name.touched && form.controls.name.invalid) { <p class="editor-error">Introduce un nombre de hasta 100 caracteres.</p> }
-          <label>Descripción<textarea formControlName="description" rows="3"></textarea></label>
+          <label>Descripción<textarea formControlName="description" maxlength="500" rows="3"></textarea></label>
           <div class="editor-dates"><label>Fecha de inicio<input type="date" formControlName="startDate" required></label><label>Fecha de fin<input type="date" formControlName="endDate"></label></div>
           <div class="editor-dates"><label>Temporadas<input type="number" min="1" formControlName="seasons"></label><label>Calificación<input type="number" min="0" max="10" step="0.1" formControlName="rating"></label></div>
           <fieldset><legend>Categorías</legend><div class="editor-categories">@for (category of categories(); track category.id) { <label><input type="checkbox" [checked]="selectedCategories().includes(category.id)" (change)="toggleCategory(category.id, $any($event.target).checked)">{{ category.name }}</label> }</div></fieldset>
-          <label>Historia<textarea formControlName="history" rows="4"></textarea></label>
+          <label>Historia<textarea formControlName="history" maxlength="1000" rows="4"></textarea></label>
         </div>
         <aside class="editor-artwork">
           <h3>Logo de la serie</h3>

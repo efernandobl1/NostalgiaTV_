@@ -9,8 +9,8 @@
         <span class="access-avatar"><span class="material-symbols-outlined">shield</span></span>
         <div><strong>{{ role.name }}</strong><span>{{ role.description || 'Sin descripción' }}</span></div>
         <div class="access-actions">
-          <button type="button" (click)="openForm(role)" aria-label="Editar rol"><mat-icon>edit</mat-icon></button>
-          <button type="button" class="is-danger" (click)="delete(role.id)" aria-label="Eliminar rol"><mat-icon>delete</mat-icon></button>
+          <button type="button" (click)="openForm(role)" matTooltip="Editar rol" aria-label="Editar rol"><mat-icon>edit</mat-icon></button>
+          <button type="button" class="is-danger" (click)="delete(role.id)" matTooltip="Eliminar rol" aria-label="Eliminar rol"><mat-icon>delete</mat-icon></button>
         </div>
       </article>
     } @empty {

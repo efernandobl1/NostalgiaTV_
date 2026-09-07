@@ -4,6 +4,7 @@ import {
 } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { A11yModule } from '@angular/cdk/a11y';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
@@ -13,7 +14,6 @@ import { environment } from '../../../../environments/environment';
 import { TvModeService } from '../../../core/services/tv-mode.service';
 import { TvSettingsService } from '../../../core/services/tv-settings.service';
 import { WatchedService } from '../../../core/services/watched.service';
-import { ControlBindingsService, TvAction, TV_ACTIONS } from '../../../core/services/control-bindings.service';
 import { SeriesResponse } from '../../models/serie.model';
 
 interface Channel { id: number; name: string; logoPath?: string; }
@@ -48,7 +48,7 @@ const slug = (s: string): string => s.toLowerCase().replace(/\s+/g, '');
 @Component({
   selector: 'app-retro-tv',
   standalone: true,
-  imports: [NgClass, FormsModule],
+  imports: [NgClass, FormsModule, A11yModule],
   templateUrl: './retro-tv.component.html',
   styleUrl: './retro-tv.component.scss',
 })
@@ -63,8 +63,6 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   readonly tv = inject(TvModeService);
   private readonly tvSettings = inject(TvSettingsService);
   private readonly watched = inject(WatchedService);
-  readonly controls = inject(ControlBindingsService);
-  readonly tvActions = TV_ACTIONS;
 
   private readonly apiUrl = environment.apiUrl;
   private hub?: signalR.HubConnection;
@@ -77,6 +75,8 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   readonly current = signal<Channel | null>(null);
   readonly state = signal<ChannelState | null>(null);
   readonly playing = signal(false);
+  readonly needsPlayback = signal(false);
+  readonly playbackError = signal('');
   readonly muted = signal(false);
   readonly volume = signal(1);
   readonly fullscreen = signal(false);
@@ -86,11 +86,9 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   readonly showFilters = signal(false);
   readonly showEpisodes = signal(false);   // lista de episodios en cine
   readonly showGuide = signal(false);      // guía de programación
-  readonly showControls = signal(false);   // remapeo de teclas
   readonly guideRows = signal<GuideRow[]>([]);
   readonly guideLoading = signal(false);
   readonly guideDay = signal<0 | 1>(0);    // 0 = hoy, 1 = mañana
-  readonly capturingAction = signal<TvAction | null>(null);
 
   // Barra de progreso del reproductor (series).
   readonly videoTime = signal(0);
@@ -211,12 +209,8 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
-    // Captura de tecla al remapear: cualquier tecla queda asignada a la acción.
-    if (this.capturingAction()) {
-      e.preventDefault(); e.stopPropagation();
-      const action = this.capturingAction()!;
-      if (e.key !== 'Escape') this.controls.set(action, e.key);
-      this.capturingAction.set(null);
+    if (this.needsPlayback()) {
+      if (e.key === 'Escape') this.needsPlayback.set(false);
       return;
     }
     if (!this.cinema()) return;
@@ -225,17 +219,17 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     if (target?.closest('input, textarea, select') ||
         (target?.closest('button, a') && ['Enter', ' '].includes(e.key))) return;
     const anyOverlay = this.browserOpen() || this.showFilters() || this.showEpisodes() ||
-        this.showGuide() || this.showControls();
+        this.showGuide();
     if (anyOverlay) {
       if (e.key === 'Escape' || e.key === 'Backspace') {
         e.preventDefault();
         this.browserOpen.set(false); this.showFilters.set(false); this.showEpisodes.set(false);
-        this.showGuide.set(false); this.showControls.set(false);
+        this.showGuide.set(false);
       }
       return;
     }
 
-    const action = this.controls.actionFor(e.key) ?? (e.key === 'Backspace' ? 'hide' : undefined);
+    const action = ({ ArrowRight: 'channelNext', ArrowLeft: 'channelPrev', Enter: 'ok', ArrowUp: 'guide', ArrowDown: 'image', Escape: 'hide', Backspace: 'hide' } as Record<string, string>)[e.key];
     if (!action) return;
     e.preventDefault();
     switch (action) {
@@ -359,11 +353,35 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     v.load();
     v.currentTime = startAt || 0;
     v.muted = this.muted();
-    v.play().then(() => this.playing.set(true)).catch((err: Error) => {
-      if (err.name === 'AbortError') return;
-      v.muted = true; this.muted.set(true);
-      v.play().then(() => this.playing.set(true)).catch(() => this.playing.set(false));
+    this.playbackError.set('');
+    this.tryPlay(v);
+
+  }
+
+  private tryPlay(video: HTMLVideoElement): void {
+    const source = video.src;
+    video.play().then(() => {
+      if (video.src !== source) return;
+      this.playing.set(true);
+      this.needsPlayback.set(false);
+    }).catch((error: Error) => {
+      if (video.src !== source || error.name === 'AbortError') return;
+      this.playing.set(false);
+      this.needsPlayback.set(true);
+      this.playbackError.set(error.name === 'NotAllowedError' ? '' :
+        'No se pudo reproducir este archivo. Puedes reintentar o elegir otro canal.');
     });
+  }
+
+  resumePlayback(): void {
+    const video = this.videoRef?.nativeElement;
+    if (!video) return;
+    video.muted = false;
+    video.volume = this.volume() || 1;
+    this.muted.set(false);
+    this.volume.set(video.volume);
+    this.playbackError.set('');
+    this.tryPlay(video);
   }
 
   private loadVideo(state: ChannelState): void {
@@ -391,7 +409,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   togglePlay(): void {
     const v = this.videoRef?.nativeElement;
     if (!v) return;
-    if (v.paused) { v.play(); this.playing.set(true); }
+    if (v.paused) { this.resumePlayback(); }
     else { v.pause(); this.playing.set(false); }
   }
   onVideoClick(): void { if (this.mode() === 'series') this.togglePlay(); }
@@ -521,12 +539,6 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     if (!v || !v.duration) return;
     v.currentTime = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * v.duration;
   }
-
-  // ── Remapeo de teclas (tipo emulador) ────────────────────────────────────
-  openControls(): void { this.showControls.set(true); }
-  closeControls(): void { this.showControls.set(false); this.capturingAction.set(null); }
-  startCapture(action: TvAction): void { this.capturingAction.set(action); }
-  resetControls(): void { this.controls.reset(); this.capturingAction.set(null); }
 
   // ── Series ──────────────────────────────────────────────────────────────
   openBrowser(): void {

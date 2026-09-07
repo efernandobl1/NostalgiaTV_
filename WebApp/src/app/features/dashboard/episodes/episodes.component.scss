@@ -19,3 +19,4 @@
   .episode-card { grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem; gap: .7rem; padding: .8rem; }
   .episode-card__number { width: 2.5rem; }
 }
+ .catalog-toolbar .admin-button { position: static; height: auto; min-height: 44px; padding: 0 18px; font-size: 15px; border-radius: 999px; }

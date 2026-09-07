@@ -5,9 +5,9 @@
   <header class="catalog-toolbar">
     <div class="catalog-search">
       <span class="material-symbols-outlined">search</span>
-      <input type="search" (input)="dataSource.filter = $any($event.target).value.trim().toLowerCase(); paginator.firstPage()" placeholder="Buscar series…" aria-label="Buscar series">
+      <input type="search" (input)="search($any($event.target).value)" placeholder="Buscar series…" aria-label="Buscar series">
     </div>
-    <button type="button" class="catalog-filter" (click)="toggleFilters()" [attr.aria-expanded]="filtersOpen()" aria-label="Filtros"><span class="material-symbols-outlined">filter_list</span>Filtros</button>
+    <button type="button" class="catalog-filter" (click)="toggleFilters()" [attr.aria-expanded]="filtersOpen()" matTooltip="Filtros" aria-label="Filtros"><span class="material-symbols-outlined">filter_list</span>Filtros</button>
     <button type="button" class="admin-button admin-button--primary" (click)="openForm()">
       <span class="material-symbols-outlined">add</span>Nueva serie
     </button>

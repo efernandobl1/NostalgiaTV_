@@ -10,3 +10,10 @@
  .era-bumpers { display: flex; flex-wrap: wrap; gap: 10px; }
  .era-bumpers button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid transparent; border-radius: 10px; background: rgba(139,125,255,.14); color: var(--dashboard-purple-soft); font-size: 14px; }
  .era-bumpers button.era-upload { border: 1px dashed var(--dashboard-green); color: var(--dashboard-green); background: rgba(142,232,159,.06); }
+ .era-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+ .era-card__heading { grid-column: 1; }
+ .era-card__meta { grid-column: 1; flex-wrap: wrap; }
+ .era-card__actions { grid-column: 2; grid-row: 1 / 3; }
+ .era-bumpers { grid-column: 1 / -1; }
+ .catalog-toolbar .admin-button { position: static; width: auto; height: auto; min-height: 44px; padding: 0 18px; font-size: 15px; border-radius: 999px; }
+ @media(max-width: 600px) { .era-card { grid-template-columns: minmax(0,1fr); } .era-card__actions { grid-column: 1; grid-row: auto; } }

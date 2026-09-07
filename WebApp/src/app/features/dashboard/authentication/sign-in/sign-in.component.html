@@ -21,7 +21,7 @@
       <label for="password">Contraseña</label>
       <mat-form-field>
         <input matInput [type]="hide ? 'password' : 'text'" id="password" formControlName="password" autocomplete="current-password" placeholder="Ingresá tu contraseña">
-        <button mat-icon-button matSuffix type="button" (click)="hide = !hide" aria-label="Mostrar u ocultar contraseña" [attr.aria-pressed]="!hide">
+        <button mat-icon-button matSuffix type="button" (click)="hide = !hide" matTooltip="Mostrar u ocultar contraseña" aria-label="Mostrar u ocultar contraseña" [attr.aria-pressed]="!hide">
           <span class="material-symbols-outlined">{{ hide ? 'visibility_off' : 'visibility' }}</span>
         </button>
       </mat-form-field>
