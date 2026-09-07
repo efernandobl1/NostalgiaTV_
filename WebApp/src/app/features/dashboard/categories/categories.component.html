@@ -8,8 +8,8 @@
       <article class="category-card">
         <div><strong>{{ category.name }}</strong><span>Categoría del catálogo</span></div>
         <div>
-          <button type="button" (click)="openForm(category)" aria-label="Editar categoría"><mat-icon>edit</mat-icon></button>
-          <button type="button" class="is-danger" (click)="delete(category.id)" aria-label="Eliminar categoría"><mat-icon>delete</mat-icon></button>
+          <button type="button" (click)="openForm(category)" matTooltip="Editar categoría" aria-label="Editar categoría"><mat-icon>edit</mat-icon></button>
+          <button type="button" class="is-danger" (click)="delete(category.id)" matTooltip="Eliminar categoría" aria-label="Eliminar categoría"><mat-icon>delete</mat-icon></button>
         </div>
       </article>
     } @empty {

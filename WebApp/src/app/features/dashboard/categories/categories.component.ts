@@ -1,3 +1,4 @@
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { AsyncPipe } from '@angular/common';
 import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -15,7 +16,7 @@ import { CustomizerSettingsService } from '../../../shared/components/customizer
 
 @Component({
     selector: 'app-categories',
-    imports: [AsyncPipe, MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, MatCardModule],
+    imports: [MatTooltipModule, AsyncPipe, MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, MatCardModule],
     templateUrl: './categories.component.html',
     styleUrl: './categories.component.scss'
 })

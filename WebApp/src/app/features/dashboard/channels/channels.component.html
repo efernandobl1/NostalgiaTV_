@@ -1,17 +1,19 @@
 <section class="catalog-page">
   <header class="catalog-toolbar">
     <div class="catalog-search"><span class="material-symbols-outlined">search</span><input type="search" placeholder="Buscar canal…" aria-label="Buscar canal" (input)="dataSource.filter = $any($event.target).value.trim().toLowerCase(); paginator.firstPage()"></div>
-    <button type="button" class="admin-button admin-button--primary" (click)="openForm()" aria-label="Nuevo canal"><span class="material-symbols-outlined">add</span>Nuevo canal</button>
+    <button type="button" class="admin-button admin-button--primary" (click)="openForm()" matTooltip="Nuevo canal" aria-label="Nuevo canal"><span class="material-symbols-outlined">add</span>Nuevo canal</button>
   </header>
   <div class="channel-workspace">
     <aside class="channel-picker" aria-label="Canales">
+      <div class="channel-options">
       @for (channel of (dataSource.connect() | async); track channel.id) {
         <button type="button" class="channel-option" [class.is-selected]="selectedChannel()?.id === channel.id" [attr.aria-pressed]="selectedChannel()?.id === channel.id" (click)="selectedChannel.set(channel)">
           <span class="channel-option__logo">@if (channel.logoPath) { <img [src]="apiUrl + channel.logoPath" alt=""> } @else { <mat-icon>live_tv</mat-icon> }</span>
           <span><strong>{{ channel.name }}</strong><small>{{ channel.eras.length }} eras · {{ channel.seriesIds.length }} series</small></span>
         </button>
       } @empty { <p class="channel-empty">No hay canales que coincidan.</p> }
-      <mat-paginator [pageSizeOptions]="[10,25,50]" showFirstLastButtons />
+      </div>
+      <mat-paginator [hidden]="dataSource.filteredData.length <= 10" [pageSizeOptions]="[10,25,50]" showFirstLastButtons />
     </aside>
     @if (selectedChannel(); as channel) {
       <section class="channel-detail" [attr.aria-label]="channel.name">

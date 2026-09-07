@@ -48,6 +48,7 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
     displayedColumns = ['id', 'title', 'filePath', 'order', 'actions'];
     dataSource = new MatTableDataSource<ChannelBumperResponse>([]);
     apiUrl = environment.apiUrl;
+    readonly preview = signal<ChannelBumperResponse | null>(null);
 
     constructor(
         private bumpersService: ChannelBumpersService,
@@ -85,6 +86,7 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
     }
 
     onChannelChange(channelId: number) {
+        this.preview.set(null);
         this.selectedChannelId.set(channelId);
         this.selectedEraId.set(null);
         this.dataSource.data = [];
@@ -95,6 +97,7 @@ export class ChannelBumpersComponent implements OnInit, AfterViewInit {
     }
 
     onEraChange(eraId: number) {
+        this.preview.set(null);
         this.selectedEraId.set(eraId);
         this.loadBumpers(eraId);
     }

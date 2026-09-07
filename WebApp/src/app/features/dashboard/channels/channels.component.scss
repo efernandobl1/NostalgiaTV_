@@ -50,3 +50,9 @@
    .channel-picker mat-paginator { flex-basis: 100%; }
    .channel-detail { padding: 0; }
  }
+ .channel-options { display: flex; min-width: 0; flex-direction: column; gap: 10px; }
+ @media (max-width: 1100px) {
+   .channel-picker { display: block; }
+   .channel-options { flex-direction: row; overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 8px; }
+   .channel-option { flex: 0 0 200px; scroll-snap-align: start; }
+ }

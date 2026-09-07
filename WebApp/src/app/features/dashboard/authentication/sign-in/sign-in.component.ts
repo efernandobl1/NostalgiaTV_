@@ -1,3 +1,4 @@
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Component, HostBinding, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -11,7 +12,7 @@ import { TvModeService } from '../../../../core/services/tv-mode.service';
 
 @Component({
   selector: 'app-sign-in',
-  imports: [
+  imports: [MatTooltipModule,
     RouterLink,
     MatFormFieldModule,
     MatInputModule,

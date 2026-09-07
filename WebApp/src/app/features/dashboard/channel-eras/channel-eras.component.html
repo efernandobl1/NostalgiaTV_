@@ -24,10 +24,10 @@
             <button type="button" class="era-upload" (click)="manageBumpers(era)"><mat-icon>upload</mat-icon>{{ era.bumpers.length ? 'Gestionar bumpers' : 'Cargar bumpers' }}</button>
           </div>
           <div class="era-card__actions">
-            <button type="button" (click)="openForm(era)" aria-label="Editar era"><mat-icon>edit</mat-icon></button>
-            <button type="button" (click)="assignSeries(era)" aria-label="Asignar series"><mat-icon>movie</mat-icon></button>
-            <button type="button" (click)="manageBumpers(era)" aria-label="Gestionar bumpers"><mat-icon>theaters</mat-icon></button>
-            <button type="button" class="is-danger" (click)="deleteEra(era)" aria-label="Eliminar era"><mat-icon>delete</mat-icon></button>
+            <button type="button" (click)="openForm(era)" matTooltip="Editar era" aria-label="Editar era"><mat-icon>edit</mat-icon></button>
+            <button type="button" (click)="assignSeries(era)" matTooltip="Asignar series" aria-label="Asignar series"><mat-icon>movie</mat-icon></button>
+            <button type="button" (click)="manageBumpers(era)" matTooltip="Gestionar bumpers" aria-label="Gestionar bumpers"><mat-icon>theaters</mat-icon></button>
+            <button type="button" class="is-danger" (click)="deleteEra(era)" matTooltip="Eliminar era" aria-label="Eliminar era"><mat-icon>delete</mat-icon></button>
           </div>
         </article>
       } @empty { <div class="admin-empty"><span class="material-symbols-outlined">history</span><strong>No hay eras para este canal</strong></div> }

@@ -10,8 +10,8 @@
         <div><strong>{{ user.username }}</strong><span>{{ user.rol.name }}</span></div>
         <span class="access-badge">{{ user.rol.name }}</span>
         <div class="access-actions">
-          <button type="button" (click)="openForm(user)" aria-label="Editar usuario"><mat-icon>edit</mat-icon></button>
-          <button type="button" class="is-danger" (click)="delete(user.id)" aria-label="Eliminar usuario"><mat-icon>delete</mat-icon></button>
+          <button type="button" (click)="openForm(user)" matTooltip="Editar usuario" aria-label="Editar usuario"><mat-icon>edit</mat-icon></button>
+          <button type="button" class="is-danger" (click)="delete(user.id)" matTooltip="Eliminar usuario" aria-label="Eliminar usuario"><mat-icon>delete</mat-icon></button>
         </div>
       </article>
     } @empty {

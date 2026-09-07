@@ -1,3 +1,4 @@
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Component, OnInit, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SeriesResponse } from '../../../shared/models/serie.model';
@@ -11,7 +12,7 @@ import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-series-editor',
-  imports: [ReactiveFormsModule, EpisodesComponent],
+  imports: [MatTooltipModule, ReactiveFormsModule, EpisodesComponent],
   templateUrl: './series-editor.component.html',
   styleUrl: './series-editor.component.scss',
 })
@@ -67,7 +68,8 @@ export class SeriesEditorComponent implements OnInit {
   }
 
   save(): void {
-    if (this.form.invalid || this.busy()) { this.form.markAllAsTouched(); return; }
+    if (this.busy()) return;
+    if (this.form.invalid) { this.form.markAllAsTouched(); this.error.set('Revisa los campos obligatorios y los valores del formulario.'); return; }
     this.busy.set(true);
     this.error.set('');
     this.message.set('Guardando…');
