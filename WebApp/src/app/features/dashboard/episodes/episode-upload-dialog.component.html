@@ -1,0 +1,85 @@
+<mat-card class="daxa-card border-none d-block upload-dialog" [class.component-dark-theme]="themeService.isDark()">
+  <mat-card-header>
+    <mat-card-title>
+      <h5 class="mb-0">Subir archivos a {{ data.seriesName }}</h5>
+    </mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div class="upload-dest">
+      <mat-form-field appearance="outline">
+        <mat-label>Destino</mat-label>
+        <mat-select [value]="target()" (selectionChange)="target.set($event.value)" [disabled]="uploading()">
+          <mat-option value="season">Temporada</mat-option>
+          <mat-option value="specials">Especiales</mat-option>
+          <mat-option value="movies">Películas</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      @if (target() === 'season') {
+        <mat-form-field appearance="outline">
+          <mat-label>Temporada</mat-label>
+          <mat-select [value]="season()" (selectionChange)="season.set($event.value)" [disabled]="uploading()">
+            @for (n of seasonOptions(); track n) {
+              <mat-option [value]="n">Temporada {{ n }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+    </div>
+
+    <input #fileInput type="file" multiple hidden [accept]="allowedExtensions.join(',')" (change)="onFilesPicked($event)" />
+
+    <button type="button" class="upload-dropzone" (click)="openFilePicker()" [disabled]="uploading()">
+      <mat-icon>cloud_upload</mat-icon>
+      <strong>Seleccionar archivos de video</strong>
+      <span>{{ allowedExtensions.join(' · ') }} — se conservan los nombres para detectar episodio y título</span>
+    </button>
+
+    @if (items().length) {
+      <div class="upload-queue">
+        @for (item of items(); track item.file.name + item.file.size; let idx = $index) {
+          <div class="upload-item" [class.upload-item--error]="item.status === 'error'">
+            <mat-icon class="upload-item__icon">
+              @switch (item.status) {
+                @case ('done') { check_circle }
+                @case ('error') { error }
+                @case ('uploading') { uploading }
+                @default { description }
+              }
+            </mat-icon>
+            <div class="upload-item__body">
+              <div class="upload-item__head">
+                <span class="upload-item__name" [title]="item.file.name">{{ item.file.name }}</span>
+                <span class="upload-item__size">{{ formatSize(item.file.size) }}</span>
+              </div>
+              @if (item.status === 'uploading') {
+                <mat-progress-bar mode="determinate" [value]="item.progress" />
+                <small class="upload-item__pct">{{ item.progress }}%</small>
+              }
+              @if (item.status === 'error' && item.error) {
+                <small class="upload-item__error">{{ item.error }}</small>
+              }
+            </div>
+            @if (!uploading() && item.status !== 'done') {
+              <button type="button" class="upload-item__remove" (click)="removeItem(idx)" aria-label="Quitar archivo">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+  </mat-card-content>
+
+  <mat-card-actions align="end">
+    <button mat-button (click)="close()" [disabled]="uploading()">Cerrar</button>
+    <button mat-flat-button color="primary" (click)="uploadAll()" [disabled]="!canUpload()">
+      @if (uploading()) {
+        <mat-icon>sync</mat-icon> Subiendo…
+      } @else {
+        <mat-icon>cloud_upload</mat-icon> Subir {{ pendingCount() }} archivo(s)
+      }
+    </button>
+  </mat-card-actions>
+</mat-card>

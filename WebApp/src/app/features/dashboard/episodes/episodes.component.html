@@ -5,7 +5,8 @@
       <span class="catalog-kicker">CATÁLOGO</span>
       <strong>Episodios@if (selectedSeriesName()) { · {{ selectedSeriesName() }}}</strong>
     </div>
-    <button type="button" class="admin-button admin-button--primary" (click)="scan()" [disabled]="!selectedSeriesId()"><span class="material-symbols-outlined">sync</span>Sincronizar carpeta</button>
+    <button type="button" class="admin-button admin-button--primary" (click)="openUpload()" [disabled]="!selectedSeriesId()" matTooltip="Subir archivos de video directamente a la carpeta de la serie"><span class="material-symbols-outlined">cloud_upload</span>Subir archivos</button>
+    <button type="button" class="admin-button" (click)="scan()" [disabled]="!selectedSeriesId()"><span class="material-symbols-outlined">sync</span>Sincronizar carpeta</button>
   </header>
   <div class="episode-filters">
     <mat-form-field appearance="outline"><mat-label>Serie</mat-label><mat-select [value]="selectedSeriesId()" (selectionChange)="onSeriesChange($event.value)">@for (item of series(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
