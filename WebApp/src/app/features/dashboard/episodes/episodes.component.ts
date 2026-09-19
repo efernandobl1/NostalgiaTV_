@@ -13,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { EpisodesService } from './episodes.service';
+import { EpisodeUploadDialogComponent } from './episode-upload-dialog.component';
 import { SeriesService } from '../series/series.service';
 import { EpisodeResponse, UpdateEpisodeRequest } from '../../../shared/models/episode.model';
 import { SeriesResponse } from '../../../shared/models/serie.model';
@@ -127,6 +128,25 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
                 this.showSuccess('Episodios sincronizados desde la carpeta');
             },
             error: () => this.showError('Error al escanear la carpeta')
+        });
+    }
+
+    openUpload() {
+        const seriesId = this.selectedSeriesId();
+        if (!seriesId) { this.showError('Seleccioná una serie primero'); return; }
+        const serie = this.series().find(s => s.id === seriesId);
+        const existingSeasons = this.allEpisodes().map(e => e.season).filter(n => n > 0);
+        const maxSeason = Math.max(serie?.seasons ?? 1, ...existingSeasons, 1);
+        const dialogRef = this.dialog.open(EpisodeUploadDialogComponent, {
+            width: '620px',
+            data: { seriesId, seriesName: serie?.name ?? '', maxSeason },
+            panelClass: this.themeService.isDark() ? 'dark-theme' : '',
+            disableClose: true
+        });
+        dialogRef.afterClosed().subscribe(result => {
+            if (!result) return;
+            if (result.failed > 0) this.showError(`${result.failed} archivo(s) no se pudieron subir`);
+            if (result.uploaded > 0) this.scan();
         });
     }
 

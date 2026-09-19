@@ -1,0 +1,145 @@
+.upload-dialog {
+    min-width: 520px;
+
+    mat-card-content {
+        max-height: 65vh;
+        overflow-y: auto;
+    }
+}
+
+.upload-dest {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+
+    mat-form-field {
+        flex: 1;
+    }
+}
+
+.upload-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 22px 16px;
+    border: 2px dashed rgba(139, 125, 255, 0.35);
+    border-radius: 12px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    text-align: center;
+    transition: border-color 0.15s ease, background 0.15s ease;
+
+    mat-icon {
+        font-size: 30px;
+        width: 30px;
+        height: 30px;
+        color: #8b7dff;
+    }
+
+    strong {
+        font-size: 14px;
+    }
+
+    span {
+        font-size: 12px;
+        opacity: 0.7;
+    }
+
+    &:hover:not(:disabled) {
+        border-color: #8b7dff;
+        background: rgba(139, 125, 255, 0.06);
+    }
+
+    &:disabled {
+        cursor: default;
+        opacity: 0.6;
+    }
+}
+
+.upload-queue {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.upload-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(139, 125, 255, 0.18);
+    border-radius: 10px;
+
+    &--error {
+        border-color: rgba(255, 99, 99, 0.45);
+    }
+
+    &__icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        margin-top: 2px;
+        color: #8b7dff;
+    }
+
+    &--error &__icon {
+        color: #e5484d;
+    }
+
+    &__body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: baseline;
+    }
+
+    &__name {
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__size {
+        font-size: 12px;
+        opacity: 0.7;
+        flex-shrink: 0;
+    }
+
+    &__pct {
+        font-size: 11px;
+        opacity: 0.7;
+    }
+
+    &__error {
+        display: block;
+        margin-top: 4px;
+        font-size: 12px;
+        color: #e5484d;
+    }
+
+    &__remove {
+        border: none;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        opacity: 0.6;
+        padding: 2px;
+        display: inline-flex;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+}

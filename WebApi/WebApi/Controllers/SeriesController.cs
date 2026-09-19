@@ -42,5 +42,13 @@ namespace WebApi.Controllers
 
         [HttpPost("{id}/scan")]
         public async Task<IActionResult> Scan(int id) => Ok(await _seriesService.ScanFolderAsync(id));
+
+        [HttpPost("{id}/upload")]
+        [Authorize]
+        [Consumes("multipart/form-data")]
+        [RequestSizeLimit(2147483648)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 2147483648)]
+        public async Task<IActionResult> Upload(int id, [FromForm] SeriesUploadRequest request) =>
+            Ok(await _seriesService.UploadEpisodeFilesAsync(id, request));
     }
 }
