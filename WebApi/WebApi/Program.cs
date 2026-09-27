@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Serilog;
+using Microsoft.AspNetCore.Authorization;
+using WebApi.Authorization;
 using WebApi.Extensions;
 using WebApi.HealthChecks;
 
@@ -38,11 +40,28 @@ namespace WebApi
             builder.Services.AddApiVersioningConfig();
             builder.Services.AddRateLimitingConfig();
             builder.Services.AddJwtAuthentication(builder.Configuration);
+            builder.Services.AddScoped<IAuthorizationHandler, MenuAccessHandler>();
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("Admin", policyBuilder =>
+                    policyBuilder.RequireAuthenticatedUser().AddRequirements(new MenuAccessRequirement(null)));
+
+                foreach (var (policy, menuUrl) in new[]
+                {
+                    ("Series", "/dashboard/series"),
+                    ("Episodes", "/dashboard/episodes"),
+                    ("Channels", "/dashboard/channels"),
+                    ("Categories", "/dashboard/categories"),
+                    ("Eras", "/dashboard/channel-eras"),
+                    ("Bumpers", "/dashboard/channel-bumpers")
+                })
+                    options.AddPolicy(policy, policyBuilder =>
+                        policyBuilder.RequireAuthenticatedUser().AddRequirements(new MenuAccessRequirement(menuUrl)));
+            });
             builder.Services.AddOpenApiConfig();
             builder.Services.AddExceptionHandling();
             builder.Services.AddValidationConfig();
             builder.Services.AddCorsConfig(builder.Configuration);
-            builder.Services.AddReverseProxyConfig(builder.Configuration);
             builder.Services.AddSecureLogging();
             builder.Services.AddHealthChecks()
                 .AddCheck<SqlServerHealthCheck>(
@@ -53,13 +72,35 @@ namespace WebApi
 
             var app = builder.Build();
 
-            // Debe ir antes de HTTPS/HSTS: Nginx informa el esquema público real
-            // mediante X-Forwarded-Proto cuando el despliegue usa Docker Compose.
-            app.UseReverseProxyConfig();
-
             await app.ApplyMigrationsAsync();
 
+            app.UseRouting();
             app.UseCors("DefaultPolicy");
+
+            var allowedOrigins = app.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+            app.Use(async (context, next) =>
+            {
+                var method = context.Request.Method;
+                if (context.Request.Path.StartsWithSegments("/api") &&
+                    method is not ("GET" or "HEAD" or "OPTIONS"))
+                {
+                    var origin = context.Request.Headers.Origin.ToString();
+                    var fetchSite = context.Request.Headers["Sec-Fetch-Site"].ToString();
+                    var sameOrigin = $"{context.Request.Scheme}://{context.Request.Host}";
+                    var trustedOrigin = allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
+                    var originAllowed = string.IsNullOrEmpty(origin) ||
+                        origin.Equals(sameOrigin, StringComparison.OrdinalIgnoreCase) ||
+                        trustedOrigin;
+
+                    if (!originAllowed || (fetchSite is "cross-site" or "same-site") && !trustedOrigin)
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        return;
+                    }
+                }
+
+                await next(context);
+            });
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -69,8 +110,7 @@ namespace WebApi
 
             app.UseExceptionHandler();
 
-            // Detrás de Nginx (que ya fuerza HTTPS y termina TLS) el redirect interno
-            // provocaría bucles y falsos fallos del healthcheck que llama por HTTP a Kestrel.
+            // The public proxy terminates TLS; redirecting internal health checks causes loops.
             var usesTrustedReverseProxy = app.Configuration.GetValue<bool>("ReverseProxy:TrustForwardedHeaders");
             if (!usesTrustedReverseProxy)
             {

@@ -9,6 +9,7 @@ using Infrastructure.Services.InternalServices;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace Infrastructure.Services
 {
@@ -53,6 +54,7 @@ namespace Infrastructure.Services
                     EndDate = era.EndDate,
                     FolderPath = era.FolderPath,
                     SeriesIds = era.Series.Select(s => s.Id).ToList(),
+                    SeasonSelections = ReadSeasonSelections(era.SeriesSeasonsJson),
                     Bumpers = era.Bumpers.Select(b => new ChannelBumperResponse
                     {
                         Id = b.Id,
@@ -80,6 +82,7 @@ namespace Infrastructure.Services
 
             var response = era.Adapt<ChannelEraResponse>();
             response.ChannelName = era.Channel.Name;
+            response.SeasonSelections = ReadSeasonSelections(era.SeriesSeasonsJson);
             response.Bumpers = era.Bumpers.Select(b => new ChannelBumperResponse
             {
                 Id = b.Id,
@@ -132,6 +135,7 @@ namespace Infrastructure.Services
             var response = era.Adapt<ChannelEraResponse>();
             var channel = await _context.Channels.FindAsync(era.ChannelId);
             response.ChannelName = channel!.Name;
+            response.SeasonSelections = ReadSeasonSelections(era.SeriesSeasonsJson);
             response.Bumpers = (await _context.ChannelBumpers.Where(b => b.ChannelEraId == eraId).ToListAsync())
                 .Select(b => new ChannelBumperResponse
                 {
@@ -166,16 +170,28 @@ namespace Infrastructure.Services
                 .FirstOrDefaultAsync(e => e.Id == eraId)
                 ?? throw new NotFoundException($"ChannelEra {eraId} not found");
 
+            var seriesIds = (request.SeriesIds ?? []).Distinct().ToList();
+            var selections = (request.SeasonSelections ?? [])
+                .Where(item => seriesIds.Contains(item.Key))
+                .ToDictionary(item => item.Key, item => (item.Value ?? []).Distinct().Where(season => season >= 0).ToList());
+            era.SeriesSeasonsJson = JsonSerializer.Serialize(selections);
+
+            var existingCount = await _context.Series.CountAsync(series => seriesIds.Contains(series.Id));
+            if (existingCount != seriesIds.Count) throw new NotFoundException("One or more series were not found");
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
             await _context.Database.ExecuteSqlRawAsync(
                 "DELETE FROM ChannelEraSeries WHERE ChannelErasId = {0}", eraId);
 
-            foreach (var seriesId in request.SeriesIds)
+            foreach (var seriesId in seriesIds)
             {
                 await _context.Database.ExecuteSqlRawAsync(
                     "INSERT INTO ChannelEraSeries (ChannelErasId, SeriesId) VALUES ({0}, {1})", eraId, seriesId);
             }
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             var refreshed = await _context.ChannelEras
                 .AsNoTracking()
@@ -195,6 +211,7 @@ namespace Infrastructure.Services
                 EndDate = refreshed.EndDate,
                 FolderPath = refreshed.FolderPath,
                 SeriesIds = refreshed.Series.Select(s => s.Id).ToList(),
+                SeasonSelections = ReadSeasonSelections(refreshed.SeriesSeasonsJson),
                 Bumpers = refreshed.Bumpers.Select(b => new ChannelBumperResponse
                 {
                     Id = b.Id,
@@ -206,6 +223,13 @@ namespace Infrastructure.Services
             };
 
             return response;
+        }
+
+        private static Dictionary<int, List<int>> ReadSeasonSelections(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return [];
+            try { return JsonSerializer.Deserialize<Dictionary<int, List<int>>>(json) ?? []; }
+            catch (JsonException) { return []; }
         }
     }
 }

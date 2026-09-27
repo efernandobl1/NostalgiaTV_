@@ -33,6 +33,10 @@ updates:
     directory: "/WebApp"
     schedule:
       interval: "weekly"
+    ignore:
+      # Review Node major upgrades against Angular and pnpm compatibility first.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "docker"
     directory: "/WebApi/WebApi"
     schedule:

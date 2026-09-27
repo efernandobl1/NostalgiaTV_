@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace WebApi.Controllers
 {
     [ApiController]
-    [Authorize]
+    [Authorize(Policy = "Episodes")]
     [ApiVersion("1")]
     [Route("api/v{version:apiVersion}/episodes")]
     public class EpisodeController : ControllerBase

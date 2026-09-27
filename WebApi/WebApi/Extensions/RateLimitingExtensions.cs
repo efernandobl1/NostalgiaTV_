@@ -8,11 +8,13 @@ public static class RateLimitingExtensions
     {
         services.AddRateLimiter(options =>
         {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.AddTokenBucketLimiter("AuthPolicy", o =>
             {
                 o.TokenLimit = 10;
                 o.ReplenishmentPeriod = TimeSpan.FromMinutes(1);
                 o.TokensPerPeriod = 5;
+                o.QueueLimit = 0;
             });
 
             options.AddTokenBucketLimiter("DataPolicy", o =>

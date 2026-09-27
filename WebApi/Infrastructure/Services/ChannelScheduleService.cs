@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 
 namespace Infrastructure.Services
 {
@@ -136,6 +137,12 @@ namespace Infrastructure.Services
             }
 
             var eras = channel.Eras.ToList();
+            var seasonSelections = eras.ToDictionary(era => era.Id, era =>
+            {
+                if (string.IsNullOrWhiteSpace(era.SeriesSeasonsJson)) return new Dictionary<int, List<int>>();
+                try { return JsonSerializer.Deserialize<Dictionary<int, List<int>>>(era.SeriesSeasonsJson) ?? []; }
+                catch (JsonException) { return new Dictionary<int, List<int>>(); }
+            });
             _logger.LogInformation("[SCHEDULE] Channel has {eraCount} eras, {seriesCount} direct series", eras.Count, channel.Series.Count);
 
             foreach (var era in eras)
@@ -196,6 +203,7 @@ namespace Infrastructure.Services
 
                 List<int> eraSeriesIds;
                 List<ChannelBumper> eraBumpers;
+                Dictionary<int, List<int>> selectedSeasons = [];
 
                 if (eras.Any())
                 {
@@ -209,6 +217,7 @@ namespace Infrastructure.Services
                         continue;
                     }
                     eraSeriesIds = activeEra.Series.Select(s => s.Id).ToList();
+                    selectedSeasons = seasonSelections[activeEra.Id];
                     eraBumpers = activeEra.Bumpers.Where(b => !string.IsNullOrEmpty(b.FilePath)).ToList();
                     _logger.LogInformation("[SCHEDULE] Iteration {iter}: Active era={era} with {series} series, {bumpers} bumpers",
                         iterationCount, activeEra.Name, eraSeriesIds.Count, eraBumpers.Count);
@@ -235,6 +244,10 @@ namespace Infrastructure.Services
                     .Include(e => e.Series)
                     .Where(e => eraSeriesIds.Contains(e.SeriesId) && e.FilePath != null)
                     .ToListAsync();
+
+                episodes = episodes
+                    .Where(e => !selectedSeasons.TryGetValue(e.SeriesId, out var seasons) || seasons.Contains(e.Season))
+                    .ToList();
 
                 _logger.LogInformation("[SCHEDULE] Iteration {iter}: Found {epCount} episodes for series [{seriesIds}]",
                     iterationCount, episodes.Count, string.Join(",", eraSeriesIds));

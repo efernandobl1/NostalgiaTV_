@@ -1,9 +1,7 @@
-import { AsyncPipe } from '@angular/common';
-import { Component, OnInit, signal, computed, ViewChild, AfterViewInit, input, effect } from '@angular/core';
+import { Component, OnInit, signal, computed, input, effect } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
@@ -27,9 +25,8 @@ import { DatePipe } from '@angular/common';
 
 @Component({
     selector: 'app-channel-eras',
-    imports: [AsyncPipe, 
+    imports: [
         MatTableModule,
-        MatPaginatorModule,
         MatButtonModule,
         MatIconModule,
         MatDialogModule,
@@ -44,17 +41,23 @@ import { DatePipe } from '@angular/common';
     templateUrl: './channel-eras.component.html',
     styleUrl: './channel-eras.component.scss',
 })
-export class ChannelErasComponent implements OnInit, AfterViewInit {
+export class ChannelErasComponent implements OnInit {
     readonly channelId = input<number | null>(null);
     private readonly syncChannel = effect(() => {
         const id = this.channelId();
         if (id) this.onChannelChange(id);
     });
-    @ViewChild(MatPaginator) paginator!: MatPaginator;
-
     channels = signal<ChannelResponse[]>([]);
     series = signal<SeriesResponse[]>([]);
     selectedChannelId = signal<number | null>(null);
+    selectedEraId = signal<number | null>(null);
+    readonly seriesPickerOpen = signal(false);
+    readonly selectedSeriesIds = signal<number[]>([]);
+    readonly selectedSeasons = signal<Record<number, number[]>>({});
+    readonly savingSelection = signal(false);
+    selectedEra(): ChannelEraResponse | null {
+        return this.dataSource.data.find(era => era.id === this.selectedEraId()) ?? null;
+    }
     // Nombre del canal seleccionado (para el encabezado "Eras — <canal>").
     selectedChannelName = computed(() =>
         this.channels().find(c => c.id === this.selectedChannelId())?.name ?? null);
@@ -78,7 +81,11 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
             error: () => this.showError('Error al cargar los canales'),
         });
         this.seriesService.getAll().subscribe({
-            next: (data) => this.series.set(data),
+            next: (data) => {
+                this.series.set(data);
+                const era = this.selectedEra();
+                if (era) this.selectEra(era);
+            },
         });
         // Deep-link desde Canales: preselecciona el canal y carga sus eras.
         const channelId = Number(this.route.snapshot.queryParamMap.get('channelId'));
@@ -86,10 +93,6 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
             this.selectedChannelId.set(channelId);
             this.loadEras(channelId);
         }
-    }
-
-    ngAfterViewInit() {
-        this.dataSource.paginator = this.paginator;
     }
 
     onChannelChange(channelId: number) {
@@ -100,10 +103,40 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
     loadEras(channelId: number) {
         this.channelErasService.getByChannel(channelId).subscribe({
             next: (data) => {
-                if (this.selectedChannelId() === channelId) this.dataSource.data = data;
+                if (this.selectedChannelId() === channelId) {
+                    this.dataSource.data = data;
+                    const selected = data.find(era => era.id === this.selectedEraId()) ?? data[0];
+                    if (selected) this.selectEra(selected);
+                    else this.selectedEraId.set(null);
+                }
             },
             error: () => this.showError('Error al cargar las eras'),
         });
+    }
+
+    selectEra(era: ChannelEraResponse): void {
+        this.selectedEraId.set(era.id);
+        this.seriesPickerOpen.set(false);
+        this.selectedSeriesIds.set([...era.seriesIds]);
+        this.selectedSeasons.set({ ...era.seasonSelections });
+    }
+
+    availableSeasons(series: SeriesResponse): number[] {
+        return [0, ...Array.from({ length: Math.max(1, series.seasons || 1) }, (_, index) => index + 1)];
+    }
+
+    isSeasonSelected(series: SeriesResponse, season: number): boolean {
+        return (this.selectedSeasons()[series.id] ?? this.availableSeasons(series)).includes(season);
+    }
+
+    toggleSeries(seriesId: number, checked: boolean): void {
+        this.selectedSeriesIds.update(ids => checked ? [...ids, seriesId] : ids.filter(id => id !== seriesId));
+    }
+
+    toggleSeason(series: SeriesResponse, season: number, checked: boolean): void {
+        const current = this.selectedSeasons()[series.id] ?? this.availableSeasons(series);
+        const selected = checked ? [...current, season] : current.filter(value => value !== season);
+        this.selectedSeasons.update(selections => ({ ...selections, [series.id]: [...new Set(selected)].sort((a, b) => a - b) }));
     }
 
     openForm(era?: ChannelEraResponse) {
@@ -162,35 +195,34 @@ export class ChannelErasComponent implements OnInit, AfterViewInit {
     }
 
     assignSeries(era: ChannelEraResponse) {
-        const config: DialogConfig = {
-            title: `series de ${era.name}`,
-            fields: [
-                {
-                    key: 'seriesIds',
-                    label: 'Series',
-                    type: 'multiselect',
-                    options: this.series().map((s) => ({ value: s.id, label: s.name })),
-                },
-            ],
-            data: { seriesIds: era.seriesIds || [] },
-        };
+        this.selectEra(era);
+        this.seriesPickerOpen.set(true);
+    }
 
-        const dialogRef = this.dialog.open(GenericFormDialogComponent, {
-            width: '500px',
-            data: config,
-        });
-
-        dialogRef.afterClosed().subscribe((result) => {
-            if (!result) return;
-            const raw = result.data?.seriesIds ?? [];
-            const seriesIds: number[] = Array.isArray(raw) ? raw.map((v: any) => Number(v)) : [];
-            this.channelErasService.assignSeries(era.id, { seriesIds }).subscribe({
-                next: () => {
-                    this.loadEras(this.selectedChannelId()!);
-                    this.showSuccess('Series asignadas');
-                },
-                error: () => this.showError('Error al asignar series'),
-            });
+    saveSeriesSelection(era: ChannelEraResponse): void {
+        if (this.savingSelection()) return;
+        const seriesIds = this.selectedSeriesIds();
+        for (const series of this.series().filter(item => seriesIds.includes(item.id))) {
+            if ((this.selectedSeasons()[series.id] ?? this.availableSeasons(series)).length === 0) {
+                this.showError(`Elige al menos una temporada de ${series.name} o quita la serie`);
+                return;
+            }
+        }
+        this.savingSelection.set(true);
+        this.channelErasService.assignSeries(era.id, {
+            seriesIds,
+            seasonSelections: this.selectedSeasons(),
+        }).subscribe({
+            next: () => {
+                this.savingSelection.set(false);
+                this.seriesPickerOpen.set(false);
+                this.loadEras(this.selectedChannelId()!);
+                this.showSuccess('Series y temporadas guardadas. Regenera la programación para aplicarlas.');
+            },
+            error: () => {
+                this.savingSelection.set(false);
+                this.showError('Error al guardar las series y temporadas');
+            },
         });
     }
 

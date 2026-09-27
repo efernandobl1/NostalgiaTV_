@@ -1,39 +1,29 @@
-<section class="catalog-page">
-  <header class="catalog-toolbar">
-    @if (!channelId()) {
-    <a routerLink="/dashboard/channels" class="admin-back" aria-label="Volver a canales"><span class="material-symbols-outlined">arrow_back</span></a>
-    <mat-form-field appearance="outline" class="era-channel-select">
-      <mat-label>Canal</mat-label>
-      <mat-select [value]="selectedChannelId()" (selectionChange)="onChannelChange($event.value)">
-        @for (channel of channels(); track channel.id) { <mat-option [value]="channel.id">{{ channel.name }}</mat-option> }
-      </mat-select>
-    </mat-form-field>
-    }
-    <button type="button" class="admin-button admin-button--primary" (click)="openForm()" [disabled]="!selectedChannelId()"><span class="material-symbols-outlined">add</span>Nueva era</button>
-  </header>
-  @if (selectedChannelId()) {
-    <div class="era-list">
-      @for (era of (dataSource.connect() | async); track era.id) {
-        <article class="era-card" [class.era-card--attention]="!era.bumpers.length">
-          <div class="era-card__heading"><strong>{{ era.name }}</strong><span>{{ era.startDate | date:'yyyy' }} – {{ era.endDate ? (era.endDate | date:'yyyy') : 'actualidad' }}</span></div>
-          <div class="era-card__meta"><span>{{ era.seriesIds.length }} series</span><span [class.is-danger]="!era.bumpers.length">{{ era.bumpers.length }} bumpers</span></div>
-          <div class="era-bumpers">
-            @for (bumper of era.bumpers; track bumper.id) {
-              <button type="button" (click)="manageBumpers(era)"><mat-icon>theaters</mat-icon>{{ bumper.title }}</button>
-            }
-            <button type="button" class="era-upload" (click)="manageBumpers(era)"><mat-icon>upload</mat-icon>{{ era.bumpers.length ? 'Gestionar bumpers' : 'Cargar bumpers' }}</button>
-          </div>
-          <div class="era-card__actions">
-            <button type="button" (click)="openForm(era)" matTooltip="Editar era" aria-label="Editar era"><mat-icon>edit</mat-icon></button>
-            <button type="button" (click)="assignSeries(era)" matTooltip="Asignar series" aria-label="Asignar series"><mat-icon>movie</mat-icon></button>
-            <button type="button" (click)="manageBumpers(era)" matTooltip="Gestionar bumpers" aria-label="Gestionar bumpers"><mat-icon>theaters</mat-icon></button>
-            <button type="button" class="is-danger" (click)="deleteEra(era)" matTooltip="Eliminar era" aria-label="Eliminar era"><mat-icon>delete</mat-icon></button>
-          </div>
-        </article>
-      } @empty { <div class="admin-empty"><span class="material-symbols-outlined">history</span><strong>No hay eras para este canal</strong></div> }
-    </div>
-  } @else {
-    <div class="admin-empty"><span class="material-symbols-outlined">live_tv</span><strong>Selecciona un canal</strong><span>Sus eras aparecerán aquí.</span></div>
+<section class="era-console">
+  @if (!channelId()) {
+    <header class="era-standalone"><a routerLink="/dashboard/channels" class="admin-back" aria-label="Volver a canales"><span class="material-symbols-outlined">arrow_back</span></a><mat-form-field appearance="outline"><mat-label>Canal</mat-label><mat-select [value]="selectedChannelId()" (selectionChange)="onChannelChange($event.value)">@for (channel of channels(); track channel.id) { <mat-option [value]="channel.id">{{ channel.name }}</mat-option> }</mat-select></mat-form-field></header>
   }
-  <mat-paginator [pageSizeOptions]="[10,25,50]" showFirstLastButtons />
+  @if (selectedChannelId()) {
+    <aside class="era-rail" aria-label="Eras del canal">
+      <header><h2>Eras</h2><button type="button" (click)="openForm()" matTooltip="Añadir era" aria-label="Añadir era"><span class="material-symbols-outlined">add</span></button></header>
+      <div class="era-rail__list">
+        @for (era of dataSource.data; track era.id; let index = $index) {
+          <button type="button" class="era-track" [attr.aria-current]="selectedEraId() === era.id ? 'true' : null" (click)="selectEra(era)"><span>{{ index + 1 }}</span><span><strong>{{ era.name }}</strong><small>{{ era.seriesIds.length }} series · {{ era.bumpers.length }} bumpers</small></span></button>
+        } @empty { <p class="era-empty">No hay eras. Crea la primera para organizar la emisión.</p> }
+      </div>
+    </aside>
+    <div class="era-workbench">
+      @if (selectedEra(); as era) {
+        <header class="workbench-head"><div><span>CONFIGURACIÓN DE ERA</span><h2>{{ era.name }}</h2><p>{{ era.description || 'Sin descripción.' }}</p><small>{{ era.startDate | date:'dd/MM/yyyy' }} – {{ era.endDate ? (era.endDate | date:'dd/MM/yyyy') : 'actualidad' }}</small></div><div class="workbench-actions"><button type="button" class="admin-button admin-button--secondary" (click)="openForm(era)">Editar era</button><button type="button" class="delete-era" (click)="deleteEra(era)" matTooltip="Eliminar era" aria-label="Eliminar era"><span class="material-symbols-outlined">delete</span></button></div></header>
+        <section class="workbench-section"><div class="section-head"><div><h3>Series en emisión</h3><p>Elige las series y temporadas que se emitirán en esta era.</p></div>@if (!seriesPickerOpen()) {<button type="button" class="admin-button admin-button--secondary" (click)="assignSeries(era)">Elegir series y temporadas</button>}</div>
+          @if (seriesPickerOpen()) {
+            <div class="program-list">@for (program of series(); track program.id) {<div class="program-row program-row--editing"><label class="program-series"><input type="checkbox" [checked]="selectedSeriesIds().includes(program.id)" (change)="toggleSeries(program.id, $any($event.target).checked)"><span><strong>{{ program.name }}</strong><small>{{ program.seasons }} temporadas disponibles</small></span></label>@if (selectedSeriesIds().includes(program.id)) {<div class="season-options" [attr.aria-label]="'Temporadas de ' + program.name">@for (season of availableSeasons(program); track season) {<label><input type="checkbox" [checked]="isSeasonSelected(program, season)" (change)="toggleSeason(program, season, $any($event.target).checked)"><span>{{ season === 0 ? 'Especiales' : 'T' + season }}</span></label>}</div>}</div>} @empty {<p class="era-empty">Crea una serie antes de configurar esta era.</p>}</div>
+            <div class="selection-actions"><button type="button" class="admin-button admin-button--primary" (click)="saveSeriesSelection(era)" [disabled]="savingSelection()">{{ savingSelection() ? 'Guardando…' : 'Guardar selección' }}</button><button type="button" class="admin-button admin-button--secondary" (click)="seriesPickerOpen.set(false)" [disabled]="savingSelection()">Cancelar</button><small>Después, regenera la programación del canal para aplicar el cambio.</small></div>
+          } @else {
+            <div class="program-list">@for (seriesId of era.seriesIds; track seriesId) {<div class="program-row"><div><strong>{{ getSeriesNames([seriesId]) }}</strong><small>@if (era.seasonSelections[seriesId]; as seasons) { {{ seasons.length ? 'Temporadas: ' + seasons.join(', ') : 'Sin temporadas' }} } @else { Todas las temporadas }</small></div><a routerLink="/dashboard/series" [queryParams]="{seriesId:seriesId}">Ver episodios <span class="material-symbols-outlined">arrow_forward</span></a></div>} @empty {<p class="era-empty">Aún no hay series asignadas a esta era.</p>}</div>
+          }
+        </section>
+        <section class="workbench-section"><div class="section-head"><div><h3>Bumpers de la era</h3><p>Identificadores y cortes de la programación.</p></div><button type="button" class="admin-button admin-button--secondary" (click)="manageBumpers(era)"><span class="material-symbols-outlined">add</span>Añadir bumper</button></div><div class="cue-list">@for (bumper of era.bumpers; track bumper.id) {<button type="button" (click)="manageBumpers(era)"><span class="material-symbols-outlined">play_arrow</span>{{ bumper.title }}<span class="material-symbols-outlined">edit</span></button>} @empty {<p class="era-empty">Esta era todavía no tiene bumpers.</p>}</div></section>
+      } @else {<div class="workbench-head"><div><h2>Empieza con una era</h2><p>Organiza aquí las series y bumpers del canal.</p></div><button type="button" class="admin-button admin-button--primary" (click)="openForm()">Crear era</button></div>}
+    </div>
+  } @else {<div class="admin-empty"><strong>Selecciona un canal</strong><span>Sus eras aparecerán aquí.</span></div>}
 </section>

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace WebApi.Controllers
 {
     [ApiController]
-    [Authorize]
+    [Authorize(Policy = "Admin")]
     [ApiVersion("1")]
     [Route("api/v{version:apiVersion}/roles")]
     public class RolController : ControllerBase
