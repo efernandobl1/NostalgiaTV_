@@ -1,14 +1,16 @@
 <section class="catalog-page episodes-page">
   <header class="catalog-toolbar">
-    <a routerLink="/dashboard/series" class="admin-back" aria-label="Volver a series"><span class="material-symbols-outlined">arrow_back</span></a>
+    @if (!seriesId()) { <a routerLink="/dashboard/series" class="admin-back" aria-label="Volver a series"><span class="material-symbols-outlined">arrow_back</span></a> }
     <div class="catalog-toolbar__title">
       <span class="catalog-kicker">CATÁLOGO</span>
       <strong>Episodios@if (selectedSeriesName()) { · {{ selectedSeriesName() }}}</strong>
     </div>
-    <button type="button" class="admin-button admin-button--primary" (click)="scan()" [disabled]="!selectedSeriesId()"><span class="material-symbols-outlined">sync</span>Sincronizar carpeta</button>
+    <button type="button" class="admin-button admin-button--primary" (click)="openUpload()" [disabled]="!selectedSeriesId()" matTooltip="Subir archivos de video directamente a la carpeta de la serie"><span class="material-symbols-outlined">cloud_upload</span>Subir archivos</button>
+    <button type="button" class="admin-button" (click)="scan()" [disabled]="!selectedSeriesId()"><span class="material-symbols-outlined">sync</span>Sincronizar carpeta</button>
   </header>
+  <div class="episode-summary"><strong>{{ allEpisodes().length }} episodios</strong><strong>{{ formatSize(totalSizeBytes()) }} en archivos disponibles</strong></div>
   <div class="episode-filters">
-    <mat-form-field appearance="outline"><mat-label>Serie</mat-label><mat-select [value]="selectedSeriesId()" (selectionChange)="onSeriesChange($event.value)">@for (item of series(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field>
+    @if (!seriesId()) { <mat-form-field appearance="outline"><mat-label>Serie</mat-label><mat-select [value]="selectedSeriesId()" (selectionChange)="onSeriesChange($event.value)">@for (item of series(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field> }
     @if (selectedSeriesId()) {
       <mat-form-field appearance="outline"><mat-label>Temporada</mat-label><mat-select [value]="selectedSeason()" (selectionChange)="onSeasonChange($event.value)"><mat-option [value]="null">Todas las temporadas</mat-option>@for (season of seasons(); track season) { <mat-option [value]="season">{{ season > 0 ? 'Temporada ' + season : 'Especiales y películas' }}</mat-option> }</mat-select></mat-form-field>
     }
@@ -18,7 +20,7 @@
       @for (episode of (dataSource.connect() | async); track episode.id) {
         <article class="episode-card">
           <div class="episode-card__number">{{ episode.episodeNumber || '—' }}</div>
-          <div class="episode-card__copy"><strong>{{ episode.title }}</strong><span>Temporada {{ episode.season || 'especial' }} · {{ episode.episodeTypeName }}</span><small [title]="episode.filePath ?? ''">{{ episode.filePath ?? 'Archivo pendiente' }}</small></div>
+          <div class="episode-card__copy"><strong>{{ episode.title }}</strong><span>Temporada {{ episode.season || 'especial' }} · {{ episode.episodeTypeName }} · {{ formatSize(episode.fileSizeBytes) }}</span><small [title]="episode.filePath ?? ''">{{ episode.filePath ?? 'Archivo pendiente' }}</small></div>
           <button type="button" class="episode-card__edit" (click)="editEpisode(episode)" matTooltip="Editar episodio" aria-label="Editar episodio"><mat-icon>edit</mat-icon></button>
         </article>
       } @empty { <div class="admin-empty"><span class="material-symbols-outlined">video_library</span><strong>No hay episodios</strong><span>Sincroniza la carpeta para encontrarlos.</span></div> }

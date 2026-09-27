@@ -1,40 +1,38 @@
-<section class="catalog-page">
-  <header class="catalog-toolbar">
-    <div class="catalog-search"><span class="material-symbols-outlined">search</span><input type="search" placeholder="Buscar canal…" aria-label="Buscar canal" (input)="dataSource.filter = $any($event.target).value.trim().toLowerCase(); paginator.firstPage()"></div>
-    <button type="button" class="admin-button admin-button--primary" (click)="openForm()" matTooltip="Nuevo canal" aria-label="Nuevo canal"><span class="material-symbols-outlined">add</span>Nuevo canal</button>
-  </header>
-  <div class="channel-workspace">
-    <aside class="channel-picker" aria-label="Canales">
-      <div class="channel-options">
+<section class="channels-page">
+  @if (selectedChannel(); as channel) {
+    <button type="button" class="back-link" (click)="selectedChannel.set(null)"><span class="material-symbols-outlined">arrow_back</span>Volver a canales</button>
+    <header class="channel-banner">
+      <div class="channel-banner__top"><span>CH {{ channel.id }} / CANAL</span><button type="button" class="admin-button admin-button--secondary" (click)="openForm(channel)">Editar canal</button></div>
+      <h1>{{ channel.name }}</h1>
+      <div class="channel-banner__foot"><span>Ahora: <strong>{{ channelStates()[channel.id]?.episodeTitle || 'Sin emisión programada' }}</strong></span><span>Después: <strong>{{ channelStates()[channel.id]?.nextEpisodeTitle || 'Sin próximo episodio' }}</strong></span></div>
+    </header>
+    <div class="channel-schedule" aria-label="Programación del canal">
+      <button type="button" class="admin-button admin-button--secondary" (click)="viewSchedule(channel)"><span class="material-symbols-outlined">calendar_month</span>Ver programación</button>
+      <button type="button" class="admin-button admin-button--primary" (click)="refreshSchedule(channel)" matTooltip="Vuelve a generar la programación de este canal"><span class="material-symbols-outlined">refresh</span>Regenerar programación</button>
+    </div>
+    <nav class="channel-tabs" aria-label="Secciones del canal">
+      <button type="button" [attr.aria-current]="detailTab() === 'eras' ? 'page' : null" (click)="detailTab.set('eras')">Eras, series y bumpers</button>
+      <button type="button" [attr.aria-current]="detailTab() === 'history' ? 'page' : null" (click)="detailTab.set('history')">Historia</button>
+    </nav>
+    @if (detailTab() === 'eras') {
+      <app-channel-eras [channelId]="channel.id" />
+    } @else {
+      <section class="channel-history"><h2>Historia del canal</h2><p>{{ channel.history || 'Este canal todavía no tiene historia.' }}</p><p>{{ channel.startDate | date:'dd/MM/yyyy' }} – {{ channel.endDate ? (channel.endDate | date:'dd/MM/yyyy') : 'actualidad' }}</p></section>
+    }
+  } @else {
+    <header class="channels-heading"><div><span>EMISIÓN</span><h1>Canales</h1><p>Elige un canal para gestionar sus eras, series y bumpers.</p></div><button type="button" class="admin-button admin-button--primary" (click)="openForm()"><span class="material-symbols-outlined">add</span>Nuevo canal</button></header>
+    <label class="catalog-search"><span class="material-symbols-outlined">search</span><input type="search" placeholder="Buscar canal…" aria-label="Buscar canal" (input)="dataSource.filter = $any($event.target).value.trim().toLowerCase(); paginator.firstPage()"></label>
+    <div class="station-board" aria-label="Canales creados">
+      <div class="station-board__head"><span>Guía de emisoras</span><span>{{ dataSource.filteredData.length }} canales</span></div>
       @for (channel of (dataSource.connect() | async); track channel.id) {
-        <button type="button" class="channel-option" [class.is-selected]="selectedChannel()?.id === channel.id" [attr.aria-pressed]="selectedChannel()?.id === channel.id" (click)="selectedChannel.set(channel)">
-          <span class="channel-option__logo">@if (channel.logoPath) { <img [src]="apiUrl + channel.logoPath" alt=""> } @else { <mat-icon>live_tv</mat-icon> }</span>
-          <span><strong>{{ channel.name }}</strong><small>{{ channel.eras.length }} eras · {{ channel.seriesIds.length }} series</small></span>
-        </button>
-      } @empty { <p class="channel-empty">No hay canales que coincidan.</p> }
-      </div>
-      <mat-paginator [hidden]="dataSource.filteredData.length <= 10" [pageSizeOptions]="[10,25,50]" showFirstLastButtons />
-    </aside>
-    @if (selectedChannel(); as channel) {
-      <section class="channel-detail" [attr.aria-label]="channel.name">
-        <header class="channel-heading">
-          <div><h2>{{ channel.name }}</h2><p>{{ channel.startDate | date:'yyyy' }} – {{ channel.endDate ? (channel.endDate | date:'yyyy') : 'actualidad' }} · {{ channel.logoPath ? 'Logo cargado' : 'Falta logo' }}</p></div>
-          <button type="button" class="admin-button admin-button--secondary" (click)="openForm(channel)">Editar canal</button>
-        </header>
-        <div class="channel-tabs" role="tablist" aria-label="Detalle del canal">
-          <button type="button" role="tab" [attr.aria-selected]="detailTab() === 'eras'" (click)="detailTab.set('eras')">Eras y bumpers</button>
-          <button type="button" role="tab" [attr.aria-selected]="detailTab() === 'history'" (click)="detailTab.set('history')">Historia</button>
-        </div>
-        @if (detailTab() === 'eras') {
-          <app-channel-eras [channelId]="channel.id" />
-        } @else {
-          <p class="channel-history">{{ channel.history || 'Este canal todavía no tiene historia.' }}</p>
-        }
-        <footer class="channel-schedule">
-          <button type="button" class="admin-button admin-button--secondary" (click)="viewSchedule(channel)">Ver programación</button>
-          <button type="button" class="admin-button admin-button--secondary" (click)="refreshSchedule(channel)">Regenerar programación</button>
-        </footer>
-      </section>
-    } @else { <div class="admin-empty"><mat-icon>live_tv</mat-icon><strong>No hay canales</strong><span>Crea un canal para configurar sus eras y programación.</span></div> }
-  </div>
+        <article class="station-row">
+          <span class="station-identity" aria-hidden="true">@if (channel.logoPath) { <img [src]="apiUrl + channel.logoPath" alt=""> } @else { {{ channel.id }} }</span>
+          <div class="station-details"><h2>{{ channel.name }}</h2><p>{{ channel.eras.length }} eras configuradas · {{ channel.seriesIds.length }} series</p><div class="station-eras">@for (era of channel.eras; track era.id) { <span>{{ era.name }}</span> } @empty { <span>Sin eras</span> }</div></div>
+          <div class="station-playing"><span>● Ahora en emisión</span><strong>{{ channelStates()[channel.id]?.episodeTitle || 'Sin emisión programada' }}</strong><small>Después: {{ channelStates()[channel.id]?.nextEpisodeTitle || 'Sin próximo episodio' }}</small></div>
+          <button type="button" class="station-open" (click)="selectedChannel.set(channel)">Abrir canal <span class="material-symbols-outlined">arrow_forward</span></button>
+        </article>
+      } @empty { <div class="admin-empty"><strong>No hay canales que coincidan</strong><span>Crea un canal o cambia la búsqueda.</span></div> }
+    </div>
+    <mat-paginator [hidden]="dataSource.filteredData.length <= 10" [pageSizeOptions]="[10,25,50]" showFirstLastButtons />
+  }
 </section>

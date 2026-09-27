@@ -8,6 +8,7 @@ export interface EpisodeResponse {
     id: number;
     title: string;
     filePath?: string;
+    fileSizeBytes?: number | null;
     season: number;
     episodeNumber: number;
     episodeTypeId: number;

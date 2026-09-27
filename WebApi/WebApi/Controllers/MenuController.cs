@@ -24,6 +24,7 @@ namespace WebApi.Controllers
         }
 
         [HttpGet("all")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> GetAll() => Ok(await _menuService.GetAllAsync());
     }
 }

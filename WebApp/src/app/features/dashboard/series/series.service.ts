@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { SeriesRequest, SeriesResponse } from '../../../shared/models/serie.model';
+import { SeriesRequest, SeriesResponse, SeriesUploadResult } from '../../../shared/models/serie.model';
 import { environment } from '../../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -34,6 +34,14 @@ export class SeriesService {
   assignCategories(id: number, categoryIds: number[]) {
     return this.http.post<SeriesResponse>(`${this.apiUrl}/${id}/categories`, categoryIds, {
       withCredentials: true,
+    });
+  }
+
+  uploadFiles(id: number, formData: FormData) {
+    return this.http.post<SeriesUploadResult[]>(`${this.apiUrl}/${id}/upload`, formData, {
+      withCredentials: true,
+      reportProgress: true,
+      observe: 'events',
     });
   }
 }

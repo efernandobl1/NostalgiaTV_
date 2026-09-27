@@ -1,2 +1,32 @@
 @use '../../../../styles/dashboard-components';
 @use '../../../../styles/catalog-page';
+
+.series-page { display: grid; gap: 18px; }
+.series-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.series-heading > div > span { color: var(--dashboard-gold); font: 800 .875rem/1.2 Consolas, monospace; }
+.series-heading h1 { margin: 5px 0 8px; font: 800 clamp(1.8rem, 3vw, 2.4rem)/1.2 Consolas, monospace; }
+.series-heading p { margin: 0; color: var(--dashboard-muted); }
+.series-tools { display: flex; flex-wrap: wrap; gap: 10px; }
+.series-tools .catalog-search { flex: 1 1 230px; max-width: 420px; }
+.incomplete-filter { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; color: var(--dashboard-text); }
+.incomplete-filter input { width: 18px; height: 18px; accent-color: var(--dashboard-green); }
+.tape-shelf { overflow: hidden; border: 1px solid var(--dashboard-line); border-radius: 9px; border-top-width: 2px; }
+.tape-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 19px; min-height: 116px; padding: 15px 19px; border-bottom: 7px solid var(--dashboard-deck-raised); background: linear-gradient(180deg, var(--dashboard-strip), var(--dashboard-deck)); }
+.tape-row:last-child { border-bottom: 0; }
+.tape-spine { display: grid; place-items: center; width: 58px; height: 83px; border: 2px solid var(--dashboard-line); border-radius: 4px; color: var(--dashboard-gold); background: repeating-linear-gradient(90deg, var(--dashboard-spine) 0 6px, var(--dashboard-spine-stripe) 7px 8px); box-shadow: 4px 3px 0 var(--dashboard-shadow); font: 900 1.3rem/1 Consolas, monospace; }
+.tape-row:nth-child(even) .tape-spine { border-color: #c490a0; color: var(--dashboard-red); }
+.tape-main { min-width: 0; }
+.tape-main h2 { margin: 0 0 5px; overflow-wrap: anywhere; font: 800 1.3rem/1.2 Consolas, monospace; }
+.tape-main p { margin: 0; color: var(--dashboard-text); font-size: .875rem; }
+.tape-main small { display: block; margin-top: 8px; color: var(--dashboard-muted); font-size: .8125rem; }
+.tape-actions { display: flex; align-items: center; gap: 12px; }
+.tape-open { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; border: 0; color: var(--dashboard-green); background: transparent; white-space: nowrap; cursor: pointer; }
+.tape-open:hover { text-decoration: underline; }
+.tape-open span { font-size: 18px; }
+.tape-actions > div { display: flex; gap: 2px; }
+.tape-actions > div button { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid transparent; border-radius: 6px; color: var(--dashboard-muted); background: transparent; cursor: pointer; }
+.tape-actions > div button:hover { border-color: var(--dashboard-line); color: var(--dashboard-text); }
+.tape-actions > div button.is-danger:hover { color: var(--dashboard-red); }
+:is(button, input):focus-visible { outline: 2px solid var(--dashboard-gold); outline-offset: 3px; }
+@media (max-width: 62rem) { .tape-row { grid-template-columns: 64px minmax(0, 1fr); } .tape-actions { grid-column: 2; justify-content: space-between; flex-wrap: wrap; } }
+@media (max-width: 36rem) { .tape-row { gap: 10px; padding: 13px; } .tape-main h2 { font-size: 1.1rem; } .tape-actions { grid-column: 1 / -1; } }

@@ -1,6 +1,6 @@
 import { AsyncPipe } from '@angular/common';
 import { ChannelErasComponent } from '../channel-eras/channel-eras.component';
-import { Component, OnInit, signal, ViewChild, AfterViewInit, Inject } from '@angular/core';
+import { Component, OnInit, signal, ViewChild, Inject } from '@angular/core';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,8 +19,14 @@ import {
 import { DatePipe, CommonModule } from '@angular/common';
 import { environment } from '../../../../environments/environment';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { catchError, of } from 'rxjs';
+
+interface ChannelStatePreview {
+  episodeTitle?: string;
+  nextEpisodeTitle?: string;
+}
 
 interface ScheduleEntry {
   id: number;
@@ -132,10 +138,14 @@ export class ScheduleDialogComponent {
   templateUrl: './channels.component.html',
   styleUrl: './channels.component.scss',
 })
-export class ChannelsComponent implements OnInit, AfterViewInit {
+export class ChannelsComponent implements OnInit {
   readonly selectedChannel = signal<ChannelResponse | null>(null);
   readonly detailTab = signal<'eras' | 'history'>('eras');
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  readonly channelStates = signal<Record<number, ChannelStatePreview | null>>({});
+  paginator!: MatPaginator;
+  @ViewChild(MatPaginator) set page(value: MatPaginator) {
+    if (value) { this.paginator = value; this.dataSource.paginator = value; }
+  }
 
   displayedColumns = ['id', 'name', 'logo', 'history', 'startDate', 'endDate', 'actions'];
   dataSource = new MatTableDataSource<ChannelResponse>([]);
@@ -147,6 +157,7 @@ export class ChannelsComponent implements OnInit, AfterViewInit {
     private snackBar: MatSnackBar,
     private http: HttpClient,
     private router: Router,
+    private route: ActivatedRoute,
     public themeService: CustomizerSettingsService,
   ) {}
 
@@ -158,18 +169,22 @@ export class ChannelsComponent implements OnInit, AfterViewInit {
 
   ngOnInit() {
     this.loadChannels();
-  }
-
-  ngAfterViewInit() {
-    this.dataSource.paginator = this.paginator;
+    if (this.route.snapshot.queryParamMap.get('new') === '1') {
+      queueMicrotask(() => this.openForm());
+    }
   }
 
   loadChannels() {
     this.channelsService.getAll().subscribe({
       next: (data) => {
         this.dataSource.data = data;
-        const selectedId = this.selectedChannel()?.id;
-        this.selectedChannel.set(data.find(channel => channel.id === selectedId) ?? data[0] ?? null);
+        const selectedId = this.selectedChannel()?.id ?? Number(this.route.snapshot.queryParamMap.get('channelId'));
+        this.selectedChannel.set(data.find(channel => channel.id === selectedId) ?? null);
+        for (const channel of data) {
+          this.http.get<ChannelStatePreview>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/state`)
+            .pipe(catchError(() => of(null)))
+            .subscribe(state => this.channelStates.update(states => ({ ...states, [channel.id]: state })));
+        }
       },
       error: () => this.showError('Error al cargar los canales'),
     });
@@ -265,10 +280,9 @@ export class ChannelsComponent implements OnInit, AfterViewInit {
   refreshSchedule(channel: ChannelResponse) {
     this.http.post(`${this.apiUrl}/api/v1/channels/${channel.id}/schedule/refresh`, {}).subscribe({
       next: () => {
-        this.showSuccess('Schedule refresh started');
-        setTimeout(() => this.viewSchedule(channel), 3000);
+        this.showSuccess('Regeneración iniciada. Consulta la programación cuando termine.');
       },
-      error: () => this.showError('Error refreshing schedule'),
+      error: () => this.showError('Error al regenerar la programación'),
     });
   }
 

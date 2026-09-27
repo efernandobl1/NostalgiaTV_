@@ -15,6 +15,7 @@ namespace ApplicationCore.DTOs.ChannelEra
         public DateTime? EndDate { get; set; }
         public string? FolderPath { get; set; }
         public List<int> SeriesIds { get; set; } = [];
+        public Dictionary<int, List<int>> SeasonSelections { get; set; } = [];
         public List<ChannelBumperResponse> Bumpers { get; set; } = [];
     }
 }

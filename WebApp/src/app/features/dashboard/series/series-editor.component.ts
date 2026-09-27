@@ -26,6 +26,8 @@ export class SeriesEditorComponent implements OnInit {
   readonly categories = signal<CategoryResponse[]>([]);
   readonly channels = signal<ChannelResponse[]>([]);
   readonly selectedCategories = signal<number[]>([]);
+  readonly categoryName = signal('');
+  readonly editingCategoryId = signal<number | null>(null);
   readonly busy = signal(false);
   readonly message = signal('');
   readonly error = signal('');
@@ -65,6 +67,35 @@ export class SeriesEditorComponent implements OnInit {
   toggleCategory(id: number, checked: boolean): void {
     this.selectedCategories.update(ids => checked ? [...ids, id] : ids.filter(value => value !== id));
     this.form.markAsDirty();
+  }
+
+  editCategory(category: CategoryResponse): void {
+    this.editingCategoryId.set(category.id);
+    this.categoryName.set(category.name);
+  }
+
+  saveCategory(): void {
+    const name = this.categoryName().trim();
+    if (!name) return;
+    const editingId = this.editingCategoryId();
+    const duplicate = this.categories().some(category => category.name.toLocaleLowerCase() === name.toLocaleLowerCase() && category.id !== editingId);
+    if (duplicate) { this.error.set('Ya existe una categoría con ese nombre.'); return; }
+    const request = editingId
+      ? this.categoryService.update(editingId, { name })
+      : this.categoryService.create({ name });
+    request.subscribe({
+      next: category => {
+        this.categories.update(items => editingId ? items.map(item => item.id === category.id ? category : item) : [...items, category]);
+        if (!editingId) {
+          this.selectedCategories.update(ids => [...ids, category.id]);
+          this.form.markAsDirty();
+        }
+        this.categoryName.set('');
+        this.editingCategoryId.set(null);
+        this.error.set('');
+      },
+      error: () => this.error.set('No se pudo guardar la categoría.'),
+    });
   }
 
   save(): void {

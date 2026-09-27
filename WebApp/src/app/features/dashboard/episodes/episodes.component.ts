@@ -13,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { EpisodesService } from './episodes.service';
+import { EpisodeUploadDialogComponent } from './episode-upload-dialog.component';
 import { SeriesService } from '../series/series.service';
 import { EpisodeResponse, UpdateEpisodeRequest } from '../../../shared/models/episode.model';
 import { SeriesResponse } from '../../../shared/models/serie.model';
@@ -53,7 +54,16 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
         { id: 5, name: 'Película' }
     ]);
 
-    private allEpisodes = signal<EpisodeResponse[]>([]);
+    readonly allEpisodes = signal<EpisodeResponse[]>([]);
+    readonly totalSizeBytes = computed(() => this.allEpisodes().reduce((total, episode) => total + (episode.fileSizeBytes ?? 0), 0));
+
+    formatSize(bytes: number | null | undefined): string {
+        if (bytes == null) return 'Peso no disponible';
+        if (bytes === 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const unit = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+        return `${(bytes / 1024 ** unit).toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+    }
 
     seasons = computed(() => {
         const nums = [...new Set(this.allEpisodes().map(e => e.season))].sort((a, b) => a - b);
@@ -127,6 +137,25 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
                 this.showSuccess('Episodios sincronizados desde la carpeta');
             },
             error: () => this.showError('Error al escanear la carpeta')
+        });
+    }
+
+    openUpload() {
+        const seriesId = this.selectedSeriesId();
+        if (!seriesId) { this.showError('Seleccioná una serie primero'); return; }
+        const serie = this.series().find(s => s.id === seriesId);
+        const existingSeasons = this.allEpisodes().map(e => e.season).filter(n => n > 0);
+        const maxSeason = Math.max(serie?.seasons ?? 1, ...existingSeasons, 1);
+        const dialogRef = this.dialog.open(EpisodeUploadDialogComponent, {
+            width: '620px',
+            data: { seriesId, seriesName: serie?.name ?? '', maxSeason },
+            panelClass: this.themeService.isDark() ? 'dark-theme' : '',
+            disableClose: true
+        });
+        dialogRef.afterClosed().subscribe(result => {
+            if (!result) return;
+            if (result.failed > 0) this.showError(`${result.failed} archivo(s) no se pudieron subir`);
+            if (result.uploaded > 0) this.scan();
         });
     }
 

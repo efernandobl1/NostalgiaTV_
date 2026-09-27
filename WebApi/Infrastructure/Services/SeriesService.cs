@@ -4,10 +4,13 @@ using ApplicationCore.Entities;
 using ApplicationCore.Exceptions;
 using ApplicationCore.Interfaces;
 using ApplicationCore.Models;
+using ApplicationCore.Settings;
 using Infrastructure.Contexts;
 using Infrastructure.Services.InternalServices;
 using Mapster;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services
 {
@@ -16,12 +19,14 @@ namespace Infrastructure.Services
         private readonly NostalgiaTVContext _context;
         private readonly FileUploadService _fileUploadService;
         private readonly SeriesFolderService _folderService;
+        private readonly SeriesUploadSettings _uploadSettings;
 
-        public SeriesService(NostalgiaTVContext context, FileUploadService fileUploadService, SeriesFolderService folderService)
+        public SeriesService(NostalgiaTVContext context, FileUploadService fileUploadService, SeriesFolderService folderService, IOptions<SeriesUploadSettings> uploadSettings)
         {
             _context = context;
             _fileUploadService = fileUploadService;
             _folderService = folderService;
+            _uploadSettings = uploadSettings.Value;
         }
 
         // Sólo formatos reproducibles directamente en un <video> HTML5. Se omiten
@@ -242,6 +247,138 @@ namespace Infrastructure.Services
                 .Include(e => e.EpisodeType)
                 .ProjectToType<EpisodeResponse>()
                 .ToListAsync();
+        }
+
+        // Guarda archivos de video directamente en la carpeta de la serie (para no
+        // depender de FTP). La validación de extensión/temporales coincide con lo
+        // que ScanFolderAsync acepta después, y se conserva el nombre original para
+        // que ParseFileName extraiga número/título del episodio.
+        public async Task<List<SeriesUploadResult>> UploadEpisodeFilesAsync(int seriesId, SeriesUploadRequest request)
+        {
+            var series = await _context.Series.FindAsync(seriesId)
+                ?? throw new NotFoundException($"Series {seriesId} not found");
+
+            if (request.Files is null || request.Files.Count == 0)
+                throw new BadRequestException("No files received.");
+
+            var target = (request.Target ?? "season").Trim().ToLowerInvariant();
+            if (target is not ("season" or "specials" or "movies"))
+                throw new BadRequestException($"Invalid target '{request.Target}'. Use 'season', 'specials' or 'movies'.");
+
+            int? seasonNumber = null;
+            if (target == "season")
+            {
+                seasonNumber = request.Season ?? series.Seasons;
+                if (seasonNumber is < 1 or > 999)
+                    throw new BadRequestException("Season must be between 1 and 999.");
+            }
+
+            if (string.IsNullOrEmpty(series.FolderPath))
+                series.FolderPath = _folderService.CreateSeriesFolder(series.Name, series.Seasons);
+
+            var subfolder = target switch
+            {
+                "season" => $"season {seasonNumber}",
+                "movies" => "movies",
+                _ => "specials"
+            };
+            var targetDir = Path.GetFullPath(Path.Combine(series.FolderPath, subfolder));
+            Directory.CreateDirectory(targetDir);
+
+            var maxBytes = (long)_uploadSettings.MaxFileSizeMB * 1024 * 1024;
+            var results = new List<SeriesUploadResult>();
+            var anySaved = false;
+
+            foreach (var file in request.Files)
+            {
+                var originalName = Path.GetFileName(file.FileName ?? string.Empty);
+                var result = new SeriesUploadResult { FileName = originalName };
+                string? fullPath = null;
+
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(originalName))
+                        throw new BadRequestException("Invalid file name.");
+
+                    var ext = Path.GetExtension(originalName);
+                    if (!VideoExtensions.Contains(ext))
+                        throw new BadRequestException(
+                            $"Format '{ext}' is not playable in the browser. Allowed: {string.Join(", ", VideoExtensions)}.");
+
+                    if (IsTranscodeArtifact(originalName))
+                        throw new BadRequestException("Temporary or transcoding files are not accepted.");
+
+                    if (file.Length == 0)
+                        throw new BadRequestException("File is empty.");
+
+                    if (file.Length > maxBytes)
+                        throw new BadRequestException($"File exceeds {_uploadSettings.MaxFileSizeMB}MB.");
+
+                    var finalName = GetUniqueFileName(targetDir, SanitizeFileName(originalName));
+                    fullPath = Path.GetFullPath(Path.Combine(targetDir, finalName));
+                    if (!fullPath.StartsWith(targetDir, StringComparison.Ordinal))
+                        throw new BadRequestException("Invalid file path.");
+
+                    await using (var stream = new FileStream(fullPath, FileMode.CreateNew))
+                        await file.CopyToAsync(stream);
+
+                    result.Success = true;
+                    result.FilePath = ToRelativePath(fullPath);
+                    anySaved = true;
+                }
+                catch (BadRequestException ex)
+                {
+                    result.Error = ex.Message;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // Escritos interrumpidos (disco lleno, permiso): no dejar archivos parciales.
+                    if (fullPath is not null)
+                        try { File.Delete(fullPath); } catch (IOException) { }
+                    result.Error = $"Error writing file: {ex.Message}";
+                }
+
+                results.Add(result);
+            }
+
+            if (anySaved && seasonNumber.HasValue && seasonNumber > series.Seasons)
+                series.Seasons = seasonNumber.Value;
+
+            if (anySaved)
+                await _context.SaveChangesAsync();
+
+            return results;
+        }
+
+        private static bool IsTranscodeArtifact(string name) =>
+            name.Contains(".transcoding.", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains(".web-compatible", StringComparison.OrdinalIgnoreCase) ||
+            name.EndsWith(".part", StringComparison.OrdinalIgnoreCase) ||
+            name.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase);
+
+        private static string SanitizeFileName(string fileName)
+        {
+            var invalid = new HashSet<char>(Path.GetInvalidFileNameChars()) { ':', '/', '\\' };
+            var ext = Path.GetExtension(fileName);
+            var baseName = Path.GetFileNameWithoutExtension(fileName);
+            var safe = new string(baseName.Select(c => invalid.Contains(c) ? '-' : c).ToArray())
+                .Trim().TrimEnd('.');
+            return string.IsNullOrEmpty(safe) ? $"video{ext}" : safe + ext;
+        }
+
+        private static string GetUniqueFileName(string dir, string fileName)
+        {
+            if (!File.Exists(Path.Combine(dir, fileName)))
+                return fileName;
+
+            var baseName = Path.GetFileNameWithoutExtension(fileName);
+            var ext = Path.GetExtension(fileName);
+            for (var i = 1; ; i++)
+            {
+                var candidate = $"{baseName} ({i}){ext}";
+                if (!File.Exists(Path.Combine(dir, candidate)))
+                    return candidate;
+            }
         }
 
         // Convierte ruta absoluta a relativa desde wwwroot

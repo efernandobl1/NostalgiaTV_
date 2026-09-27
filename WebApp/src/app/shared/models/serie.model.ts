@@ -23,3 +23,10 @@ export interface SeriesResponse {
     channelName?: string;
     episodeCount?: number;
 }
+
+export interface SeriesUploadResult {
+    fileName: string;
+    success: boolean;
+    filePath?: string;
+    error?: string;
+}

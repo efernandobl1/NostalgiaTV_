@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace WebApi.Controllers
 {
     [ApiController]
-    [Authorize]
+    [Authorize(Policy = "Bumpers")]
     [ApiVersion("1")]
     [Route("api/v{version:apiVersion}/eras/{eraId}/bumpers")]
     public class ChannelBumperController : ControllerBase

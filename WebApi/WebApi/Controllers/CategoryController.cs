@@ -9,7 +9,7 @@ namespace WebApi.Controllers
     [ApiController]
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/[controller]")]
-    [Authorize]
+    [Authorize(Policy = "Categories")]
     public class CategoryController : ControllerBase
     {
         private readonly ICategoryService _categoryService;

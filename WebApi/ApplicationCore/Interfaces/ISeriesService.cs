@@ -16,6 +16,7 @@ namespace ApplicationCore.Interfaces
         Task DeleteAsync(int id);
         Task<SeriesResponse> AssignCategoriesAsync(int seriesId, List<int> categoryIds);
         Task<List<EpisodeResponse>> ScanFolderAsync(int seriesId);
+        Task<List<SeriesUploadResult>> UploadEpisodeFilesAsync(int seriesId, SeriesUploadRequest request);
         Task<PagedResult<SeriesResponse>> GetPublicAsync(SeriesFilterRequest filter);
     }
 }
