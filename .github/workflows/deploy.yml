@@ -20,6 +20,9 @@ jobs:
   # Escaneo de seguridad como gate: si hay CVEs HIGH/CRITICAL, no se publica nada.
   security-scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,6 +49,12 @@ jobs:
           # NO llegan a la imagen final (solo nginx + estáticos ya compilados),
           # así que sus CVEs son de build, no de runtime. El backend .NET sí se escanea.
           skip-dirs: WebApp
+
+      - name: Reject newly introduced vulnerable dependencies
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
 
   # Construye ambas imágenes EN PARALELO (matriz) con caché de capas por imagen.
   build-and-push:
@@ -95,6 +104,18 @@ jobs:
           # Caché de capas por imagen (scope) para no pisarse entre api/web.
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  # Unlike a skipped dependency job, this gate fails when either prerequisite fails.
+  pr-gate:
+    if: always() && github.event_name == 'pull_request'
+    needs: [security-scan, build-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require security scan and both builds
+        env:
+          SECURITY_RESULT: ${{ needs.security-scan.result }}
+          BUILD_RESULT: ${{ needs.build-and-push.result }}
+        run: test "$SECURITY_RESULT" = success && test "$BUILD_RESULT" = success
 
   # Despliegue en la VPS por SSH: baja las imágenes nuevas y reinicia el stack.
   deploy:
