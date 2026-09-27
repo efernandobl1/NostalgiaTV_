@@ -1,8 +1,16 @@
 <section class="activity-page" aria-label="Registro de actividad">
-  <div class="activity-filters" aria-label="Periodo">
-    <button type="button" [class.is-active]="days() === 7" (click)="load(7)">7 días</button>
-    <button type="button" [class.is-active]="days() === 30" (click)="load(30)">30 días</button>
-    <button type="button" [class.is-active]="days() === 0" (click)="load(0)">Todos</button>
+  <header class="activity-heading"><div><h1>Actividad</h1><p>Cambios del panel ordenados desde el más reciente.</p></div><span>{{ activity().length }} movimientos</span></header>
+  <div class="activity-toolbar">
+    <div class="activity-filters" aria-label="Tipo de actividad">
+      <button type="button" [attr.aria-pressed]="kind() === 'all'" (click)="kind.set('all')">Todo</button>
+      <button type="button" [attr.aria-pressed]="kind() === 'channel'" (click)="kind.set('channel')">Canales</button>
+      <button type="button" [attr.aria-pressed]="kind() === 'series'" (click)="kind.set('series')">Series</button>
+    </div>
+    <div class="activity-filters" aria-label="Periodo">
+      <button type="button" [attr.aria-pressed]="days() === 7" (click)="load(7)">7 días</button>
+      <button type="button" [attr.aria-pressed]="days() === 30" (click)="load(30)">30 días</button>
+      <button type="button" [attr.aria-pressed]="days() === 0" (click)="load(0)">Todos</button>
+    </div>
   </div>
 
   @if (loading()) {
@@ -13,24 +21,17 @@
       <div><strong>No se pudo cargar la actividad</strong><span>Comprueba la conexión con la API.</span></div>
       <button type="button" class="admin-button admin-button--secondary" (click)="load(days())">Reintentar</button>
     </div>
-  } @else if (activity().length) {
-    <div class="activity-timeline">
-      @for (entry of activity(); track entry.id) {
-        <article class="activity-entry" [class.activity-entry--delete]="entry.action === 'delete'">
-          <span class="material-symbols-outlined">{{ icon(entry.action) }}</span>
-          <div>
-            <strong>{{ entry.description }}</strong>
-            <span>{{ entry.createdAtUtc | date:'dd/MM/yyyy · HH:mm' }}</span>
-          </div>
-          <span class="activity-entry__resource">{{ entry.resource }}</span>
-        </article>
+  } @else if (visibleActivity().length) {
+    <ol class="activity-timeline">
+      @for (entry of visibleActivity(); track entry.id) {
+        <li class="activity-entry" [class.activity-entry--delete]="entry.action === 'delete'">
+          <time [attr.datetime]="entry.createdAtUtc">{{ entry.createdAtUtc | date:'dd/MM' }}<br>{{ entry.createdAtUtc | date:'HH:mm' }}</time>
+          <div class="activity-entry__copy"><strong>{{ entry.description }}</strong><span>{{ entry.resource }} · {{ entry.username }}</span></div>
+          <a [routerLink]="resourceUrl(entry.resource)">Ir al módulo <span class="material-symbols-outlined">arrow_forward</span></a>
+        </li>
       }
-    </div>
+    </ol>
   } @else {
-    <div class="admin-empty">
-      <span class="material-symbols-outlined">history</span>
-      <strong>No hay actividad en este periodo</strong>
-      <span>Los cambios realizados desde el panel aparecerán aquí.</span>
-    </div>
+    <div class="admin-empty"><span class="material-symbols-outlined">history</span><strong>No hay movimientos con estos filtros</strong><span>Prueba otro periodo o tipo de actividad.</span></div>
   }
 </section>

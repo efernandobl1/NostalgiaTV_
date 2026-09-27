@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace WebApi.Controllers
 {
     [ApiController]
-    [Authorize]
+    [Authorize(Policy = "Channels")]
     [ApiVersion("1")]
     [Route("api/v{version:apiVersion}/channels")]
     public class ChannelController : ControllerBase

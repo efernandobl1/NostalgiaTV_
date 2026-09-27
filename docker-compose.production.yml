@@ -71,7 +71,7 @@ services:
       # Issuer/Audience fijos (no dependen de la IP/dominio) para que funcione en cualquier host.
       Jwt__Issuer: ${JWT_ISSUER:-nostalgiatv}
       Jwt__Audience: ${JWT_ISSUER:-nostalgiatv}
-      # Nginx es el único borde: la API confía en X-Forwarded-Proto/For.
+      # Keep the existing proxy flag to skip internal HTTPS redirects. Forwarded headers are not trusted.
       ReverseProxy__TrustForwardedHeaders: "true"
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads

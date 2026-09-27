@@ -1,5 +1,5 @@
 import { Component, computed, HostListener, inject, signal } from '@angular/core';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { MenuService } from '../../core/services/menu.service';
 import { CustomizerSettingsService } from '../../shared/components/customizer-settings/customizer-settings.service';
@@ -10,13 +10,13 @@ interface DashboardNavigationItem {
   icon: string;
   url: string;
   accessUrls: string[];
-  section: 'broadcast' | 'access';
+  section: 'primary' | 'tools';
 }
 
 @Component({
   selector: 'app-dashboard-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink],
   template: `
     <div class="dashboard-shell" [class.dashboard-shell--light]="!themeService.isDark()">
       <aside class="dashboard-sidebar" aria-label="Navegación del panel">
@@ -25,16 +25,24 @@ interface DashboardNavigationItem {
           <span>NostalgiaTV</span>
         </a>
         <nav class="dashboard-navigation">
-          @for (section of sections; track section.key) {
-            <span class="dashboard-navigation__section">{{ section.label }}</span>
-            @for (item of visibleItems(section.key); track item.url) {
-              <a [routerLink]="item.url" routerLinkActive="is-active" class="dashboard-navigation__item">
+          <span class="dashboard-navigation__section">Navegación</span>
+          @for (item of visibleItems('primary'); track item.url) {
+            <a [routerLink]="item.url" [class.is-active]="isCurrent(item)" class="dashboard-navigation__item">
+              <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+              <span class="dashboard-navigation__label">{{ item.label }}</span>
+              <span class="dashboard-navigation__compact-label">{{ item.compactLabel }}</span>
+            </a>
+          }
+          <details class="dashboard-tools">
+            <summary>Más herramientas</summary>
+            @for (item of visibleItems('tools'); track item.url) {
+              <a [routerLink]="item.url" [class.is-active]="isCurrent(item)" class="dashboard-navigation__item">
                 <span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
                 <span class="dashboard-navigation__label">{{ item.label }}</span>
                 <span class="dashboard-navigation__compact-label">{{ item.compactLabel }}</span>
               </a>
             }
-          }
+          </details>
         </nav>
         <div class="dashboard-sidebar__footer">
           <button type="button" class="dashboard-navigation__item dashboard-theme-button" (click)="toggleTheme()">
@@ -52,18 +60,15 @@ interface DashboardNavigationItem {
 
       <div class="dashboard-workspace">
         <header class="dashboard-header">
-          <div>
+          <div class="dashboard-location">
             <span>{{ currentSection() }}</span>
-            <h1>{{ currentTitle() }}</h1>
+            <strong>{{ currentTitle() }}</strong>
           </div>
           <div class="dashboard-header__actions">
             <button type="button" class="dashboard-icon-button" aria-label="Abrir comandos" (click)="commandOpen.set(true)">
               <span class="material-symbols-outlined">bolt</span>
               <span class="dashboard-command-label">Comandos</span>
               <kbd>Ctrl K</kbd>
-            </button>
-            <button type="button" class="dashboard-icon-button" aria-label="Notificaciones">
-              <span class="material-symbols-outlined">notifications</span>
             </button>
             <div class="dashboard-user" [attr.aria-label]="'Sesión de ' + username()">
               <span>{{ initials() }}</span>
@@ -76,7 +81,7 @@ interface DashboardNavigationItem {
 
       <nav class="dashboard-mobile-nav" aria-label="Navegación móvil">
         @for (item of mobilePrimaryItems; track item.url) {
-          <a [routerLink]="item.url" routerLinkActive="is-active">
+          <a [routerLink]="item.url" [class.is-active]="isCurrent(item)">
             <span class="material-symbols-outlined">{{ item.icon }}</span>
             <span>{{ item.compactLabel }}</span>
           </a>
@@ -130,19 +135,16 @@ export class DashboardLayoutComponent {
   readonly commandOpen = signal(false);
   readonly currentUrl = signal(this.router.url);
 
-  readonly sections = [
-    { key: 'broadcast' as const, label: 'EMISIÓN' },
-    { key: 'access' as const, label: 'ACCESOS' },
-  ];
-
   readonly navigationItems: DashboardNavigationItem[] = [
-    { label: 'Resumen', compactLabel: 'Resumen', icon: 'dashboard', url: '/dashboard/summary', accessUrls: [], section: 'broadcast' },
-    { label: 'Canales y eras', compactLabel: 'Canales', icon: 'live_tv', url: '/dashboard/channels', accessUrls: ['/dashboard/channels', '/dashboard/channel-eras'], section: 'broadcast' },
-    { label: 'Series y episodios', compactLabel: 'Series', icon: 'movie', url: '/dashboard/series', accessUrls: ['/dashboard/series', '/dashboard/episodes'], section: 'broadcast' },
-    { label: 'Bumpers', compactLabel: 'Bumpers', icon: 'theaters', url: '/dashboard/channel-bumpers', accessUrls: ['/dashboard/channel-bumpers'], section: 'broadcast' },
-    { label: 'Categorías', compactLabel: 'Categ.', icon: 'sell', url: '/dashboard/categories', accessUrls: ['/dashboard/categories'], section: 'broadcast' },
-    { label: 'Usuarios y roles', compactLabel: 'Accesos', icon: 'group', url: '/dashboard/users', accessUrls: ['/dashboard/users', '/dashboard/roles'], section: 'access' },
-    { label: 'Actividad', compactLabel: 'Activid.', icon: 'history', url: '/dashboard/activity', accessUrls: [], section: 'access' },
+    { label: 'Inicio', compactLabel: 'Inicio', icon: 'home', url: '/dashboard/summary', accessUrls: [], section: 'primary' },
+    { label: 'Canales', compactLabel: 'Canales', icon: 'live_tv', url: '/dashboard/channels', accessUrls: ['/dashboard/channels', '/dashboard/channel-eras', '/dashboard/channel-bumpers'], section: 'primary' },
+    { label: 'Series', compactLabel: 'Series', icon: 'movie', url: '/dashboard/series', accessUrls: ['/dashboard/series', '/dashboard/episodes'], section: 'primary' },
+    { label: 'Actividad', compactLabel: 'Actividad', icon: 'history', url: '/dashboard/activity', accessUrls: [], section: 'primary' },
+    { label: 'Eras', compactLabel: 'Eras', icon: 'schedule', url: '/dashboard/channel-eras', accessUrls: ['/dashboard/channel-eras'], section: 'tools' },
+    { label: 'Bumpers', compactLabel: 'Bumpers', icon: 'theaters', url: '/dashboard/channel-bumpers', accessUrls: ['/dashboard/channel-bumpers'], section: 'tools' },
+    { label: 'Episodios', compactLabel: 'Episodios', icon: 'video_library', url: '/dashboard/episodes', accessUrls: ['/dashboard/episodes'], section: 'tools' },
+    { label: 'Categorías', compactLabel: 'Categorías', icon: 'sell', url: '/dashboard/categories', accessUrls: ['/dashboard/categories'], section: 'tools' },
+    { label: 'Usuarios y roles', compactLabel: 'Accesos', icon: 'group', url: '/dashboard/users', accessUrls: ['/dashboard/users', '/dashboard/roles'], section: 'tools' },
   ];
 
   readonly mobilePrimaryItems = this.navigationItems.slice(0, 3);
@@ -158,11 +160,12 @@ export class DashboardLayoutComponent {
         : url.includes('/channel-eras') ? 'Canales y eras'
         : url.includes('/channel-bumpers') ? 'Bumpers'
         : url.includes('/roles') ? 'Usuarios y roles'
-        : 'Resumen');
+        : 'Inicio');
   });
   readonly currentSection = computed(() =>
-    ['/dashboard/users', '/dashboard/roles', '/dashboard/activity'].some(path => this.currentUrl().startsWith(path))
-      ? 'Accesos'
+    ['/dashboard/users', '/dashboard/roles', '/dashboard/categories', '/dashboard/episodes',
+      '/dashboard/channel-eras', '/dashboard/channel-bumpers'].some(path => this.currentUrl().startsWith(path))
+      ? 'Herramientas'
       : 'Panel',
   );
 
@@ -173,8 +176,17 @@ export class DashboardLayoutComponent {
     });
   }
 
-  visibleItems(section: 'broadcast' | 'access'): DashboardNavigationItem[] {
+  visibleItems(section: 'primary' | 'tools'): DashboardNavigationItem[] {
     return this.navigationItems.filter(item => item.section === section && this.canAccess(item));
+  }
+
+  isCurrent(item: DashboardNavigationItem): boolean {
+    const path = this.currentUrl().split('?')[0];
+    if (item.section === 'primary' && item.url === '/dashboard/channels')
+      return ['/dashboard/channels', '/dashboard/channel-eras', '/dashboard/channel-bumpers'].includes(path);
+    if (item.section === 'primary' && item.url === '/dashboard/series')
+      return ['/dashboard/series', '/dashboard/episodes'].includes(path);
+    return path === item.url;
   }
 
   toggleTheme(): void {

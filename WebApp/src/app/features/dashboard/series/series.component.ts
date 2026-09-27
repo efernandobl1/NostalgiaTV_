@@ -1,7 +1,7 @@
 import { AsyncPipe } from '@angular/common';
 import { SeriesEditorComponent } from './series-editor.component';
 import { map } from 'rxjs';
-import { Component, OnInit, ViewChild, AfterViewInit, signal } from '@angular/core';
+import { Component, OnInit, ViewChild, signal } from '@angular/core';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,16 +16,16 @@ import { SeriesResponse } from '../../../shared/models/serie.model';
 import { CategoryResponse } from '../../../shared/models/category.model';
 import { DialogConfig, GenericFormDialogComponent } from '../../../shared/components/dialogs/generic-form-dialog/generic-form-dialog.component';
 import { CustomizerSettingsService } from '../../../shared/components/customizer-settings/customizer-settings.service';
-import { DatePipe } from '@angular/common';
 import { environment } from '../../../../environments/environment';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
     selector: 'app-series',
-    imports: [SeriesEditorComponent, AsyncPipe, MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, MatCardModule, MatTooltipModule, DatePipe],
+    imports: [SeriesEditorComponent, AsyncPipe, MatTableModule, MatPaginatorModule, MatButtonModule, MatIconModule, MatDialogModule, MatSnackBarModule, MatCardModule, MatTooltipModule],
     templateUrl: './series.component.html',
     styleUrl: './series.component.scss',
 })
-export class SeriesComponent implements OnInit, AfterViewInit {
+export class SeriesComponent implements OnInit {
 
     readonly apiUrl = environment.apiUrl;
     readonly editorOpen = signal(false);
@@ -41,6 +41,7 @@ export class SeriesComponent implements OnInit, AfterViewInit {
     readonly filtersOpen = signal(false);
     private searchTerm = '';
     private incompleteOnly = false;
+    private initialSeriesOpened = false;
     toggleFilters(): void { this.filtersOpen.update(value => !value); }
 
     filterIncomplete(checked: boolean): void {
@@ -65,6 +66,7 @@ export class SeriesComponent implements OnInit, AfterViewInit {
         private categoriesService: CategoriesService,
         private dialog: MatDialog,
         private snackBar: MatSnackBar,
+        private route: ActivatedRoute,
         public themeService: CustomizerSettingsService,
     ) {}
 
@@ -81,17 +83,28 @@ export class SeriesComponent implements OnInit, AfterViewInit {
             (!this.incompleteOnly || !series.logoPath || !series.categoryIds.length) &&
             series.name.toLocaleLowerCase().includes(this.searchTerm);
         this.loadSeries();
+        if (this.route.snapshot.queryParamMap.get('new') === '1') {
+            this.openForm();
+        }
         this.categoriesService.getAll().subscribe({
             next: data => this.categories.set(data),
             error: () => this.showError('Error al cargar las categorías'),
         });
     }
 
-    ngAfterViewInit() { this.dataSource.paginator = this.paginator; }
-
     loadSeries() {
         this.seriesService.getAll().subscribe({
-            next: data => this.dataSource.data = data,
+            next: data => {
+                this.dataSource.data = data;
+                const requestedId = Number(this.route.snapshot.queryParamMap.get('seriesId'));
+                if (requestedId && !this.initialSeriesOpened) {
+                    const series = data.find(item => item.id === requestedId);
+                    if (series) {
+                        this.initialSeriesOpened = true;
+                        this.openForm(series);
+                    }
+                }
+            },
             error: () => this.showError('Error al cargar las series'),
         });
     }

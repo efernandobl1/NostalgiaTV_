@@ -1,28 +1,23 @@
 @use '../../../../styles/dashboard-components';
 
-.activity-page { display: flex; flex-direction: column; gap: 16px; }
-.activity-filters { display: flex; gap: 8px; overflow-x: auto; }
-.activity-filters button {
-  min-height: 40px; padding: 0 16px; border: 0; border-radius: 999px;
-  color: var(--dashboard-muted); background: var(--dashboard-raised); font: 400 .875rem/1 Outfit, sans-serif; white-space: nowrap;
-  &.is-active { color: #0e0e1c; background: var(--dashboard-green); }
-}
-.activity-timeline { display: flex; flex-direction: column; gap: 10px; }
-.activity-entry {
-  display: flex; min-height: 68px; align-items: center; gap: 14px; padding: 14px 16px;
-  border: 1px solid rgba(139, 125, 255, .22); border-radius: 12px; background: var(--dashboard-surface);
-  > .material-symbols-outlined { color: var(--dashboard-green); font-size: 22px; }
-  div { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
-  strong { font-size: 1rem; font-weight: 400; }
-  div span { color: var(--dashboard-muted); font-size: .8125rem; }
-}
-.activity-entry--delete > .material-symbols-outlined { color: var(--dashboard-red); }
-.activity-entry__resource {
-  padding: 5px 10px; border-radius: 999px; color: var(--dashboard-purple-soft);
-  background: rgba(139, 125, 255, .14); font-size: .75rem; text-transform: capitalize;
-}
-@media (max-width: 48rem) {
-  .activity-entry { align-items: flex-start; padding: 14px; }
-  .activity-entry__resource { display: none; }
-  .activity-entry strong { font-size: .9375rem; line-height: 1.4; }
-}
+.activity-page { display: grid; gap: 20px; }
+.activity-heading, .activity-toolbar { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 14px; }
+.activity-heading h1 { margin: 0 0 5px; color: var(--dashboard-text); font: 800 clamp(1.7rem, 3vw, 2.3rem)/1.2 Consolas, monospace; }
+.activity-heading p { margin: 0; color: var(--dashboard-muted); }
+.activity-heading > span { padding: 7px 11px; border: 1px solid var(--dashboard-line); border-radius: 6px; color: var(--dashboard-muted); }
+.activity-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.activity-filters button { min-height: 42px; padding: 8px 14px; border: 1px solid var(--dashboard-line); border-radius: 6px; color: var(--dashboard-text); background: var(--dashboard-raised); font: 700 .875rem/1.3 Outfit, sans-serif; cursor: pointer; }
+.activity-filters button[aria-pressed='true'] { border-color: var(--dashboard-green); color: var(--dashboard-on-green); background: var(--dashboard-green); }
+.activity-timeline { position: relative; max-width: 900px; margin: 0; padding: 0 0 0 28px; list-style: none; }
+.activity-timeline::before { position: absolute; top: 20px; bottom: 20px; left: 8px; width: 2px; background: var(--dashboard-line); content: ''; }
+.activity-entry { position: relative; display: grid; grid-template-columns: 75px minmax(0, 1fr) auto; gap: 17px; padding: 18px 0 22px; border-bottom: 1px solid var(--dashboard-rule); }
+.activity-entry::before { position: absolute; top: 22px; left: -25px; width: 12px; height: 12px; border: 2px solid var(--dashboard-green); border-radius: 50%; background: var(--dashboard-bg); content: ''; }
+.activity-entry--delete::before { border-color: var(--dashboard-red); }
+.activity-entry time { color: var(--dashboard-gold); font: 800 .875rem/1.4 Consolas, monospace; white-space: nowrap; }
+.activity-entry__copy { min-width: 0; }
+.activity-entry__copy strong { display: block; overflow-wrap: anywhere; font-size: 1rem; }
+.activity-entry__copy span { display: block; margin-top: 5px; color: var(--dashboard-muted); font-size: .875rem; }
+.activity-entry a { display: inline-flex; align-items: center; align-self: start; gap: 5px; min-height: 40px; color: var(--dashboard-green); text-decoration: none; white-space: nowrap; }
+.activity-entry a:hover { text-decoration: underline; }
+.activity-entry a span { font-size: 18px; }
+@media (max-width: 48rem) { .activity-entry { grid-template-columns: minmax(0, 1fr); gap: 6px; } .activity-entry a { justify-self: start; } }

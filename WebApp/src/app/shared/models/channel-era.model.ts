@@ -23,11 +23,13 @@ export interface ChannelEraResponse {
     endDate?: string;
     folderPath?: string;
     seriesIds: number[];
+    seasonSelections: Record<number, number[]>;
     bumpers: ChannelBumperResponse[];
 }
 
 export interface AssignSeriesToEraRequest {
     seriesIds: number[];
+    seasonSelections?: Record<number, number[]>;
 }
 
 export interface ChannelBumperRequest {
