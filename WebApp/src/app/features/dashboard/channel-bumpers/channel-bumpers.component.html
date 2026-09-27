@@ -1,6 +1,6 @@
 <section class="catalog-page">
   <header class="catalog-toolbar">
-    <a routerLink="/dashboard/channel-eras" [queryParams]="{channelId:selectedChannelId()}" class="admin-back" aria-label="Volver a eras"><span class="material-symbols-outlined">arrow_back</span></a>
+    <a routerLink="/dashboard/channels" [queryParams]="{channelId:selectedChannelId()}" class="admin-back" aria-label="Volver al canal"><span class="material-symbols-outlined">arrow_back</span></a>
     <mat-form-field appearance="outline"><mat-label>Canal</mat-label><mat-select [value]="selectedChannelId()" (selectionChange)="onChannelChange($event.value)">@for(channel of channels();track channel.id){<mat-option [value]="channel.id">{{channel.name}}</mat-option>}</mat-select></mat-form-field>
     <mat-form-field appearance="outline"><mat-label>Era</mat-label><mat-select [value]="selectedEraId()" (selectionChange)="onEraChange($event.value)">@for(era of eras();track era.id){<mat-option [value]="era.id">{{era.name}}</mat-option>}</mat-select></mat-form-field>
     <button type="button" class="admin-button admin-button--primary" (click)="openForm()" [disabled]="!selectedEraId()"><span class="material-symbols-outlined">upload</span>Subir bumper</button>

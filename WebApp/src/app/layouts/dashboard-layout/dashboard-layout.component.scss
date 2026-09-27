@@ -1,22 +1,30 @@
 :host { display: block; }
 
 .dashboard-shell {
-  --dashboard-bg: #0e0e1c;
-  --dashboard-sidebar: #141629;
-  --dashboard-surface: #191b2e;
-  --dashboard-raised: #20223a;
-  --dashboard-text: #e6e8f2;
-  --dashboard-muted: #aab0c6;
-  --dashboard-green: #8ee89f;
-  --dashboard-purple-soft: #c9c2ff;
-  --dashboard-gold: #ffd93d;
+  --dashboard-bg: #0c0a17;
+  --dashboard-sidebar: #181327;
+  --dashboard-surface: #211a33;
+  --dashboard-raised: #2b2340;
+  --dashboard-text: #f8f4ff;
+  --dashboard-muted: #c7bdd5;
+  --dashboard-green: #a3efb1;
+  --dashboard-on-green: #152519;
+  --dashboard-purple-soft: #c9b7ff;
+  --dashboard-gold: #ffdc7b;
   --dashboard-red: #ff8f8f;
+  --dashboard-line: #79688e;
+  --dashboard-rule: #59496d;
+  --dashboard-deck: #181327;
+  --dashboard-deck-raised: #2a203c;
+  --dashboard-strip: #211a37;
+  --dashboard-spine: #2e2443;
+  --dashboard-spine-stripe: #38294c;
+  --dashboard-shadow: #080610;
   display: grid;
   min-height: 100dvh;
   grid-template-columns: 248px minmax(0, 1fr);
   color: var(--dashboard-text);
-  background: radial-gradient(ellipse at 18% -10%, rgba(139, 125, 255, .16), transparent 55%),
-    linear-gradient(160deg, #15152b, var(--dashboard-bg) 58%, #101a30);
+  background: var(--dashboard-bg);
   font-family: Outfit, sans-serif;
 }
 
@@ -28,9 +36,18 @@
   --dashboard-text: #1b1d33;
   --dashboard-muted: #5f6479;
   --dashboard-green: #287b42;
+  --dashboard-on-green: #ffffff;
   --dashboard-purple-soft: #5145b9;
   --dashboard-gold: #8a6800;
   --dashboard-red: #b53636;
+  --dashboard-line: #877b9b;
+  --dashboard-rule: #d8d0e3;
+  --dashboard-deck: #ffffff;
+  --dashboard-deck-raised: #eee7f5;
+  --dashboard-strip: #f6f1fb;
+  --dashboard-spine: #eee2f9;
+  --dashboard-spine-stripe: #e4d7f0;
+  --dashboard-shadow: #c7b8d3;
   background: #f4f5fb;
 }
 
@@ -41,21 +58,26 @@
   display: flex;
   height: 100dvh;
   flex-direction: column;
-  padding: 18px 12px;
-  border-right: 1px solid rgba(139, 125, 255, .18);
-  background: var(--dashboard-sidebar);
+  padding: 26px 15px 18px;
+  border-right: 1px solid rgba(174, 145, 205, .38);
+  background: linear-gradient(180deg, var(--dashboard-deck-raised), var(--dashboard-sidebar) 38%);
+  &::before {
+    position: absolute; inset: 0 0 auto; height: 4px;
+    background: linear-gradient(90deg, #ff858d 0 33%, var(--dashboard-gold) 33% 66%, var(--dashboard-green) 66%);
+    content: '';
+  }
 }
 
 .dashboard-brand {
   display: flex;
-  min-height: 42px;
+  min-height: 60px;
   align-items: center;
   gap: 10px;
-  padding: 0 8px 14px;
-  color: #ff6b6b;
-  font: 400 .625rem/1.4 'Press Start 2P', cursive;
-  text-shadow: 0 0 12px rgba(255, 107, 107, .55);
-  img { width: 26px; height: 26px; }
+  padding: 0 8px 22px;
+  border-bottom: 1px solid rgba(174, 145, 205, .32);
+  color: var(--dashboard-red);
+  font: 400 .7rem/1.4 'Press Start 2P', cursive;
+  img { width: 34px; height: 34px; }
 }
 
 .dashboard-navigation {
@@ -66,9 +88,8 @@
 
 .dashboard-navigation__section {
   padding: 14px 8px 6px;
-  color: var(--dashboard-green);
-  font: 400 .4375rem/1.4 'Press Start 2P', cursive;
-  letter-spacing: .12em;
+  color: var(--dashboard-muted);
+  font: 600 .8125rem/1.4 Outfit, sans-serif;
 }
 
 .dashboard-navigation__item {
@@ -93,6 +114,19 @@
   }
 }
 
+.dashboard-tools {
+  margin-top: 15px;
+  border-top: 1px solid rgba(174, 145, 205, .32);
+  summary {
+    min-height: 46px;
+    padding: 13px 10px;
+    color: var(--dashboard-muted);
+    font-size: .875rem;
+    cursor: pointer;
+  }
+  .dashboard-navigation__item { min-height: 43px; padding-left: 22px; }
+}
+
 .dashboard-navigation__compact-label { display: none; }
 .dashboard-navigation__item--logout { color: var(--dashboard-red); }
 .dashboard-sidebar__footer { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
@@ -109,15 +143,14 @@
   justify-content: space-between;
   padding: 10px 26px;
   border-bottom: 1px solid rgba(139, 125, 255, .16);
-  background: color-mix(in srgb, var(--dashboard-sidebar) 92%, transparent);
-  backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--dashboard-sidebar) 96%, transparent);
   > div:first-child {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
-    > span { color: var(--dashboard-muted); font-size: .8125rem; }
+    align-items: baseline;
+    gap: 9px;
+    > span { color: var(--dashboard-muted); font-size: .875rem; }
   }
-  h1 { margin: 0; color: var(--dashboard-green); font: 400 1.75rem/1 VT323, monospace; }
+  .dashboard-location strong { color: var(--dashboard-text); font-size: 1rem; font-weight: 600; }
 }
 
 .dashboard-header__actions { display: flex; align-items: center; gap: 12px; }
@@ -160,7 +193,7 @@
   strong { font-size: .875rem; font-weight: 400; }
 }
 
-.dashboard-content { padding: 24px 26px; }
+.dashboard-content { width: min(100%, 1400px); margin: 0 auto; padding: 28px clamp(18px, 3vw, 42px) 55px; }
 .dashboard-mobile-nav, .dashboard-more-sheet, .dashboard-more-backdrop { display: none; }
 .dashboard-command-backdrop { position:fixed;inset:0;z-index:70;border:0;background:rgba(8,8,15,.7); }
 .dashboard-command-palette { position:fixed;top:14vh;left:50%;z-index:75;width:min(calc(100% - 32px),540px);overflow:hidden;transform:translateX(-50%);border:1px solid rgba(139,125,255,.35);border-radius:16px;color:var(--dashboard-text);background:var(--dashboard-surface);box-shadow:0 24px 60px rgba(0,0,0,.55); }
@@ -181,6 +214,12 @@
   }
   .dashboard-navigation { width: 100%; align-items: center; gap: 8px; }
   .dashboard-navigation__section, .dashboard-navigation__label { display: none; }
+  .dashboard-tools {
+    width: 100%;
+    summary { display: grid; place-items: center; min-height: 50px; padding: 3px; font-size: .6875rem; text-align: center; list-style: none; }
+    summary::before { content: 'more_horiz'; font: 24px/1 'Material Symbols Outlined'; }
+    .dashboard-navigation__item { padding: 2px; }
+  }
   .dashboard-navigation__item {
     width: 56px;
     min-height: 56px;
@@ -205,7 +244,7 @@
   .dashboard-icon-button kbd,
   .dashboard-user strong,
   .dashboard-header__actions > .dashboard-icon-button:nth-child(2) { display: none; }
-  .dashboard-header h1 { font-size: 1.5rem; }
+  .dashboard-location strong { font-size: .9375rem; }
   .dashboard-user {
     width: 44px;
     padding: 0;

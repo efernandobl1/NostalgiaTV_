@@ -5,26 +5,37 @@ using ApplicationCore.Interfaces;
 using Infrastructure.Contexts;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace Infrastructure.Services
 {
     public class EpisodeService : IEpisodeService
     {
         private readonly NostalgiaTVContext _context;
+        private readonly IHostEnvironment _environment;
 
-        public EpisodeService(NostalgiaTVContext context) => _context = context;
+        public EpisodeService(NostalgiaTVContext context, IHostEnvironment environment)
+        {
+            _context = context;
+            _environment = environment;
+        }
 
         public async Task<List<EpisodeResponse>> GetBySeriesAsync(int seriesId)
         {
             var exists = await _context.Series.AnyAsync(s => s.Id == seriesId);
             if (!exists) throw new NotFoundException($"Series {seriesId} not found");
 
-            return await _context.Episodes
+            var episodes = await _context.Episodes
                 .Where(e => e.SeriesId == seriesId)
                 .Include(e => e.EpisodeType)
                 .OrderBy(e => e.Season)
                 .ProjectToType<EpisodeResponse>()
                 .ToListAsync();
+
+            foreach (var episode in episodes)
+                episode.FileSizeBytes = GetFileSize(episode.FilePath);
+
+            return episodes;
         }
 
         public async Task<EpisodeResponse> UpdateAsync(int id, UpdateEpisodeRequest request)
@@ -42,7 +53,9 @@ namespace Infrastructure.Services
                 episode.EpisodeTypeId = request.EpisodeTypeId;
 
             await _context.SaveChangesAsync();
-            return episode.Adapt<EpisodeResponse>();
+            var response = episode.Adapt<EpisodeResponse>();
+            response.FileSizeBytes = GetFileSize(response.FilePath);
+            return response;
         }
 
         public async Task<IEnumerable<EpisodeTypeResponse>> GetTypesAsync()
@@ -60,6 +73,24 @@ namespace Infrastructure.Services
                 .ThenBy(e => e.EpisodeNumber)
                 .ProjectToType<EpisodeResponse>()
                 .ToListAsync();
+        }
+
+        private long? GetFileSize(string? filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath)) return null;
+            try
+            {
+                var contentRoot = Path.GetFullPath(_environment.ContentRootPath);
+                var relativePath = filePath.TrimStart('/', '\\').Replace('/', Path.DirectorySeparatorChar);
+                var fullPath = Path.GetFullPath(Path.Combine(contentRoot, relativePath));
+                var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+                if (!fullPath.StartsWith(contentRoot + Path.DirectorySeparatorChar, comparison)) return null;
+
+                return File.Exists(fullPath) ? new FileInfo(fullPath).Length : null;
+            }
+            catch (ArgumentException) { return null; }
+            catch (IOException) { return null; }
+            catch (NotSupportedException) { return null; }
         }
     }
 }

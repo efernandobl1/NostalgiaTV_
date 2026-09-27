@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace WebApi.Controllers
 {
     [ApiController]
-    [Authorize]
+    [Authorize(Policy = "Eras")]
     [ApiVersion("1")]
     [Route("api/v{version:apiVersion}/channels/{channelId}/eras")]
     public class ChannelEraController : ControllerBase

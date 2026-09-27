@@ -75,11 +75,8 @@
   <mat-card-actions align="end">
     <button mat-button (click)="close()" [disabled]="uploading()">Cerrar</button>
     <button mat-flat-button color="primary" (click)="uploadAll()" [disabled]="!canUpload()">
-      @if (uploading()) {
-        <mat-icon>sync</mat-icon> Subiendo…
-      } @else {
-        <mat-icon>cloud_upload</mat-icon> Subir {{ pendingCount() }} archivo(s)
-      }
+      <mat-icon>{{ uploading() ? 'sync' : 'cloud_upload' }}</mat-icon>
+      {{ uploading() ? 'Subiendo…' : 'Subir ' + pendingCount() + ' archivo(s)' }}
     </button>
   </mat-card-actions>
 </mat-card>

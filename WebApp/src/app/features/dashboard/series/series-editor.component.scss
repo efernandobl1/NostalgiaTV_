@@ -1,11 +1,14 @@
 @use '../../../../styles/dashboard-components';
 :host { display: block; min-width: 0; }
-.series-editor { display: grid; gap: 20px; }
-.editor-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
-.editor-heading > div { flex: 1; min-width: 0; }
-.editor-heading h2 { margin: 0; overflow-wrap: anywhere; font: 30px/1.1 VT323, monospace; color: var(--dashboard-green); }
-.editor-heading span { color: var(--dashboard-muted); font-size: 14px; }
-.editor-back { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #8b7dff55; border-radius: 10px; background: transparent; color: var(--dashboard-text); }
+.series-editor { display: grid; gap: 18px; }
+.editor-heading { position: relative; overflow: hidden; padding: 22px 26px; border: 1px solid var(--dashboard-line); border-radius: 10px; background: repeating-linear-gradient(90deg, transparent 0 18px, #ffffff04 19px), linear-gradient(105deg, var(--dashboard-deck-raised), var(--dashboard-deck) 72%); }
+.editor-heading::after { position: absolute; right: -35px; top: -50px; width: 190px; height: 190px; border: 20px double #b7a2ff13; border-radius: 50%; content: ''; pointer-events: none; }
+.editor-heading > * { position: relative; z-index: 1; }
+.editor-banner-top, .editor-banner-foot { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.editor-banner-top > span { color: var(--dashboard-gold); font: 800 .875rem/1.2 Consolas, monospace; }
+.editor-banner-foot { justify-content: flex-start; gap: 12px 28px; color: var(--dashboard-muted); font-size: .875rem; }
+.editor-heading h1 { margin: 8px 0 14px; overflow-wrap: anywhere; font: 800 clamp(1.8rem, 3vw, 2.4rem)/1.2 Consolas, monospace; }
+.editor-back { display: inline-flex; align-items: center; justify-self: start; gap: 6px; min-height: 44px; border: 0; color: var(--dashboard-green); background: transparent; cursor: pointer; }
 .editor-tabs { display: flex; gap: 24px; overflow-x: auto; border-bottom: 1px solid #8b7dff33; }
 .editor-tabs button { flex-shrink: 0; padding: 12px 0; min-height: 48px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--dashboard-muted); font-size: 16px; }
 .editor-tabs button.active { color: var(--dashboard-green); border-color: var(--dashboard-green); }
@@ -17,7 +20,15 @@ textarea { resize: vertical; }
 .editor-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 fieldset { min-width: 0; padding: 12px; border: 1px solid #8b7dff44; border-radius: 10px; }
 .editor-categories { display: flex; flex-wrap: wrap; gap: 10px; }
-.editor-categories label { display: flex; align-items: center; min-height: 44px; }
+.editor-category { display: inline-flex; align-items: center; min-height: 44px; padding: 0 5px 0 10px; border: 1px solid var(--dashboard-line); border-radius: 7px; background: var(--dashboard-raised); }
+.editor-category label { display: flex; align-items: center; min-height: 40px; font-size: .875rem; }
+.editor-category button { display: grid; place-items: center; width: 34px; height: 34px; margin-left: 5px; border: 0; border-radius: 5px; color: var(--dashboard-muted); background: transparent; cursor: pointer; }
+.editor-category button:hover { color: var(--dashboard-text); }
+.editor-category button span { font-size: 18px; }
+.editor-category-form { display: flex; align-items: end; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+.editor-category-form label { flex: 1 1 180px; font-size: .875rem; }
+.editor-category-cancel { min-height: 44px; border: 0; color: var(--dashboard-muted); background: transparent; cursor: pointer; }
+.editor-fields fieldset > p { margin: 0 0 12px; color: var(--dashboard-muted); font-size: .875rem; }
 .editor-categories input { accent-color: #8b7dff; width: 20px; height: 20px; }
 .editor-artwork { display: flex; flex-direction: column; gap: 14px; }
 .editor-artwork h3 { color: var(--dashboard-green); font: 26px/1.1 VT323, monospace; margin: 0; }

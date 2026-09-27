@@ -1,9 +1,6 @@
 <section class="series-editor">
-  <header class="editor-heading">
-    <button type="button" class="editor-back" matTooltip="Volver a series" aria-label="Volver a series" (click)="closed.emit()" [disabled]="busy()"><span class="material-symbols-outlined">arrow_back</span></button>
-    <div><h2>{{ current()?.name || 'Nueva serie' }}</h2><span role="status">{{ message() || (form.dirty ? 'Cambios sin guardar' : 'Editor de serie') }}</span></div>
-    <button type="button" class="admin-button admin-button--primary" (click)="save()" [disabled]="busy()">{{ busy() ? 'Guardando…' : 'Guardar cambios' }}</button>
-  </header>
+  <button type="button" class="editor-back" matTooltip="Volver a series" (click)="closed.emit()" [disabled]="busy()"><span class="material-symbols-outlined">arrow_back</span>Volver a series</button>
+  <header class="editor-heading"><div class="editor-banner-top"><span>ARCHIVO / SERIE</span><button type="button" class="admin-button admin-button--primary" (click)="save()" [disabled]="busy()">{{ busy() ? 'Guardando…' : 'Guardar cambios' }}</button></div><h1>{{ current()?.name || 'Nueva serie' }}</h1><div class="editor-banner-foot"><span>{{ current()?.seasons || 0 }} temporadas</span><span>{{ current()?.episodeCount || 0 }} episodios registrados</span><span role="status">{{ message() || (form.dirty ? 'Cambios sin guardar' : 'Datos guardados') }}</span></div></header>
   @if (error()) { <p class="editor-error" role="alert">{{ error() }}</p> }
   <nav class="editor-tabs" aria-label="Secciones de la serie">
     <button type="button" [class.active]="tab() === 'data'" (click)="tab.set('data')">Datos</button>
@@ -20,7 +17,7 @@
           <label>Descripción<textarea formControlName="description" maxlength="500" rows="3"></textarea></label>
           <div class="editor-dates"><label>Fecha de inicio<input type="date" formControlName="startDate" required></label><label>Fecha de fin<input type="date" formControlName="endDate"></label></div>
           <div class="editor-dates"><label>Temporadas<input type="number" min="1" formControlName="seasons"></label><label>Calificación<input type="number" min="0" max="10" step="0.1" formControlName="rating"></label></div>
-          <fieldset><legend>Categorías</legend><div class="editor-categories">@for (category of categories(); track category.id) { <label><input type="checkbox" [checked]="selectedCategories().includes(category.id)" (change)="toggleCategory(category.id, $any($event.target).checked)">{{ category.name }}</label> }</div></fieldset>
+          <fieldset><legend>Categorías</legend><p>Organiza esta serie sin salir de su ficha. Si editas el nombre de una categoría, cambiará en todas las series.</p><div class="editor-categories">@for (category of categories(); track category.id) { <div class="editor-category"><label><input type="checkbox" [checked]="selectedCategories().includes(category.id)" (change)="toggleCategory(category.id, $any($event.target).checked)">{{ category.name }}</label><button type="button" (click)="editCategory(category)" [attr.aria-label]="'Editar categoría ' + category.name" matTooltip="Editar categoría"><span class="material-symbols-outlined">edit</span></button></div> }</div><div class="editor-category-form"><label>{{ editingCategoryId() ? 'Editar categoría' : 'Crear categoría' }}<input type="text" maxlength="100" [value]="categoryName()" (input)="categoryName.set($any($event.target).value)" (keydown.enter)="$event.preventDefault(); saveCategory()"></label><button type="button" class="admin-button admin-button--secondary" (click)="saveCategory()" [disabled]="!categoryName().trim()">{{ editingCategoryId() ? 'Guardar nombre' : 'Crear y seleccionar' }}</button>@if (editingCategoryId()) {<button type="button" class="editor-category-cancel" (click)="editingCategoryId.set(null); categoryName.set('')">Cancelar</button>}</div></fieldset>
           <label>Historia<textarea formControlName="history" maxlength="1000" rows="4"></textarea></label>
         </div>
         <aside class="editor-artwork">

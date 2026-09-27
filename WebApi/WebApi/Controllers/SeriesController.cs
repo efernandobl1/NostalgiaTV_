@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace WebApi.Controllers
 {
     [ApiController]
+    [Authorize(Policy = "Series")]
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/series")]
     public class SeriesController : ControllerBase
@@ -44,7 +45,6 @@ namespace WebApi.Controllers
         public async Task<IActionResult> Scan(int id) => Ok(await _seriesService.ScanFolderAsync(id));
 
         [HttpPost("{id}/upload")]
-        [Authorize]
         [Consumes("multipart/form-data")]
         [RequestSizeLimit(2147483648)]
         [RequestFormLimits(MultipartBodyLengthLimit = 2147483648)]

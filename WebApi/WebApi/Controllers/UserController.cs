@@ -19,12 +19,15 @@ namespace WebApi.Controllers
         public UserController(IUserService userService) => _userService = userService;
 
         [HttpGet]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> GetAll() => Ok(await _userService.GetAllAsync());
 
         [HttpPost]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> Create(UserRequest request) => Ok(await _userService.CreateAsync(request));
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             await _userService.DeleteAsync(id);
@@ -32,6 +35,7 @@ namespace WebApi.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> Update(int id, UserRequest request) => Ok(await _userService.UpdateAsync(id, request));
 
         [HttpGet("me")]
