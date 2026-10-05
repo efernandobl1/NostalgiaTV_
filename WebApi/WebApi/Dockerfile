@@ -20,8 +20,11 @@ WORKDIR /src
 COPY ["WebApi/WebApi.csproj", "WebApi/"]
 COPY ["ApplicationCore/ApplicationCore.csproj", "ApplicationCore/"]
 COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
-RUN dotnet restore "WebApi/WebApi.csproj"
+COPY ["Infrastructure.Tests/Infrastructure.Tests.csproj", "Infrastructure.Tests/"]
+RUN dotnet restore "Infrastructure.Tests/Infrastructure.Tests.csproj" \
+    && dotnet restore "WebApi/WebApi.csproj"
 COPY . .
+RUN dotnet test "Infrastructure.Tests/Infrastructure.Tests.csproj" -c $BUILD_CONFIGURATION --no-restore
 WORKDIR "/src/WebApi"
 # 'publish' ya compila; se elimina el paso 'build' redundante para acelerar la imagen.
 RUN dotnet publish "WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
