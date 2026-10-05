@@ -101,7 +101,7 @@ namespace Infrastructure.Services
                     .OrderByDescending(e => e.EndTime)
                     .FirstOrDefaultAsync();
 
-                var generateFrom = lastEntry?.EndTime ?? DateTime.UtcNow;
+                var generateFrom = lastEntry?.EndTime > DateTime.UtcNow ? lastEntry.EndTime : DateTime.UtcNow;
 
                 _logger.LogInformation("[SCHEDULE] Last entry ends at={last}, generateFrom={from}", lastEntry?.EndTime, generateFrom);
 
@@ -112,6 +112,34 @@ namespace Infrastructure.Services
                 }
 
                 await GenerateScheduleAsync(channelId, generateFrom, until);
+            }
+            finally
+            {
+                sem.Release();
+            }
+        }
+
+        public async Task RefreshScheduleAsync(int channelId)
+        {
+            var sem = GetLock(channelId);
+            await sem.WaitAsync();
+
+            try
+            {
+                var now = DateTime.UtcNow;
+                var currentEnd = await _context.ChannelScheduleEntries
+                    .Where(e => e.ChannelId == channelId && e.StartTime <= now && e.EndTime > now)
+                    .OrderByDescending(e => e.StartTime)
+                    .Select(e => (DateTime?)e.EndTime)
+                    .FirstOrDefaultAsync();
+                var generateFrom = currentEnd ?? now;
+
+                // Keep past airings and the current entry; only replace future programming.
+                await _context.ChannelScheduleEntries
+                    .Where(e => e.ChannelId == channelId && e.StartTime >= generateFrom)
+                    .ExecuteDeleteAsync();
+
+                await GenerateScheduleAsync(channelId, generateFrom, now.AddHours(24));
             }
             finally
             {
@@ -153,22 +181,24 @@ namespace Infrastructure.Services
 
             var random = new Random();
             var current = from;
-            var noRepeat = TimeSpan.FromHours(Math.Max(0, _rules.NoRepeatWindowHours));
+            var maxPreferredGap = TimeSpan.FromHours(Math.Max(0, _rules.NoRepeatWindowHours));
 
-            // Siembra desde lo ya generado, para respetar "no repetir en 24h" y los
-            // cupos diarios de especiales/películas cruzando una regeneración.
+            var latestCycle = await _context.ChannelScheduleEntries
+                .Where(e => e.ChannelId == channelId && e.EpisodeId != null && e.StartTime < from)
+                .MaxAsync(e => (int?)e.ShuffleCycle);
+
+            // Keep three days for time-slot variety and the complete active shuffle cycle.
             var seed = await _context.ChannelScheduleEntries
                 .AsNoTracking()
                 .Where(e => e.ChannelId == channelId && e.EpisodeId != null
-                         && e.StartTime >= from.Add(-noRepeat))
+                         && (e.StartTime >= from.AddDays(-3)
+                             || (latestCycle != null && e.ShuffleCycle == latestCycle)))
                 .Include(e => e.Episode).ThenInclude(e => e!.EpisodeType)
-                .Select(e => new { EpisodeId = e.EpisodeId!.Value, e.StartTime, e.Episode!.SeriesId, TypeName = e.Episode.EpisodeType.Name })
+                .Select(e => new { EpisodeId = e.EpisodeId!.Value, e.StartTime, e.EndTime, e.ShuffleCycle, e.Episode!.SeriesId, TypeName = e.Episode.EpisodeType.Name })
                 .ToListAsync();
 
-            // Última vez que se programó cada episodio (para la ventana de no-repetición).
-            var lastScheduled = seed
-                .GroupBy(x => x.EpisodeId)
-                .ToDictionary(g => g.Key, g => g.Max(x => x.StartTime));
+            var selector = new ChannelEpisodeSelector(seed.Select(x => new EpisodeAiring(x.EpisodeId, x.StartTime, x.ShuffleCycle)));
+            var playlists = new Dictionary<int, (List<Episode> Episodes, TimeSpan PreferredGap)>();
 
             // Cupos por día (y por serie/día) ya consumidos por lo existente.
             var specialsPerDay = new Dictionary<DateOnly, int>();
@@ -190,7 +220,6 @@ namespace Infrastructure.Services
                 }
             }
 
-            int? lastEpisodeId = null;
             var durationCache = new Dictionary<string, double>();
             var batch = new List<ChannelScheduleEntry>();
             var totalGenerated = 0;
@@ -204,6 +233,7 @@ namespace Infrastructure.Services
                 List<int> eraSeriesIds;
                 List<ChannelBumper> eraBumpers;
                 Dictionary<int, List<int>> selectedSeasons = [];
+                var playlistKey = 0;
 
                 if (eras.Any())
                 {
@@ -217,6 +247,7 @@ namespace Infrastructure.Services
                         continue;
                     }
                     eraSeriesIds = activeEra.Series.Select(s => s.Id).ToList();
+                    playlistKey = activeEra.Id;
                     selectedSeasons = seasonSelections[activeEra.Id];
                     eraBumpers = activeEra.Bumpers.Where(b => !string.IsNullOrEmpty(b.FilePath)).ToList();
                     _logger.LogInformation("[SCHEDULE] Iteration {iter}: Active era={era} with {series} series, {bumpers} bumpers",
@@ -238,16 +269,31 @@ namespace Infrastructure.Services
                     continue;
                 }
 
-                var episodes = await _context.Episodes
-                    .AsNoTracking()
-                    .Include(e => e.EpisodeType)
-                    .Include(e => e.Series)
-                    .Where(e => eraSeriesIds.Contains(e.SeriesId) && e.FilePath != null)
-                    .ToListAsync();
+                if (!playlists.TryGetValue(playlistKey, out var playlist))
+                {
+                    var episodesForEra = await _context.Episodes
+                        .AsNoTracking()
+                        .Include(e => e.EpisodeType)
+                        .Include(e => e.Series)
+                        .Where(e => eraSeriesIds.Contains(e.SeriesId) && e.FilePath != null)
+                        .ToListAsync();
 
-                episodes = episodes
-                    .Where(e => !selectedSeasons.TryGetValue(e.SeriesId, out var seasons) || seasons.Contains(e.Season))
-                    .ToList();
+                    episodesForEra = episodesForEra
+                        .Where(e => !selectedSeasons.TryGetValue(e.SeriesId, out var seasons) || seasons.Contains(e.Season))
+                        .ToList();
+
+                    var eligibleIds = episodesForEra.Select(e => e.Id).ToHashSet();
+                    var durations = seed.Where(x => eligibleIds.Contains(x.EpisodeId))
+                        .Select(x => (x.EndTime - x.StartTime).TotalSeconds)
+                        .Where(seconds => seconds > 0)
+                        .ToList();
+                    var averageDuration = durations.Count > 0 ? durations.Average() : 1800;
+                    var preferredGap = ChannelEpisodeSelector.EstimatePreferredGap(maxPreferredGap, episodesForEra.Count, averageDuration);
+                    playlist = (episodesForEra, preferredGap);
+                    playlists[playlistKey] = playlist;
+                }
+
+                var episodes = playlist.Episodes;
 
                 _logger.LogInformation("[SCHEDULE] Iteration {iter}: Found {epCount} episodes for series [{seriesIds}]",
                     iterationCount, episodes.Count, string.Join(",", eraSeriesIds));
@@ -261,12 +307,9 @@ namespace Infrastructure.Services
                     continue;
                 }
 
-                // Selección ALEATORIA respetando, en orden de prioridad, estas reglas
-                // (si nada es elegible se van relajando): no repetir un episodio dentro
-                // de la ventana; cupos de especiales/películas por serie y totales por
-                // día; y no repetir el episodio inmediatamente anterior.
+                // Play every eligible episode once per shuffled cycle, then prefer
+                // episodes outside the adaptive gap and away from recent time slots.
                 var day = DateOnly.FromDateTime(current);
-                var windowStart = current - noRepeat;
 
                 bool WithinCaps(Episode e)
                 {
@@ -278,16 +321,9 @@ namespace Infrastructure.Services
                             && specialsPerSeriesDay.GetValueOrDefault((day, e.SeriesId)) < _rules.MaxSpecialsPerSeriesPerDay;
                     return true;
                 }
-                bool NotRepeated(Episode e) =>
-                    !lastScheduled.TryGetValue(e.Id, out var t) || t <= windowStart;
-
-                var pool = episodes.Where(e => e.Id != lastEpisodeId && WithinCaps(e) && NotRepeated(e)).ToList();
-                if (pool.Count == 0) pool = episodes.Where(e => e.Id != lastEpisodeId && WithinCaps(e)).ToList();
-                if (pool.Count == 0) pool = episodes.Where(e => e.Id != lastEpisodeId && NotRepeated(e)).ToList();
-                if (pool.Count == 0) pool = episodes.Where(e => e.Id != lastEpisodeId).ToList();
-                if (pool.Count == 0) pool = episodes;
-
-                var episode = pool[random.Next(pool.Count)];
+                var available = episodes.Where(WithinCaps).ToList();
+                if (available.Count == 0) available = episodes;
+                var episode = selector.Choose(available, current, playlist.PreferredGap, random);
 
                 _logger.LogInformation("[SCHEDULE] Iteration {iter}: Selected episode={ep} series={s}",
                     iterationCount, episode.Title, episode.Series.Name);
@@ -298,13 +334,12 @@ namespace Infrastructure.Services
                 {
                     ChannelId = channelId,
                     EpisodeId = episode.Id,
+                    ShuffleCycle = selector.ShuffleCycle,
                     StartTime = current,
                     EndTime = end,
                 });
 
                 // Contabilidad para las reglas.
-                lastScheduled[episode.Id] = current;
-                lastEpisodeId = episode.Id;
                 if (IsMovieType(episode.EpisodeType.Name))
                 {
                     moviesPerDay[day] = moviesPerDay.GetValueOrDefault(day) + 1;
@@ -416,9 +451,29 @@ namespace Infrastructure.Services
 
         public async Task CleanupOldEntriesAsync()
         {
-            var cutoff = DateTime.UtcNow.AddHours(-24);
+            var cutoff = DateTime.UtcNow.AddDays(-3);
+            var recentCycles = await _context.ChannelScheduleEntries
+                .Where(e => e.ShuffleCycle != null && e.EndTime >= cutoff)
+                .GroupBy(e => e.ChannelId)
+                .Select(group => new { ChannelId = group.Key, Cycle = group.Min(e => e.ShuffleCycle) })
+                .ToDictionaryAsync(entry => entry.ChannelId, entry => entry.Cycle);
+            var activeCycles = await _context.ChannelScheduleEntries
+                .Where(e => e.ShuffleCycle != null)
+                .GroupBy(e => e.ChannelId)
+                .Select(group => new { ChannelId = group.Key, Cycle = group.Max(e => e.ShuffleCycle) })
+                .ToListAsync();
+
+            foreach (var active in activeCycles)
+            {
+                var oldestNeededCycle = recentCycles.GetValueOrDefault(active.ChannelId) ?? active.Cycle;
+                await _context.ChannelScheduleEntries
+                    .Where(e => e.ChannelId == active.ChannelId && e.EndTime < cutoff
+                             && e.ShuffleCycle < oldestNeededCycle)
+                    .ExecuteDeleteAsync();
+            }
+
             await _context.ChannelScheduleEntries
-                .Where(e => e.EndTime < cutoff)
+                .Where(e => e.EndTime < cutoff && e.ShuffleCycle == null)
                 .ExecuteDeleteAsync();
         }
     }
