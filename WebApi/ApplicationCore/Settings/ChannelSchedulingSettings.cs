@@ -1,25 +1,24 @@
 namespace ApplicationCore.Settings
 {
     /// <summary>
-    /// Reglas configurables para la generación aleatoria de la programación de canales.
-    /// Se enlaza desde la sección "ChannelScheduling" de appsettings y puede sobre-
-    /// escribirse por entorno (Docker) con variables ChannelScheduling__Xxx.
+    /// Configurable rules for random channel scheduling.
+    /// Bound from the "ChannelScheduling" section or ChannelScheduling__Xxx environment variables.
     /// </summary>
     public class ChannelSchedulingSettings
     {
-        /// <summary>Ventana en horas durante la cual no se repite un mismo episodio.</summary>
+        /// <summary>Maximum preferred gap between airings; reduced for small catalogs.</summary>
         public int NoRepeatWindowHours { get; set; } = 24;
 
-        /// <summary>Máximo de especiales por serie y por día.</summary>
+        /// <summary>Maximum specials per series and day.</summary>
         public int MaxSpecialsPerSeriesPerDay { get; set; } = 2;
 
-        /// <summary>Máximo de especiales en total por día (todas las series).</summary>
+        /// <summary>Maximum specials per day across all series.</summary>
         public int MaxSpecialsPerDay { get; set; } = 5;
 
-        /// <summary>Máximo de películas por serie y por día.</summary>
+        /// <summary>Maximum movies per series and day.</summary>
         public int MaxMoviesPerSeriesPerDay { get; set; } = 2;
 
-        /// <summary>Máximo de películas en total por día (todas las series).</summary>
+        /// <summary>Maximum movies per day across all series.</summary>
         public int MaxMoviesPerDay { get; set; } = 2;
     }
 }

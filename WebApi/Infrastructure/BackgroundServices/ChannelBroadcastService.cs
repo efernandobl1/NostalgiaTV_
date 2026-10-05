@@ -194,15 +194,7 @@ namespace Infrastructure.BackgroundServices
             using var scope = _scopeFactory.CreateScope();
             var scheduleService = scope.ServiceProvider.GetRequiredService<ChannelScheduleService>();
 
-            var context = scope.ServiceProvider.GetRequiredService<NostalgiaTVContext>();
-
-            // Delete ALL schedule entries for this channel (past and future)
-            await context.ChannelScheduleEntries
-                .Where(e => e.ChannelId == channelId)
-                .ExecuteDeleteAsync();
-
-            // Regenerate full 24h schedule from now
-            await scheduleService.EnsureScheduleGeneratedAsync(channelId, DateTime.UtcNow.AddHours(24));
+            await scheduleService.RefreshScheduleAsync(channelId);
 
             var entry = await scheduleService.GetCurrentEntryAsync(channelId);
             if (entry == null)

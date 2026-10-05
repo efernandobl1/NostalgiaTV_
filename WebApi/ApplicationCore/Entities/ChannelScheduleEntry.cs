@@ -11,6 +11,7 @@ namespace ApplicationCore.Entities
         public Channel Channel { get; set; } = null!;
         public int? EpisodeId { get; set; }
         public Episode? Episode { get; set; }
+        public int? ShuffleCycle { get; set; }
         public int? BumperId { get; set; }
         public ChannelBumper? Bumper { get; set; }
         public DateTime StartTime { get; set; }
