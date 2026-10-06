@@ -46,8 +46,8 @@ export class EpisodeUploadDialogComponent {
     private readonly seriesService = inject(SeriesService);
     readonly themeService = inject(CustomizerSettingsService);
 
-    // Mismos contenedores reproducibles en HTML5 que acepta el escáner de carpetas.
-    readonly allowedExtensions = ['.mp4', '.m4v', '.webm', '.ogg', '.ogv', '.mov'];
+    // Non-browser containers remain outside the catalogue until conversion succeeds.
+    readonly allowedExtensions = ['.mp4', '.m4v', '.mkv', '.flv', '.avi', '.wmv', '.mov', '.webm', '.ogg', '.ogv', '.mpeg', '.mpg', '.ts'];
 
     readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 

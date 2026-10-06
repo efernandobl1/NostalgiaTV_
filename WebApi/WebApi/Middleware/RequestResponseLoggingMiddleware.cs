@@ -26,7 +26,8 @@ namespace WebApi.Middleware
 
             // Los healthchecks se ejecutan cada pocos segundos y no aportan payload de
             // auditoría; excluirlos evita ruido y escrituras innecesarias.
-            if (context.Request.Path.StartsWithSegments("/health"))
+            // Viewer payloads contain private history and one-use pairing codes.
+            if (context.Request.Path.StartsWithSegments("/health") || context.Request.Path.StartsWithSegments("/api/v1/viewer"))
             {
                 await _next(context);
                 return;

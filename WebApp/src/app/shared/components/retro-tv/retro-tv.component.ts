@@ -2,6 +2,7 @@ import {
   Component,
   signal,
   computed,
+  effect,
   inject,
   ViewChild,
   ElementRef,
@@ -21,7 +22,10 @@ import * as signalR from '@microsoft/signalr';
 import { environment } from '../../../../environments/environment';
 import { TvModeService } from '../../../core/services/tv-mode.service';
 import { TvSettingsService } from '../../../core/services/tv-settings.service';
-import { WatchedService } from '../../../core/services/watched.service';
+import { EpisodeRef, WatchedService } from '../../../core/services/watched.service';
+import { SeasonalThemeService } from '../../../core/services/seasonal-theme.service';
+import { ViewerProfileComponent } from '../viewer-profile/viewer-profile.component';
+import { PublicCommentsComponent } from '../public-comments/public-comments.component';
 import { SeriesResponse } from '../../models/serie.model';
 
 interface Channel {
@@ -33,6 +37,9 @@ interface ChannelState {
   channelId: number;
   segmentId: number;
   episodeId: number;
+  seriesId?: number;
+  season?: number;
+  episodeNumber?: number;
   episodeTitle: string;
   filePath: string;
   seriesName: string;
@@ -85,7 +92,7 @@ const slug = (s: string): string => s.toLowerCase().replace(/\s+/g, '');
 @Component({
   selector: 'app-retro-tv',
   standalone: true,
-  imports: [NgTemplateOutlet, FormsModule, A11yModule],
+  imports: [NgTemplateOutlet, FormsModule, A11yModule, ViewerProfileComponent, PublicCommentsComponent],
   templateUrl: './retro-tv.component.html',
   styleUrl: './retro-tv.component.scss',
 })
@@ -100,6 +107,17 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   readonly tv = inject(TvModeService);
   private readonly tvSettings = inject(TvSettingsService);
   private readonly watched = inject(WatchedService);
+  readonly seasonal = inject(SeasonalThemeService);
+  readonly showProfile = signal(false);
+  readonly showComments = signal(false);
+  private playbackSample?: { key: string; seriesId: number; episode: EpisodeRef; start: number; last: number; at: number; duration: number };
+  private readonly refreshWatched = effect(() => {
+    this.watched.revision();
+    const id = this.selectedSeries()?.id;
+    const map: Record<number, boolean> = {};
+    if (id) this.episodes().forEach(episode => map[episode.id] = this.watched.isWatched(id, episode));
+    this.watchedMap.set(map);
+  });
 
   private readonly apiUrl = environment.apiUrl;
   private hub?: signalR.HubConnection;
@@ -255,6 +273,8 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       this.showGuide() ||
       this.showFilters() ||
       this.showEpisodes() ||
+      this.showProfile() ||
+      this.showComments() ||
       (this.needsPlayback() && this.hasMedia()),
   );
 
@@ -291,8 +311,10 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       return;
     }
     const anyOverlay =
-      this.browserOpen() || this.showFilters() || this.showEpisodes() || this.showGuide();
+      this.browserOpen() || this.showFilters() || this.showEpisodes() || this.showGuide() || this.showProfile() || this.showComments();
     if (anyOverlay && e.key === 'Escape') {
+      this.showProfile.set(false);
+      this.showComments.set(false);
       this.browserOpen.set(false);
       this.showFilters.set(false);
       this.showEpisodes.set(false);
@@ -388,9 +410,11 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       if (v) {
         const dur = () =>
           this.zone.run(() => this.videoDuration.set(isFinite(v.duration) ? v.duration : 0));
-        v.addEventListener('timeupdate', () =>
-          this.zone.run(() => this.videoTime.set(v.currentTime)),
-        );
+        v.addEventListener('timeupdate', () => {
+          this.zone.run(() => this.videoTime.set(v.currentTime));
+          this.recordPlayback(v);
+        });
+        v.addEventListener('ended', () => { this.recordPlayback(v); this.flushPlayback(); });
         v.addEventListener('loadedmetadata', dur);
         v.addEventListener('durationchange', dur);
       }
@@ -399,6 +423,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.flushPlayback();
     this.hub?.stop();
     clearInterval(this.clockTimer);
     clearInterval(this.progressTimer);
@@ -524,6 +549,8 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   }
 
   private playVideo(src: string, startAt: number): void {
+    this.flushPlayback();
+    this.playbackSample = undefined;
     const v = this.videoRef?.nativeElement;
     if (!v) return;
     v.src = src;
@@ -936,7 +963,6 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     const id = this.selectedSeries()?.id;
     if (!id) return;
     this.watched.resetSeries(id);
-    this.watchedMap.set({});
   }
 
   playEpisode(ep: Episode): void {
@@ -967,19 +993,38 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     };
     v?.addEventListener('ended', this.endedHandler, { once: true });
 
-    let marked = false;
-    this.zone.runOutsideAngular(() => {
-      this.progressTimer = setInterval(() => {
-        const vid = this.videoRef?.nativeElement;
-        if (!vid || !vid.duration) return;
-        const pct = vid.currentTime / vid.duration;
-        this.watched.markProgress(seriesId, ep, vid.currentTime, pct >= 0.95);
-        if (pct >= 0.95 && !marked) {
-          marked = true;
-          this.zone.run(() => this.watchedMap.update((m) => ({ ...m, [ep.id]: true })));
-        }
-      }, 5000);
-    });
+  }
+
+  private recordPlayback(video: HTMLVideoElement): void {
+    const state = this.state(), episode = this.currentEpisode();
+    const seriesId = this.mode() === 'series' ? this.selectedSeries()?.id : state?.seriesId;
+    const path = this.mode() === 'series' ? episode?.filePath : state?.filePath;
+    if (path && video.src !== new URL(this.videoSrc(path), document.baseURI).href) { this.flushPlayback(); this.playbackSample = undefined; return; }
+    const ref: EpisodeRef | undefined = this.mode() === 'series' ? episode ?? undefined : state?.episodeId && !state.isBumper
+      ? { id: state.episodeId, season: state.season ?? 0, episodeNumber: state.episodeNumber ?? 0 } : undefined;
+    if (!seriesId || !ref || !Number.isFinite(video.duration) || video.duration <= 0) { this.flushPlayback(); this.playbackSample = undefined; return; }
+    const key = `${seriesId}:${ref.id}:${this.mode() === 'channels' ? state?.segmentId : 'series'}`;
+    const now = performance.now();
+    const sample = this.playbackSample;
+    if (!sample || sample.key !== key) {
+      this.flushPlayback();
+      this.playbackSample = { key, seriesId, episode: ref, start: video.currentTime, last: video.currentTime, at: now, duration: video.duration };
+      return;
+    }
+    const delta = video.currentTime - sample.last;
+    const elapsed = (now - sample.at) / 1000;
+    if ((video.paused && !video.ended) || video.seeking || document.hidden || delta < 0 || delta > Math.min(3, elapsed * video.playbackRate + .75)) {
+      this.flushPlayback(); sample.start = video.currentTime;
+    }
+    sample.last = video.currentTime; sample.at = now; sample.duration = video.duration;
+    if (sample.last - sample.start >= 5) this.flushPlayback();
+  }
+
+  private flushPlayback(): void {
+    const sample = this.playbackSample;
+    if (!sample || sample.last <= sample.start) return;
+    this.watched.recordInterval(sample.seriesId, sample.episode, sample.start, sample.last, sample.duration, sample.last);
+    sample.start = sample.last;
   }
 
   private stopProgress(): void {

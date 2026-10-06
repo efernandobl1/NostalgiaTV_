@@ -1,0 +1,14 @@
+:host { display: block; color: var(--room-text); font: 16px/1.5 Outfit, sans-serif; }
+p { margin: 0 0 20px; }
+article { border-top: 1px solid var(--room-line); padding-top: 20px; }
+article header { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+article p { white-space: pre-wrap; overflow-wrap: anywhere; }
+time, small { color: var(--room-muted); font-size: 14px; }
+form { display: grid; gap: 12px; border-top: 1px solid var(--room-line); padding-block: 24px; }
+textarea { width: 100%; resize: vertical; min-height: 120px; padding: 12px; color: var(--room-text); background: var(--room-bg); border: 1px solid var(--room-line); font: inherit; }
+button { min-height: 44px; padding: 10px 16px; font: inherit; color: var(--room-text); background: var(--room-surface); border: 1px solid var(--room-line); cursor: var(--retroCursor); }
+button:disabled { opacity: .6; }
+:is(button, textarea, a):focus-visible { outline: 3px solid var(--room-gold); outline-offset: 3px; }
+nav { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.comment-error { color: #ffc3b5; }
+a { color: var(--room-gold); text-decoration: underline; text-underline-offset: .2em; }

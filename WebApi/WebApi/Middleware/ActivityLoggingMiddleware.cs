@@ -57,6 +57,7 @@ public sealed class ActivityLoggingMiddleware
         return context.Response.StatusCode < 400
             && TrackedMethods.Contains(context.Request.Method)
             && path.StartsWith("/api/v1/", StringComparison.OrdinalIgnoreCase)
+            && !context.Request.Path.StartsWithSegments("/api/v1/viewer")
             && !path.StartsWith("/api/v1/auth/", StringComparison.OrdinalIgnoreCase);
     }
 

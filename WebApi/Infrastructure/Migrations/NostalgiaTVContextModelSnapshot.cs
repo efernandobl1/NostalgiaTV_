@@ -133,6 +133,42 @@ namespace Infrastructure.Migrations
                     b.ToTable("ChannelBumpers");
                 });
 
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelComment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("ChannelId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ChannelId", "Status", "CreatedAtUtc");
+
+                    b.ToTable("ChannelComments");
+                });
+
             modelBuilder.Entity("ApplicationCore.Entities.ChannelEra", b =>
                 {
                     b.Property<int>("Id")
@@ -510,6 +546,157 @@ namespace Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ApplicationCore.Entities.MediaProcessingJob", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("OutputPath")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<double>("Progress")
+                        .HasColumnType("float");
+
+                    b.Property<int>("SeriesId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SourceModifiedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SourcePath")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<long>("SourceSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Worker")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeriesId");
+
+                    b.HasIndex("Worker", "Fingerprint")
+                        .IsUnique();
+
+                    b.HasIndex("Worker", "Status", "Id");
+
+                    b.ToTable("MediaProcessingJobs");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.MediaResourcePolicy", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("AppliedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("AppliedCores")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AvailableCores")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DayCores")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NightCores")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("NightEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("NightEndMinute")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NightStartMinute")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MediaResourcePolicies");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            AppliedCores = 0,
+                            AvailableCores = 0,
+                            DayCores = 1,
+                            NightCores = 3,
+                            NightEnabled = true,
+                            NightEndMinute = 300,
+                            NightStartMinute = 0,
+                            TimeZoneId = "America/Guatemala"
+                        });
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.MediaWorkerState", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("HeartbeatUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MediaWorkerStates");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "transcode",
+                            Enabled = false
+                        },
+                        new
+                        {
+                            Id = "index",
+                            Enabled = false
+                        });
+                });
+
             modelBuilder.Entity("ApplicationCore.Entities.Menu", b =>
                 {
                     b.Property<int>("Id")
@@ -657,6 +844,17 @@ namespace Infrastructure.Migrations
                             ParentId = 1,
                             SortOrder = 6,
                             Url = "/dashboard/channel-bumpers"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Caption = "Transcodificación",
+                            Icon = "video_settings",
+                            IsVisible = true,
+                            Name = "Transcoding",
+                            ParentId = 1,
+                            SortOrder = 7,
+                            Url = "/dashboard/transcoding"
                         });
                 });
 
@@ -1049,6 +1247,126 @@ namespace Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ApplicationCore.Entities.ViewerDevice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("LastSeenUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProfileId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("ViewerDevices");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ViewerPairingCode", b =>
+                {
+                    b.Property<string>("Hash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Hash");
+
+                    b.HasIndex("DeviceId")
+                        .IsUnique();
+
+                    b.ToTable("ViewerPairingCodes");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ViewerProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ViewerProfiles");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ViewerProgress", b =>
+                {
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("EpisodeId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Completed")
+                        .HasColumnType("bit");
+
+                    b.Property<double>("CurrentSecond")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ProfileId", "EpisodeId");
+
+                    b.HasIndex("EpisodeId");
+
+                    b.ToTable("ViewerProgress");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ViewerWatchRange", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<double>("EndSecond")
+                        .HasColumnType("float");
+
+                    b.Property<int>("EpisodeId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("StartSecond")
+                        .HasColumnType("float");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProfileId", "EpisodeId", "StartSecond");
+
+                    b.ToTable("ViewerWatchRanges");
+                });
+
             modelBuilder.Entity("CategorySeries", b =>
                 {
                     b.Property<int>("CategoriesId")
@@ -1143,6 +1461,11 @@ namespace Infrastructure.Migrations
                         {
                             MenusId = 10,
                             RolesId = 1
+                        },
+                        new
+                        {
+                            MenusId = 11,
+                            RolesId = 1
                         });
                 });
 
@@ -1155,6 +1478,21 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("ChannelEra");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelComment", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.Channel", null)
+                        .WithMany()
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ApplicationCore.Entities.ChannelEra", b =>
@@ -1310,6 +1648,21 @@ namespace Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ApplicationCore.Entities.MediaProcessingJob", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.Series", null)
+                        .WithMany()
+                        .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.MediaWorkerState", null)
+                        .WithMany()
+                        .HasForeignKey("Worker")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ApplicationCore.Entities.Menu", b =>
                 {
                     b.HasOne("ApplicationCore.Entities.Menu", "Parent")
@@ -1446,6 +1799,48 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Rol");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ViewerDevice", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.ViewerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ViewerPairingCode", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.ViewerDevice", null)
+                        .WithMany()
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ViewerProgress", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.Episode", null)
+                        .WithMany()
+                        .HasForeignKey("EpisodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.ViewerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ViewerWatchRange", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.ViewerProgress", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId", "EpisodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CategorySeries", b =>

@@ -1,0 +1,15 @@
+<p>Un mismo historial para tu tele, computadora y celular. Vincular no concede acceso al panel de administración.</p>
+@if (theme.enabled()) { <p><button type="button" (click)="theme.toggleEffects()" [attr.aria-pressed]="theme.effects()">{{ theme.effects() ? 'Desactivar efectos de Halloween' : 'Activar efectos de Halloween' }}</button></p> }
+@if (error()) { <p class="profile-error" role="alert">{{ error() }}</p> }
+@if (watched.syncError()) { <p class="profile-error" role="status">{{ watched.syncError() }}</p> }
+@if (message()) { <p role="status">{{ message() }}</p> }
+@if (!watched.session()) {
+  <form (ngSubmit)="connect()"><label>Nombre de este dispositivo<input name="deviceName" [(ngModel)]="name" maxlength="80" required placeholder="TV de la sala"></label><button type="submit" [disabled]="busy()">{{ busy() ? 'Conectando…' : 'Crear mi perfil de reproducción' }}</button></form>
+  <p class="profile-note">El historial anterior de este navegador permanece guardado por separado. Solo se comparte el historial del perfil que vincules.</p>
+} @else {
+  <section class="pairing-source"><h3>En la pantalla que quieres vincular</h3><p>Genera un código aquí y escríbelo en «Mi perfil» de tu dispositivo principal.</p><button type="button" (click)="generate()" [disabled]="busy()">Generar código</button>
+    @if (code(); as pairing) { <output class="pairing-code" aria-label="Código de vinculación">{{ pairing.code }}</output><p>Válido hasta {{ pairing.expiresAtUtc | date:'HH:mm' }}. Un solo uso. No lo compartas públicamente.</p> }
+  </section>
+  <form (ngSubmit)="pair()"><h3>En tu dispositivo principal</h3><label>Código de la otra pantalla<input name="pairCode" [(ngModel)]="enteredCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="32" placeholder="ABC-DEF-GHJ-KLM" required></label><p class="profile-note">La otra pantalla usará este perfil y compartirá lo visto. Su historial anterior se añadirá sin borrar el de aquí.</p><button type="submit" [disabled]="busy() || !enteredCode.trim()">Vincular dispositivo</button></form>
+  <section><h3>Dispositivos del perfil</h3><ul class="viewer-devices">@for (device of watched.session()?.devices; track device.id) { <li><span><strong>{{ device.name }}{{ device.current ? ' (este)' : '' }}</strong><small>Última conexión: {{ device.lastSeenUtc | date:'dd/MM HH:mm' }}</small></span><button type="button" (click)="unlink(device.id)" [disabled]="busy()" [attr.aria-label]="'Desvincular ' + device.name">Desvincular</button></li> }</ul></section>
+}
