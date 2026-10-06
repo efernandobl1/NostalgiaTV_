@@ -10,6 +10,7 @@ namespace ApplicationCore.Models
         public int ChannelId { get; set; }
         public int CurrentEpisodeId { get; set; }
         public double CurrentSecond { get; set; }
+        public double MediaStartSecond { get; set; }
         public DateTime StartedAt { get; set; }
         public double DurationSeconds { get; set; }
 

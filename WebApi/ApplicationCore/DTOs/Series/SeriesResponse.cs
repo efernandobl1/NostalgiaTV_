@@ -20,5 +20,6 @@ namespace ApplicationCore.DTOs.Series
         public List<string> CategoryNames { get; set; } = [];
         public string? ChannelName { get; set; }
         public int EpisodeCount { get; set; }
+        public List<int> SeasonNumbers { get; set; } = [];
     }
 }

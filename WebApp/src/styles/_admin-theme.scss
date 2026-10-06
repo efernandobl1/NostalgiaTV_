@@ -1,0 +1,118 @@
+@use '@angular/material' as mat;
+
+// Body scope also reaches CDK overlays without changing public-page themes.
+body:has(.dashboard-shell) {
+  color-scheme: light;
+  --dashboard-bg: #ece7f0;
+  --dashboard-surface: #faf7ed;
+  --dashboard-raised: #e4ddec;
+  --dashboard-text: #292033;
+  --dashboard-muted: #665a73;
+  --dashboard-border: #b8acbf;
+  --dashboard-control-border: #81708d;
+  --dashboard-green: #365b2a;
+  --dashboard-yellow: #785414;
+  --dashboard-red: #9f352b;
+  --dashboard-purple: #624981;
+  --dashboard-gold: var(--dashboard-yellow);
+  --dashboard-purple-soft: var(--dashboard-purple);
+  --dashboard-line: var(--dashboard-border);
+  --dashboard-rule: var(--dashboard-border);
+  --dashboard-on-green: var(--dashboard-bg);
+
+  &.dark-theme {
+    color-scheme: dark;
+    --dashboard-bg: #110f19;
+    --dashboard-surface: #201a2e;
+    --dashboard-raised: #2b243c;
+    --dashboard-text: #f4ecd8;
+    --dashboard-muted: #bdb4cd;
+    --dashboard-border: #51445f;
+    --dashboard-control-border: #9281a6;
+    --dashboard-green: #bde5a0;
+    --dashboard-yellow: #ecc579;
+    --dashboard-red: #ffafa9;
+    --dashboard-purple: #b9a7d4;
+  }
+
+  @include mat.theme-overrides((
+    primary: var(--dashboard-green),
+    on-primary: var(--dashboard-bg),
+    primary-container: var(--dashboard-raised),
+    on-primary-container: var(--dashboard-text),
+    secondary: var(--dashboard-purple),
+    on-secondary: var(--dashboard-bg),
+    secondary-container: var(--dashboard-raised),
+    on-secondary-container: var(--dashboard-text),
+    surface: var(--dashboard-surface),
+    surface-dim: var(--dashboard-bg),
+    surface-bright: var(--dashboard-raised),
+    surface-container-lowest: var(--dashboard-bg),
+    surface-container-low: var(--dashboard-surface),
+    surface-container: var(--dashboard-surface),
+    surface-container-high: var(--dashboard-raised),
+    surface-container-highest: var(--dashboard-raised),
+    on-surface: var(--dashboard-text),
+    on-surface-variant: var(--dashboard-muted),
+    outline: var(--dashboard-control-border),
+    outline-variant: var(--dashboard-border),
+    error: var(--dashboard-red),
+    inverse-surface: var(--dashboard-raised),
+    inverse-on-surface: var(--dashboard-text),
+    inverse-primary: var(--dashboard-green),
+  ));
+
+  .dashboard-shell,
+  .cdk-overlay-container {
+    --bodyColor: var(--dashboard-muted);
+    --blackColor: var(--dashboard-text);
+    --dangerColor: var(--dashboard-red);
+    --mat-select-panel-background-color: var(--dashboard-surface);
+    --mat-option-label-text-color: var(--dashboard-text);
+    --mat-option-selected-state-label-text-color: var(--dashboard-green);
+    --mat-optgroup-label-text-color: var(--dashboard-muted);
+    --mat-datepicker-calendar-container-background-color: var(--dashboard-surface);
+    --mat-datepicker-calendar-date-text-color: var(--dashboard-text);
+    --mat-datepicker-calendar-header-text-color: var(--dashboard-text);
+    --mdc-dialog-container-color: var(--dashboard-surface);
+    --mdc-checkbox-unselected-icon-color: var(--dashboard-control-border);
+
+    input::placeholder,
+    textarea::placeholder {
+      color: var(--dashboard-muted);
+      opacity: 1;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--dashboard-purple) !important;
+      outline-offset: 3px;
+      box-shadow: none !important;
+    }
+  }
+
+  .studio-field :is(input, select, textarea),
+  .studio-search,
+  .catalog-search,
+  .mat-mdc-form-field .mat-mdc-text-field-wrapper {
+    border-color: var(--dashboard-control-border) !important;
+  }
+
+  .mat-mdc-paginator :is(.mat-mdc-paginator-page-size-label, .mat-mdc-paginator-range-label),
+  .mat-mdc-form-field-hint {
+    color: var(--dashboard-muted) !important;
+  }
+
+  .mat-mdc-form-field-error,
+  .text-danger {
+    color: var(--dashboard-red) !important;
+  }
+
+  .mat-mdc-snack-bar-container {
+    --mat-snack-bar-container-color: var(--dashboard-raised);
+    --mat-snack-bar-supporting-text-color: var(--dashboard-text);
+    --mat-snack-bar-button-color: var(--dashboard-green);
+    &.error-snack {
+      --mat-snack-bar-supporting-text-color: var(--dashboard-red);
+    }
+  }
+}

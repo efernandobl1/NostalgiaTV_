@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ApplicationCore.Entities
 {
@@ -16,5 +17,7 @@ namespace ApplicationCore.Entities
         public ChannelBumper? Bumper { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
+        [NotMapped] public long SegmentId { get; set; }
+        [NotMapped] public double MediaStartSecond { get; set; }
     }
 }

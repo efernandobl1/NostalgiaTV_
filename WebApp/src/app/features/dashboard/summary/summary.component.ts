@@ -25,6 +25,7 @@ interface ChannelStatePreview {
   styleUrl: './summary.component.scss',
 })
 export class SummaryComponent {
+  readonly apiUrl = environment.apiUrl;
   private readonly dashboardService = inject(DashboardService);
   private readonly channelsService = inject(ChannelsService);
   private readonly seriesService = inject(SeriesService);
@@ -50,14 +51,18 @@ export class SummaryComponent {
     this.channelStates.set({});
     forkJoin({
       summary: this.dashboardService.getSummary(),
-      channels: this.channelsService.getAll().pipe(catchError(() => {
-        this.channelsLoadFailed.set(true);
-        return of([] as ChannelResponse[]);
-      })),
-      series: this.seriesService.getAll().pipe(catchError(() => {
-        this.seriesLoadFailed.set(true);
-        return of([] as SeriesResponse[]);
-      })),
+      channels: this.channelsService.getAll().pipe(
+        catchError(() => {
+          this.channelsLoadFailed.set(true);
+          return of([] as ChannelResponse[]);
+        }),
+      ),
+      series: this.seriesService.getAll().pipe(
+        catchError(() => {
+          this.seriesLoadFailed.set(true);
+          return of([] as SeriesResponse[]);
+        }),
+      ),
     }).subscribe({
       next: ({ summary, channels, series }) => {
         this.summary.set(summary);
@@ -65,11 +70,18 @@ export class SummaryComponent {
         this.series.set(series);
         this.loading.set(false);
         if (channels.length) {
-          forkJoin(channels.map(channel =>
-            this.http.get<ChannelStatePreview>(`${environment.apiUrl}/api/v1/public/channels/${channel.id}/state`)
-              .pipe(catchError(() => of(null))),
-          )).subscribe(states => {
-            this.channelStates.set(Object.fromEntries(channels.map((channel, index) => [channel.id, states[index]])));
+          forkJoin(
+            channels.map((channel) =>
+              this.http
+                .get<ChannelStatePreview>(
+                  `${environment.apiUrl}/api/v1/public/channels/${channel.id}/state`,
+                )
+                .pipe(catchError(() => of(null))),
+            ),
+          ).subscribe((states) => {
+            this.channelStates.set(
+              Object.fromEntries(channels.map((channel, index) => [channel.id, states[index]])),
+            );
           });
         }
       },

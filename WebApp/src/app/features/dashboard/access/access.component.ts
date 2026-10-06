@@ -1,4 +1,5 @@
-import { Component, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { MenuService } from '../../../core/services/menu.service';
 import { UsersComponent } from '../users/users.component';
 import { RolesComponent } from '../roles/roles.component';
 
@@ -8,20 +9,54 @@ import { RolesComponent } from '../roles/roles.component';
   imports: [UsersComponent, RolesComponent],
   template: `
     <section class="access-page">
-      <div class="access-tabs" role="tablist" aria-label="Usuarios y roles">
-        <button type="button" role="tab" [attr.aria-selected]="tab() === 'users'" [class.is-active]="tab() === 'users'" (click)="tab.set('users')">Usuarios</button>
-        <button type="button" role="tab" [attr.aria-selected]="tab() === 'roles'" [class.is-active]="tab() === 'roles'" (click)="tab.set('roles')">Roles y permisos</button>
-      </div>
-      @if (tab() === 'users') { <app-users /> } @else { <app-roles /> }
+      <header class="studio-heading">
+        <div>
+          <h1>Accesos al estudio</h1>
+          <p>Define quién puede trabajar en el panel y qué herramientas tiene disponibles.</p>
+        </div>
+      </header>
+      <nav class="studio-tabs" aria-label="Usuarios y roles">
+        @if (canViewUsers()) {
+          <button type="button" [attr.aria-pressed]="tab() === 'users'" (click)="tab.set('users')">
+            Usuarios
+          </button>
+        }
+        @if (canViewRoles()) {
+          <button type="button" [attr.aria-pressed]="tab() === 'roles'" (click)="tab.set('roles')">
+            Roles y permisos
+          </button>
+        }
+      </nav>
+      @if (tab() === 'users' && canViewUsers()) {
+        <app-users />
+      }
+      @if (tab() === 'roles' && canViewRoles()) {
+        <app-roles />
+      }
     </section>
   `,
   styles: `
-    .access-page { display:flex; flex-direction:column; gap:16px; }
-    .access-tabs { display:flex; gap:8px; border-bottom:1px solid rgba(139,125,255,.18); }
-    .access-tabs button { min-height:48px; padding:0 16px; border:0; border-bottom:2px solid transparent; color:var(--dashboard-muted); background:transparent; font:400 .9375rem/1 Outfit,sans-serif; }
-    .access-tabs button.is-active { border-bottom-color:var(--dashboard-green); color:var(--dashboard-green); }
+    @use '../../../../styles/dashboard-components';
+    .access-page {
+      display: grid;
+      gap: 26px;
+    }
   `,
 })
 export class AccessComponent {
+  private readonly menuService = inject(MenuService);
+  readonly canViewUsers = computed(() => this.hasAccess('/dashboard/users'));
+  readonly canViewRoles = computed(() => this.hasAccess('/dashboard/roles'));
   readonly tab = signal<'users' | 'roles'>('users');
+  constructor() {
+    effect(() => {
+      if (!this.canViewUsers() && this.canViewRoles()) this.tab.set('roles');
+      else if (!this.canViewRoles()) this.tab.set('users');
+    });
+  }
+  private hasAccess(url: string): boolean {
+    const flatten = (menus: ReturnType<MenuService['menus']>): string[] =>
+      menus.flatMap((menu) => [menu.url, ...flatten(menu.children ?? [])]);
+    return flatten(this.menuService.menus()).includes(url);
+  }
 }

@@ -23,8 +23,22 @@ namespace Infrastructure.Contexts
         public DbSet<ChannelState> ChannelStates { get; set; }
         public DbSet<ChannelScheduleEntry> ChannelScheduleEntries { get; set; }
         public DbSet<ChannelEra> ChannelEras { get; set; }
+        public DbSet<ChannelEraSeries> ChannelEraSeries { get; set; }
+        public DbSet<ChannelEraSelectedSeason> ChannelEraSelectedSeasons { get; set; }
         public DbSet<ChannelBumper> ChannelBumpers { get; set; }
         public DbSet<ActivityLog> ActivityLogs { get; set; }
+        public DbSet<MetadataProvider> MetadataProviders { get; set; }
+        public DbSet<SeriesExternalId> SeriesExternalIds { get; set; }
+        public DbSet<MetadataImportRun> MetadataImportRuns { get; set; }
+        public DbSet<SeriesComment> SeriesComments { get; set; }
+        public DbSet<ChannelEraSelection> ChannelEraSelections { get; set; }
+        public DbSet<EpisodeBreakPoint> EpisodeBreakPoints { get; set; }
+        public DbSet<Interlude> Interludes { get; set; }
+        public DbSet<ChannelEraInterlude> ChannelEraInterludes { get; set; }
+        public DbSet<ChannelEraBreakRule> ChannelEraBreakRules { get; set; }
+        public DbSet<ScheduledProgram> ScheduledPrograms { get; set; }
+        public DbSet<ScheduledAdBreak> ScheduledAdBreaks { get; set; }
+        public DbSet<ScheduledPlaybackSegment> ScheduledPlaybackSegments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -107,7 +121,27 @@ namespace Infrastructure.Contexts
             modelBuilder.Entity<ChannelEra>()
                 .HasMany(e => e.Series)
                 .WithMany(s => s.ChannelEras)
-                .UsingEntity(j => j.ToTable("ChannelEraSeries"));
+                .UsingEntity<ChannelEraSeries>(
+                    right => right.HasOne(link => link.Series).WithMany().HasForeignKey(link => link.SeriesId),
+                    left => left.HasOne(link => link.ChannelEra).WithMany(era => era.SeriesLinks).HasForeignKey(link => link.ChannelEraId),
+                    join =>
+                    {
+                        join.ToTable("ChannelEraSeries");
+                        join.HasKey(link => new { link.ChannelEraId, link.SeriesId });
+                        join.Property(link => link.ChannelEraId).HasColumnName("ChannelErasId");
+                    });
+
+            modelBuilder.Entity<ChannelEraSelectedSeason>(season =>
+            {
+                season.HasKey(item => new { item.ChannelEraId, item.SeriesId, item.SeasonNumber });
+                season.Property(item => item.ChannelEraId).HasColumnName("ChannelErasId");
+                season.ToTable("ChannelEraSelectedSeasons");
+                season.HasOne(item => item.ChannelEraSeries)
+                    .WithMany(link => link.SelectedSeasons)
+                    .HasForeignKey(item => new { item.ChannelEraId, item.SeriesId })
+                    .OnDelete(DeleteBehavior.Cascade);
+                season.ToTable(table => table.HasCheckConstraint("CK_ChannelEraSelectedSeasons_SeasonNumber", "[SeasonNumber] >= 0"));
+            });
 
             modelBuilder.Entity<ChannelBumper>()
                 .HasOne(b => b.ChannelEra)
@@ -129,6 +163,8 @@ namespace Infrastructure.Contexts
                 .WithMany()
                 .HasForeignKey(e => e.BumperId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.ConfigureRetroBroadcast();
         }
     }
 }

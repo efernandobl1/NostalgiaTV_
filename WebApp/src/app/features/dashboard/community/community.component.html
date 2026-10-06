@@ -1,0 +1,118 @@
+<section class="studio-page">
+  @if (!seriesId()) {
+    <header class="studio-heading">
+      <div>
+        <h1>Comunidad</h1>
+        <p>Revisa las conversaciones antes de publicarlas en las fichas de las series.</p>
+      </div>
+    </header>
+  }
+  <nav class="studio-tabs" aria-label="Estado de los comentarios">
+    @for (filterOption of filters; track filterOption.value) {
+      <button
+        type="button"
+        [attr.aria-pressed]="status() === filterOption.value"
+        (click)="filter(filterOption.value)"
+      >
+        {{ filterOption.label }}
+      </button>
+    }
+  </nav>
+  @if (error()) {
+    <p class="studio-error" role="alert">
+      {{ error() }}
+      <button class="admin-button admin-button--secondary" type="button" (click)="load()">
+        Reintentar
+      </button>
+    </p>
+  }
+  @if (loading()) {
+    <div class="admin-state" role="status">Cargando comentarios…</div>
+  } @else {
+    <span class="studio-muted">{{ count() }} comentarios en esta sección</span>
+    <div class="comment-list">
+      @for (comment of comments(); track comment.id) {
+        <article class="comment-note">
+          <header>
+            <strong>{{ comment.author }}</strong
+            ><time [attr.datetime]="comment.createdAtUtc">{{
+              comment.createdAtUtc | date: 'dd/MM/yyyy HH:mm'
+            }}</time>
+          </header>
+          <a routerLink="/dashboard/series" [queryParams]="{ seriesId: comment.seriesId }">{{
+            comment.seriesName
+          }}</a>
+          @if (comment.parentCommentId) {
+            <small class="studio-muted"
+              >Respuesta al comentario #{{ comment.parentCommentId }}</small
+            >
+          }
+          <p>{{ comment.body }}</p>
+          <footer class="studio-actions">
+            @if (status() !== 'Approved') {
+              <button
+                type="button"
+                class="admin-button admin-button--primary"
+                [disabled]="busy() !== null"
+                (click)="moderate(comment, 'Approved')"
+              >
+                Publicar
+              </button>
+            }
+            @if (status() !== 'Rejected') {
+              <button
+                type="button"
+                class="admin-button admin-button--danger"
+                [disabled]="busy() !== null"
+                (click)="moderate(comment, 'Rejected')"
+              >
+                Rechazar
+              </button>
+            }
+            @if (status() === 'Approved') {
+              <button
+                type="button"
+                class="admin-button admin-button--secondary"
+                [disabled]="busy() !== null"
+                (click)="moderate(comment, 'Hidden')"
+              >
+                Ocultar
+              </button>
+            }
+            @if (busy() === comment.id) {
+              <span role="status">Guardando…</span>
+            }
+          </footer>
+        </article>
+      } @empty {
+        @if (!error()) {
+          <div class="admin-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">forum</span
+            ><strong>No hay comentarios en esta sección</strong
+            ><span>Los nuevos comentarios aparecerán en «Por revisar».</span>
+          </div>
+        }
+      }
+    </div>
+    @if (count() > 25) {
+      <div class="studio-pagination">
+        <button
+          type="button"
+          class="admin-button"
+          [disabled]="page() === 1"
+          (click)="page.update(previousPage)"
+        >
+          Anterior</button
+        ><span>Página {{ page() }}</span
+        ><button
+          type="button"
+          class="admin-button"
+          [disabled]="page() * 25 >= count()"
+          (click)="page.update(nextPage)"
+        >
+          Siguiente
+        </button>
+      </div>
+    }
+  }
+</section>

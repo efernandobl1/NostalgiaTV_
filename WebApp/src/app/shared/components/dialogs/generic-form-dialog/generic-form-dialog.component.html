@@ -1,38 +1,38 @@
 <mat-card
   class="daxa-card border-none d-block"
   [class.component-dark-theme]="themeService.isDark()"
-  [style.--mat-card-elevated-container-color]="themeService.isDark() ? '#1b232d' : '#ffffff'"
+  [style.--mat-card-elevated-container-color]="themeService.isDark() ? '#201a2e' : '#faf7ed'"
 >
   <mat-card-header>
     <mat-card-title>
-      <h5 class="mb-0">{{ isEdit ? 'Editar' : 'Crear' }} {{ config.title }}</h5>
+      <h2 mat-dialog-title class="mb-0">{{ isEdit ? 'Editar' : 'Crear' }} {{ config.title }}</h2>
     </mat-card-title>
   </mat-card-header>
-  <mat-card-content style="max-height: 65vh; overflow-y: auto;">
+  <mat-card-content style="max-height: 65vh; overflow-y: auto">
     <form [formGroup]="form" class="pt-2">
       @for (field of config.fields; track field.key) {
         <div class="form-group mb-20">
           <label class="main-label d-block lh-1 text-black">{{ field.label }}</label>
 
           @if (field.type === 'datepicker') {
-            <mat-form-field class="w-100 mb-13 mt-10">
+            <mat-form-field class="w-100 mb-13 mt-10" floatLabel="always">
               <mat-label>{{ field.label }}</mat-label>
               <input matInput [matDatepicker]="picker" [formControlName]="field.key" />
-              <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+              <mat-datepicker-toggle matIconSuffix [for]="picker" [aria-label]="'Abrir calendario: ' + field.label"></mat-datepicker-toggle>
               <mat-datepicker #picker></mat-datepicker>
               @if (form.get(field.key)!.invalid && form.get(field.key)!.touched) {
                 <mat-error>{{ field.label }}: obligatorio.</mat-error>
               }
             </mat-form-field>
           } @else if (field.type === 'file') {
-            <mat-form-field class="w-100 mb-13 mt-10">
+            <mat-form-field class="w-100 mb-13 mt-10" floatLabel="always">
               <mat-label>{{ field.label }}</mat-label>
               <input
                 matInput
                 type="text"
                 [formControlName]="field.key"
-                [readonly]="!!selectedFiles[field.key]"
-                placeholder="https://..."
+                readonly
+                placeholder="Selecciona una imagen"
               />
               @if (form.get(field.key)!.invalid && form.get(field.key)!.touched) {
                 <mat-error>{{ field.label }}: obligatorio.</mat-error>
@@ -43,6 +43,7 @@
               <div class="text-center mt-10">
                 <img
                   [src]="previewUrls[field.key]"
+                  [alt]="'Vista previa de ' + field.label"
                   style="
                     max-width: 200px;
                     max-height: 150px;
@@ -53,7 +54,7 @@
               </div>
             }
           } @else if (field.type === 'checkboxes') {
-            <!-- Checkboxes agrupados (más claros que un select múltiple para permisos). -->
+            <!-- Group permissions under their parent section. -->
             <div class="checkbox-field mt-8 mb-13">
               @if (field.groups) {
                 @for (g of field.groups; track g.label) {
@@ -62,13 +63,15 @@
                       class="checkbox-section__all"
                       [checked]="isGroupAllChecked(field.key, g.options)"
                       (change)="toggleGroup(field.key, g.options, $event.checked)"
-                    >{{ g.label }}</mat-checkbox>
+                      >{{ g.label }}</mat-checkbox
+                    >
                     <div class="checkbox-section__items">
                       @for (opt of g.options; track opt.value) {
                         <mat-checkbox
                           [checked]="isChecked(field.key, opt.value)"
                           (change)="toggleCheckbox(field.key, opt.value, $event.checked)"
-                        >{{ opt.label }}</mat-checkbox>
+                          >{{ opt.label }}</mat-checkbox
+                        >
                       }
                     </div>
                   </div>
@@ -79,13 +82,14 @@
                     <mat-checkbox
                       [checked]="isChecked(field.key, opt.value)"
                       (change)="toggleCheckbox(field.key, opt.value, $event.checked)"
-                    >{{ opt.label }}</mat-checkbox>
+                      >{{ opt.label }}</mat-checkbox
+                    >
                   }
                 </div>
               }
             </div>
           } @else {
-            <mat-form-field class="w-100 mb-13 mt-10">
+            <mat-form-field class="w-100 mb-13 mt-10" floatLabel="always">
               <mat-label>{{ field.label }}</mat-label>
               @switch (field.type) {
                 @case ('textarea') {
@@ -122,13 +126,18 @@
                   <input matInput type="date" [formControlName]="field.key" />
                 }
                 @default {
-                  <input matInput type="text" [formControlName]="field.key" />
+                  <input
+                    matInput
+                    [type]="field.key === 'password' ? 'password' : 'text'"
+                    [formControlName]="field.key"
+                    [attr.autocomplete]="field.key === 'password' ? 'new-password' : null"
+                  />
                 }
               }
             </mat-form-field>
             @if (field.type === 'multiselect' && field.creatable) {
-              <div class="d-flex align-items-center" style="gap: 8px; margin: -6px 0 12px;">
-                <mat-form-field class="mb-0" style="flex: 1;">
+              <div class="d-flex align-items-center" style="gap: 8px; margin: -6px 0 12px">
+                <mat-form-field class="mb-0" style="flex: 1">
                   <mat-label>Crear nueva</mat-label>
                   <input
                     matInput
@@ -157,13 +166,13 @@
               @if (form.get(field.key)!.hasError('minlength')) {
                 <span class="text-danger" style="font-size: 12px"
                   >{{ field.label }}: mínimo
-                  {{ form.get(field.key)!.getError('minlength').requiredLength }} characters.</span
+                  {{ form.get(field.key)!.getError('minlength').requiredLength }} caracteres.</span
                 >
               }
               @if (form.get(field.key)!.hasError('maxlength')) {
                 <span class="text-danger" style="font-size: 12px"
                   >{{ field.label }}: máximo
-                  {{ form.get(field.key)!.getError('maxlength').requiredLength }} characters.</span
+                  {{ form.get(field.key)!.getError('maxlength').requiredLength }} caracteres.</span
                 >
               }
             }

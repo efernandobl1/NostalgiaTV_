@@ -6,7 +6,7 @@ namespace ApplicationCore.DTOs.Channel
 {
     public class ChannelScheduleEntryResponse
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         public int ChannelId { get; set; }
         public int? EpisodeId { get; set; }
         public string EpisodeTitle { get; set; } = string.Empty;
@@ -19,5 +19,8 @@ namespace ApplicationCore.DTOs.Channel
         public int EpisodeNumber { get; set; }
         public int? BumperId { get; set; }
         public string? BumperTitle { get; set; }
+        public bool IsBumper { get; set; }
+        public string ContentKind { get; set; } = "Episode";
+        public decimal? MediaStartSecond { get; set; }
     }
 }

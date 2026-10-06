@@ -18,7 +18,7 @@ import { SeriesResponse } from '../../models/serie.model';
 
 interface Channel { id: number; name: string; logoPath?: string; }
 interface ChannelState {
-  channelId: number; episodeId: number; episodeTitle: string;
+  channelId: number; segmentId: number; episodeId: number; episodeTitle: string;
   filePath: string; seriesName: string; seriesLogoPath?: string;
   currentSecond: number; nextEpisodeId: number;
   nextEpisodeTitle: string | null; secondsUntilNext: number;
@@ -398,7 +398,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       this.state.set(state);
       const v = this.videoRef?.nativeElement;
       if (!v) return;
-      if (prev?.episodeId !== state.episodeId) this.loadVideo(state);
+      if (prev?.segmentId !== state.segmentId) this.loadVideo(state);
       else if (v.duration && Math.abs(v.currentTime - state.currentSecond) > 20)
         v.currentTime = state.currentSecond;
     });
