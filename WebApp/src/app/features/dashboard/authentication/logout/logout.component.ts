@@ -1,34 +1,44 @@
-import { Component, OnInit } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { RouterLink, Router } from '@angular/router';
-import { CustomizerSettingsService } from '../../../../shared/components/customizer-settings/customizer-settings.service';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
+import { TvModeService } from '../../../../core/services/tv-mode.service';
 
 @Component({
   selector: 'app-logout',
-  imports: [RouterLink, MatButtonModule],
+  imports: [RouterLink],
   templateUrl: './logout.component.html',
   styleUrl: './logout.component.scss',
 })
 export class LogoutComponent implements OnInit {
-  constructor(
-    public themeService: CustomizerSettingsService,
-    private authService: AuthService,
-    private router: Router,
-  ) {}
+  readonly tvMode = inject(TvModeService);
+  private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
+  pending = false;
+  failed = false;
 
   ngOnInit() {
-    this.authService.logout().subscribe({
-      next: () => {
-        localStorage.removeItem('rememberMe');
-        sessionStorage.removeItem('sessionActive');
-        this.authService.isAuthenticated.set(false);
-      },
-      error: () => {
-        localStorage.removeItem('rememberMe');
-        sessionStorage.removeItem('sessionActive');
-        this.authService.isAuthenticated.set(false);
-      },
-    });
+    this.logout();
+  }
+
+  logout(): void {
+    if (this.pending) return;
+    this.pending = true;
+    this.failed = false;
+    this.authService
+      .logout()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.pending = false;
+          localStorage.removeItem('rememberMe');
+          sessionStorage.removeItem('sessionActive');
+          this.authService.isAuthenticated.set(false);
+        },
+        error: () => {
+          this.pending = false;
+          this.failed = true;
+        },
+      });
   }
 }

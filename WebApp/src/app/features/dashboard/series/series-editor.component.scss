@@ -28,8 +28,10 @@
   border-radius: 4px;
   background: var(--dashboard-surface);
   color: var(--dashboard-muted);
+  overflow: hidden;
   img {
     width: 100%;
+    height: 240px;
     max-height: 240px;
     object-fit: contain;
   }
@@ -135,6 +137,7 @@
   .folio-poster {
     min-height: 180px;
     img {
+      height: 160px;
       max-height: 160px;
     }
   }

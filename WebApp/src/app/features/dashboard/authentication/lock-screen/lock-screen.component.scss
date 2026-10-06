@@ -22,6 +22,8 @@
 
         img {
             width: 200px;
+            aspect-ratio: 1;
+            object-fit: contain;
             margin-bottom: -4px;
         }
         span {

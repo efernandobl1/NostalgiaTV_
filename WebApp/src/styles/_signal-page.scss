@@ -1,121 +1,217 @@
+:host {
+  display: block;
+}
 .signal-page {
-  position: relative;
-  display: grid;
-  min-height: 100dvh;
-  place-items: center;
-  overflow: hidden;
-  padding: 2rem 1.25rem;
-  color: #e6e8f2;
-  background:
-    radial-gradient(ellipse at 18% -10%, rgba(139, 125, 255, .18), transparent 55%),
-    linear-gradient(160deg, #15152b, #0e0e1c 58%, #101a30);
-  font-family: Outfit, sans-serif;
-}
-
-.signal-page__scanlines {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: .08;
-  background: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 4px);
-}
-
-.signal-card {
-  position: relative;
-  z-index: 1;
+  --signal-bg: #17141f;
+  --signal-surface: #262130;
+  --signal-text: #f3ecdc;
+  --signal-muted: #c3b8cc;
+  --signal-line: #88769d;
+  --signal-green: #b4dfa1;
+  --signal-gold: #eac17a;
+  --signal-purple: #c1ade3;
+  --signal-red: #ffb3ac;
+  --signal-title: clamp(40px, 4.5vw, 60px);
+  --signal-body: 18px;
   display: flex;
-  width: min(100%, 38rem);
   flex-direction: column;
+  min-height: 100dvh;
+  padding: 24px clamp(16px, 4vw, 56px);
+  color: var(--signal-text);
+  background: var(--signal-bg);
+  color-scheme: dark;
+  font:
+    16px/1.5 Outfit,
+    sans-serif;
+}
+.signal-page :is(button, a) {
+  cursor: var(--retroCursor, pointer);
+}
+.signal-page :is(button, a):focus-visible {
+  outline: 3px solid var(--signal-gold) !important;
+  outline-offset: 4px;
+  box-shadow: none !important;
+}
+.signal-page button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+.signal-page .material-symbols-outlined {
+  flex-shrink: 0;
+  font-size: 24px;
+  line-height: 1;
+}
+.signal-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 1.25rem;
-  padding: clamp(1.5rem, 5vw, 3rem);
-  text-align: center;
-  border: 1px solid rgba(139, 125, 255, .22);
-  border-radius: 1rem;
-  background: #191b2e;
-  box-shadow: 0 10px 34px rgba(0, 0, 0, .45);
-
+  gap: 16px;
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #62536f;
+}
+.signal-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--signal-text);
+  font:
+    32px/1 VT323,
+    monospace;
+}
+.signal-brand__screen {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 2px solid var(--signal-purple);
+  border-radius: 10px;
+  color: var(--signal-green);
+}
+.signal-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--signal-muted);
+  font-size: 16px;
+}
+.signal-back:hover {
+  color: var(--signal-text);
+}
+.signal-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  margin-inline: auto;
+  padding-block: 48px;
+}
+.signal-card {
+  display: grid;
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(28px, 6vw, 80px);
+  width: 100%;
+  max-width: 960px;
   h1 {
-    margin: 0;
-    color: #8ee89f;
-    font: 400 clamp(2.25rem, 7vw, 3.5rem)/.95 VT323, monospace;
+    margin: 0 0 16px;
+    color: var(--signal-text);
+    font:
+      var(--signal-title)/1.05 VT323,
+      monospace;
   }
-
   p {
-    max-width: 31rem;
+    max-width: 480px;
     margin: 0;
-    color: #aab0c6;
-    font-size: 1.0625rem;
+    color: var(--signal-muted);
+    font-size: var(--signal-body);
     line-height: 1.6;
   }
 }
-
-.signal-card__code {
-  color: #ffd93d;
-  font: 400 .625rem/1.5 'Press Start 2P', cursive;
-  letter-spacing: .08em;
-}
-
 .signal-card__screen {
   display: grid;
-  width: min(100%, 20rem);
-  min-height: 10rem;
   place-items: center;
-  border: .375rem solid #2a2a3e;
-  border-radius: .875rem;
-  background: repeating-linear-gradient(0deg, #1a1a2e 0 3px, #22224a 3px 6px);
-  box-shadow: inset 0 0 3.75rem rgba(0, 0, 0, .8);
-
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  border: 14px solid #80708e;
+  border-radius: 16px;
+  background: repeating-linear-gradient(0deg, #17141f 0 2px, #211c2a 2px 4px);
+  box-shadow:
+    inset 0 0 0 6px #292130,
+    0 8px 0 #100d16;
+  color: var(--signal-gold);
+  font:
+    112px/1 VT323,
+    monospace;
   .material-symbols-outlined {
-    color: #8ee89f;
-    font-size: 4rem;
-    text-shadow: 0 0 1.25rem rgba(142, 232, 159, .55);
+    color: var(--signal-green);
+    font-size: 72px;
   }
 }
-
-.signal-card--error .signal-card__screen .material-symbols-outlined {
-  color: #ff6b6b;
-  text-shadow: 0 0 1.25rem rgba(255, 107, 107, .6);
+.signal-card--error .signal-card__screen {
+  color: var(--signal-gold);
 }
-
 .signal-card__actions {
   display: flex;
-  width: 100%;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: .75rem;
+  gap: 12px;
+  margin-top: 28px;
 }
-
 .signal-button {
   display: inline-flex;
-  min-height: 3.25rem;
   align-items: center;
   justify-content: center;
-  padding: 0 1.375rem;
-  border-radius: 999px;
-  font: 600 1rem/1 Outfit, sans-serif;
-  cursor: pointer;
+  gap: 10px;
+  min-height: 52px;
+  padding: 12px 20px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font:
+    500 16px/1.4 Outfit,
+    sans-serif !important;
+  text-align: center;
 }
-
 .signal-button--primary {
-  border: 0;
-  color: #fff;
-  background: linear-gradient(135deg, #8b7dff, #5a4fe0);
-  box-shadow: 0 6px 20px rgba(139, 125, 255, .35);
+  border-color: var(--signal-green);
+  color: var(--signal-bg);
+  background: var(--signal-green);
 }
-
+.signal-button--primary:hover:not(:disabled) {
+  background: #c9ebba;
+}
 .signal-button--secondary {
-  border: 1px solid rgba(142, 232, 159, .5);
-  color: #8ee89f;
+  border-color: var(--signal-line);
+  color: var(--signal-text);
   background: transparent;
 }
-
-@media (max-width: 35rem) {
-  .signal-card__actions {
-    flex-direction: column-reverse;
-  }
-
+.signal-button--secondary:hover {
+  background: var(--signal-surface);
+}
+.signal-page--tv {
+  --signal-title: clamp(40px, 5vw, 72px);
+  --signal-body: clamp(18px, 1.5vw, 24px);
   .signal-button {
-    width: 100%;
+    min-height: 60px;
+    font-size: clamp(16px, 1.4vw, 22px) !important;
+  }
+}
+@media (max-width: 700px) {
+  .signal-main {
+    padding-block: 32px;
+  }
+  .signal-card {
+    grid-template-columns: 1fr;
+    max-width: 460px;
+  }
+  .signal-card__screen {
+    width: min(100%, 260px);
+    margin-inline: auto;
+  }
+  .signal-card__actions {
+    flex-direction: column;
+  }
+}
+@media (max-width: 480px) {
+  .signal-back {
+    width: 44px;
+  }
+  .signal-back > span:last-child {
+    display: none;
+  }
+}
+@media (max-height: 500px) and (min-width: 701px) {
+  .signal-main {
+    padding-block: 24px;
+  }
+  .signal-card {
+    grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+    gap: 32px;
   }
 }

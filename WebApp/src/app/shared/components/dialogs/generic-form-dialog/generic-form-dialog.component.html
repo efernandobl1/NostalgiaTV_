@@ -18,7 +18,11 @@
             <mat-form-field class="w-100 mb-13 mt-10" floatLabel="always">
               <mat-label>{{ field.label }}</mat-label>
               <input matInput [matDatepicker]="picker" [formControlName]="field.key" />
-              <mat-datepicker-toggle matIconSuffix [for]="picker" [aria-label]="'Abrir calendario: ' + field.label"></mat-datepicker-toggle>
+              <mat-datepicker-toggle
+                matIconSuffix
+                [for]="picker"
+                [aria-label]="'Abrir calendario: ' + field.label"
+              ></mat-datepicker-toggle>
               <mat-datepicker #picker></mat-datepicker>
               @if (form.get(field.key)!.invalid && form.get(field.key)!.touched) {
                 <mat-error>{{ field.label }}: obligatorio.</mat-error>
@@ -40,17 +44,8 @@
             </mat-form-field>
             <app-simple-fu (fileSelected)="onFileSelected($event, field.key)" />
             @if (previewUrls[field.key]) {
-              <div class="text-center mt-10">
-                <img
-                  [src]="previewUrls[field.key]"
-                  [alt]="'Vista previa de ' + field.label"
-                  style="
-                    max-width: 200px;
-                    max-height: 150px;
-                    border-radius: 8px;
-                    object-fit: contain;
-                  "
-                />
+              <div class="image-preview mt-10">
+                <img [src]="previewUrls[field.key]" [alt]="'Vista previa de ' + field.label" />
               </div>
             }
           } @else if (field.type === 'checkboxes') {

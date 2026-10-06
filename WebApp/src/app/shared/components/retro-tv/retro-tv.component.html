@@ -37,11 +37,10 @@
       <div class="room-heading" [attr.inert]="cinema() ? '' : null">
         <div>
           <h1>Las tardes no se olvidan.</h1>
-          <p>Enciende la tele. Lo demás ya lo conoces.</p>
+          <p>Elige un canal y enciende la tele.</p>
         </div>
         <div class="room-clock">
-          <span class="clock-dot" aria-hidden="true"></span><time>{{ clock() }}</time
-          ><span>Un ratito para ti</span>
+          <span class="clock-dot" aria-hidden="true"></span><time>{{ clock() }}</time>
         </div>
       </div>
       <div class="room-layout">
@@ -117,11 +116,26 @@
                               <span class="material-symbols-outlined" aria-hidden="true">tune</span
                               >Imagen
                             </button>
-                            <button class="control-key" type="button" (click)="leaveCinema()">
-                              <span class="material-symbols-outlined" aria-hidden="true"
-                                >close_fullscreen</span
-                              >Volver a la sala
-                            </button>
+                            @if (tv.enabled()) {
+                              <button class="control-key" type="button" (click)="leaveCinema()">
+                                <span class="material-symbols-outlined" aria-hidden="true"
+                                  >close_fullscreen</span
+                                >Volver a la sala
+                              </button>
+                            } @else {
+                              <ng-container [ngTemplateOutlet]="soundControls" />
+                              <button
+                                class="control-key cinema-exit"
+                                type="button"
+                                (click)="toggleFullscreen()"
+                                aria-label="Salir de pantalla completa"
+                                title="Salir de pantalla completa"
+                              >
+                                <span class="material-symbols-outlined" aria-hidden="true"
+                                  >fullscreen_exit</span
+                                ><span>Salir de pantalla completa</span>
+                              </button>
+                            }
                           </div>
                         </header>
                         <div class="cinema-bottom">
@@ -140,9 +154,6 @@
                           @if (mode() === 'series') {
                             <ng-container [ngTemplateOutlet]="seriesTransport" />
                           }
-                          <div class="cinema-player-controls">
-                            <ng-container [ngTemplateOutlet]="soundControls" />
-                          </div>
                           @if (mode() === 'channels') {
                             <div class="cinema-channels" aria-label="Cambiar canal">
                               @for (channel of channels(); track channel.id) {
@@ -154,8 +165,11 @@
                                   [class.is-focused]="focusedIndex() === $index"
                                   [attr.aria-pressed]="current()?.id === channel.id"
                                 >
-                                  <span>{{ ($index + 3).toString().padStart(2, '0') }}</span
-                                  >{{ channel.name }}
+                                  <ng-container
+                                    [ngTemplateOutlet]="channelLogo"
+                                    [ngTemplateOutletContext]="{ $implicit: channel }"
+                                  />
+                                  <span class="station-name">{{ channel.name }}</span>
                                 </button>
                               }
                             </div>
@@ -197,7 +211,27 @@
               <span class="clock-dot" aria-hidden="true"></span
               >{{ mode() === 'series' ? 'A tu ritmo' : 'Televisión en vivo' }}
             </div>
-            <ng-container [ngTemplateOutlet]="soundControls" />
+            <div class="room-player-actions">
+              <ng-container [ngTemplateOutlet]="soundControls" />
+              <button
+                class="icon-key"
+                type="button"
+                (click)="toggleFilters()"
+                aria-label="Ajustar imagen CRT"
+                title="Ajustar imagen CRT"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+              </button>
+              <button
+                class="icon-key"
+                type="button"
+                (click)="toggleFullscreen()"
+                aria-label="Pantalla completa"
+                title="Pantalla completa"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">fullscreen</span>
+              </button>
+            </div>
           </div>
           @if (mode() === 'series') {
             <div class="room-transport" [attr.inert]="cinema() ? '' : null">
@@ -220,11 +254,8 @@
         >
           <div class="tuner-heading">
             <div>
-              <span class="section-note">{{
-                mode() === 'series' ? 'Tu videoteca' : 'Sin prisa, sin zapping infinito'
-              }}</span>
               <h2 id="channel-panel-title">
-                {{ mode() === 'series' ? selectedSeries()?.name : '¿Qué vemos hoy?' }}
+                {{ mode() === 'series' ? selectedSeries()?.name : 'Canales' }}
               </h2>
             </div>
             <button
@@ -261,11 +292,13 @@
                         (click)="tune(channel)"
                         [class.is-active]="current()?.id === channel.id"
                         [attr.aria-pressed]="current()?.id === channel.id"
+                        [attr.aria-label]="'Ver canal ' + channel.name"
                       >
-                        <span class="station-number">{{
-                          ($index + 3).toString().padStart(2, '0')
-                        }}</span
-                        ><span class="station-name">{{ channel.name }}</span
+                        <ng-container
+                          [ngTemplateOutlet]="channelLogo"
+                          [ngTemplateOutletContext]="{ $implicit: channel }"
+                        />
+                        <span class="station-name">{{ channel.name }}</span
                         ><span class="material-symbols-outlined" aria-hidden="true">{{
                           current()?.id === channel.id ? 'graphic_eq' : 'play_arrow'
                         }}</span>
@@ -275,12 +308,6 @@
                     }
                   </div>
                 }
-                <div class="tuner-footnote">
-                  <span class="material-symbols-outlined" aria-hidden="true"
-                    >settings_input_antenna</span
-                  >
-                  <p>Como antes: el canal sigue su programación. Tú solo ponte cómodo.</p>
-                </div>
               } @else {
                 <button class="text-key" type="button" (click)="backToChannels()">
                   <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>Volver
@@ -343,18 +370,6 @@
               }
             </div>
           }
-          <div class="library-invitation">
-            <span class="library-ticket" aria-hidden="true">PLAY</span>
-            <div>
-              <h3>También a tu manera.</h3>
-              <p>Tu serie, tu episodio, tu momento.</p>
-              <button class="text-key" type="button" (click)="openBrowser()">
-                Explorar series<span class="material-symbols-outlined" aria-hidden="true"
-                  >arrow_forward</span
-                >
-              </button>
-            </div>
-          </div>
         </aside>
       </div>
       @if (state() && mode() === 'channels') {
@@ -373,7 +388,6 @@
           <div>
             <span class="program-label">Después · en {{ minutesUntilNext() }} min</span>
             <h3>{{ state()?.nextEpisodeTitle || 'Por anunciar' }}</h3>
-            <p>Quédate, la tarde continúa.</p>
           </div>
           <button class="control-key" type="button" (click)="openGuide()">
             <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>Ver
@@ -383,10 +397,22 @@
       }
     </main>
     <footer class="public-footer" [attr.inert]="cinema() ? '' : null">
-      <span>Un viaje a cuando llegar a casa era encender la tele.</span
-      ><span class="footer-signature">Hecho para volver.</span>
+      <span class="footer-signature">Hecho para volver.</span>
     </footer>
   </div>
+  <ng-template #channelLogo let-channel>
+    <span class="station-logo" aria-hidden="true">
+      @if (channel.logoPath && !unavailableChannelLogos().includes(channel.id)) {
+        <img
+          [src]="logo(channel.logoPath)"
+          alt=""
+          (error)="markChannelLogoUnavailable(channel.id)"
+        />
+      } @else {
+        <span class="material-symbols-outlined">live_tv</span>
+      }
+    </span>
+  </ng-template>
   <ng-template #soundControls
     ><div class="sound-controls">
       <button
@@ -407,27 +433,8 @@
         [value]="muted() ? 0 : volume()"
         (input)="setVolume(+$any($event.target).value)"
         aria-label="Volumen"
-      /><button
-        class="icon-key"
-        type="button"
-        (click)="toggleFilters()"
-        aria-label="Ajustar imagen CRT"
-        title="Ajustar imagen CRT"
-      >
-        <span class="material-symbols-outlined" aria-hidden="true">tune</span></button
-      ><button
-        class="icon-key"
-        type="button"
-        (click)="toggleFullscreen()"
-        [attr.aria-label]="fullscreen() ? 'Salir de pantalla completa' : 'Pantalla completa'"
-        title="Pantalla completa"
-      >
-        <span class="material-symbols-outlined" aria-hidden="true">{{
-          fullscreen() ? 'fullscreen_exit' : 'fullscreen'
-        }}</span>
-      </button>
-    </div></ng-template
-  >
+      /></div
+  ></ng-template>
   <ng-template #seriesTransport
     ><div class="series-transport">
       <button
@@ -839,8 +846,11 @@
             @for (row of guideDayRows(); track row.channel.id) {
               <section class="guide-station">
                 <button class="guide-channel" type="button" (click)="tuneFromGuide(row.channel)">
-                  <span class="station-number">{{ ($index + 3).toString().padStart(2, '0') }}</span
-                  ><strong>{{ row.channel.name }}</strong
+                  <ng-container
+                    [ngTemplateOutlet]="channelLogo"
+                    [ngTemplateOutletContext]="{ $implicit: row.channel }"
+                  />
+                  <strong>{{ row.channel.name }}</strong
                   ><span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
                 </button>
                 <div class="guide-timeline">

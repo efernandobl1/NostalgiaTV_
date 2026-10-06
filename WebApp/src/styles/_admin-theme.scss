@@ -83,10 +83,20 @@ body:has(.dashboard-shell) {
       opacity: 1;
     }
 
-    :focus-visible {
+    :focus-visible:not(input):not(textarea):not(select):not(.mat-mdc-select) {
       outline: 2px solid var(--dashboard-purple) !important;
       outline-offset: 3px;
       box-shadow: none !important;
+    }
+
+    :is(input, select, textarea):focus-visible:not(.mat-mdc-input-element):not(
+        .mdc-checkbox__native-control
+      ) {
+      box-shadow: inset 0 -2px 0 var(--dashboard-purple);
+    }
+
+    :is(.studio-search, .catalog-search) input:focus-visible {
+      box-shadow: none;
     }
   }
 
@@ -95,6 +105,13 @@ body:has(.dashboard-shell) {
   .catalog-search,
   .mat-mdc-form-field .mat-mdc-text-field-wrapper {
     border-color: var(--dashboard-control-border) !important;
+  }
+
+  .studio-field :is(input, select, textarea):focus-visible,
+  .studio-search:has(input:focus-visible),
+  .catalog-search:has(input:focus-visible) {
+    border-color: var(--dashboard-purple) !important;
+    box-shadow: inset 0 -2px 0 var(--dashboard-purple);
   }
 
   .mat-mdc-paginator :is(.mat-mdc-paginator-page-size-label, .mat-mdc-paginator-range-label),

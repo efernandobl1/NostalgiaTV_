@@ -1,179 +1,247 @@
 # 📺 NostalgiaTV
 
-NostalgiaTV es una plataforma de streaming retro personal. Organiza series y
-episodios en **canales** que se transmiten como TV en vivo (programación
-generada y sincronizada en tiempo real con SignalR) y permite además ver
-**series on-demand**. Incluye una experiencia pública tipo televisor retro (modo
-TV / control remoto / guía de programación) y un panel de administración.
+NostalgiaTV es una plataforma de televisión retro personal. Organiza series y
+episodios en canales con programación compartida y sincronizada mediante SignalR,
+y también permite ver series bajo demanda. La página pública recrea una sala con
+un televisor CRT; el panel administra el catálogo, las eras y la emisión.
 
----
+## Tecnologías
 
-## 🚀 Tecnologías
+- **Backend:** ASP.NET Core 10, Entity Framework Core, SQL Server, SignalR,
+  Serilog, Mapster y FluentValidation.
+- **Autenticación:** JWT en cookies HttpOnly y contraseñas con Argon2.
+- **Frontend:** Angular 21, componentes standalone, signals, Angular Material,
+  Tailwind CSS 4 y SCSS compartido.
+- **Herramientas:** pnpm 11.17.0, FFmpeg/FFprobe, Docker y GitHub Actions.
+- **Producción:** imágenes GHCR; WebApp estática servida por nginx, sin servidor
+  Node en la imagen final.
 
-### Backend (`WebApi/`)
-- **ASP.NET Core 10** — Web API REST (versionada `api/v1`)
-- **Entity Framework Core** — ORM con migraciones (se aplican solas al arrancar)
-- **SQL Server** — base de datos
-- **SignalR** — estado de canal en vivo en tiempo real
-- **Serilog** — logging estructurado + middleware de request/response y auditoría
-  (`ActivityLog`)
-- **Mapster** — mapeo de DTOs · **FluentValidation** — validación
-- **JWT + cookies HttpOnly** y **Argon2id** para contraseñas
-- **Health checks** (`/health`, `/health/ready` con verificación real a SQL Server)
-- **Scalar** — documentación de API · **FFmpeg** (FFMpegCore) — duración de videos
+## Experiencia pública
 
-### Frontend (`WebApp/`)
-- **Angular 21** (standalone components + signals)
-- **Angular Material** — UI del dashboard
-- **Tailwind CSS v4** — experiencia pública retro
-- **SignalR Client** — sincronización en vivo
-- **pnpm** como gestor de paquetes (vía corepack), **no npm**
+- Canales identificados por su logo, separados de las acciones de navegación.
+- Guía de programación de hoy y mañana, con estado del canal en tiempo real.
+- Videoteca con búsqueda y filtros por categoría y canal; temporadas, especiales
+  y películas, progreso guardado y continuación de episodios.
+- Un único reproductor permanece montado al cambiar entre sala, modo TV y
+  pantalla completa.
+- **Modo TV:** overlay que se oculta por inactividad, navegación de canales y
+  salida a la sala; sin controles de volumen ni fullscreen en el overlay.
+- **Pantalla completa:** volumen y salida en la barra superior, con una sola
+  acción de ajustes de imagen.
+- Activación manual de modo TV y detección por navegador/dispositivo, no por
+  resolución de pantalla.
+- Filtros CRT configurables y diálogo para iniciar o reanudar la reproducción
+  cuando el navegador bloquea el autoplay con sonido.
+- Enlaces compartibles mediante `?channel=<slug>` y `?series=<slug>`.
+- Login, cierre de sesión, 404 y error 500 con el mismo lenguaje visual retro,
+  textos legibles y estados claros. No hay registro público ni recuperación de
+  contraseña habilitados.
 
----
+Los canales en vivo siguen su programación: no tienen controles de pausa ni
+avance. Las series bajo demanda sí permiten controlar la reproducción. No hay
+remapeo de controles en la interfaz.
 
-## ✨ Funcionalidades
+## Panel de administración
 
-### Experiencia pública (TV retro)
-- **Canales en vivo**: la programación se genera automáticamente y se sincroniza
-  con SignalR (todos ven lo mismo, al mismo tiempo). No se puede pausar/adelantar.
-- **Series on-demand**: catálogo con búsqueda, filtro por género y por canal,
-  "Continuar viendo", y pantalla de detalle (temporadas, especiales, episodios).
-- **Modo TV / cine**: video full-bleed con overlay auto-ocultable; detección de
-  dispositivo (TV/desktop/móvil) para sugerir el modo TV.
-- **Control remoto remapeable** (tipo emulador): teclas configurables guardadas en
-  el navegador.
-- **Guía de programación** (Hoy/Mañana) centrada en el programa actual.
-- **Filtros CRT** (scanlines, viñeta, curvatura) configurables.
-- **Reanudar reproducción** y marcado de vistos por episodio (persistente y estable
-  entre re-escaneos).
-- **Deep-links** para compartir: `?channel=<slug>` y `?series=<slug>`.
+- **Inicio:** estado del estudio, canales, catálogo y actividad reciente.
+- **Canales:** estaciones visuales; cada canal reúne sus eras, series,
+  temporadas seleccionadas, publicidad y programación. Permite regenerar la
+  programación.
+- **Videoteca:** ficha de cada serie con portada, categorías, temporadas,
+  episodios, rutas y tamaño de archivos. Las categorías se pueden crear o editar
+  desde la ficha.
+- **Subidas:** selección de varios videos para una temporada, especiales o
+  películas; cola con progreso por archivo, errores y reintento. La cola procesa
+  los archivos de uno en uno.
+- **Archivo publicitario:** anuncios y bumpers, aprobación para emisión,
+  selección por era y reglas de pausas publicitarias.
+- **Actividad:** registro de acciones administrativas.
+- **Accesos:** usuarios, roles y permisos; las opciones visibles dependen del
+  acceso autorizado.
+- **Comentarios:** moderación administrativa de los comentarios registrados
+  mediante la API.
+- **Metadatos:** proveedores, identificadores externos de series e historial de
+  importaciones. Esto no implica una búsqueda/importación automática desde una
+  API pública en la interfaz.
 
-### Programación de canales (aleatoria y configurable)
-- Selección **aleatoria** de episodios, **sin repetir** un episodio dentro de una
-  ventana (por defecto 24 h) salvo que no alcancen los capítulos.
-- Cupos diarios de **especiales** (máx. 2 por serie / 5 en total) y **películas**
-  (máx. 2 por serie / 2 en total).
-- Todo configurable por `appsettings` (`ChannelScheduling`) o variables de entorno
-  (`ChannelScheduling__*` / `SCHED_*` en Docker).
+El panel dispone de tema claro y oscuro. Logos, portadas, avatares y vistas
+previas usan límites de tamaño y `object-fit: contain`. Los campos evitan
+contornos duplicados, conservando una señal de foco para navegación con teclado.
 
-### Panel de administración
-- Gestión de **series, episodios, canales, eras y bumpers, categorías, usuarios y
-  roles**; **resumen** y **registro de actividad** (auditoría).
-- Escaneo de episodios desde disco (normaliza acentos, ignora artefactos de
-  transcodificación y sólo indexa formatos reproducibles en web).
+## Programación y archivos de video
 
----
+La programación usa ciclos aleatorios, historial reciente y preferencias de
+separación para evitar repeticiones cuando hay más episodios disponibles. La
+ventana preferida sin repetición es de 24 horas por defecto y se adapta a
+catálogos pequeños. Los cupos diarios de especiales y películas se configuran
+en `ChannelScheduling` o mediante variables `ChannelScheduling__*`; Compose
+incluye sus equivalentes `SCHED_*`.
 
-## 📋 Requisitos
+Las eras representan etapas del canal y definen su selección de series y
+temporadas. El modelo de emisión contempla segmentos de episodios, bumpers de
+entrada/salida y anuncios, con puntos de corte y reglas por era.
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Node.js 20+](https://nodejs.org/) con **pnpm** (`corepack enable`)
-- [SQL Server](https://www.microsoft.com/sql-server) (o SQL Server Express)
-- **FFmpeg** (para calcular la duración de los videos)
-- [Docker](https://www.docker.com/) — opcional, para levantar el stack completo
+El scanner y las subidas admiten `.mp4`, `.m4v`, `.webm`, `.ogg`, `.ogv`
+y `.mov`. El contenedor del archivo no garantiza que sus códecs sean compatibles
+con todos los navegadores: para PC, Android e iOS, preparar preferentemente
+**MP4 con H.264 y audio AAC**. La API calcula duración con FFprobe, pero no
+transcodifica automáticamente cada video al subirlo.
 
----
+El scanner ignora archivos temporales y marcadores de transcodificación. Tras
+reemplazar videos en disco, reescanear la serie y regenerar la programación
+afectada. Mantener copias de los originales antes de convertirlos.
 
-## ⚙️ Puesta en marcha
+## Requisitos y ejecución local
 
-### Opción A — Local (backend + frontend por separado)
+- .NET 10 SDK.
+- Node.js 24, como en el Dockerfile de la WebApp, y pnpm 11.17.0.
+- SQL Server con una base accesible desde la API.
+- FFmpeg y FFprobe disponibles para la API.
+- Docker y Docker Compose, si se utiliza el stack de contenedores.
 
-**Backend** (aplica las migraciones EF pendientes al arrancar):
+### Backend
+
+Copiar el archivo de ejemplo y completar conexión, JWT y demás configuración.
+En PowerShell, usar `Copy-Item` como equivalente de `cp`.
+
 ```bash
 cd WebApi/WebApi
-cp appsettings.Local.example.json appsettings.Local.json   # y completá tus valores
-dotnet run                                                 # https://localhost:7221  (docs: /scalar/v1)
+cp appsettings.Local.example.json appsettings.Local.json
+dotnet run
 ```
 
-**Frontend** (usar **pnpm**, no npm):
+La API local escucha en `https://localhost:7221`; Scalar está disponible en
+`/scalar/v1` solamente en desarrollo. Las migraciones EF pendientes se aplican
+al iniciar: antes de actualizar producción, respaldar y validar una copia de
+la base de datos.
+
+### Frontend
+
 ```bash
 corepack enable
 cd WebApp
-pnpm install
-pnpm start                                                 # http://localhost:4200
-pnpm run build                                             # build de producción
+pnpm install --frozen-lockfile
+pnpm start
 ```
 
-### Opción B — Stack completo con Docker (SQL Server + API + WebApp)
+La WebApp local abre en `http://localhost:4200` y utiliza la API configurada en
+`WebApp/src/environments/`. El build desplegado usa `assets/env.js`; un
+`apiUrl` vacío mantiene `/api`, `/uploads` y `/hubs` en el mismo origen.
+
+### Stack local con Docker
+
 ```bash
-cp .env.example .env        # completá DB_PASSWORD, JWT_SECRET_KEY, etc.
+cp .env.example .env
 docker compose up --build -d
-# WebApp: http://localhost:8082   ·   API (dev): http://localhost:8080
+docker compose ps
 ```
 
-> Configuración sensible por sección de `appsettings` o variables de entorno:
-> `ConnectionStrings__DefaultConnection`, `Jwt__*`, `Cors__AllowedOrigins__0`,
-> `MediaSettings__*`, `ChannelScheduling__*`, `ReverseProxy__TrustForwardedHeaders`.
-> Nunca commitear `.env` ni `appsettings.Local.json`; usar los `*.example`.
+Puertos locales predeterminados: WebApp `127.0.0.1:8082`, API
+`127.0.0.1:8080` y SQL Server `127.0.0.1:1433`.
 
----
+## Validación
 
-## 🏗️ Estructura del proyecto
+Desde la raíz del repositorio:
 
+```bash
+dotnet build WebApi/WebApi/WebApi.csproj -c Release
+dotnet test WebApi/Infrastructure.Tests/Infrastructure.Tests.csproj -c Release
 ```
+
+Desde `WebApp/`:
+
+```bash
+pnpm exec node node_modules/@angular/cli/bin/ng.js build
+pnpm exec node node_modules/@angular/cli/bin/ng.js test --watch=false
+```
+
+Además de compilar, comprobar visualmente los flujos modificados en móvil,
+tablet, escritorio y modo TV, incluyendo móvil horizontal, foco de teclado,
+contraste, estados de carga/error y ausencia de desbordamientos. Las pruebas
+con datos simulados no sustituyen la validación del backend ni de producción.
+
+## Estructura
+
+```text
 NostalgiaTV/
-├── WebApi/                          # Backend ASP.NET Core
-│   ├── ApplicationCore/             # Entidades, DTOs, Interfaces, Settings, Excepciones
-│   ├── Infrastructure/              # Servicios, Contexto EF, Migraciones, BackgroundServices, Mappings
-│   └── WebApi/                      # Controllers, Middleware, Logging, HealthChecks, Extensions, Program.cs
-│
-├── WebApp/                          # Frontend Angular (Tailwind + Material)
-│   └── src/app/
-│       ├── core/                    # Servicios globales (tv-mode, tv-settings, watched, control-bindings…)
-│       ├── features/dashboard/      # Administración (series, episodes, channels, eras, bumpers, users, roles, activity, summary)
-│       ├── shared/components/retro-tv/   # Experiencia pública retro TV
-│       ├── layouts/ · common/ · shared/
-│       └── styles/                  # Estilos compartidos (Tailwind + SCSS)
-│
-├── docker-compose.yml               # Stack de desarrollo
-├── docker-compose.production.yml    # Stack de producción (sin publicar API/DB)
-├── .github/workflows/deploy.yml     # CI/CD (scan → build/push GHCR → deploy VPS)
-└── CONTRIBUTING.md                  # Flujo de ramas, commits y despliegue
+├── WebApi/
+│   ├── ApplicationCore/          # Entities, DTOs, contracts and settings
+│   ├── Infrastructure/           # EF context, migrations and services
+│   ├── Infrastructure.Tests/     # Backend regression tests
+│   └── WebApi/                   # Controllers, middleware and health checks
+├── WebApp/
+│   └── src/
+│       ├── app/core/             # Authentication, TV settings and playback state
+│       ├── app/features/dashboard/
+│       ├── app/shared/components/retro-tv/
+│       └── styles/               # Shared dashboard and message-page styles
+├── database-target.dbml          # Target relational schema
+├── docker-compose.yml            # Local development stack
+├── docker-compose.production.yml # GHCR production stack
+├── .github/workflows/deploy.yml  # PR validation and production deployment
+└── CONTRIBUTING.md               # Branch, commit and deployment conventions
 ```
 
----
+## API
 
-## 📡 API
+La API está versionada bajo `/api/v1`. Las rutas administrativas requieren
+autenticación y permisos; las rutas `/public` permiten consultar la programación
+y el catálogo sin iniciar sesión.
 
-Rutas administrativas bajo `api/v1/*` (requieren auth) y rutas públicas bajo
-`api/v1/public/*` (sin auth). Documentación interactiva en `/scalar/v1`.
+| Área | Rutas principales |
+|------|-------------------|
+| Autenticación | `POST /api/v1/auth/token`, `/api/v1/auth/refresh`, `/api/v1/auth/revoke` |
+| Catálogo | `/api/v1/series`, `/api/v1/episodes`, `/api/v1/category` |
+| Archivos | `POST /api/v1/series/{id}/upload`, `POST /api/v1/series/{id}/scan` |
+| Canales y eras | `/api/v1/channels`, `/api/v1/channels/{channelId}/eras` |
+| Programación | `POST /api/v1/channels/{id}/schedule/refresh` |
+| Publicidad y cortes | `/api/v1/retro/interludes`, `/api/v1/retro/eras/{eraId}/*`, `/api/v1/retro/episodes/{episodeId}/break-points` |
+| Metadatos y comentarios | `/api/v1/metadata/*`, `/api/v1/series/{seriesId}/comments`, `/api/v1/moderation/comments` |
+| Administración | `/api/v1/dashboard/summary`, `/api/v1/dashboard/activity`, `/api/v1/users`, `/api/v1/roles`, `/api/v1/menus` |
+| Público | `/api/v1/public/channels`, `/api/v1/public/channels/{channelId}/state`, `/api/v1/public/channels/{channelId}/schedule`, `/api/v1/public/series`, `/api/v1/public/series/{seriesId}/episodes` |
+| Salud | `/health` (proceso HTTP), `/health/ready` (conexión con SQL Server) |
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| POST | `/api/v1/auth/token` · `/refresh` · `/revoke` | Login / refresh / logout |
-| GET/POST/PUT/DELETE | `/api/v1/series`, `/episodes`, `/channels`, `/categories`, `/channel-eras`, `/channel-bumpers`, `/users`, `/roles` | ABM del panel |
-| GET | `/api/v1/public/channels` · `/channels/{id}/state` · `/channels/{id}/schedule` | Canales, estado en vivo y guía |
-| GET | `/api/v1/public/series` · `/series/{id}/episodes` · `/categories` | Catálogo público |
-| GET | `/api/v1/public/channels/{id}/eras` · `/eras/{id}/bumpers` | Eras y bumpers |
+Los métodos y contratos completos se consultan en Scalar durante el desarrollo.
+La salud de la WebApp no sustituye la comprobación de readiness de la API.
 
----
+## CI/CD y producción
 
-## 🚢 CI/CD y despliegue
+Flujo de contribución: **`feature/* → develop → main`**, con commits
+Conventional Commits en inglés y sin coautor. Ver [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Al integrar en `main`, `.github/workflows/deploy.yml`:
+- **PR hacia develop o main:** activa revisión de dependencias, escaneo de
+  seguridad y construcción de API/WebApp. El build de la API ejecuta sus
+  pruebas. No publica imágenes ni despliega.
+- **Push a main:** tras aprobar los gates, publica en GHCR las imágenes
+  `nostalgia-api` y `nostalgia-web` con `:latest` y `:<sha>`, y despliega
+  mediante SSH con una clave restringida y el dispatcher autorizado.
+- Trivy en este workflow excluye `WebApp/`; la revisión de dependencias del PR
+  comprueba vulnerabilidades nuevas. Esto no equivale a una auditoría completa
+  de todas las dependencias existentes del frontend ni a revisión visual.
 
-1. **Escanea** el repo con Trivy (bloquea CVEs HIGH/CRITICAL).
-2. **Construye y publica** en GHCR las imágenes de API y WebApp (`:latest` y `:<sha>`).
-3. **Despliega automáticamente en la VPS** por SSH: se conecta con una clave de
-   despliegue restringida (comando forzado) que ejecuta `docker compose pull` +
-   `up -d` en el servidor.
+En producción se utiliza `docker-compose.production.yml` como
+`/opt/nostalgiatv/docker-compose.yml`. Solo la WebApp publica un puerto en
+loopback, normalmente `127.0.0.1:8090`; nginx del host termina TLS. API y base
+de datos no publican puertos al host. Los stacks de observabilidad son
+independientes; revisar aliases y redes de monitoreo para no mezclar proyectos.
 
-El detalle del flujo de ramas (`feature/* → develop → main`), la convención de
-commits y la configuración del despliegue (usuario `deploy`, dispatcher, secrets
-del entorno `production`) está en **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+Despliegue manual de respaldo, desde la VPS:
 
----
+```bash
+cd /opt/nostalgiatv
+sudo docker compose pull
+sudo docker compose up -d
+sudo docker compose ps
+```
 
-## 🔐 Credenciales por defecto
+No agregar usuarios al grupo Docker ni usar Watchtower como alternativa al
+despliegue autorizado. No versionar `.env`, `appsettings.Local.json`,
+certificados, JWT, contraseñas, archivos de medios ni backups reales.
 
-Las migraciones crean un usuario administrador inicial (`admin`).
+Las migraciones iniciales incluyen una cuenta `admin`: cambiar su contraseña
+antes de utilizarla en producción. El README no publica credenciales.
 
-> ⚠️ **Cambiá la contraseña del admin inmediatamente después del primer inicio de
-> sesión.** No uses las credenciales por defecto en producción.
-
----
-
-## 📄 Licencia
+## Licencia
 
 Copyright (c) 2026 Fernando. Todos los derechos reservados.
 
