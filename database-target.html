@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NostalgiaTV · Proposed broadcast data model</title>
+  <style>
+    :root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; background: #0b1020; color: #edf2ff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button { font: inherit; }
+    .shell { max-width: 1480px; margin: auto; padding: clamp(18px, 3vw, 42px); }
+    .eyebrow { color: #84ebcb; font-size: .75rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 10px 0 8px; font-size: clamp(1.8rem, 3vw, 3rem); line-height: 1.1; }
+    p { margin: 0; color: #bac4d9; }
+    a { color: #91e4ff; }
+    .head { display: flex; justify-content: space-between; gap: 24px; align-items: end; }
+    .status { flex: none; border: 1px solid #a98938; border-radius: 999px; color: #ffe09a; padding: 8px 14px; font-size: .82rem; font-weight: 700; }
+    .tabs { display: flex; gap: 10px; flex-wrap: wrap; margin: 30px 0 16px; }
+    .tabs button { cursor: pointer; color: #e4ebff; background: #171e36; border: 1px solid #3c4867; border-radius: 9px; padding: 10px 18px; }
+    .tabs button[aria-selected="true"] { border-color: #7de4ca; color: #98f5dc; background: #16302f; }
+    .tabs button:focus-visible, .node:focus-visible { outline: 3px solid #ffe09a; outline-offset: 3px; }
+    .board { border: 1px solid #3b4561; border-radius: 18px; background: radial-gradient(circle at 50% -10%, #1d2a4b, #11182e 56%, #0c1223); overflow-x: auto; box-shadow: 0 20px 60px #0005; }
+    .board svg { display: block; min-width: 1080px; width: 100%; height: auto; }
+    .board text { font-family: system-ui, sans-serif; }
+    .group-title { fill: #99aac9; font-size: 13px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+    .group-line { stroke: #384966; stroke-width: 1; stroke-dasharray: 4 7; }
+    .edge { stroke: #7189a9; stroke-width: 2; opacity: .34; fill: none; }
+    .edge.active { stroke: #91e4ff; stroke-width: 3; opacity: 1; }
+    .node { cursor: pointer; }
+    .node rect { fill: #1d2742; stroke: #526183; stroke-width: 1.5; }
+    .node[data-group="identity"] rect { stroke: #74c2ea; }
+    .node[data-group="advertising"] rect { stroke: #e5ad68; }
+    .node[data-group="playback"] rect { stroke: #8ce4b3; }
+    .node[data-group="community"] rect { stroke: #be9cf2; }
+    .node.active rect { fill: #294465; stroke-width: 3; }
+    .node .name { fill: #fff; font-size: 16px; font-weight: 750; }
+    .node .hint { fill: #b8c8e3; font-size: 12px; }
+    .lower { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(340px, 2fr); gap: 18px; margin-top: 18px; }
+    .panel { border: 1px solid #3b4561; border-radius: 14px; padding: 20px; background: #151d33; }
+    .panel h2 { margin: 4px 0 8px; font-size: 1.2rem; }
+    .panel .tag { color: #87dec8; font-size: .73rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .timeline { display: flex; gap: 4px; margin: 18px 0 10px; min-height: 62px; }
+    .timeline span { display: grid; place-items: center; padding: 8px; text-align: center; border-radius: 7px; font-size: .76rem; font-weight: 700; line-height: 1.2; }
+    .episode { flex: 2; background: #25694e; }
+    .bumper { flex: 1; background: #825a2c; }
+    .ads { flex: 1.5; background: #75543b; }
+    .fine { font-size: .86rem; }
+    @media (max-width: 760px) {
+      .head { align-items: start; flex-direction: column; }
+      .lower { grid-template-columns: 1fr; }
+      .timeline { overflow-x: auto; }
+      .timeline span { min-width: 115px; }
+    }
+    @media (prefers-reduced-motion: no-preference) { .node rect, .edge { transition: fill .15s, stroke .15s, opacity .15s; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="head">
+      <div>
+        <div class="eyebrow">NostalgiaTV / data model</div>
+        <h1>A retro channel, not a playlist</h1>
+        <p>A proposed schema for historical channel eras, in-episode commercial breaks, and one shared live timeline.</p>
+      </div>
+      <span class="status">PROPOSED · NOT IMPLEMENTED</span>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Model views">
+      <button id="broadcast-tab" type="button" role="tab" aria-controls="diagram" aria-selected="true" data-view="broadcast">Broadcast model</button>
+      <button id="catalog-tab" type="button" role="tab" aria-controls="diagram" aria-selected="false" data-view="catalog">Catalog &amp; comments</button>
+    </div>
+
+    <section class="board" aria-label="Proposed entity relationship overview">
+      <svg id="diagram" viewBox="0 0 1200 830" role="img" aria-label="Select a table to inspect its responsibility and relationships">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0 0 L10 5 L0 10Z" fill="#91e4ff"></path>
+          </marker>
+        </defs>
+      </svg>
+    </section>
+
+    <div class="lower">
+      <section class="panel" aria-live="polite">
+        <span class="tag" id="detail-group">Select a table</span>
+        <h2 id="detail-title">Inspect the model</h2>
+        <p id="detail-copy">Choose any table in the diagram. The full entity definitions and constraints are in <a href="database-schema.md">database-schema.md</a>.</p>
+      </section>
+      <section class="panel">
+        <span class="tag">One shared broadcast timeline</span>
+        <div class="timeline" aria-label="Episode, opening bumper, advertisements, closing bumper, resumed episode">
+          <span class="episode">Episode<br>0–600 s</span>
+          <span class="bumper">Opening<br>bumper</span>
+          <span class="ads">Advertisements<br>1 or more</span>
+          <span class="bumper">Closing<br>bumper</span>
+          <span class="episode">Same episode<br>600 s–end</span>
+        </div>
+        <p class="fine">The episode resumes at its original media offset. Historical era dates describe the source period; administrators select the active era explicitly.</p>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const svg = document.getElementById("diagram");
+    const ns = "http://www.w3.org/2000/svg";
+    const make = (name, attributes = {}) => {
+      const element = document.createElementNS(ns, name);
+      for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
+      return element;
+    };
+    const models = {
+      broadcast: {
+        groups: [["IDENTITY & LINEUP", 42], ["MEDIA & BREAK RULES", 292], ["GENERATED AIRING", 568]],
+        nodes: [
+          ["channels", "Channels", "Continuous TV stream", "identity", 40, 83, "A continuous retro TV stream with one selected editorial era."],
+          ["eras", "ChannelEras", "Historical channel identity", "identity", 330, 83, "An identity such as Cartoon Network City or Check It. Historical dates describe the original period, not activation."],
+          ["selections", "ChannelEraSelections", "Explicit active era", "identity", 620, 83, "Selects one active era per channel. A composite key must prevent selecting another channel's era."],
+          ["eraSeries", "ChannelEraSeries", "Series and seasons", "identity", 910, 83, "The era's eligible series and selected seasons."],
+          ["selectedSeasons", "ChannelEraSelectedSeasons", "Explicit season subset", "identity", 910, 185, "Selected seasons for an era-series assignment; absence of rows follows the filter rule documented in the full schema."],
+          ["episodes", "Episodes", "Source media", "catalog", 40, 335, "Canonical episode media. One episode may air in multiple scheduled programs."],
+          ["breakPoints", "EpisodeBreakPoints", "Safe pause offsets", "playback", 330, 335, "An offset in source media where an airing may pause for a commercial break."],
+          ["interludes", "Interludes", "Bumpers and period ads", "advertising", 620, 335, "Reviewed media assets that can be reused across eras."],
+          ["eraInterludes", "ChannelEraInterludes", "Opener / ad / closer roles", "advertising", 910, 335, "Assigns eligible clips and their commercial-break roles to an era."],
+          ["breakRules", "ChannelEraBreakRules", "Ad count and duration", "advertising", 40, 610, "Limits how many advertisements can air and how long a break can last."],
+          ["programs", "ScheduledPrograms", "One episode airing", "playback", 330, 610, "Groups all segments for one airing of one episode in a selected era."],
+          ["adBreaks", "ScheduledAdBreaks", "Break at episode offset", "playback", 620, 610, "Groups a generated commercial break at an allowed point of that episode."],
+          ["segments", "ScheduledPlaybackSegments", "Ordered UTC playback", "playback", 910, 610, "The single source of truth for live playback: episode ranges, opening bumper, ads, closing bumper, then resumed episode."]
+        ],
+        edges: [
+          ["channels", "eras"], ["channels", "selections"], ["eras", "selections"], ["eras", "eraSeries"],
+          ["eraSeries", "selectedSeasons"],
+          ["episodes", "breakPoints"], ["eras", "eraInterludes"], ["interludes", "eraInterludes"],
+          ["eras", "breakRules"], ["eras", "programs"], ["episodes", "programs"],
+          ["programs", "adBreaks"], ["breakPoints", "adBreaks"], ["programs", "segments"],
+          ["adBreaks", "segments"], ["interludes", "segments"]
+        ]
+      },
+      catalog: {
+        groups: [["METADATA & CANONICAL CONTENT", 42], ["COMMUNITY", 292], ["CLASSIFICATION", 568]],
+        nodes: [
+          ["providers", "MetadataProviders", "Public catalog sources", "catalog", 40, 83, "Public providers identify external sources; API credentials remain outside the database."],
+          ["externalIds", "SeriesExternalIds", "Provider identity", "catalog", 330, 83, "A unique provider/external-ID pair maps to one canonical local series."],
+          ["series", "Series", "Canonical local record", "catalog", 620, 83, "Local series data remains canonical; imported changes must not silently overwrite manual edits."],
+          ["episodes", "Episodes", "Seasons and media", "catalog", 910, 83, "Episodes belong to a series and carry local media paths."],
+          ["users", "Users", "Authenticated authors", "community", 40, 335, "Authenticated people who can write comments."],
+          ["comments", "SeriesComments", "Moderated discussion", "community", 330, 335, "Comments and replies belong to a series; a reply must reference a parent on the same series."],
+          ["importRuns", "MetadataImportRuns", "Import provenance", "catalog", 620, 335, "Records provider import attempts, status, and timing."],
+          ["categories", "Categories", "Reusable categories", "catalog", 40, 610, "Reusable classifications for series."],
+          ["seriesCategories", "SeriesCategories", "Series classification", "catalog", 330, 610, "A junction table connects series with reusable categories."]
+        ],
+        edges: [
+          ["providers", "externalIds"], ["externalIds", "series"], ["series", "episodes"],
+          ["users", "comments"], ["comments", "series"], ["externalIds", "importRuns"],
+          ["series", "seriesCategories"], ["categories", "seriesCategories"]
+        ]
+      }
+    };
+    let currentView = "broadcast";
+    let selectedId = null;
+
+    function render(view) {
+      currentView = view;
+      selectedId = null;
+      svg.querySelectorAll(":scope > g").forEach(group => group.remove());
+      const model = models[view];
+      const nodes = new Map(model.nodes.map(node => [node[0], node]));
+      for (const [label, y] of model.groups) {
+        const group = make("g");
+        const title = make("text", { x: 40, y, class: "group-title" });
+        title.textContent = label;
+        group.append(title, make("line", { x1: 40, x2: 1160, y1: y + 13, y2: y + 13, class: "group-line" }));
+        svg.append(group);
+      }
+      for (const [from, to] of model.edges) {
+        const a = nodes.get(from), b = nodes.get(to);
+        const ax = a[4] + 115, ay = a[5] + 43, bx = b[4] + 115, by = b[5] + 43;
+        const path = make("path", {
+          d: `M${ax} ${ay} C${ax + (bx - ax) / 2} ${ay}, ${bx - (bx - ax) / 2} ${by}, ${bx} ${by}`,
+          class: "edge", "data-from": from, "data-to": to, "marker-end": "url(#arrow)"
+        });
+        svg.append(path);
+      }
+      for (const node of model.nodes) {
+        const [id, name, hint, groupName, x, y] = node;
+        const group = make("g", { class: "node", "data-id": id, "data-group": groupName, tabindex: "0", role: "button", "aria-label": `${name}: ${hint}` });
+        group.append(make("rect", { x, y, width: 230, height: 86, rx: 12 }));
+        const title = make("text", { x: x + 15, y: y + 35, class: "name" });
+        title.textContent = name;
+        const subtitle = make("text", { x: x + 15, y: y + 60, class: "hint" });
+        subtitle.textContent = hint;
+        group.append(title, subtitle);
+        group.addEventListener("click", () => select(id));
+        group.addEventListener("keydown", event => {
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); select(id); }
+        });
+        svg.append(group);
+      }
+      document.getElementById("detail-group").textContent = view === "broadcast" ? "Broadcast model" : "Catalog & community";
+      document.getElementById("detail-title").textContent = "Select a table";
+      document.getElementById("detail-copy").textContent = "Choose a table to inspect its purpose and direct relationships.";
+      document.querySelectorAll("[data-view]").forEach(tab => tab.setAttribute("aria-selected", String(tab.dataset.view === view)));
+    }
+
+    function select(id) {
+      selectedId = id;
+      const model = models[currentView];
+      const node = model.nodes.find(item => item[0] === id);
+      const related = model.edges.filter(([from, to]) => from === id || to === id);
+      svg.querySelectorAll(".node").forEach(item => item.classList.toggle("active", item.dataset.id === id));
+      svg.querySelectorAll(".edge").forEach(item => item.classList.toggle("active", item.dataset.from === id || item.dataset.to === id));
+      document.getElementById("detail-group").textContent = node[3];
+      document.getElementById("detail-title").textContent = node[1];
+      const neighbors = related.map(([from, to]) => model.nodes.find(item => item[0] === (from === id ? to : from))[1]);
+      document.getElementById("detail-copy").textContent = node[6] + (neighbors.length ? " Directly related: " + neighbors.join(", ") + "." : "");
+    }
+
+    document.querySelectorAll("[data-view]").forEach(tab => tab.addEventListener("click", () => render(tab.dataset.view)));
+    render("broadcast");
+  </script>
+</body>
+</html>

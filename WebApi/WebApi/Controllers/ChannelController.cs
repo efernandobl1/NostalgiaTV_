@@ -39,11 +39,9 @@ namespace WebApi.Controllers
         [HttpPost("{id}/schedule/refresh")]
         public async Task<IActionResult> RefreshSchedule(int id)
         {
-            _ = Task.Run(async () =>
-            {
-                await _broadcastService.ReloadChannelAsync(id);
-            });
-            return Accepted();
+            if (!(await _channelService.GetAllAsync()).Any(channel => channel.Id == id)) return NotFound();
+            await _broadcastService.ReloadChannelAsync(id);
+            return NoContent();
         }
     }
 }

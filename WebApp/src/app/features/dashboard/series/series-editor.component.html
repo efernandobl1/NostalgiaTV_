@@ -1,37 +1,226 @@
-<section class="series-editor">
-  <button type="button" class="editor-back" matTooltip="Volver a series" (click)="closed.emit()" [disabled]="busy()"><span class="material-symbols-outlined">arrow_back</span>Volver a series</button>
-  <header class="editor-heading"><div class="editor-banner-top"><span>ARCHIVO / SERIE</span><button type="button" class="admin-button admin-button--primary" (click)="save()" [disabled]="busy()">{{ busy() ? 'Guardando…' : 'Guardar cambios' }}</button></div><h1>{{ current()?.name || 'Nueva serie' }}</h1><div class="editor-banner-foot"><span>{{ current()?.seasons || 0 }} temporadas</span><span>{{ current()?.episodeCount || 0 }} episodios registrados</span><span role="status">{{ message() || (form.dirty ? 'Cambios sin guardar' : 'Datos guardados') }}</span></div></header>
-  @if (error()) { <p class="editor-error" role="alert">{{ error() }}</p> }
-  <nav class="editor-tabs" aria-label="Secciones de la serie">
-    <button type="button" [class.active]="tab() === 'data'" (click)="tab.set('data')">Datos</button>
-    <button type="button" [class.active]="tab() === 'episodes'" (click)="tab.set('episodes')" [disabled]="!current()">Episodios</button>
-    <button type="button" [class.active]="tab() === 'channels'" (click)="tab.set('channels')" [disabled]="!current()">Canales y eras</button>
-    <button type="button" [class.active]="tab() === 'pending'" (click)="tab.set('pending')">Pendientes</button>
+<section class="studio-page">
+  <button type="button" class="studio-back" (click)="close()" [disabled]="busy()">
+    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>Volver a la
+    videoteca
+  </button>
+  <header class="series-heading">
+    <div>
+      <h1>{{ current()?.name || 'Nueva serie' }}</h1>
+      <p>
+        {{ current() ? 'Ficha de videoteca' : 'Crea la ficha para empezar a subir sus episodios.' }}
+      </p>
+    </div>
+    <div class="studio-actions">
+      <span class="studio-muted" role="status">{{
+        message() || (form.dirty ? 'Cambios sin guardar' : '')
+      }}</span
+      ><button
+        class="admin-button admin-button--primary"
+        type="button"
+        (click)="save()"
+        [disabled]="busy()"
+      >
+        {{ busy() ? 'Guardando…' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </header>
+  @if (error()) {
+    <p class="studio-error" role="alert">{{ error() }}</p>
+  }
+  <nav class="studio-tabs" aria-label="Secciones de la serie">
+    <button type="button" [attr.aria-pressed]="tab() === 'data'" (click)="tab.set('data')">
+      Ficha
+    </button>
+    <button
+      type="button"
+      [attr.aria-pressed]="tab() === 'episodes'"
+      (click)="tab.set('episodes')"
+      [disabled]="!current()"
+    >
+      Episodios y archivos
+    </button>
+    <button
+      type="button"
+      [attr.aria-pressed]="tab() === 'channels'"
+      (click)="tab.set('channels')"
+      [disabled]="!current()"
+    >
+      Dónde se emite
+    </button>
+    @if (menuService.currentUser()?.rol?.id === 1) {
+      <button
+        type="button"
+        [attr.aria-pressed]="tab() === 'sources'"
+        (click)="tab.set('sources')"
+        [disabled]="!current()"
+      >
+        Fuentes</button
+      ><button
+        type="button"
+        [attr.aria-pressed]="tab() === 'comments'"
+        (click)="tab.set('comments')"
+        [disabled]="!current()"
+      >
+        Comentarios
+      </button>
+    }
   </nav>
   @switch (tab()) {
     @case ('data') {
-      <form [formGroup]="form" (ngSubmit)="save()" class="editor-grid">
-        <div class="editor-fields">
-          <label>Nombre<input formControlName="name" maxlength="100" required></label>
-          @if (form.controls.name.touched && form.controls.name.invalid) { <p class="editor-error">Introduce un nombre de hasta 100 caracteres.</p> }
-          <label>Descripción<textarea formControlName="description" maxlength="500" rows="3"></textarea></label>
-          <div class="editor-dates"><label>Fecha de inicio<input type="date" formControlName="startDate" required></label><label>Fecha de fin<input type="date" formControlName="endDate"></label></div>
-          <div class="editor-dates"><label>Temporadas<input type="number" min="1" formControlName="seasons"></label><label>Calificación<input type="number" min="0" max="10" step="0.1" formControlName="rating"></label></div>
-          <fieldset><legend>Categorías</legend><p>Organiza esta serie sin salir de su ficha. Si editas el nombre de una categoría, cambiará en todas las series.</p><div class="editor-categories">@for (category of categories(); track category.id) { <div class="editor-category"><label><input type="checkbox" [checked]="selectedCategories().includes(category.id)" (change)="toggleCategory(category.id, $any($event.target).checked)">{{ category.name }}</label><button type="button" (click)="editCategory(category)" [attr.aria-label]="'Editar categoría ' + category.name" matTooltip="Editar categoría"><span class="material-symbols-outlined">edit</span></button></div> }</div><div class="editor-category-form"><label>{{ editingCategoryId() ? 'Editar categoría' : 'Crear categoría' }}<input type="text" maxlength="100" [value]="categoryName()" (input)="categoryName.set($any($event.target).value)" (keydown.enter)="$event.preventDefault(); saveCategory()"></label><button type="button" class="admin-button admin-button--secondary" (click)="saveCategory()" [disabled]="!categoryName().trim()">{{ editingCategoryId() ? 'Guardar nombre' : 'Crear y seleccionar' }}</button>@if (editingCategoryId()) {<button type="button" class="editor-category-cancel" (click)="editingCategoryId.set(null); categoryName.set('')">Cancelar</button>}</div></fieldset>
-          <label>Historia<textarea formControlName="history" maxlength="1000" rows="4"></textarea></label>
-        </div>
-        <aside class="editor-artwork">
-          <h3>Logo de la serie</h3>
-          <div class="editor-logo">@if (current()?.logoPath) { <img [src]="apiUrl + current()!.logoPath" alt="Logo de la serie"> } @else { <span class="material-symbols-outlined">image</span> }</div>
-          <label class="editor-upload"><span class="material-symbols-outlined">upload</span>Subir logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" (change)="selectLogo($event)"></label>
-          <p>Guarda la serie para aplicar el logo y gestionar sus episodios.</p>
+      <form [formGroup]="form" (ngSubmit)="save()" class="series-folio">
+        <aside class="series-artwork">
+          <div class="folio-poster">
+            @if (logoPreview() || current()?.logoPath) {
+              <img
+                [src]="logoPreview() || apiUrl + current()!.logoPath"
+                alt="Portada de la serie"
+              />
+            } @else {
+              <span class="material-symbols-outlined" aria-hidden="true">movie</span
+              ><span>Sin portada</span>
+            }
+          </div>
+          <label class="studio-field"
+            >Portada<input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              (change)="selectLogo($event)"
+            /><small>PNG, JPG o WebP.</small></label
+          >
+          @if (current()?.folderPath) {
+            <div class="folder-label">
+              <strong>Carpeta de archivos</strong><code>{{ current()!.folderPath }}</code>
+            </div>
+          }
         </aside>
+        <div class="admin-panel studio-form">
+          <label class="studio-field"
+            >Nombre<input formControlName="name" maxlength="100" required
+          /></label>
+          @if (form.controls.name.touched && form.controls.name.invalid) {
+            <p class="studio-error">Introduce un nombre de hasta 100 caracteres.</p>
+          }
+          <label class="studio-field"
+            >Descripción<textarea formControlName="description" maxlength="500" rows="3"></textarea>
+          </label>
+          <div class="studio-field-grid">
+            <label class="studio-field"
+              >Fecha de inicio<input type="date" formControlName="startDate" required /></label
+            ><label class="studio-field"
+              >Fecha de fin<input type="date" formControlName="endDate"
+            /></label>
+          </div>
+          <div class="studio-field-grid">
+            <label class="studio-field"
+              >Temporadas<input type="number" min="1" formControlName="seasons" required /></label
+            ><label class="studio-field"
+              >Calificación (0–10)<input
+                type="number"
+                min="0"
+                max="10"
+                step="0.1"
+                formControlName="rating"
+            /></label>
+          </div>
+          <fieldset class="series-categories">
+            <legend>Categorías</legend>
+            <div class="category-options">
+              @for (category of categories(); track category.id) {
+                <div>
+                  <label class="studio-check"
+                    ><input
+                      type="checkbox"
+                      [checked]="selectedCategories().includes(category.id)"
+                      (change)="toggleCategory(category.id, $any($event.target).checked)"
+                    />{{ category.name }}</label
+                  ><button
+                    type="button"
+                    class="category-edit"
+                    (click)="editCategory(category)"
+                    [attr.aria-label]="'Editar categoría ' + category.name"
+                    matTooltip="Editar categoría"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                  </button>
+                </div>
+              } @empty {
+                <p>No hay categorías. Crea la primera aquí.</p>
+              }
+            </div>
+            <div class="category-create">
+              <label class="studio-field"
+                >{{
+                  editingCategoryId() ? 'Editar categoría en todas las series' : 'Nueva categoría'
+                }}<input
+                  type="text"
+                  maxlength="100"
+                  [value]="categoryName()"
+                  (input)="categoryName.set($any($event.target).value)"
+                  (keydown.enter)="$event.preventDefault(); saveCategory()" /></label
+              ><button
+                class="admin-button"
+                type="button"
+                (click)="saveCategory()"
+                [disabled]="!categoryName().trim()"
+              >
+                {{ editingCategoryId() ? 'Guardar nombre' : 'Crear y seleccionar' }}
+              </button>
+              @if (editingCategoryId()) {
+                <button
+                  class="studio-back"
+                  type="button"
+                  (click)="editingCategoryId.set(null); categoryName.set('')"
+                >
+                  Cancelar
+                </button>
+              }
+            </div>
+          </fieldset>
+          <label class="studio-field"
+            >Historia<textarea formControlName="history" maxlength="1000" rows="4"></textarea>
+          </label>
+          <button class="admin-button admin-button--primary" type="submit" [disabled]="busy()">
+            {{ busy() ? 'Guardando…' : 'Guardar ficha' }}
+          </button>
+        </div>
       </form>
     }
-    @case ('episodes') { <app-episodes [seriesId]="current()!.id" /> }
-    @case ('channels') { <div class="admin-panel"><h3>Canales de esta serie</h3>@for (name of channelNames(); track name) { <p>{{ name }}</p> } @empty { <p>Esta serie todavía no está asignada a un canal.</p> }</div> }
-    @case ('pending') {
-      <div class="admin-panel"><h3>Revisión de la serie</h3><p>{{ current()?.logoPath ? 'Logo cargado' : 'Falta cargar el logo' }}</p><p>{{ selectedCategories().length ? 'Categorías asignadas' : 'Falta asignar categorías' }}</p><p>{{ current()?.folderPath ? 'Carpeta: ' + current()!.folderPath : 'Guarda la serie para crear su carpeta' }}</p></div>
+    @case ('episodes') {
+      <app-episodes [seriesId]="current()!.id" />
+    }
+    @case ('sources') {
+      <section class="admin-panel"><app-series-sources [seriesId]="current()!.id" /></section>
+    }
+    @case ('comments') {
+      <app-community [seriesId]="current()!.id" />
+    }
+    @case ('channels') {
+      <div class="airing-list">
+        @for (channel of linkedChannels(); track channel.id) {
+          <a
+            class="airing-station"
+            routerLink="/dashboard/channels"
+            [queryParams]="{ channelId: channel.id }"
+            ><span class="material-symbols-outlined" aria-hidden="true">live_tv</span>
+            <div>
+              <h2>{{ channel.name }}</h2>
+              <p>
+                @for (era of channel.eras; track era.id) {
+                  @if (era.seriesIds.includes(current()!.id)) {
+                    <span>{{ era.name }}</span>
+                  }
+                }
+              </p>
+            </div>
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></a
+          >
+        } @empty {
+          <div class="admin-empty">
+            <strong>Esta serie no está asignada a ninguna era</strong
+            ><a routerLink="/dashboard/channels" class="admin-button">Elegir un canal</a>
+          </div>
+        }
+      </div>
     }
   }
 </section>

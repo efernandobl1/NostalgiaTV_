@@ -9,7 +9,8 @@ export const menuGuard: CanActivateFn = (route, state) => {
 
     const url = state.url.split('?')[0];
 
-    const hasAccess = hasMenuAccess(menuService.menus(), url);
+    const menuUrls: string[] = route.data['menuUrls'] ?? [url];
+    const hasAccess = menuUrls.some(menuUrl => hasMenuAccess(menuService.menus(), menuUrl));
 
     if (!hasAccess) {
         router.navigate(['/dashboard']);

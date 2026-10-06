@@ -1,12 +1,12 @@
 <section class="access-module">
   <header class="catalog-toolbar">
     <div></div>
-    <button type="button" class="admin-button admin-button--primary" (click)="openForm()"><span class="material-symbols-outlined">add_moderator</span>Nuevo rol</button>
+    <button type="button" class="admin-button admin-button--primary" (click)="openForm()"><span class="material-symbols-outlined" aria-hidden="true">add_moderator</span>Nuevo rol</button>
   </header>
   <div class="access-list">
     @for (role of (dataSource.connect() | async); track role.id) {
       <article class="access-row">
-        <span class="access-avatar"><span class="material-symbols-outlined">shield</span></span>
+        <span class="access-avatar"><span class="material-symbols-outlined" aria-hidden="true">shield</span></span>
         <div><strong>{{ role.name }}</strong><span>{{ role.description || 'Sin descripción' }}</span></div>
         <div class="access-actions">
           <button type="button" (click)="openForm(role)" matTooltip="Editar rol" aria-label="Editar rol"><mat-icon>edit</mat-icon></button>
@@ -14,7 +14,7 @@
         </div>
       </article>
     } @empty {
-      <div class="admin-empty"><span class="material-symbols-outlined">shield</span><strong>No hay roles</strong></div>
+      <div class="admin-empty"><span class="material-symbols-outlined" aria-hidden="true">shield</span><strong>No hay roles</strong></div>
     }
   </div>
   <mat-paginator [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons />

@@ -1,0 +1,101 @@
+<div class="dashboard-shell" [class.dashboard-shell--light]="!themeService.isDark()">
+  <a class="studio-skip" href="#studio-content" (click)="skipToContent($event)"
+    >Saltar al contenido</a
+  >
+  @if (menuOpen()) {
+    <button
+      class="studio-backdrop"
+      type="button"
+      aria-label="Cerrar navegación"
+      (click)="closeMenu()"
+    ></button>
+  }
+  <aside
+    id="studio-navigation"
+    class="dashboard-sidebar"
+    [class.is-open]="menuOpen()"
+    [cdkTrapFocus]="menuOpen()"
+    [cdkTrapFocusAutoCapture]="menuOpen()"
+    aria-label="Navegación del estudio"
+  >
+    <a routerLink="/dashboard/summary" class="dashboard-brand"
+      ><span class="brand-screen" aria-hidden="true">N</span
+      ><span>NostalgiaTV<small>Estudio de emisión</small></span></a
+    >
+    <button
+      type="button"
+      class="studio-menu-close"
+      aria-label="Cerrar navegación"
+      (click)="closeMenu()"
+    >
+      <span class="material-symbols-outlined" aria-hidden="true">close</span>
+    </button>
+    <nav class="dashboard-navigation">
+      @for (item of visibleItems(); track item.url) {
+        <a
+          [routerLink]="item.url"
+          [class.is-active]="isCurrent(item)"
+          [attr.aria-current]="isCurrent(item) ? 'page' : null"
+          ><span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span
+          >{{ item.label }}</a
+        >
+      }
+      <div class="navigation-divider"></div>
+      @for (item of visibleItems(true); track item.url) {
+        <a
+          [routerLink]="item.url"
+          [class.is-active]="isCurrent(item)"
+          [attr.aria-current]="isCurrent(item) ? 'page' : null"
+          ><span class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span
+          >{{ item.label }}</a
+        >
+      }
+    </nav>
+    <div class="dashboard-sidebar__footer">
+      <a routerLink="/" target="_blank" rel="noopener"
+        ><span class="material-symbols-outlined" aria-hidden="true">tv</span>Ver la televisión<span
+          class="material-symbols-outlined"
+          aria-hidden="true"
+          >open_in_new</span
+        ></a
+      >
+      <button type="button" (click)="themeService.toggleTheme()">
+        <span class="material-symbols-outlined" aria-hidden="true">{{
+          themeService.isDark() ? 'light_mode' : 'dark_mode'
+        }}</span
+        >{{ themeService.isDark() ? 'Usar tema claro' : 'Usar tema oscuro' }}
+      </button>
+      <a routerLink="/dashboard/logout"
+        ><span class="material-symbols-outlined" aria-hidden="true">logout</span>Cerrar sesión</a
+      >
+    </div>
+  </aside>
+  <div class="dashboard-workspace">
+    <header class="dashboard-header">
+      <button
+        #menuToggle
+        class="studio-menu-toggle"
+        type="button"
+        aria-label="Abrir navegación"
+        aria-controls="studio-navigation"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="menuOpen.set(true)"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+      </button>
+      <span class="dashboard-location"
+        >Estudio <span aria-hidden="true">/</span> <strong>{{ title() }}</strong></span
+      >
+      <div class="dashboard-user">
+        <span class="user-dot" aria-hidden="true"></span
+        ><span
+          >{{ username() }}<small>{{ roleName() }}</small></span
+        >
+      </div>
+    </header>
+    <main #studioContent id="studio-content" class="dashboard-content" tabindex="-1">
+      <router-outlet />
+    </main>
+    <footer class="studio-footer">NostalgiaTV <span>Tu archivo. Tu programación.</span></footer>
+  </div>
+</div>

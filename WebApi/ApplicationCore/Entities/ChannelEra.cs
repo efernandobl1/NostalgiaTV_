@@ -14,8 +14,8 @@ namespace ApplicationCore.Entities
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public string? FolderPath { get; set; }
-        public string SeriesSeasonsJson { get; set; } = "{}";
         public ICollection<Series> Series { get; set; } = [];
+        public ICollection<ChannelEraSeries> SeriesLinks { get; set; } = [];
         public ICollection<ChannelBumper> Bumpers { get; set; } = [];
     }
 }

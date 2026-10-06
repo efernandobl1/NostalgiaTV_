@@ -39,6 +39,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "inlineStyleLanguage": "scss",
             "polyfills": [
               "zone.js"
             ],

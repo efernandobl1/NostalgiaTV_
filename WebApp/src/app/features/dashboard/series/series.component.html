@@ -1,17 +1,99 @@
 @if (editorOpen()) {
-  <app-series-editor [series]="editingSeries()" [initialTab]="editorTab()" (closed)="editorOpen.set(false); loadSeries()" (saved)="loadSeries()" />
+  <app-series-editor
+    [series]="editingSeries()"
+    [initialTab]="editorTab()"
+    (closed)="editorOpen.set(false); loadSeries()"
+    (saved)="loadSeries()"
+  />
 } @else {
-  <section class="series-page">
-    <header class="series-heading"><div><span>VIDEOTECA</span><h1>Series</h1><p>Cada serie reúne sus temporadas, episodios, archivos y categorías.</p></div><button type="button" class="admin-button admin-button--primary" (click)="openForm()"><span class="material-symbols-outlined">add</span>Nueva serie</button></header>
-    <div class="series-tools"><label class="catalog-search"><span class="material-symbols-outlined">search</span><input type="search" (input)="search($any($event.target).value)" placeholder="Buscar series…" aria-label="Buscar series"></label><button type="button" class="catalog-filter" (click)="toggleFilters()" [attr.aria-expanded]="filtersOpen()" matTooltip="Filtros" aria-label="Filtros"><span class="material-symbols-outlined">filter_list</span>Filtros</button></div>
-    @if (filtersOpen()) {<label class="incomplete-filter"><input type="checkbox" (change)="filterIncomplete($any($event.target).checked)"> Solo series sin logo o categorías</label>}
-    @if (dataSource.data.length) {
-      <div class="tape-shelf" aria-label="Series de la videoteca">
-        @for (series of (dataSource.connect() | async); track series.id; let index = $index) {
-          <article class="tape-row"><span class="tape-spine" aria-hidden="true">{{ series.id }}</span><div class="tape-main"><h2>{{ series.name }}</h2><p>{{ series.seasons }} temporadas · {{ series.episodeCount }} episodios registrados</p><small>{{ getCategoryNames(series.categoryIds) || 'Sin categorías' }}</small></div><div class="tape-actions"><button type="button" class="tape-open" (click)="openForm(series)">Abrir serie <span class="material-symbols-outlined">arrow_forward</span></button><div><button type="button" (click)="manageEpisodes(series)" matTooltip="Gestionar episodios" aria-label="Gestionar episodios"><span class="material-symbols-outlined">video_library</span></button><button type="button" (click)="assignCategories(series)" matTooltip="Asignar categorías" aria-label="Asignar categorías"><span class="material-symbols-outlined">sell</span></button><button type="button" class="is-danger" (click)="delete(series.id)" matTooltip="Eliminar serie" aria-label="Eliminar serie"><span class="material-symbols-outlined">delete</span></button></div></div></article>
-        } @empty {<div class="admin-empty"><strong>No hay series que coincidan</strong><span>Prueba otra búsqueda o filtro.</span></div>}
+  <section class="studio-page">
+    <header class="studio-heading">
+      <div>
+        <h1>Videoteca</h1>
+        <p>
+          Historias que vuelven a la pantalla. Cada ficha reúne sus temporadas, archivos y fuentes.
+        </p>
       </div>
-    } @else {<div class="admin-empty"><strong>No hay series</strong><span>Crea la primera serie para comenzar el catálogo.</span></div>}
-    <mat-paginator [hidden]="dataSource.filteredData.length <= 10" [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons />
+      <button class="admin-button admin-button--primary" type="button" (click)="openForm()">
+        <span class="material-symbols-outlined" aria-hidden="true">add</span>Añadir serie
+      </button>
+    </header>
+    <div class="studio-toolbar">
+      <label class="studio-search"
+        ><span class="material-symbols-outlined" aria-hidden="true">search</span
+        ><input
+          type="search"
+          aria-label="Buscar serie"
+          placeholder="Buscar serie"
+          (input)="search($any($event.target).value)" /></label
+      ><label class="studio-check"
+        ><input type="checkbox" (change)="filterIncomplete($any($event.target).checked)" />Sin
+        portada o categorías</label
+      >
+    </div>
+    @if (loading()) {
+      <div class="admin-state" role="status">Cargando videoteca…</div>
+    } @else if (loadError()) {
+      <div class="admin-state admin-state--error" role="alert">
+        <strong>No se pudo cargar la videoteca</strong
+        ><button class="admin-button" type="button" (click)="loadSeries()">Reintentar</button>
+      </div>
+    } @else {
+      <div class="video-shelf">
+        @for (item of dataSource.connect() | async; track item.id) {
+          <article class="video-case">
+            <button
+              class="case-art"
+              type="button"
+              (click)="openForm(item)"
+              [attr.aria-label]="'Abrir ficha de ' + item.name"
+            >
+              <div class="case-spine" aria-hidden="true">NostalgiaTV</div>
+              <div class="case-poster">
+                @if (item.logoPath) {
+                  <img [src]="apiUrl + item.logoPath" [alt]="item.name" loading="lazy" />
+                } @else {
+                  <span class="material-symbols-outlined" aria-hidden="true">movie</span
+                  ><span>{{ item.name }}</span>
+                }
+                <span class="case-rating">{{ item.startDate.slice(0, 4) }}</span>
+              </div>
+            </button>
+            <div class="case-caption">
+              <button type="button" (click)="openForm(item)">
+                <h2>{{ item.name }}</h2></button
+              ><span
+                >{{ item.episodeCount || 0 }} episodios · {{ item.seasons || 0 }} temporadas</span
+              >
+              <p>{{ getCategoryNames(item.categoryIds) || 'Sin categorías' }}</p>
+            </div>
+            <footer>
+              <button type="button" (click)="manageEpisodes(item)">
+                <span class="material-symbols-outlined" aria-hidden="true">video_library</span
+                >Archivos</button
+              ><button
+                type="button"
+                (click)="delete(item.id)"
+                [attr.aria-label]="'Eliminar ' + item.name"
+                matTooltip="Eliminar serie"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+              </button>
+            </footer>
+          </article>
+        } @empty {
+          <div class="admin-empty">
+            <strong>No hay series con estos filtros</strong
+            ><span>Añade una serie o cambia la búsqueda.</span>
+          </div>
+        }
+      </div>
+    }
+    <mat-paginator
+      [pageSizeOptions]="[12, 24, 48]"
+      [pageSize]="12"
+      showFirstLastButtons
+      aria-label="Páginas de la videoteca"
+    />
   </section>
 }

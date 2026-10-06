@@ -70,7 +70,16 @@ namespace Infrastructure.Services
             catch { return text; }
         }
 
-        public async Task<List<SeriesResponse>> GetAllAsync() => await _context.Series.ProjectToType<SeriesResponse>().ToListAsync();
+        public async Task<List<SeriesResponse>> GetAllAsync()
+        {
+            var series = await _context.Series.ProjectToType<SeriesResponse>().ToListAsync();
+            var seasons = await _context.Episodes.AsNoTracking()
+                .Select(episode => new { episode.SeriesId, episode.Season }).Distinct().ToListAsync();
+            var bySeries = seasons.ToLookup(episode => episode.SeriesId, episode => episode.Season);
+            foreach (var item in series)
+                item.SeasonNumbers = bySeries[item.Id].Order().ToList();
+            return series;
+        }
 
         public async Task<SeriesResponse> GetByIdAsync(int id)
         {

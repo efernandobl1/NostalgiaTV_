@@ -1,23 +1,87 @@
 @use '../../../../styles/dashboard-components';
-
-.activity-page { display: grid; gap: 20px; }
-.activity-heading, .activity-toolbar { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 14px; }
-.activity-heading h1 { margin: 0 0 5px; color: var(--dashboard-text); font: 800 clamp(1.7rem, 3vw, 2.3rem)/1.2 Consolas, monospace; }
-.activity-heading p { margin: 0; color: var(--dashboard-muted); }
-.activity-heading > span { padding: 7px 11px; border: 1px solid var(--dashboard-line); border-radius: 6px; color: var(--dashboard-muted); }
-.activity-filters { display: flex; flex-wrap: wrap; gap: 8px; }
-.activity-filters button { min-height: 42px; padding: 8px 14px; border: 1px solid var(--dashboard-line); border-radius: 6px; color: var(--dashboard-text); background: var(--dashboard-raised); font: 700 .875rem/1.3 Outfit, sans-serif; cursor: pointer; }
-.activity-filters button[aria-pressed='true'] { border-color: var(--dashboard-green); color: var(--dashboard-on-green); background: var(--dashboard-green); }
-.activity-timeline { position: relative; max-width: 900px; margin: 0; padding: 0 0 0 28px; list-style: none; }
-.activity-timeline::before { position: absolute; top: 20px; bottom: 20px; left: 8px; width: 2px; background: var(--dashboard-line); content: ''; }
-.activity-entry { position: relative; display: grid; grid-template-columns: 75px minmax(0, 1fr) auto; gap: 17px; padding: 18px 0 22px; border-bottom: 1px solid var(--dashboard-rule); }
-.activity-entry::before { position: absolute; top: 22px; left: -25px; width: 12px; height: 12px; border: 2px solid var(--dashboard-green); border-radius: 50%; background: var(--dashboard-bg); content: ''; }
-.activity-entry--delete::before { border-color: var(--dashboard-red); }
-.activity-entry time { color: var(--dashboard-gold); font: 800 .875rem/1.4 Consolas, monospace; white-space: nowrap; }
-.activity-entry__copy { min-width: 0; }
-.activity-entry__copy strong { display: block; overflow-wrap: anywhere; font-size: 1rem; }
-.activity-entry__copy span { display: block; margin-top: 5px; color: var(--dashboard-muted); font-size: .875rem; }
-.activity-entry a { display: inline-flex; align-items: center; align-self: start; gap: 5px; min-height: 40px; color: var(--dashboard-green); text-decoration: none; white-space: nowrap; }
-.activity-entry a:hover { text-decoration: underline; }
-.activity-entry a span { font-size: 18px; }
-@media (max-width: 48rem) { .activity-entry { grid-template-columns: minmax(0, 1fr); gap: 6px; } .activity-entry a { justify-self: start; } }
+.activity-page {
+  display: grid;
+  gap: 26px;
+}
+.activity-heading > span {
+  color: var(--dashboard-muted);
+  font-size: 14px;
+}
+.activity-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.activity-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  button {
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 1px solid var(--dashboard-border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--dashboard-muted);
+    &[aria-pressed='true'] {
+      background: var(--dashboard-raised);
+      color: var(--dashboard-text);
+      border-color: var(--dashboard-purple);
+    }
+  }
+}
+.activity-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 3px solid var(--dashboard-purple);
+  background: var(--dashboard-surface);
+}
+.activity-entry {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) auto;
+  gap: 24px;
+  padding: 24px;
+  border-bottom: 1px solid var(--dashboard-border);
+  time {
+    color: var(--dashboard-yellow);
+    font:
+      24px/1 VT323,
+      monospace;
+  }
+  &--delete time {
+    color: var(--dashboard-red);
+  }
+}
+.activity-entry__copy {
+  min-width: 0;
+  strong {
+    display: block;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  span {
+    display: block;
+    color: var(--dashboard-muted);
+    font-size: 14px;
+    margin-top: 7px;
+  }
+}
+.activity-entry a {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+}
+@media (max-width: 650px) {
+  .activity-entry {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .activity-entry time br {
+    display: none;
+  }
+}

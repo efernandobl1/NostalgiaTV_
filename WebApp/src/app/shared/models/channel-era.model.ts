@@ -14,6 +14,7 @@ export interface ChannelBumperResponse {
 }
 
 export interface ChannelEraResponse {
+    isActive?: boolean;
     id: number;
     channelId: number;
     channelName: string;
