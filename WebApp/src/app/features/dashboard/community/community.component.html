@@ -3,7 +3,7 @@
     <header class="studio-heading">
       <div>
         <h1>Comunidad</h1>
-        <p>Revisa las conversaciones antes de publicarlas en las fichas de las series.</p>
+        <p>Revisa las conversaciones de canales y series antes de publicarlas.</p>
       </div>
     </header>
   }
@@ -31,7 +31,7 @@
   } @else {
     <span class="studio-muted">{{ count() }} comentarios en esta sección</span>
     <div class="comment-list">
-      @for (comment of comments(); track comment.id) {
+      @for (comment of comments(); track commentKey(comment)) {
         <article class="comment-note">
           <header>
             <strong>{{ comment.author }}</strong
@@ -39,8 +39,8 @@
               comment.createdAtUtc | date: 'dd/MM/yyyy HH:mm'
             }}</time>
           </header>
-          <a routerLink="/dashboard/series" [queryParams]="{ seriesId: comment.seriesId }">{{
-            comment.seriesName
+          <a [routerLink]="comment.channelId ? '/dashboard/channels' : '/dashboard/series'" [queryParams]="comment.channelId ? { channelId: comment.channelId } : { seriesId: comment.seriesId }">{{
+            comment.channelName || comment.seriesName
           }}</a>
           @if (comment.parentCommentId) {
             <small class="studio-muted"
@@ -79,7 +79,7 @@
                 Ocultar
               </button>
             }
-            @if (busy() === comment.id) {
+            @if (busy() === commentKey(comment)) {
               <span role="status">Guardando…</span>
             }
           </footer>

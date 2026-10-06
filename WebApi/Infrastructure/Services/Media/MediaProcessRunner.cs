@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Infrastructure.Services.Media;
 
-public sealed class MediaProcessRunner
+public sealed class MediaProcessRunner(MediaCpuGovernor? governor = null)
 {
     public async Task<string> RunAsync(string executable, IEnumerable<string> arguments, TimeSpan timeout,
         CancellationToken cancellationToken, Func<string, Task>? onLine = null)
@@ -25,6 +25,7 @@ public sealed class MediaProcessRunner
         var error = DrainErrorAsync(process.StandardError);
         try
         {
+            using var cpuLease = governor?.Register(process);
             while (await process.StandardOutput.ReadLineAsync(deadline.Token) is { } line)
             {
                 if (onLine != null) await onLine(line);

@@ -138,8 +138,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    # One CPU is 25% of the four-core VPS. Set this to host CPUs * 0.25 on other hosts.
-    cpus: ${MEDIA_WORKER_CPUS:-1.0}
+    # This is the hard ceiling. The worker limits itself to the dashboard day/night policy.
+    cpus: ${MEDIA_WORKER_CPUS:-4.0}
     cpu_shares: 128
     mem_limit: 768m
     pids_limit: 128

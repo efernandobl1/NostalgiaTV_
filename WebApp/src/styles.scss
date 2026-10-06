@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use './styles/admin-theme';
+@use './styles/halloween';
 
 html {
     @include mat.theme((

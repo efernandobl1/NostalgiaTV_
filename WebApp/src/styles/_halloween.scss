@@ -1,0 +1,60 @@
+body.halloween-theme {
+  color-scheme: dark;
+  background: #140f19;
+  color: #fff0d7;
+  --retroCursor: url('/images/cursors/halloween-pointer.svg') 5 3, auto;
+  --blackColor: #fff0d7;
+  --bodyColor: #ddc7bf;
+  --whiteColor: #241929;
+  --primaryColor: #ffbe71;
+  --daxaColor: #dcc2ff;
+  --dangerColor: #ffc3b5;
+}
+body.halloween-theme:has(.dashboard-shell) {
+  --dashboard-bg: #140f19;
+  --dashboard-surface: #241929;
+  --dashboard-raised: #37233f;
+  --dashboard-text: #fff0d7;
+  --dashboard-muted: #ddc7bf;
+  --dashboard-border: #745767;
+  --dashboard-control-border: #b791ac;
+  --dashboard-green: #cde79f;
+  --dashboard-yellow: #ffbe71;
+  --dashboard-red: #ffc3b5;
+  --dashboard-purple: #dcc2ff;
+}
+body.halloween-theme .living-room {
+  --room-bg: #140f19;
+  --room-wall: #241929;
+  --room-surface: #37233f;
+  --room-line: #745767;
+  --room-text: #fff0d7;
+  --room-muted: #ddc7bf;
+  --room-green: #cde79f;
+  --room-gold: #ffbe71;
+  --room-purple: #dcc2ff;
+}
+body.halloween-theme .signal-page {
+  --signal-bg: #140f19; --signal-surface: #241929; --signal-text: #fff0d7; --signal-muted: #ddc7bf;
+  --signal-line: #b791ac; --signal-green: #cde79f; --signal-gold: #ffbe71; --signal-purple: #dcc2ff; --signal-red: #ffc3b5;
+}
+body.halloween-theme :is(.public-header, .studio-header) { border-bottom-color: #ffbe71; }
+body.halloween-theme .room-page { background: radial-gradient(ellipse at 26% 32%, #402144 0, transparent 55%), #140f19; }
+body.halloween-theme .television-face { background: #59435d; border-color: #b491ad; }
+body.halloween-theme .television { filter: drop-shadow(0 0 22px #c16a2630); }
+body.halloween-theme .public-brand .brand-screen { border-color: #ffbe71; color: #ffbe71; }
+body.halloween-theme :is(.retro-auth, .message-page, .error-page) { background: #140f19; color: #fff0d7; }
+.seasonal-atmosphere { position: fixed; inset: 0; pointer-events: none; z-index: 5; overflow: hidden; }
+.seasonal-web { position: absolute; top: 0; width: clamp(50px, 8vw, 125px); fill: none; stroke: #dcc2ff; stroke-width: 1; opacity: .24; }
+.seasonal-web--left { left: 0; }
+.seasonal-web--right { right: 0; transform: scaleX(-1); }
+.seasonal-bat { position: absolute; top: 85px; right: 3%; width: 52px; fill: #8b719a; opacity: .55; }
+.seasonal-bat circle { fill: #ffbe71; }
+body.seasonal-effects .seasonal-bat { animation: midnight-drift 18s ease-in-out infinite; }
+@keyframes midnight-drift { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(18px) rotate(6deg); } }
+body:has(.crt-screen--cinema) .seasonal-atmosphere { display: none; }
+@media (prefers-reduced-motion: reduce) { .seasonal-bat { animation: none !important; } }
+@media (pointer: fine) {
+  body.halloween-theme :is(a, button, summary, select, [role='button']) { cursor: var(--retroCursor) !important; }
+}
+@media (max-width: 600px) { .seasonal-bat { right: 8px; top: 12px; width: 30px; } }

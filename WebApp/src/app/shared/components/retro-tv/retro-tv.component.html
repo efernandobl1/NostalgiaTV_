@@ -13,6 +13,8 @@
         ><span>NostalgiaTV<small>Tu señal de vuelta a casa</small></span></a
       >
       <nav aria-label="Navegación principal">
+        <button class="nav-key" type="button" (click)="showProfile.set(true)"><span class="material-symbols-outlined" aria-hidden="true">devices</span>Mi perfil</button>
+        <button class="nav-key" type="button" (click)="seasonal.toggle()" [attr.aria-pressed]="seasonal.enabled()"><span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>{{ seasonal.enabled() ? 'Tema clásico' : 'Halloween' }}</button>
         <button class="nav-key" type="button" (click)="openBrowser()">
           <span class="material-symbols-outlined" aria-hidden="true">video_library</span>Series
         </button>
@@ -96,6 +98,7 @@
                         <header class="cinema-toolbar">
                           <span class="cinema-brand">NostalgiaTV</span>
                           <div class="cinema-actions">
+                            <button class="control-key" type="button" (click)="showProfile.set(true)"><span class="material-symbols-outlined" aria-hidden="true">devices</span>Sincronizar</button>
                             @if (mode() === 'channels') {
                               <button class="control-key" type="button" (click)="openGuide()">
                                 <span class="material-symbols-outlined" aria-hidden="true"
@@ -271,6 +274,7 @@
               }}</span>
             </button>
           </div>
+          @if (current() || selectedSeries()) { <button class="text-key public-comment-action" type="button" (click)="showComments.set(true)"><span class="material-symbols-outlined" aria-hidden="true">forum</span>Comentarios</button> }
           @if (panelOpen()) {
             <div id="tuner-list">
               @if (mode() === 'channels') {
@@ -790,6 +794,18 @@
         </div>
       </section>
     </div>
+  }
+  @if (showProfile()) {
+    <div class="public-modal-backdrop"><section class="public-dialog profile-dialog" role="dialog" aria-modal="true" aria-labelledby="viewer-profile-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+      <header class="dialog-heading"><h2 id="viewer-profile-title">Mi perfil de reproducción</h2><button class="icon-key" type="button" (click)="showProfile.set(false)" aria-label="Cerrar perfil"><span class="material-symbols-outlined" aria-hidden="true">close</span></button></header>
+      <app-viewer-profile />
+    </section></div>
+  }
+  @if (showComments() && (current() || selectedSeries())) {
+    <div class="public-modal-backdrop"><section class="public-dialog profile-dialog" role="dialog" aria-modal="true" aria-labelledby="public-comments-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+      <header class="dialog-heading"><h2 id="public-comments-title">{{ mode() === 'series' ? selectedSeries()?.name : current()?.name }}</h2><button class="icon-key" type="button" (click)="showComments.set(false)" aria-label="Cerrar comentarios"><span class="material-symbols-outlined" aria-hidden="true">close</span></button></header>
+      <app-public-comments [kind]="mode() === 'series' ? 'series' : 'channels'" [targetId]="(mode() === 'series' ? selectedSeries()?.id : current()?.id) || 0" />
+    </section></div>
   }
   @if (showGuide()) {
     <div class="public-modal-backdrop">

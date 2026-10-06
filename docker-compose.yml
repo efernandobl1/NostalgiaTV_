@@ -107,7 +107,7 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    cpus: ${MEDIA_WORKER_CPUS:-1.0}
+    cpus: ${MEDIA_WORKER_CPUS:-4.0}
     cpu_shares: 128
     mem_limit: 768m
     pids_limit: 128

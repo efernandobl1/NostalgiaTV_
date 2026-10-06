@@ -1,6 +1,9 @@
 :host {
   display: block;
 }
+.profile-dialog { max-width: 680px; width: min(680px, 100%); }
+.profile-dialog > :is(app-viewer-profile, app-public-comments) { min-height: 0; overflow-y: auto; padding: 4px; scrollbar-width: thin; }
+.public-comment-action { margin-bottom: 18px; }
 .living-room {
   --room-bg: #17141f;
   --room-wall: #262130;

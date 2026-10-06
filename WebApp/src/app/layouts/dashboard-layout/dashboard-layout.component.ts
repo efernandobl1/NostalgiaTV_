@@ -12,6 +12,7 @@ import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { MenuService } from '../../core/services/menu.service';
+import { SeasonalThemeService } from '../../core/services/seasonal-theme.service';
 import { CustomizerSettingsService } from '../../shared/components/customizer-settings/customizer-settings.service';
 
 interface StudioDestination {
@@ -33,6 +34,7 @@ export class DashboardLayoutComponent {
   private readonly router = inject(Router);
   readonly menuService = inject(MenuService);
   readonly themeService = inject(CustomizerSettingsService);
+  readonly seasonal = inject(SeasonalThemeService);
   readonly menuOpen = signal(false);
   private readonly menuToggle = viewChild<ElementRef<HTMLButtonElement>>('menuToggle');
   private readonly studioContent = viewChild<ElementRef<HTMLElement>>('studioContent');
