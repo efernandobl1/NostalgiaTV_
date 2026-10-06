@@ -14,6 +14,9 @@ ENV LANG=C.UTF-8 \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 # Copiar sólo los .csproj primero maximiza el uso de la caché de capas en 'restore'.

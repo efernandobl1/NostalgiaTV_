@@ -1,0 +1,57 @@
+<section class="transcoding-page" aria-label="Transcodificación y videoteca automática">
+  <header class="studio-heading">
+    <div><h1>Transcodificación</h1><p>Del archivo original a la emisión, sin escanear cada serie a mano.</p></div>
+    <button type="button" class="admin-button admin-button--secondary" (click)="refresh()">Actualizar estado</button>
+  </header>
+  @if (error()) {
+    <div class="admin-state admin-state--error" role="alert"><strong>No se pudo consultar el worker.</strong><button type="button" class="admin-button" (click)="refresh()">Reintentar</button></div>
+  }
+  @if (actionError()) { <p class="action-error" role="alert">{{ actionError() }}</p> }
+  @if (!status() && !error()) {
+    <div class="admin-state" role="status">Cargando servicios…</div>
+  }
+  @if (status()) {
+    <div class="transfer-deck">
+      @for (item of workers; track item.id) {
+        <section class="transfer-lane" [class.transfer-lane--active]="online(item.id) && worker(item.id)?.enabled" [attr.aria-labelledby]="'worker-' + item.id">
+          <div class="lane-heading"><span class="material-symbols-outlined lane-icon" aria-hidden="true">{{ item.icon }}</span><h2 [id]="'worker-' + item.id">{{ item.title }}</h2></div>
+          <p>{{ item.description }}</p>
+          <div class="lane-state"><span class="signal-light" aria-hidden="true"></span><strong>{{ stateLabel(item.id) }}</strong></div>
+          <dl class="lane-counters"><div><dt>En cola</dt><dd>{{ count(item.id, ['Queued']) }}</dd></div><div><dt>Completados</dt><dd>{{ count(item.id, ['Completed']) }}</dd></div><div><dt>Errores</dt><dd>{{ count(item.id, ['Failed']) }}</dd></div></dl>
+          <button type="button" class="admin-button" [disabled]="busy() !== null || error()" (click)="toggle(item.id)" [attr.aria-label]="(worker(item.id)?.enabled ? 'Pausar cola de ' : 'Activar ') + item.title">
+            <span class="material-symbols-outlined" aria-hidden="true">{{ worker(item.id)?.enabled ? 'pause' : 'play_arrow' }}</span>{{ busy() === item.id ? 'Guardando…' : worker(item.id)?.enabled ? 'Pausar cola' : 'Activar servicio' }}
+          </button>
+        </section>
+      }
+    </div>
+    <p class="processing-note">Pausar deja terminar el archivo actual. Solo se leen temporadas, especiales y películas de series registradas; los archivos en carga se omiten. El límite de recursos se configura en Docker.</p>
+    @if (!online('transcode') || !online('index')) {
+      <p class="processing-note">El contenedor <code>media-worker</code> debe estar iniciado. Antes de activar la conversión, detén el transcoder externo anterior para evitar que ambos procesen la misma carpeta.</p>
+    }
+    <section class="processing-log" aria-labelledby="processing-log-title">
+      <header class="log-heading"><h2 id="processing-log-title">Recorrido de los archivos</h2><div class="job-filters" aria-label="Filtrar trabajos">
+        <button type="button" [attr.aria-pressed]="filter() === 'all'" (click)="filter.set('all')">Todos</button>
+        <button type="button" [attr.aria-pressed]="filter() === 'transcode'" (click)="filter.set('transcode')">Conversión</button>
+        <button type="button" [attr.aria-pressed]="filter() === 'index'" (click)="filter.set('index')">Videoteca</button>
+      </div></header>
+      @for (job of jobs(); track job.id) {
+        <article class="processing-job" [class.processing-job--error]="job.status === 'Failed'">
+          <span class="material-symbols-outlined job-icon" aria-hidden="true">{{ job.worker === 'transcode' ? 'video_settings' : 'video_library' }}</span>
+          <div class="job-copy"><strong>{{ job.seriesName }}</strong><span class="job-path">{{ job.sourcePath }}</span>
+            @if (job.status === 'Processing' && job.worker === 'transcode') {
+              <progress max="100" [value]="job.progress" [attr.aria-label]="'Progreso de ' + job.sourcePath"></progress><span>{{ job.progress | number:'1.0-0' }}% · conversión y validación</span>
+            } @else if (job.status === 'Processing') {
+              <span>Validando compatibilidad e incorporando el episodio…</span>
+            }
+            @if (job.message) { <small>{{ job.message }}</small> }
+            @if (job.outputPath && job.outputPath !== job.sourcePath) { <small>Salida: {{ job.outputPath }}</small> }
+          </div>
+          <div class="job-state"><strong>{{ label(job.status) }}</strong><span>{{ size(job.sourceSize) }}</span><time [attr.datetime]="job.updatedAtUtc">{{ job.updatedAtUtc | date:'dd/MM HH:mm' }}</time>
+            @if (job.status === 'Failed') { <button type="button" class="admin-button" [disabled]="busy() !== null || error()" (click)="retry(job.id)" [attr.aria-label]="'Reintentar ' + job.sourcePath">Reintentar</button> }
+          </div>
+        </article>
+      } @empty { <div class="admin-empty"><strong>No hay archivos en este filtro.</strong><span>Activa los servicios y sube videos a una temporada desde Videoteca o SFTP.</span></div> }
+      <p class="processing-note">Se muestran los últimos 100 trabajos, con los archivos activos primero. Los estados se actualizan cada 5 segundos.</p>
+    </section>
+  }
+</section>

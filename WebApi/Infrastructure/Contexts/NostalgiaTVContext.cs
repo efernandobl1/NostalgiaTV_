@@ -39,10 +39,31 @@ namespace Infrastructure.Contexts
         public DbSet<ScheduledProgram> ScheduledPrograms { get; set; }
         public DbSet<ScheduledAdBreak> ScheduledAdBreaks { get; set; }
         public DbSet<ScheduledPlaybackSegment> ScheduledPlaybackSegments { get; set; }
+        public DbSet<MediaProcessingJob> MediaProcessingJobs { get; set; }
+        public DbSet<MediaWorkerState> MediaWorkerStates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<MediaProcessingJob>(job =>
+            {
+                job.Property(item => item.Worker).HasMaxLength(20);
+                job.Property(item => item.Status).HasMaxLength(20);
+                job.Property(item => item.Fingerprint).HasMaxLength(64);
+                job.Property(item => item.SourcePath).HasMaxLength(2048);
+                job.Property(item => item.OutputPath).HasMaxLength(2048);
+                job.Property(item => item.Message).HasMaxLength(500);
+                job.HasIndex(item => new { item.Worker, item.Fingerprint }).IsUnique();
+                job.HasIndex(item => new { item.Worker, item.Status, item.Id });
+                job.HasOne<Series>().WithMany().HasForeignKey(item => item.SeriesId).OnDelete(DeleteBehavior.Cascade);
+                job.HasOne<MediaWorkerState>().WithMany().HasForeignKey(item => item.Worker).OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<MediaWorkerState>(worker =>
+            {
+                worker.Property(item => item.Id).HasMaxLength(20);
+                worker.HasData(new MediaWorkerState { Id = "transcode" }, new MediaWorkerState { Id = "index" });
+            });
 
             modelBuilder.Entity<Menu>()
                 .HasMany(m => m.Roles)
@@ -78,7 +99,8 @@ namespace Infrastructure.Contexts
                 new Menu { Id = 5, Name = "Channels", Caption = "Canales", Icon = "live_tv", Url = "/dashboard/channels", IsVisible = true, SortOrder = 3, ParentId = 1 },
                 new Menu { Id = 8, Name = "Categories", Caption = "Categorías", Icon = "category", Url = "/dashboard/categories", IsVisible = true, SortOrder = 4, ParentId = 1 },
                 new Menu { Id = 9, Name = "Channel Eras", Caption = "Eras", Icon = "history_edu", Url = "/dashboard/channel-eras", IsVisible = true, SortOrder = 5, ParentId = 1 },
-                new Menu { Id = 10, Name = "Channel Bumpers", Caption = "Bumpers", Icon = "movie_filter", Url = "/dashboard/channel-bumpers", IsVisible = true, SortOrder = 6, ParentId = 1 }
+                new Menu { Id = 10, Name = "Channel Bumpers", Caption = "Bumpers", Icon = "movie_filter", Url = "/dashboard/channel-bumpers", IsVisible = true, SortOrder = 6, ParentId = 1 },
+                new Menu { Id = 11, Name = "Transcoding", Caption = "Transcodificación", Icon = "video_settings", Url = "/dashboard/transcoding", IsVisible = true, SortOrder = 7, ParentId = 1 }
 
             );
 
@@ -92,7 +114,8 @@ namespace Infrastructure.Contexts
                 new { MenusId = 7, RolesId = 1 },
                 new { MenusId = 8, RolesId = 1 },
                 new { MenusId = 9, RolesId = 1 },
-                new { MenusId = 10, RolesId = 1 }
+                new { MenusId = 10, RolesId = 1 },
+                new { MenusId = 11, RolesId = 1 }
             );
 
             // Seed User
