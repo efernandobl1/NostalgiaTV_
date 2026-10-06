@@ -1,40 +1,30 @@
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { Component, HostBinding, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
+import { finalize } from 'rxjs';
 import { RouterLink, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CustomizerSettingsService } from '../../../../shared/components/customizer-settings/customizer-settings.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TvModeService } from '../../../../core/services/tv-mode.service';
 
 @Component({
   selector: 'app-sign-in',
-  imports: [MatTooltipModule,
-    RouterLink,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatCheckboxModule,
-    ReactiveFormsModule,
-  ],
+  imports: [RouterLink, ReactiveFormsModule],
   templateUrl: './sign-in.component.html',
   styleUrl: './sign-in.component.scss',
 })
 export class SignInComponent {
   readonly tvMode = inject(TvModeService);
-  @HostBinding('class.tv-mode') get isTvMode(): boolean { return this.tvMode.enabled(); }
+  private readonly destroyRef = inject(DestroyRef);
   hide = true;
   authForm: FormGroup;
   errorMessage = '';
+  submitting = false;
 
   constructor(
     private fb: FormBuilder,
     private router: Router,
     private authService: AuthService,
-    public themeService: CustomizerSettingsService,
   ) {
     this.authForm = this.fb.group({
       username: ['', Validators.required],
@@ -46,22 +36,38 @@ export class SignInComponent {
   }
 
   onSubmit() {
+    if (this.submitting) return;
+    this.authForm.markAllAsTouched();
     if (this.authForm.invalid) return;
+    this.errorMessage = '';
+    this.submitting = true;
     const { rememberMe, ...credentials } = this.authForm.value;
-    if (rememberMe) {
-        localStorage.setItem('rememberMe', 'true');
-    } else {
-        localStorage.removeItem('rememberMe');
-        sessionStorage.setItem('sessionActive', 'true');
-    }
-    this.authService.login(credentials).subscribe({
-      next: () => {
-        this.authService.isAuthenticated.set(true);
-        this.router.navigate(['/dashboard']);
-      },
-      error: () => {
-        this.errorMessage = 'Usuario o contraseña incorrectos.';
-      },
-    });
+    this.authService
+      .login(credentials)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => (this.submitting = false)),
+      )
+      .subscribe({
+        next: () => {
+          if (rememberMe) {
+            localStorage.setItem('rememberMe', 'true');
+            sessionStorage.removeItem('sessionActive');
+          } else {
+            localStorage.removeItem('rememberMe');
+            sessionStorage.setItem('sessionActive', 'true');
+          }
+          this.authService.isAuthenticated.set(true);
+          this.router.navigate(['/dashboard']);
+        },
+        error: (error: HttpErrorResponse) => {
+          this.errorMessage =
+            error.status === 401 || error.status === 400
+              ? 'Usuario o contraseña incorrectos. Revisa los datos e intenta otra vez.'
+              : error.status === 429
+                ? 'Hubo demasiados intentos. Espera un momento antes de volver a entrar.'
+                : 'No pudimos conectar con el panel. Intenta nuevamente en un momento.';
+        },
+      });
   }
 }

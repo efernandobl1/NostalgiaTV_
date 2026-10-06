@@ -27,9 +27,17 @@
 .living-room :is(button, input, select) {
   font: inherit;
 }
-.living-room :is(button, a, input, select):focus-visible {
+.living-room :is(button, a):focus-visible {
   outline: 3px solid var(--room-gold) !important;
   outline-offset: 5px;
+}
+.living-room :is(input[type='range'], input[type='checkbox']):focus-visible {
+  box-shadow: 0 2px 0 var(--room-gold);
+}
+.living-room .catalog-search:has(input:focus-visible),
+.living-room .catalog-channel select:focus-visible {
+  border-color: var(--room-gold);
+  box-shadow: inset 0 -2px 0 var(--room-gold);
 }
 .living-room button {
   cursor: var(--retroCursor, pointer);
@@ -210,12 +218,6 @@
   font:
     34px/1 VT323,
     monospace;
-}
-.room-clock > span:last-child {
-  grid-column: 1 / -1;
-  margin-top: 6px;
-  color: var(--room-muted);
-  font-size: 14px;
 }
 .clock-dot {
   display: inline-block;
@@ -509,7 +511,7 @@
   position: absolute;
   width: 132px;
   height: auto;
-  bottom: -7px;
+  bottom: 0;
   right: 22%;
   z-index: 2;
   filter: drop-shadow(0 6px 8px #07050e80);
@@ -528,6 +530,7 @@
   color: var(--room-muted);
   font-size: 14px;
 }
+.room-player-actions,
 .sound-controls {
   display: flex;
   align-items: center;
@@ -544,7 +547,7 @@
   align-items: center;
   gap: 8px;
   justify-content: space-between;
-  padding-top: 7px;
+  padding: 0 2px;
 }
 .section-note {
   color: var(--room-muted);
@@ -554,7 +557,6 @@
   font:
     36px/1.1 VT323,
     monospace;
-  margin-top: 9px;
   overflow-wrap: anywhere;
 }
 .panel-toggle {
@@ -562,31 +564,45 @@
   color: var(--room-muted);
 }
 .channel-list {
-  margin-top: 22px;
-  border-top: 1px solid var(--room-line);
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
 }
 .channel-station {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   width: 100%;
-  padding: 20px 12px;
-  border: 0;
-  border-bottom: 1px solid var(--room-line);
-  background: transparent;
+  min-height: 100px;
+  padding: 14px;
+  border: 1px solid var(--room-line);
+  border-radius: 10px;
+  background: var(--room-surface);
+  box-shadow: 0 3px 0 #0e0b16;
   color: var(--room-text);
   text-align: left;
   position: relative;
 }
-.station-number {
-  font:
-    38px/1 VT323,
-    monospace;
-  color: var(--room-purple);
+.station-logo {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 64px;
+  padding: 8px;
   flex-shrink: 0;
-  width: 38px;
+  border-radius: 5px;
+  background: #f3ecdc;
+  color: #62536f;
+  overflow: hidden;
+}
+.station-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .station-name {
+  min-width: 0;
   flex: 1;
   font-size: 18px;
   font-weight: 500;
@@ -594,73 +610,31 @@
 }
 .channel-station > .material-symbols-outlined {
   color: var(--room-muted);
+  padding: 6px;
+  border: 1px solid var(--room-line);
+  border-radius: 50%;
+  font-size: 20px;
 }
 .channel-station:hover {
-  background: #c1ade30d;
+  border-color: var(--room-purple);
+  background: #3a324a;
 }
 .channel-station.is-active {
-  background: #b4dfa110;
-  border-bottom-color: var(--room-green);
+  background: #2c342c;
+  border-color: var(--room-green);
 }
 .channel-station.is-active::before {
   content: '';
   position: absolute;
-  left: 0;
+  left: -1px;
   top: 16px;
   bottom: 16px;
   width: 3px;
   background: var(--room-green);
 }
-.channel-station.is-active .station-number,
 .channel-station.is-active > .material-symbols-outlined {
   color: var(--room-green);
-}
-.tuner-footnote {
-  display: flex;
-  align-items: start;
-  gap: 12px;
-  margin-top: 20px;
-  color: var(--room-muted);
-  font-size: 14px;
-}
-.tuner-footnote > span {
-  color: var(--room-gold);
-}
-.tuner-footnote p {
-  max-width: 260px;
-}
-.library-invitation {
-  display: flex;
-  align-items: start;
-  gap: 20px;
-  padding: 26px 0;
-  margin-top: 22px;
-  border-top: 1px dashed var(--room-line);
-}
-.library-ticket {
-  flex-shrink: 0;
-  border: 1px solid var(--room-gold);
-  padding: 6px 5px;
-  margin-top: 4px;
-  font:
-    16px VT323,
-    monospace;
-  color: var(--room-gold);
-  transform: rotate(-7deg);
-}
-.library-invitation h3 {
-  font:
-    29px/1.1 VT323,
-    monospace;
-}
-.library-invitation p {
-  margin-top: 7px;
-  font-size: 14px;
-  color: var(--room-muted);
-}
-.library-invitation .text-key {
-  color: var(--room-gold);
-  font-weight: 500;
+  border-color: var(--room-green);
 }
 .now-and-next {
   margin-top: 30px;
@@ -704,7 +678,7 @@
   max-width: 1344px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: end;
   gap: 20px;
   padding: 28px 48px;
   margin: auto;
@@ -854,8 +828,14 @@
 }
 .cinema-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+.cinema-actions .sound-controls {
+  padding: 0 8px;
+  border-radius: 4px;
+  background: #17141feb;
 }
 .cinema-actions .control-key {
   background: #17141feb;
@@ -883,10 +863,6 @@
   margin-top: 4px;
   font-size: 18px;
 }
-.cinema-player-controls {
-  display: flex;
-  justify-content: end;
-}
 .cinema-channels {
   display: flex;
   overflow-x: auto;
@@ -909,11 +885,10 @@
   align-items: center;
   gap: 12px;
 }
-.cinema-channel > span {
-  font:
-    30px VT323,
-    monospace;
-  color: var(--room-gold);
+.cinema-channel .station-logo {
+  width: 64px;
+  height: 48px;
+  padding: 6px;
 }
 .cinema-channel.is-active {
   border-color: var(--room-green);
@@ -1098,8 +1073,10 @@
   overflow: hidden;
 }
 .cassette-cover img {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  inset: 12px 12px 24px 30px;
+  width: calc(100% - 42px);
+  height: calc(100% - 36px);
   object-fit: contain;
 }
 .cassette-spine {
@@ -1201,6 +1178,13 @@
 }
 .guide-channel > strong {
   font-size: 18px;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.guide-channel .station-logo {
+  width: 64px;
+  height: 48px;
+  padding: 6px;
 }
 .guide-channel > .material-symbols-outlined {
   color: var(--room-green);
@@ -1341,10 +1325,6 @@
   .channel-station {
     padding: 16px 12px;
   }
-  .library-invitation {
-    margin-top: 22px;
-    padding-bottom: 0;
-  }
   .station-name {
     font-size: 18px;
   }
@@ -1466,7 +1446,7 @@
   }
   .room-viewer {
     width: 103px;
-    bottom: -5px;
+    bottom: 0;
     right: 21%;
   }
   .standby-message {
@@ -1496,14 +1476,14 @@
   .player-signal {
     font-size: 14px;
   }
-  .sound-controls {
+  .room-player-actions {
     margin-left: auto;
     gap: 6px;
   }
   .sound-controls > input {
     width: 72px;
   }
-  .sound-controls .icon-key {
+  .room-player-actions .icon-key {
     border-color: transparent;
   }
   .tuner-heading h2 {
@@ -1612,12 +1592,25 @@
     padding: 8px;
     font-size: 14px !important;
   }
-  .cinema-player-controls {
-    position: absolute;
-    right: 16px;
-    bottom: 95px;
-    background: #17141fec;
-    border-radius: 4px;
+}
+@media (max-width: 600px) {
+  .cinema-overlay {
+    padding: 16px;
+  }
+  .cinema-toolbar {
+    gap: 8px;
+  }
+  .cinema-actions .control-key {
+    padding: 8px 6px;
+    gap: 6px;
+    font-size: 16px !important;
+  }
+  .cinema-actions .cinema-exit {
+    width: 44px;
+    padding: 0;
+  }
+  .cinema-exit > span:last-child {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
