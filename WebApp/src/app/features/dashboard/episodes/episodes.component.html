@@ -1,30 +1,125 @@
-<section class="catalog-page episodes-page">
-  <header class="catalog-toolbar">
-    @if (!seriesId()) { <a routerLink="/dashboard/series" class="admin-back" aria-label="Volver a series"><span class="material-symbols-outlined">arrow_back</span></a> }
-    <div class="catalog-toolbar__title">
-      <span class="catalog-kicker">CATÁLOGO</span>
-      <strong>Episodios@if (selectedSeriesName()) { · {{ selectedSeriesName() }}}</strong>
-    </div>
-    <button type="button" class="admin-button admin-button--primary" (click)="openUpload()" [disabled]="!selectedSeriesId()" matTooltip="Subir archivos de video directamente a la carpeta de la serie"><span class="material-symbols-outlined">cloud_upload</span>Subir archivos</button>
-    <button type="button" class="admin-button" (click)="scan()" [disabled]="!selectedSeriesId()"><span class="material-symbols-outlined">sync</span>Sincronizar carpeta</button>
-  </header>
-  <div class="episode-summary"><strong>{{ allEpisodes().length }} episodios</strong><strong>{{ formatSize(totalSizeBytes()) }} en archivos disponibles</strong></div>
-  <div class="episode-filters">
-    @if (!seriesId()) { <mat-form-field appearance="outline"><mat-label>Serie</mat-label><mat-select [value]="selectedSeriesId()" (selectionChange)="onSeriesChange($event.value)">@for (item of series(); track item.id) { <mat-option [value]="item.id">{{ item.name }}</mat-option> }</mat-select></mat-form-field> }
-    @if (selectedSeriesId()) {
-      <mat-form-field appearance="outline"><mat-label>Temporada</mat-label><mat-select [value]="selectedSeason()" (selectionChange)="onSeasonChange($event.value)"><mat-option [value]="null">Todas las temporadas</mat-option>@for (season of seasons(); track season) { <mat-option [value]="season">{{ season > 0 ? 'Temporada ' + season : 'Especiales y películas' }}</mat-option> }</mat-select></mat-form-field>
-    }
-  </div>
+<section class="studio-page">
+  @if (!seriesId()) {
+    <header class="studio-heading"><h1>Episodios y archivos</h1></header>
+    <label class="studio-field"
+      >Serie<select
+        [value]="selectedSeriesId() ?? ''"
+        (change)="onSeriesChange(+$any($event.target).value)"
+      >
+        <option disabled value="">Seleccionar serie</option>
+        @for (item of series(); track item.id) {
+          <option [value]="item.id">{{ item.name }}</option>
+        }
+      </select></label
+    >
+  }
   @if (selectedSeriesId()) {
-    <div class="episode-list">
-      @for (episode of (dataSource.connect() | async); track episode.id) {
-        <article class="episode-card">
-          <div class="episode-card__number">{{ episode.episodeNumber || '—' }}</div>
-          <div class="episode-card__copy"><strong>{{ episode.title }}</strong><span>Temporada {{ episode.season || 'especial' }} · {{ episode.episodeTypeName }} · {{ formatSize(episode.fileSizeBytes) }}</span><small [title]="episode.filePath ?? ''">{{ episode.filePath ?? 'Archivo pendiente' }}</small></div>
-          <button type="button" class="episode-card__edit" (click)="editEpisode(episode)" matTooltip="Editar episodio" aria-label="Editar episodio"><mat-icon>edit</mat-icon></button>
-        </article>
-      } @empty { <div class="admin-empty"><span class="material-symbols-outlined">video_library</span><strong>No hay episodios</strong><span>Sincroniza la carpeta para encontrarlos.</span></div> }
+    <div class="studio-heading">
+      <div>
+        <h2>Archivo de episodios</h2>
+        <p>{{ allEpisodes().length }} episodios · {{ formatSize(totalSizeBytes()) }} registrados</p>
+      </div>
+      <div class="studio-actions">
+        <button
+          class="admin-button admin-button--secondary"
+          type="button"
+          (click)="scan()"
+          [disabled]="scanning()"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">sync</span
+          >{{ scanning() ? 'Sincronizando…' : 'Sincronizar carpeta' }}</button
+        ><button
+          class="admin-button admin-button--primary"
+          type="button"
+          (click)="openUpload()"
+          [disabled]="scanning()"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">upload</span>Subir episodios
+        </button>
+      </div>
     </div>
-  } @else { <div class="admin-empty"><span class="material-symbols-outlined">live_tv</span><strong>Selecciona una serie</strong><span>Sus temporadas y episodios aparecerán aquí.</span></div> }
-  <mat-paginator [pageSizeOptions]="[10,25,50]" showFirstLastButtons />
+    <nav class="studio-tabs" aria-label="Temporadas">
+      <button
+        type="button"
+        [attr.aria-pressed]="selectedSeason() === null"
+        (click)="onSeasonChange(null)"
+      >
+        Todos
+      </button>
+      @for (season of seasons(); track season) {
+        <button
+          type="button"
+          [attr.aria-pressed]="selectedSeason() === season"
+          (click)="onSeasonChange(season)"
+        >
+          {{ season === 0 ? 'Especiales y películas' : 'Temporada ' + season }}
+        </button>
+      }
+    </nav>
+    @if (loading()) {
+      <div class="admin-state" role="status">Cargando episodios…</div>
+    } @else if (loadError()) {
+      <div class="admin-state admin-state--error" role="alert">
+        <strong>No se pudieron cargar los episodios</strong
+        ><button type="button" class="admin-button" (click)="loadEpisodes(selectedSeriesId()!)">
+          Reintentar
+        </button>
+      </div>
+    } @else {
+      <div class="episode-archive">
+        @for (episode of dataSource.connect() | async; track episode.id) {
+          <article class="episode-file">
+            <div class="episode-index">
+              <span>T{{ episode.season }}</span
+              ><strong>{{ episode.episodeNumber }}</strong>
+            </div>
+            <div class="episode-info">
+              <h3>{{ episode.title }}</h3>
+              <div>
+                <span class="studio-tag">{{ episode.episodeTypeName }}</span
+                ><span>{{ formatSize(episode.fileSizeBytes) }}</span>
+              </div>
+              <code>{{ episode.filePath || 'Sin archivo disponible' }}</code>
+            </div>
+            <div class="episode-actions">
+              <button
+                class="admin-button admin-button--secondary"
+                type="button"
+                (click)="editEpisode(episode)"
+              >
+                Editar
+              </button>
+              @if (menuService.currentUser()?.rol?.id === 1) {
+                <button
+                  class="admin-button"
+                  type="button"
+                  [attr.aria-expanded]="expandedId() === episode.id"
+                  (click)="expandedId.set(expandedId() === episode.id ? null : episode.id)"
+                >
+                  {{ expandedId() === episode.id ? 'Cerrar cortes' : 'Ver y marcar cortes' }}
+                </button>
+              }
+            </div>
+            @if (expandedId() === episode.id) {
+              <div class="episode-cuts">
+                <app-break-points [episodeId]="episode.id" [filePath]="episode.filePath" />
+              </div>
+            }
+          </article>
+        } @empty {
+          <div class="admin-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">video_library</span
+            ><strong>No hay episodios en esta sección</strong
+            ><span>Sube archivos o sincroniza la carpeta de esta serie.</span>
+          </div>
+        }
+      </div>
+    }
+    <mat-paginator
+      [pageSizeOptions]="[12, 24, 48]"
+      [pageSize]="12"
+      showFirstLastButtons
+      aria-label="Páginas de episodios"
+    />
+  }
 </section>

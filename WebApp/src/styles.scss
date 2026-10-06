@@ -1,4 +1,5 @@
 @use '@angular/material' as mat;
+@use './styles/admin-theme';
 
 html {
     @include mat.theme((
@@ -176,6 +177,11 @@ button {
 html, body { height: 100%; }
 // Antes forzaba Roboto y pisaba la tipografía Outfit del tema; se conserva Outfit.
 body { margin: 0; }
+
+// Match only the redesigned administration dialogs, not public screens.
+.mat-mdc-dialog-surface:has(app-generic-form-dialog, app-episode-upload-dialog) {
+  border-radius: 6px !important;
+}
 
 // Accesibilidad: foco visible de alto contraste para botones/enlaces/navegación TV.
 // Los campos de texto quedan excluidos (usan su propio estilo de foco Material/nativo),

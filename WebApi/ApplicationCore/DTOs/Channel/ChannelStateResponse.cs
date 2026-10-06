@@ -7,6 +7,7 @@ namespace ApplicationCore.DTOs.Channel
     public class ChannelStateResponse
     {
         public int ChannelId { get; set; }
+        public long SegmentId { get; set; }
         public int EpisodeId { get; set; }
         public string EpisodeTitle { get; set; } = string.Empty;
         public string FilePath { get; set; } = string.Empty;

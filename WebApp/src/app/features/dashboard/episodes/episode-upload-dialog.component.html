@@ -1,7 +1,7 @@
 <mat-card class="daxa-card border-none d-block upload-dialog" [class.component-dark-theme]="themeService.isDark()">
   <mat-card-header>
     <mat-card-title>
-      <h5 class="mb-0">Subir archivos a {{ data.seriesName }}</h5>
+      <h2 mat-dialog-title class="mb-0">Subir archivos a {{ data.seriesName }}</h2>
     </mat-card-title>
   </mat-card-header>
 
@@ -54,11 +54,11 @@
                 <span class="upload-item__size">{{ formatSize(item.file.size) }}</span>
               </div>
               @if (item.status === 'uploading') {
-                <mat-progress-bar mode="determinate" [value]="item.progress" />
+                <mat-progress-bar mode="determinate" [value]="item.progress" [attr.aria-label]="'Carga de ' + item.file.name" />
                 <small class="upload-item__pct">{{ item.progress }}%</small>
               }
               @if (item.status === 'error' && item.error) {
-                <small class="upload-item__error">{{ item.error }}</small>
+                <small class="upload-item__error" role="alert">{{ item.error }}</small>
               }
             </div>
             @if (!uploading() && item.status !== 'done') {

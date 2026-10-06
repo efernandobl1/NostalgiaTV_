@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ApplicationCore.Entities
 {
@@ -11,9 +12,12 @@ namespace ApplicationCore.Entities
         public Channel Channel { get; set; } = null!;
         public int? EpisodeId { get; set; }
         public Episode? Episode { get; set; }
+        public int? ShuffleCycle { get; set; }
         public int? BumperId { get; set; }
         public ChannelBumper? Bumper { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
+        [NotMapped] public long SegmentId { get; set; }
+        [NotMapped] public double MediaStartSecond { get; set; }
     }
 }

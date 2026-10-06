@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "NostalgiaTV database relationships",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "viewBox": [1390, 860]
+  },
+  "components": [
+    { "id": "channels", "type": "database", "label": "Channels", "sublabel": "Channel metadata", "pos": [70, 140], "size": [180, 72] },
+    { "id": "eras", "type": "database", "label": "ChannelEras", "sublabel": "Era dates and JSON filter", "pos": [350, 140], "size": [210, 72] },
+    { "id": "eraSeries", "type": "database", "label": "ChannelEraSeries", "sublabel": "Era-series junction", "pos": [680, 140], "size": [220, 72] },
+    { "id": "series", "type": "database", "label": "Series", "sublabel": "Series metadata", "pos": [1030, 140], "size": [180, 72] },
+    { "id": "episodes", "type": "database", "label": "Episodes", "sublabel": "Season and episode number", "pos": [1030, 330], "size": [180, 72] },
+    { "id": "categories", "type": "database", "label": "SeriesCategories", "sublabel": "Series-category junction", "pos": [1170, 520], "size": [210, 72] },
+    { "id": "bumpers", "type": "database", "label": "ChannelBumpers", "sublabel": "Era media", "pos": [350, 330], "size": [210, 72] },
+    { "id": "schedule", "type": "database", "label": "ChannelScheduleEntries", "sublabel": "Episode or bumper airtime", "pos": [680, 520], "size": [250, 72] },
+    { "id": "users", "type": "database", "label": "Users / Roles", "sublabel": "Identity and access", "pos": [70, 620], "size": [180, 72] },
+    { "id": "tokens", "type": "database", "label": "RefreshTokens / Menus", "sublabel": "Sessions and navigation", "pos": [350, 620], "size": [220, 72] }
+  ],
+  "connections": [
+    { "from": "channels", "to": "eras" },
+    { "from": "eras", "to": "eraSeries" },
+    { "from": "eraSeries", "to": "series" },
+    { "from": "series", "to": "episodes" },
+    { "from": "series", "to": "categories", "fromSide": "right", "toSide": "top" },
+    { "from": "eras", "to": "bumpers" },
+    { "from": "episodes", "to": "schedule" },
+    { "from": "bumpers", "to": "schedule" },
+    { "from": "users", "to": "tokens" }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "Normalization target", "items": ["Replace ChannelEras.SeriesSeasonsJson with atomic season rows", "Keep the existing era-series assignment and API behavior"] }
+  ]
+}

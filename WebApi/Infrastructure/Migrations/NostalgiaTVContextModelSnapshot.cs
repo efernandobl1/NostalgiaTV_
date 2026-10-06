@@ -148,7 +148,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("EndDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("HistoricalEndDate");
 
                     b.Property<string>("FolderPath")
                         .HasColumnType("nvarchar(max)");
@@ -157,18 +158,129 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("SeriesSeasonsJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("StartDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasColumnName("HistoricalStartDate");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ChannelId");
+                    b.ToTable("ChannelEras", t =>
+                        {
+                            t.HasCheckConstraint("CK_ChannelEras_HistoricalDates", "[HistoricalEndDate] IS NULL OR [HistoricalEndDate] >= [HistoricalStartDate]");
+                        });
+                });
 
-                    b.ToTable("ChannelEras");
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelEraBreakRule", b =>
+                {
+                    b.Property<int>("ChannelEraId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaximumAds")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaximumBreakSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MinimumAds")
+                        .HasColumnType("int");
+
+                    b.HasKey("ChannelEraId");
+
+                    b.ToTable("ChannelEraBreakRules", t =>
+                        {
+                            t.HasCheckConstraint("CK_ChannelEraBreakRules_AdCount", "[MinimumAds] >= 1 AND [MaximumAds] >= [MinimumAds]");
+
+                            t.HasCheckConstraint("CK_ChannelEraBreakRules_Duration", "[MaximumBreakSeconds] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelEraInterlude", b =>
+                {
+                    b.Property<int>("ChannelEraId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("InterludeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("MinimumGapSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Weight")
+                        .HasColumnType("int");
+
+                    b.HasKey("ChannelEraId", "InterludeId", "Role");
+
+                    b.HasIndex("InterludeId");
+
+                    b.ToTable("ChannelEraInterludes", t =>
+                        {
+                            t.HasCheckConstraint("CK_ChannelEraInterludes_Gap", "[MinimumGapSeconds] >= 0");
+
+                            t.HasCheckConstraint("CK_ChannelEraInterludes_Role", "[Role] IN ('BreakOpener', 'Advertisement', 'BreakCloser')");
+
+                            t.HasCheckConstraint("CK_ChannelEraInterludes_Weight", "[Weight] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelEraSelectedSeason", b =>
+                {
+                    b.Property<int>("ChannelEraId")
+                        .HasColumnType("int")
+                        .HasColumnName("ChannelErasId");
+
+                    b.Property<int>("SeriesId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SeasonNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("ChannelEraId", "SeriesId", "SeasonNumber");
+
+                    b.ToTable("ChannelEraSelectedSeasons", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ChannelEraSelectedSeasons_SeasonNumber", "[SeasonNumber] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelEraSelection", b =>
+                {
+                    b.Property<int>("ChannelId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ChannelEraId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SelectedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ChannelId");
+
+                    b.HasIndex("ChannelId", "ChannelEraId");
+
+                    b.ToTable("ChannelEraSelections");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelEraSeries", b =>
+                {
+                    b.Property<int>("ChannelEraId")
+                        .HasColumnType("int")
+                        .HasColumnName("ChannelErasId");
+
+                    b.Property<int>("SeriesId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("HasSeasonFilter")
+                        .HasColumnType("bit");
+
+                    b.HasKey("ChannelEraId", "SeriesId");
+
+                    b.HasIndex("SeriesId");
+
+                    b.ToTable("ChannelEraSeries", (string)null);
                 });
 
             modelBuilder.Entity("ApplicationCore.Entities.ChannelScheduleEntry", b =>
@@ -189,6 +301,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int?>("EpisodeId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ShuffleCycle")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("StartTime")
@@ -271,6 +386,35 @@ namespace Infrastructure.Migrations
                     b.ToTable("Episodes");
                 });
 
+            modelBuilder.Entity("ApplicationCore.Entities.EpisodeBreakPoint", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EpisodeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Label")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("OffsetSeconds")
+                        .HasColumnType("decimal(12,3)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EpisodeId", "OffsetSeconds")
+                        .IsUnique();
+
+                    b.ToTable("EpisodeBreakPoints", t =>
+                        {
+                            t.HasCheckConstraint("CK_EpisodeBreakPoints_Offset", "[OffsetSeconds] > 0");
+                        });
+                });
+
             modelBuilder.Entity("ApplicationCore.Entities.EpisodeType", b =>
                 {
                     b.Property<int>("Id")
@@ -312,6 +456,57 @@ namespace Infrastructure.Migrations
                         {
                             Id = 5,
                             Name = "Movie"
+                        });
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.Interlude", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("ApprovedForBroadcast")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("DurationSeconds")
+                        .HasColumnType("decimal(12,3)");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int?>("OriginalYearFrom")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OriginalYearTo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RegionCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Interludes", t =>
+                        {
+                            t.HasCheckConstraint("CK_Interludes_Duration", "[DurationSeconds] > 0");
+
+                            t.HasCheckConstraint("CK_Interludes_Kind", "[Kind] IN ('Bumper', 'Advertisement')");
+
+                            t.HasCheckConstraint("CK_Interludes_OriginalYears", "[OriginalYearTo] IS NULL OR [OriginalYearFrom] IS NULL OR [OriginalYearTo] >= [OriginalYearFrom]");
                         });
                 });
 
@@ -465,6 +660,65 @@ namespace Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ApplicationCore.Entities.MetadataImportRun", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("FinishedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LanguageCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("SeriesExternalId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeriesExternalId");
+
+                    b.ToTable("MetadataImportRuns");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.MetadataProvider", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("MetadataProviders");
+                });
+
             modelBuilder.Entity("ApplicationCore.Entities.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
@@ -532,6 +786,121 @@ namespace Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ApplicationCore.Entities.ScheduledAdBreak", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("EpisodeBreakPointId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Ordinal")
+                        .HasColumnType("int");
+
+                    b.Property<long>("ScheduledProgramId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EpisodeBreakPointId");
+
+                    b.HasIndex("ScheduledProgramId", "EpisodeBreakPointId")
+                        .IsUnique();
+
+                    b.HasIndex("ScheduledProgramId", "Ordinal")
+                        .IsUnique();
+
+                    b.ToTable("ScheduledAdBreaks", t =>
+                        {
+                            t.HasCheckConstraint("CK_ScheduledAdBreaks_Ordinal", "[Ordinal] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ScheduledPlaybackSegment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("EndsAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("InterludeId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("MediaEndSecond")
+                        .HasColumnType("decimal(12,3)");
+
+                    b.Property<decimal?>("MediaStartSecond")
+                        .HasColumnType("decimal(12,3)");
+
+                    b.Property<long?>("ScheduledAdBreakId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ScheduledProgramId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartsAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InterludeId");
+
+                    b.HasIndex("ScheduledAdBreakId", "ScheduledProgramId");
+
+                    b.HasIndex("ScheduledProgramId", "Sequence")
+                        .IsUnique();
+
+                    b.HasIndex("StartsAtUtc", "EndsAtUtc");
+
+                    b.ToTable("ScheduledPlaybackSegments", t =>
+                        {
+                            t.HasCheckConstraint("CK_ScheduledPlaybackSegments_Content", "([InterludeId] IS NULL AND [ScheduledAdBreakId] IS NULL AND [MediaStartSecond] IS NOT NULL AND [MediaEndSecond] IS NOT NULL AND [MediaStartSecond] >= 0 AND [MediaEndSecond] > [MediaStartSecond]) OR ([InterludeId] IS NOT NULL AND [ScheduledAdBreakId] IS NOT NULL AND [MediaStartSecond] IS NULL AND [MediaEndSecond] IS NULL)");
+
+                            t.HasCheckConstraint("CK_ScheduledPlaybackSegments_Sequence", "[Sequence] > 0");
+
+                            t.HasCheckConstraint("CK_ScheduledPlaybackSegments_Time", "[EndsAtUtc] > [StartsAtUtc]");
+                        });
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ScheduledProgram", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("ChannelEraId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EpisodeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("GeneratedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ShuffleCycle")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChannelEraId");
+
+                    b.HasIndex("EpisodeId");
+
+                    b.ToTable("ScheduledPrograms");
+                });
+
             modelBuilder.Entity("ApplicationCore.Entities.Series", b =>
                 {
                     b.Property<int>("Id")
@@ -571,6 +940,78 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Series");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.SeriesComment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("EditedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("ParentCommentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("SeriesId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeriesId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ParentCommentId", "SeriesId");
+
+                    b.ToTable("SeriesComments");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.SeriesExternalId", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("ProviderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SeriesId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeriesId");
+
+                    b.HasIndex("ProviderId", "ExternalId")
+                        .IsUnique();
+
+                    b.ToTable("SeriesExternalIds");
                 });
 
             modelBuilder.Entity("ApplicationCore.Entities.User", b =>
@@ -621,21 +1062,6 @@ namespace Infrastructure.Migrations
                     b.HasIndex("SeriesId");
 
                     b.ToTable("SeriesCategories", (string)null);
-                });
-
-            modelBuilder.Entity("ChannelEraSeries", b =>
-                {
-                    b.Property<int>("ChannelErasId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SeriesId")
-                        .HasColumnType("int");
-
-                    b.HasKey("ChannelErasId", "SeriesId");
-
-                    b.HasIndex("SeriesId");
-
-                    b.ToTable("ChannelEraSeries", (string)null);
                 });
 
             modelBuilder.Entity("ChannelSeries", b =>
@@ -742,6 +1168,76 @@ namespace Infrastructure.Migrations
                     b.Navigation("Channel");
                 });
 
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelEraBreakRule", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.ChannelEra", null)
+                        .WithOne()
+                        .HasForeignKey("ApplicationCore.Entities.ChannelEraBreakRule", "ChannelEraId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelEraInterlude", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.ChannelEra", null)
+                        .WithMany()
+                        .HasForeignKey("ChannelEraId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.Interlude", null)
+                        .WithMany()
+                        .HasForeignKey("InterludeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelEraSelectedSeason", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.ChannelEraSeries", "ChannelEraSeries")
+                        .WithMany("SelectedSeasons")
+                        .HasForeignKey("ChannelEraId", "SeriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChannelEraSeries");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelEraSelection", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.Channel", null)
+                        .WithOne()
+                        .HasForeignKey("ApplicationCore.Entities.ChannelEraSelection", "ChannelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.ChannelEra", null)
+                        .WithMany()
+                        .HasForeignKey("ChannelId", "ChannelEraId")
+                        .HasPrincipalKey("ChannelId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelEraSeries", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.ChannelEra", "ChannelEra")
+                        .WithMany("SeriesLinks")
+                        .HasForeignKey("ChannelEraId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.Series", "Series")
+                        .WithMany()
+                        .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChannelEra");
+
+                    b.Navigation("Series");
+                });
+
             modelBuilder.Entity("ApplicationCore.Entities.ChannelScheduleEntry", b =>
                 {
                     b.HasOne("ApplicationCore.Entities.ChannelBumper", "Bumper")
@@ -805,6 +1301,15 @@ namespace Infrastructure.Migrations
                     b.Navigation("Series");
                 });
 
+            modelBuilder.Entity("ApplicationCore.Entities.EpisodeBreakPoint", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.Episode", null)
+                        .WithMany()
+                        .HasForeignKey("EpisodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ApplicationCore.Entities.Menu", b =>
                 {
                     b.HasOne("ApplicationCore.Entities.Menu", "Parent")
@@ -812,6 +1317,15 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("ParentId");
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.MetadataImportRun", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.SeriesExternalId", null)
+                        .WithMany()
+                        .HasForeignKey("SeriesExternalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ApplicationCore.Entities.RefreshToken", b =>
@@ -823,6 +1337,104 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ScheduledAdBreak", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.EpisodeBreakPoint", "EpisodeBreakPoint")
+                        .WithMany()
+                        .HasForeignKey("EpisodeBreakPointId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.ScheduledProgram", "ScheduledProgram")
+                        .WithMany()
+                        .HasForeignKey("ScheduledProgramId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EpisodeBreakPoint");
+
+                    b.Navigation("ScheduledProgram");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ScheduledPlaybackSegment", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.Interlude", "Interlude")
+                        .WithMany()
+                        .HasForeignKey("InterludeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ApplicationCore.Entities.ScheduledProgram", "ScheduledProgram")
+                        .WithMany()
+                        .HasForeignKey("ScheduledProgramId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.ScheduledAdBreak", null)
+                        .WithMany()
+                        .HasForeignKey("ScheduledAdBreakId", "ScheduledProgramId")
+                        .HasPrincipalKey("Id", "ScheduledProgramId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Interlude");
+
+                    b.Navigation("ScheduledProgram");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ScheduledProgram", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.ChannelEra", "ChannelEra")
+                        .WithMany()
+                        .HasForeignKey("ChannelEraId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.Episode", "Episode")
+                        .WithMany()
+                        .HasForeignKey("EpisodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ChannelEra");
+
+                    b.Navigation("Episode");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.SeriesComment", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.Series", null)
+                        .WithMany()
+                        .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.SeriesComment", null)
+                        .WithMany()
+                        .HasForeignKey("ParentCommentId", "SeriesId")
+                        .HasPrincipalKey("Id", "SeriesId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.SeriesExternalId", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.MetadataProvider", null)
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.Series", null)
+                        .WithMany()
+                        .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ApplicationCore.Entities.User", b =>
@@ -841,21 +1453,6 @@ namespace Infrastructure.Migrations
                     b.HasOne("ApplicationCore.Entities.Category", null)
                         .WithMany()
                         .HasForeignKey("CategoriesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ApplicationCore.Entities.Series", null)
-                        .WithMany()
-                        .HasForeignKey("SeriesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("ChannelEraSeries", b =>
-                {
-                    b.HasOne("ApplicationCore.Entities.ChannelEra", null)
-                        .WithMany()
-                        .HasForeignKey("ChannelErasId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -906,6 +1503,13 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("ApplicationCore.Entities.ChannelEra", b =>
                 {
                     b.Navigation("Bumpers");
+
+                    b.Navigation("SeriesLinks");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ChannelEraSeries", b =>
+                {
+                    b.Navigation("SelectedSeasons");
                 });
 
             modelBuilder.Entity("ApplicationCore.Entities.Menu", b =>

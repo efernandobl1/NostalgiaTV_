@@ -6,420 +6,501 @@ using Infrastructure.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json;
+using System.Collections.Concurrent;
 
-namespace Infrastructure.Services
+namespace Infrastructure.Services;
+
+public class ChannelScheduleService
 {
-    public class ChannelScheduleService
+    private readonly NostalgiaTVContext _context;
+    private readonly ILogger<ChannelScheduleService> _logger;
+    private readonly ChannelSchedulingSettings _rules;
+    private static readonly ConcurrentDictionary<int, SemaphoreSlim> Locks = new();
+
+    public ChannelScheduleService(
+        NostalgiaTVContext context,
+        ILogger<ChannelScheduleService> logger,
+        IOptions<ChannelSchedulingSettings> rules)
     {
-        private readonly NostalgiaTVContext _context;
-        private readonly ILogger<ChannelScheduleService> _logger;
-        private readonly ChannelSchedulingSettings _rules;
-        private static readonly Dictionary<int, SemaphoreSlim> _locks = new();
-        private static readonly object _lockDict = new();
+        _context = context;
+        _logger = logger;
+        _rules = rules.Value;
+    }
 
-        public ChannelScheduleService(
-            NostalgiaTVContext context,
-            ILogger<ChannelScheduleService> logger,
-            IOptions<ChannelSchedulingSettings> rules)
+    public async Task<List<ChannelScheduleEntryResponse>> GetScheduleAsync(int channelId)
+    {
+        var now = DateTime.UtcNow;
+        await EnsureScheduleGeneratedAsync(channelId, now.AddHours(24));
+        var entries = await LoadSegments(channelId)
+            .Where(segment => segment.EndsAtUtc >= now.AddHours(-24)
+                && segment.StartsAtUtc <= now.AddHours(24))
+            .OrderBy(segment => segment.StartsAtUtc)
+            .ToListAsync();
+
+        return entries.Select(segment =>
         {
-            _context = context;
-            _logger = logger;
-            _rules = rules.Value;
+            var entry = ToEntry(segment);
+            return new ChannelScheduleEntryResponse
+            {
+                Id = entry.SegmentId,
+                ChannelId = channelId,
+                EpisodeId = entry.EpisodeId,
+                EpisodeTitle = entry.Episode?.Title ?? entry.Bumper?.Title ?? "",
+                SeriesName = entry.Episode?.Series?.Name ?? "",
+                SeriesLogoPath = entry.Episode?.Series?.LogoPath,
+                FilePath = CleanPath(entry.Episode?.FilePath ?? entry.Bumper?.FilePath),
+                StartTime = DateTime.SpecifyKind(entry.StartTime, DateTimeKind.Utc),
+                EndTime = DateTime.SpecifyKind(entry.EndTime, DateTimeKind.Utc),
+                Season = entry.Episode?.Season ?? 0,
+                EpisodeNumber = entry.Episode?.EpisodeNumber ?? 0,
+                BumperId = entry.BumperId,
+                BumperTitle = entry.Bumper?.Title,
+                IsBumper = entry.BumperId != null,
+                ContentKind = segment.Interlude?.Kind.ToString() ?? "Episode",
+                MediaStartSecond = segment.MediaStartSecond
+            };
+        }).ToList();
+    }
+
+    public async Task EnsureScheduleGeneratedAsync(int channelId, DateTime until)
+    {
+        var gate = Locks.GetOrAdd(channelId, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
+        try
+        {
+            await GenerateScheduleCoreAsync(channelId, until);
         }
-
-        private static bool IsMovieType(string? name) =>
-            string.Equals(name, "Movie", StringComparison.OrdinalIgnoreCase);
-        private static bool IsSpecialType(string? name) =>
-            name != null && name.Contains("Special", StringComparison.OrdinalIgnoreCase);
-
-        private static SemaphoreSlim GetLock(int channelId)
+        finally
         {
-            lock (_lockDict)
-            {
-                if (!_locks.TryGetValue(channelId, out var sem))
-                {
-                    sem = new SemaphoreSlim(1, 1);
-                    _locks[channelId] = sem;
-                }
-                return sem;
-            }
-        }
-
-        // Returns the schedule from 24h ago to 24h ahead (for the guide, centered on "now").
-        public async Task<List<ChannelScheduleEntryResponse>> GetScheduleAsync(int channelId)
-        {
-            var now = DateTime.UtcNow;
-            var from = now.AddHours(-24);
-            var until = now.AddHours(24);
-
-            _logger.LogInformation("[SCHEDULE] GetScheduleAsync channelId={ch} from={from} to={to}", channelId, from, until);
-
-            await EnsureScheduleGeneratedAsync(channelId, until);
-
-            var entries = await _context.ChannelScheduleEntries
-                .Where(e => e.ChannelId == channelId && e.EndTime >= from && e.StartTime <= until)
-                .Include(e => e.Episode).ThenInclude(e => e.Series)
-                .Include(e => e.Bumper)
-                .OrderBy(e => e.StartTime)
-                .Select(e => new ChannelScheduleEntryResponse
-                {
-                    Id = e.Id,
-                    ChannelId = e.ChannelId,
-                    EpisodeId = e.EpisodeId,
-                    EpisodeTitle = e.Episode != null ? e.Episode.Title : (e.Bumper != null ? e.Bumper.Title : ""),
-                    SeriesName = e.Episode != null ? e.Episode.Series.Name : "",
-                    SeriesLogoPath = e.Episode != null ? e.Episode.Series.LogoPath : null,
-                    FilePath = e.Episode != null ? e.Episode.FilePath!.Replace("wwwroot", "").Replace("\\", "/") : (e.Bumper != null ? e.Bumper.FilePath!.Replace("wwwroot", "").Replace("\\", "/") : ""),
-                    StartTime = DateTime.SpecifyKind(e.StartTime, DateTimeKind.Utc),
-                    EndTime = DateTime.SpecifyKind(e.EndTime, DateTimeKind.Utc),
-                    Season = e.Episode != null ? e.Episode.Season : 0,
-                    EpisodeNumber = e.Episode != null ? e.Episode.EpisodeNumber : 0,
-                    BumperId = e.BumperId,
-                    BumperTitle = e.Bumper != null ? e.Bumper.Title : null,
-                })
-                .ToListAsync();
-
-            _logger.LogInformation("[SCHEDULE] Returning {count} entries for channel {ch}", entries.Count, channelId);
-            return entries;
-        }
-
-        public async Task EnsureScheduleGeneratedAsync(int channelId, DateTime until)
-        {
-            _logger.LogInformation("[SCHEDULE] EnsureScheduleGeneratedAsync channelId={ch} until={until}", channelId, until);
-
-            var sem = GetLock(channelId);
-            await sem.WaitAsync();
-
-            try
-            {
-                var lastEntry = await _context.ChannelScheduleEntries
-                    .Where(e => e.ChannelId == channelId)
-                    .OrderByDescending(e => e.EndTime)
-                    .FirstOrDefaultAsync();
-
-                var generateFrom = lastEntry?.EndTime ?? DateTime.UtcNow;
-
-                _logger.LogInformation("[SCHEDULE] Last entry ends at={last}, generateFrom={from}", lastEntry?.EndTime, generateFrom);
-
-                if (generateFrom >= until)
-                {
-                    _logger.LogInformation("[SCHEDULE] No generation needed, generateFrom >= until");
-                    return;
-                }
-
-                await GenerateScheduleAsync(channelId, generateFrom, until);
-            }
-            finally
-            {
-                sem.Release();
-            }
-        }
-
-        private async Task GenerateScheduleAsync(int channelId, DateTime from, DateTime until)
-        {
-            _logger.LogInformation("[SCHEDULE] GenerateScheduleAsync channelId={ch} from={from} until={until}", channelId, from, until);
-
-            var channel = await _context.Channels
-                .AsNoTracking()
-                .Include(c => c.Eras).ThenInclude(e => e.Series)
-                .Include(c => c.Eras).ThenInclude(e => e.Bumpers)
-                .Include(c => c.Series)
-                .FirstOrDefaultAsync(c => c.Id == channelId);
-
-            if (channel == null)
-            {
-                _logger.LogWarning("[SCHEDULE] Channel {ch} not found", channelId);
-                return;
-            }
-
-            var eras = channel.Eras.ToList();
-            var seasonSelections = eras.ToDictionary(era => era.Id, era =>
-            {
-                if (string.IsNullOrWhiteSpace(era.SeriesSeasonsJson)) return new Dictionary<int, List<int>>();
-                try { return JsonSerializer.Deserialize<Dictionary<int, List<int>>>(era.SeriesSeasonsJson) ?? []; }
-                catch (JsonException) { return new Dictionary<int, List<int>>(); }
-            });
-            _logger.LogInformation("[SCHEDULE] Channel has {eraCount} eras, {seriesCount} direct series", eras.Count, channel.Series.Count);
-
-            foreach (var era in eras)
-            {
-                _logger.LogInformation("[SCHEDULE] Era: id={id} name={name} start={start} end={end} series={series}",
-                    era.Id, era.Name, era.StartDate, era.EndDate, era.Series.Count);
-            }
-
-            var random = new Random();
-            var current = from;
-            var noRepeat = TimeSpan.FromHours(Math.Max(0, _rules.NoRepeatWindowHours));
-
-            // Siembra desde lo ya generado, para respetar "no repetir en 24h" y los
-            // cupos diarios de especiales/películas cruzando una regeneración.
-            var seed = await _context.ChannelScheduleEntries
-                .AsNoTracking()
-                .Where(e => e.ChannelId == channelId && e.EpisodeId != null
-                         && e.StartTime >= from.Add(-noRepeat))
-                .Include(e => e.Episode).ThenInclude(e => e!.EpisodeType)
-                .Select(e => new { EpisodeId = e.EpisodeId!.Value, e.StartTime, e.Episode!.SeriesId, TypeName = e.Episode.EpisodeType.Name })
-                .ToListAsync();
-
-            // Última vez que se programó cada episodio (para la ventana de no-repetición).
-            var lastScheduled = seed
-                .GroupBy(x => x.EpisodeId)
-                .ToDictionary(g => g.Key, g => g.Max(x => x.StartTime));
-
-            // Cupos por día (y por serie/día) ya consumidos por lo existente.
-            var specialsPerDay = new Dictionary<DateOnly, int>();
-            var moviesPerDay = new Dictionary<DateOnly, int>();
-            var specialsPerSeriesDay = new Dictionary<(DateOnly, int), int>();
-            var moviesPerSeriesDay = new Dictionary<(DateOnly, int), int>();
-            foreach (var x in seed.Where(x => x.StartTime >= from.Date))
-            {
-                var day = DateOnly.FromDateTime(x.StartTime);
-                if (IsMovieType(x.TypeName))
-                {
-                    moviesPerDay[day] = moviesPerDay.GetValueOrDefault(day) + 1;
-                    moviesPerSeriesDay[(day, x.SeriesId)] = moviesPerSeriesDay.GetValueOrDefault((day, x.SeriesId)) + 1;
-                }
-                else if (IsSpecialType(x.TypeName))
-                {
-                    specialsPerDay[day] = specialsPerDay.GetValueOrDefault(day) + 1;
-                    specialsPerSeriesDay[(day, x.SeriesId)] = specialsPerSeriesDay.GetValueOrDefault((day, x.SeriesId)) + 1;
-                }
-            }
-
-            int? lastEpisodeId = null;
-            var durationCache = new Dictionary<string, double>();
-            var batch = new List<ChannelScheduleEntry>();
-            var totalGenerated = 0;
-            var iterationCount = 0;
-            var skipCount = 0;
-
-            while (current < until)
-            {
-                iterationCount++;
-
-                List<int> eraSeriesIds;
-                List<ChannelBumper> eraBumpers;
-                Dictionary<int, List<int>> selectedSeasons = [];
-
-                if (eras.Any())
-                {
-                    var activeEra = GetActiveEra(eras, current);
-                    if (activeEra == null)
-                    {
-                        _logger.LogWarning("[SCHEDULE] Iteration {iter}: No active era for time={time}, skipping 30min", iterationCount, current);
-                        current = current.AddMinutes(30);
-                        skipCount++;
-                        if (skipCount > 100) { _logger.LogError("[SCHEDULE] Too many skips, aborting"); break; }
-                        continue;
-                    }
-                    eraSeriesIds = activeEra.Series.Select(s => s.Id).ToList();
-                    selectedSeasons = seasonSelections[activeEra.Id];
-                    eraBumpers = activeEra.Bumpers.Where(b => !string.IsNullOrEmpty(b.FilePath)).ToList();
-                    _logger.LogInformation("[SCHEDULE] Iteration {iter}: Active era={era} with {series} series, {bumpers} bumpers",
-                        iterationCount, activeEra.Name, eraSeriesIds.Count, eraBumpers.Count);
-                }
-                else
-                {
-                    eraSeriesIds = channel.Series.Select(s => s.Id).ToList();
-                    eraBumpers = [];
-                    _logger.LogInformation("[SCHEDULE] Iteration {iter}: No eras, using {series} direct channel series", iterationCount, eraSeriesIds.Count);
-                }
-
-                if (!eraSeriesIds.Any())
-                {
-                    _logger.LogWarning("[SCHEDULE] Iteration {iter}: No series in era/channel, skipping 30min", iterationCount);
-                    current = current.AddMinutes(30);
-                    skipCount++;
-                    if (skipCount > 100) { _logger.LogError("[SCHEDULE] Too many skips, aborting"); break; }
-                    continue;
-                }
-
-                var episodes = await _context.Episodes
-                    .AsNoTracking()
-                    .Include(e => e.EpisodeType)
-                    .Include(e => e.Series)
-                    .Where(e => eraSeriesIds.Contains(e.SeriesId) && e.FilePath != null)
-                    .ToListAsync();
-
-                episodes = episodes
-                    .Where(e => !selectedSeasons.TryGetValue(e.SeriesId, out var seasons) || seasons.Contains(e.Season))
-                    .ToList();
-
-                _logger.LogInformation("[SCHEDULE] Iteration {iter}: Found {epCount} episodes for series [{seriesIds}]",
-                    iterationCount, episodes.Count, string.Join(",", eraSeriesIds));
-
-                if (!episodes.Any())
-                {
-                    _logger.LogWarning("[SCHEDULE] Iteration {iter}: No episodes found, skipping 30min", iterationCount);
-                    current = current.AddMinutes(30);
-                    skipCount++;
-                    if (skipCount > 100) { _logger.LogError("[SCHEDULE] Too many skips, aborting"); break; }
-                    continue;
-                }
-
-                // Selección ALEATORIA respetando, en orden de prioridad, estas reglas
-                // (si nada es elegible se van relajando): no repetir un episodio dentro
-                // de la ventana; cupos de especiales/películas por serie y totales por
-                // día; y no repetir el episodio inmediatamente anterior.
-                var day = DateOnly.FromDateTime(current);
-                var windowStart = current - noRepeat;
-
-                bool WithinCaps(Episode e)
-                {
-                    if (IsMovieType(e.EpisodeType.Name))
-                        return moviesPerDay.GetValueOrDefault(day) < _rules.MaxMoviesPerDay
-                            && moviesPerSeriesDay.GetValueOrDefault((day, e.SeriesId)) < _rules.MaxMoviesPerSeriesPerDay;
-                    if (IsSpecialType(e.EpisodeType.Name))
-                        return specialsPerDay.GetValueOrDefault(day) < _rules.MaxSpecialsPerDay
-                            && specialsPerSeriesDay.GetValueOrDefault((day, e.SeriesId)) < _rules.MaxSpecialsPerSeriesPerDay;
-                    return true;
-                }
-                bool NotRepeated(Episode e) =>
-                    !lastScheduled.TryGetValue(e.Id, out var t) || t <= windowStart;
-
-                var pool = episodes.Where(e => e.Id != lastEpisodeId && WithinCaps(e) && NotRepeated(e)).ToList();
-                if (pool.Count == 0) pool = episodes.Where(e => e.Id != lastEpisodeId && WithinCaps(e)).ToList();
-                if (pool.Count == 0) pool = episodes.Where(e => e.Id != lastEpisodeId && NotRepeated(e)).ToList();
-                if (pool.Count == 0) pool = episodes.Where(e => e.Id != lastEpisodeId).ToList();
-                if (pool.Count == 0) pool = episodes;
-
-                var episode = pool[random.Next(pool.Count)];
-
-                _logger.LogInformation("[SCHEDULE] Iteration {iter}: Selected episode={ep} series={s}",
-                    iterationCount, episode.Title, episode.Series.Name);
-
-                var duration = GetCachedDuration(episode.FilePath!, durationCache);
-                var end = current.AddSeconds(duration);
-                batch.Add(new ChannelScheduleEntry
-                {
-                    ChannelId = channelId,
-                    EpisodeId = episode.Id,
-                    StartTime = current,
-                    EndTime = end,
-                });
-
-                // Contabilidad para las reglas.
-                lastScheduled[episode.Id] = current;
-                lastEpisodeId = episode.Id;
-                if (IsMovieType(episode.EpisodeType.Name))
-                {
-                    moviesPerDay[day] = moviesPerDay.GetValueOrDefault(day) + 1;
-                    moviesPerSeriesDay[(day, episode.SeriesId)] = moviesPerSeriesDay.GetValueOrDefault((day, episode.SeriesId)) + 1;
-                }
-                else if (IsSpecialType(episode.EpisodeType.Name))
-                {
-                    specialsPerDay[day] = specialsPerDay.GetValueOrDefault(day) + 1;
-                    specialsPerSeriesDay[(day, episode.SeriesId)] = specialsPerSeriesDay.GetValueOrDefault((day, episode.SeriesId)) + 1;
-                }
-                current = end;
-
-                // Insert bumper after every episode if available
-                if (eraBumpers.Any())
-                {
-                    var bumper = eraBumpers[random.Next(eraBumpers.Count)];
-                    var bumperDuration = GetCachedDuration(bumper.FilePath!, durationCache);
-
-                    var bumperEnd = current.AddSeconds(bumperDuration);
-                    batch.Add(new ChannelScheduleEntry
-                    {
-                        ChannelId = channelId,
-                        BumperId = bumper.Id,
-                        StartTime = current,
-                        EndTime = bumperEnd,
-                    });
-
-                    current = bumperEnd;
-                }
-
-                if (batch.Count >= 20)
-                {
-                    _context.ChannelScheduleEntries.AddRange(batch);
-                    await _context.SaveChangesAsync();
-                    totalGenerated += batch.Count;
-                    _logger.LogInformation("[SCHEDULE] Saved batch of {count} entries (total={total})", batch.Count, totalGenerated);
-                    batch.Clear();
-                }
-            }
-
-            if (batch.Count > 0)
-            {
-                _context.ChannelScheduleEntries.AddRange(batch);
-                await _context.SaveChangesAsync();
-                totalGenerated += batch.Count;
-            }
-
-            _logger.LogInformation("[SCHEDULE] Generated {count} schedule entries for channel {id} in {iter} iterations ({skip} skips)",
-                totalGenerated, channelId, iterationCount, skipCount);
-        }
-
-        private static double GetCachedDuration(string filePath, Dictionary<string, double> cache)
-        {
-            if (cache.TryGetValue(filePath, out var cached)) return cached;
-
-            var duration = VideoHelper.GetVideoDurationAsync(filePath).GetAwaiter().GetResult();
-            if (duration <= 0) duration = 1800;
-            cache[filePath] = duration;
-            return duration;
-        }
-
-        private ChannelEra? GetActiveEra(List<ChannelEra> eras, DateTime time)
-        {
-            // Pick the era with the latest start date (most recent era = current one)
-            // Historical dates are informational only, not scheduling constraints
-            return eras.OrderByDescending(e => e.StartDate).FirstOrDefault();
-        }
-
-        public async Task<ChannelScheduleEntry?> GetCurrentEntryAsync(int channelId)
-        {
-            var now = DateTime.UtcNow;
-
-            var entry = await _context.ChannelScheduleEntries
-                .AsNoTracking()
-                .Include(e => e.Episode).ThenInclude(e => e.Series)
-                .Include(e => e.Bumper)
-                .Where(e => e.ChannelId == channelId && e.StartTime <= now && e.EndTime > now)
-                .FirstOrDefaultAsync();
-
-            if (entry == null)
-            {
-                _logger.LogInformation("[SCHEDULE] No current entry for channel {ch}, regenerating...", channelId);
-                await EnsureScheduleGeneratedAsync(channelId, now.AddHours(24));
-
-                entry = await _context.ChannelScheduleEntries
-                    .AsNoTracking()
-                    .Include(e => e.Episode).ThenInclude(e => e.Series)
-                    .Include(e => e.Bumper)
-                    .Where(e => e.ChannelId == channelId && e.StartTime <= now && e.EndTime > now)
-                    .FirstOrDefaultAsync();
-
-                _logger.LogInformation("[SCHEDULE] After regeneration, current entry: {entry}", entry?.Episode?.Title ?? "null");
-            }
-
-            return entry;
-        }
-
-        public async Task<ChannelScheduleEntry?> GetNextEntryAsync(int channelId)
-        {
-            var now = DateTime.UtcNow;
-            return await _context.ChannelScheduleEntries
-                .AsNoTracking()
-                .Include(e => e.Episode).ThenInclude(e => e.Series)
-                .Include(e => e.Bumper)
-                .Where(e => e.ChannelId == channelId && e.StartTime > now)
-                .OrderBy(e => e.StartTime)
-                .FirstOrDefaultAsync();
-        }
-
-        public async Task CleanupOldEntriesAsync()
-        {
-            var cutoff = DateTime.UtcNow.AddHours(-24);
-            await _context.ChannelScheduleEntries
-                .Where(e => e.EndTime < cutoff)
-                .ExecuteDeleteAsync();
+            gate.Release();
         }
     }
+
+    public async Task RegenerateAsync(int channelId, DateTime until, bool replaceCurrent = false)
+    {
+        var gate = Locks.GetOrAdd(channelId, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
+        try
+        {
+            await using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                var now = DateTime.UtcNow;
+                var currentProgramId = await _context.ScheduledPlaybackSegments
+                    .Where(segment => segment.ScheduledProgram.ChannelEra.ChannelId == channelId
+                        && segment.StartsAtUtc <= now && segment.EndsAtUtc > now)
+                    .Select(segment => (long?)segment.ScheduledProgramId).FirstOrDefaultAsync();
+                var from = !replaceCurrent && currentProgramId.HasValue
+                    ? await _context.ScheduledPlaybackSegments.Where(segment => segment.ScheduledProgramId == currentProgramId)
+                        .MaxAsync(segment => segment.EndsAtUtc)
+                    : now;
+                await DeleteChannelScheduleCoreAsync(channelId, from, replaceCurrent);
+                await transaction.CommitAsync();
+            }
+            await GenerateScheduleCoreAsync(channelId, until);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    public async Task<List<int>> DeleteBreakPointAsync(EpisodeBreakPoint point)
+    {
+        var channelIds = await _context.ScheduledAdBreaks.AsNoTracking()
+            .Where(item => item.EpisodeBreakPointId == point.Id)
+            .Select(item => item.ScheduledProgram.ChannelEra.ChannelId)
+            .Distinct().OrderBy(id => id).ToListAsync();
+        var gates = channelIds.Select(id => Locks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1))).ToList();
+        var acquired = new List<SemaphoreSlim>();
+        try
+        {
+            foreach (var gate in gates)
+            {
+                await gate.WaitAsync();
+                acquired.Add(gate);
+            }
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            foreach (var channelId in channelIds)
+                await DeleteChannelScheduleCoreAsync(channelId);
+            _context.EpisodeBreakPoints.Remove(point);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return channelIds;
+        }
+        finally
+        {
+            foreach (var gate in acquired) gate.Release();
+        }
+    }
+
+    private async Task GenerateScheduleCoreAsync(int channelId, DateTime until)
+    {
+            var selection = await EnsureEraSelectionAsync(channelId);
+            if (selection == null) return;
+
+            var lastEnd = await _context.ScheduledPlaybackSegments
+                .Where(segment => segment.ScheduledProgram.ChannelEra.ChannelId == channelId)
+                .MaxAsync(segment => (DateTime?)segment.EndsAtUtc);
+            var current = lastEnd is { } end && end > DateTime.UtcNow ? end : DateTime.UtcNow;
+            if (current >= until) return;
+
+            var links = await _context.ChannelEraSeries
+                .AsNoTracking()
+                .Include(link => link.SelectedSeasons)
+                .Where(link => link.ChannelEraId == selection.ChannelEraId)
+                .ToListAsync();
+            var seriesIds = links.Select(link => link.SeriesId).ToArray();
+            if (seriesIds.Length == 0) return;
+
+            var episodes = await _context.Episodes.AsNoTracking()
+                .Include(episode => episode.EpisodeType)
+                .Where(episode => seriesIds.Contains(episode.SeriesId) && episode.FilePath != null)
+                .ToListAsync();
+            episodes = episodes.Where(episode =>
+            {
+                var link = links.First(item => item.SeriesId == episode.SeriesId);
+                return !link.HasSeasonFilter || link.SelectedSeasons.Any(season => season.SeasonNumber == episode.Season);
+            }).ToList();
+            if (episodes.Count == 0) return;
+
+            var breakRule = await _context.ChannelEraBreakRules.AsNoTracking()
+                .FirstOrDefaultAsync(rule => rule.ChannelEraId == selection.ChannelEraId);
+            var clips = await (
+                from assignment in _context.ChannelEraInterludes.AsNoTracking()
+                join clip in _context.Interludes.AsNoTracking() on assignment.InterludeId equals clip.Id
+                where assignment.ChannelEraId == selection.ChannelEraId
+                    && clip.ApprovedForBroadcast
+                select new EligibleClip(assignment, clip)).ToListAsync();
+            var lastClipUse = await (
+                from segment in _context.ScheduledPlaybackSegments.AsNoTracking()
+                where segment.InterludeId != null
+                    && segment.ScheduledProgram.ChannelEra.ChannelId == channelId
+                    && segment.EndsAtUtc >= current.AddDays(-7)
+                group segment by segment.InterludeId!.Value into uses
+                select new { ClipId = uses.Key, LastEnd = uses.Max(item => item.EndsAtUtc) })
+                .ToDictionaryAsync(item => item.ClipId, item => item.LastEnd);
+
+            var latestCycle = await _context.ScheduledPrograms
+                .Where(program => program.ChannelEra.ChannelId == channelId)
+                .MaxAsync(program => program.ShuffleCycle);
+            var legacyCycle = await _context.ChannelScheduleEntries
+                .Where(entry => entry.ChannelId == channelId && entry.EpisodeId != null)
+                .MaxAsync(entry => entry.ShuffleCycle);
+            latestCycle = Math.Max(latestCycle ?? 1, legacyCycle ?? 1);
+            var previous = await (
+                from segment in _context.ScheduledPlaybackSegments.AsNoTracking()
+                where segment.Sequence == 1
+                    && segment.ScheduledProgram.ChannelEra.ChannelId == channelId
+                    && (segment.StartsAtUtc >= current.AddDays(-3)
+                        || segment.ScheduledProgram.ShuffleCycle == latestCycle)
+                select new PriorProgram(
+                    segment.ScheduledProgram.EpisodeId,
+                    segment.ScheduledProgram.Episode.SeriesId,
+                    segment.ScheduledProgram.Episode.EpisodeType.Name,
+                    segment.StartsAtUtc,
+                    _context.ScheduledPlaybackSegments.Where(item => item.ScheduledProgramId == segment.ScheduledProgramId)
+                        .Max(item => item.EndsAtUtc),
+                    segment.ScheduledProgram.ShuffleCycle)).ToListAsync();
+
+            var legacyHistory = await _context.ChannelScheduleEntries.AsNoTracking()
+                .Where(entry => entry.ChannelId == channelId && entry.EpisodeId != null && entry.StartTime < current
+                    && (entry.StartTime >= current.AddDays(-3) || entry.ShuffleCycle == latestCycle))
+                .Select(entry => new PriorProgram(entry.EpisodeId!.Value, entry.Episode!.SeriesId,
+                    entry.Episode.EpisodeType.Name, entry.StartTime, entry.EndTime, entry.ShuffleCycle)).ToListAsync();
+            previous.AddRange(legacyHistory);
+            var selector = new ChannelEpisodeSelector(previous.Select(item => new EpisodeAiring(item.EpisodeId, item.StartsAtUtc, item.ShuffleCycle)));
+
+            var durations = new Dictionary<string, decimal>(StringComparer.Ordinal);
+            var eligibleIds = episodes.Select(episode => episode.Id).ToHashSet();
+            var previousDurations = previous.Where(item => eligibleIds.Contains(item.EpisodeId))
+                .Select(item => (item.EndsAtUtc - item.StartsAtUtc).TotalSeconds).Where(seconds => seconds > 0).ToList();
+            var averageDuration = previousDurations.Count > 0 ? previousDurations.Average() : 1800;
+            var preferredGap = ChannelEpisodeSelector.EstimatePreferredGap(
+                TimeSpan.FromHours(Math.Max(0, _rules.NoRepeatWindowHours)), episodes.Count, averageDuration);
+            var iterations = 0;
+            while (current < until && iterations++ < 500)
+            {
+                var programStart = current;
+                var episode = PickEpisode(episodes, previous, current, preferredGap, selector);
+                var duration = await GetDurationAsync(episode.FilePath!, durations);
+                var points = await _context.EpisodeBreakPoints.AsNoTracking()
+                    .Where(point => point.EpisodeId == episode.Id
+                        && point.OffsetSeconds > 0 && point.OffsetSeconds < duration)
+                    .OrderBy(point => point.OffsetSeconds)
+                    .ToListAsync();
+
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+                var program = new ScheduledProgram
+                {
+                    ChannelEraId = selection.ChannelEraId,
+                    EpisodeId = episode.Id,
+                    ShuffleCycle = selector.ShuffleCycle,
+                    GeneratedAtUtc = DateTime.UtcNow
+                };
+                _context.ScheduledPrograms.Add(program);
+                await _context.SaveChangesAsync();
+
+                var sequence = 0;
+                var offset = 0m;
+                var ordinal = 0;
+                var startsAt = current;
+                foreach (var point in points)
+                {
+                    var planned = PlanBreak(clips, breakRule, lastClipUse, startsAt.AddSeconds((double)(point.OffsetSeconds - offset)));
+                    if (planned.Count == 0) continue;
+
+                    startsAt = AddEpisodeSegment(program.Id, ++sequence, startsAt, offset, point.OffsetSeconds);
+                    var adBreak = new ScheduledAdBreak
+                    {
+                        ScheduledProgramId = program.Id,
+                        EpisodeBreakPointId = point.Id,
+                        Ordinal = ++ordinal
+                    };
+                    _context.ScheduledAdBreaks.Add(adBreak);
+                    await _context.SaveChangesAsync();
+
+                    foreach (var clip in planned)
+                    {
+                        var endsAt = startsAt.AddSeconds((double)clip.DurationSeconds);
+                        _context.ScheduledPlaybackSegments.Add(new ScheduledPlaybackSegment
+                        {
+                            ScheduledProgramId = program.Id,
+                            ScheduledAdBreakId = adBreak.Id,
+                            InterludeId = clip.Id,
+                            Sequence = ++sequence,
+                            StartsAtUtc = startsAt,
+                            EndsAtUtc = endsAt
+                        });
+                        startsAt = endsAt;
+                        lastClipUse[clip.Id] = endsAt;
+                    }
+                    offset = point.OffsetSeconds;
+                }
+
+                current = AddEpisodeSegment(program.Id, ++sequence, startsAt, offset, duration);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                previous.Add(new PriorProgram(episode.Id, episode.SeriesId, episode.EpisodeType.Name, programStart, current, selector.ShuffleCycle));
+            }
+            if (iterations >= 500)
+                _logger.LogWarning("Schedule generation stopped after 500 episodes for channel {ChannelId}", channelId);
+    }
+
+    private async Task<ChannelEraSelection?> EnsureEraSelectionAsync(int channelId)
+    {
+        var selection = await _context.ChannelEraSelections.FindAsync(channelId);
+        if (selection != null) return selection;
+
+        var channel = await _context.Channels.Include(item => item.Series)
+            .Include(item => item.Eras).FirstOrDefaultAsync(item => item.Id == channelId);
+        if (channel == null) return null;
+
+        var era = channel.Eras.OrderByDescending(item => item.StartDate).ThenByDescending(item => item.Id).FirstOrDefault();
+        if (era == null)
+        {
+            era = new ChannelEra
+            {
+                ChannelId = channelId,
+                Name = "Imported lineup",
+                StartDate = channel.StartDate,
+                EndDate = channel.EndDate
+            };
+            _context.ChannelEras.Add(era);
+            await _context.SaveChangesAsync();
+            _context.ChannelEraSeries.AddRange(channel.Series.Select(series => new ChannelEraSeries
+            {
+                ChannelEraId = era.Id,
+                SeriesId = series.Id
+            }));
+        }
+        selection = new ChannelEraSelection
+        {
+            ChannelId = channelId,
+            ChannelEraId = era.Id,
+            SelectedAtUtc = DateTime.UtcNow
+        };
+        _context.ChannelEraSelections.Add(selection);
+        await _context.SaveChangesAsync();
+        return selection;
+    }
+
+    private Episode PickEpisode(List<Episode> episodes, List<PriorProgram> prior, DateTime current, TimeSpan preferredGap, ChannelEpisodeSelector selector)
+    {
+        var day = current.Date;
+        var todays = prior.Where(item => item.StartsAtUtc.Date == day).ToList();
+        bool WithinCaps(Episode episode)
+        {
+            var name = episode.EpisodeType.Name;
+            if (name.Equals("Movie", StringComparison.OrdinalIgnoreCase))
+                return todays.Count(item => item.TypeName.Equals("Movie", StringComparison.OrdinalIgnoreCase)) < _rules.MaxMoviesPerDay
+                    && todays.Count(item => item.SeriesId == episode.SeriesId && item.TypeName.Equals("Movie", StringComparison.OrdinalIgnoreCase)) < _rules.MaxMoviesPerSeriesPerDay;
+            if (name.Contains("Special", StringComparison.OrdinalIgnoreCase))
+                return todays.Count(item => item.TypeName.Contains("Special", StringComparison.OrdinalIgnoreCase)) < _rules.MaxSpecialsPerDay
+                    && todays.Count(item => item.SeriesId == episode.SeriesId && item.TypeName.Contains("Special", StringComparison.OrdinalIgnoreCase)) < _rules.MaxSpecialsPerSeriesPerDay;
+            return true;
+        }
+        var pool = episodes.Where(WithinCaps).ToList();
+        if (pool.Count == 0) pool = episodes;
+        return selector.Choose(pool, current, preferredGap, Random.Shared);
+    }
+
+    private static List<Interlude> PlanBreak(
+        List<EligibleClip> clips,
+        ChannelEraBreakRule? rule,
+        Dictionary<int, DateTime> lastUse,
+        DateTime startsAt)
+    {
+        if (rule == null) return [];
+        var planned = new List<Interlude>();
+        var proposedUse = new Dictionary<int, DateTime>(lastUse);
+        var cursor = startsAt;
+        var shortestAd = clips.Where(item => item.Assignment.Role == BreakRole.Advertisement
+            && item.Clip.Kind == InterludeKind.Advertisement)
+            .Select(item => item.Clip.DurationSeconds).DefaultIfEmpty(decimal.MaxValue).Min();
+        var shortestCloser = clips.Where(item => item.Assignment.Role == BreakRole.BreakCloser
+            && item.Clip.Kind == InterludeKind.Bumper)
+            .Select(item => item.Clip.DurationSeconds).DefaultIfEmpty(decimal.MaxValue).Min();
+        if (shortestAd == decimal.MaxValue || shortestCloser == decimal.MaxValue) return [];
+
+        bool Add(BreakRole role, int remainingAds)
+        {
+            var candidates = clips.Where(item =>
+                item.Assignment.Role == role
+                && item.Clip.Kind == (role == BreakRole.Advertisement ? InterludeKind.Advertisement : InterludeKind.Bumper)
+                && (!proposedUse.TryGetValue(item.Clip.Id, out var last)
+                    || cursor >= last.AddSeconds(item.Assignment.MinimumGapSeconds))
+                && (cursor - startsAt).TotalSeconds + (double)item.Clip.DurationSeconds
+                    + (double)(shortestAd * remainingAds)
+                    + (role == BreakRole.BreakCloser ? 0 : (double)shortestCloser)
+                    <= rule.MaximumBreakSeconds)
+                .ToList();
+            if (candidates.Count == 0) return false;
+            var total = candidates.Sum(item => item.Assignment.Weight);
+            var choice = Random.Shared.Next(total);
+            var selected = candidates.First(item => (choice -= item.Assignment.Weight) < 0);
+            planned.Add(selected.Clip);
+            cursor = cursor.AddSeconds((double)selected.Clip.DurationSeconds);
+            proposedUse[selected.Clip.Id] = cursor;
+            return true;
+        }
+
+        if (!Add(BreakRole.BreakOpener, rule.MinimumAds)) return [];
+        var adCount = Random.Shared.Next(rule.MinimumAds, rule.MaximumAds + 1);
+        for (var i = 0; i < adCount; i++)
+            if (!Add(BreakRole.Advertisement, Math.Max(0, rule.MinimumAds - i - 1)))
+                return i >= rule.MinimumAds && Add(BreakRole.BreakCloser, 0) ? planned : [];
+        return Add(BreakRole.BreakCloser, 0) ? planned : [];
+    }
+
+    private DateTime AddEpisodeSegment(long programId, int sequence, DateTime start, decimal from, decimal to)
+    {
+        var end = start.AddSeconds((double)(to - from));
+        _context.ScheduledPlaybackSegments.Add(new ScheduledPlaybackSegment
+        {
+            ScheduledProgramId = programId,
+            Sequence = sequence,
+            StartsAtUtc = start,
+            EndsAtUtc = end,
+            MediaStartSecond = from,
+            MediaEndSecond = to
+        });
+        return end;
+    }
+
+    private static async Task<decimal> GetDurationAsync(string path, Dictionary<string, decimal> cache)
+    {
+        if (cache.TryGetValue(path, out var value)) return value;
+        var duration = Math.Max(1, await VideoHelper.GetVideoDurationAsync(path));
+        return cache[path] = decimal.Round((decimal)duration, 3);
+    }
+
+    private IQueryable<ScheduledPlaybackSegment> LoadSegments(int channelId) =>
+        _context.ScheduledPlaybackSegments.AsNoTracking()
+            .Include(segment => segment.ScheduledProgram).ThenInclude(program => program.ChannelEra)
+            .Include(segment => segment.ScheduledProgram).ThenInclude(program => program.Episode).ThenInclude(episode => episode.Series)
+            .Include(segment => segment.Interlude)
+            .Where(segment => segment.ScheduledProgram.ChannelEra.ChannelId == channelId);
+
+    private static ChannelScheduleEntry ToEntry(ScheduledPlaybackSegment segment)
+    {
+        var program = segment.ScheduledProgram;
+        return new ChannelScheduleEntry
+        {
+            ChannelId = program.ChannelEra.ChannelId,
+            SegmentId = segment.Id,
+            EpisodeId = segment.InterludeId == null ? program.EpisodeId : null,
+            Episode = segment.InterludeId == null ? program.Episode : null,
+            BumperId = segment.InterludeId,
+            Bumper = segment.Interlude is { } clip ? new ChannelBumper
+            {
+                Id = clip.Id,
+                ChannelEraId = program.ChannelEraId,
+                Title = clip.Title,
+                FilePath = clip.FilePath
+            } : null,
+            StartTime = segment.StartsAtUtc,
+            EndTime = segment.EndsAtUtc,
+            MediaStartSecond = (double)(segment.MediaStartSecond ?? 0)
+        };
+    }
+
+    public async Task<ChannelScheduleEntry?> GetCurrentEntryAsync(int channelId)
+    {
+        var now = DateTime.UtcNow;
+        var segment = await LoadSegments(channelId)
+            .Where(item => item.StartsAtUtc <= now && item.EndsAtUtc > now)
+            .OrderBy(item => item.StartsAtUtc).FirstOrDefaultAsync();
+        if (segment != null) return ToEntry(segment);
+        await EnsureScheduleGeneratedAsync(channelId, now.AddHours(24));
+        now = DateTime.UtcNow;
+        segment = await LoadSegments(channelId)
+            .Where(item => item.StartsAtUtc <= now && item.EndsAtUtc > now)
+            .OrderBy(item => item.StartsAtUtc).FirstOrDefaultAsync();
+        return segment == null ? null : ToEntry(segment);
+    }
+
+    public async Task<ChannelScheduleEntry?> GetNextEntryAsync(int channelId)
+    {
+        var now = DateTime.UtcNow;
+        var segment = await LoadSegments(channelId)
+            .Where(item => item.StartsAtUtc > now)
+            .OrderBy(item => item.StartsAtUtc).FirstOrDefaultAsync();
+        return segment == null ? null : ToEntry(segment);
+    }
+
+    private async Task DeleteChannelScheduleCoreAsync(int channelId, DateTime? from = null, bool includeCurrent = false)
+    {
+        var programs = _context.ScheduledPrograms.Where(item => item.ChannelEra.ChannelId == channelId);
+        if (from.HasValue)
+            programs = includeCurrent
+                ? programs.Where(program => _context.ScheduledPlaybackSegments.Any(segment => segment.ScheduledProgramId == program.Id && segment.EndsAtUtc > from.Value))
+                : programs.Where(program => _context.ScheduledPlaybackSegments.Where(segment => segment.ScheduledProgramId == program.Id).Min(segment => segment.StartsAtUtc) >= from.Value);
+        var ids = programs.Select(item => item.Id);
+        await _context.ScheduledPlaybackSegments.Where(item => ids.Contains(item.ScheduledProgramId)).ExecuteDeleteAsync();
+        await _context.ScheduledAdBreaks.Where(item => ids.Contains(item.ScheduledProgramId)).ExecuteDeleteAsync();
+        await programs.ExecuteDeleteAsync();
+    }
+
+    public async Task CleanupOldEntriesAsync()
+    {
+        var cutoff = DateTime.UtcNow.AddDays(-3);
+        var old = _context.ScheduledPrograms.Where(program =>
+            _context.ScheduledPlaybackSegments.Any(segment => segment.ScheduledProgramId == program.Id)
+            && !_context.ScheduledPlaybackSegments.Any(segment => segment.ScheduledProgramId == program.Id
+                && segment.EndsAtUtc >= cutoff)
+            && (program.ShuffleCycle == null || program.ShuffleCycle != _context.ScheduledPrograms
+                .Where(item => item.ChannelEra.ChannelId == program.ChannelEra.ChannelId).Max(item => item.ShuffleCycle)));
+        var ids = old.Select(item => item.Id);
+        await _context.ScheduledPlaybackSegments.Where(item => ids.Contains(item.ScheduledProgramId)).ExecuteDeleteAsync();
+        await _context.ScheduledAdBreaks.Where(item => ids.Contains(item.ScheduledProgramId)).ExecuteDeleteAsync();
+        await old.ExecuteDeleteAsync();
+        await _context.ChannelScheduleEntries.Where(item => item.EndTime < cutoff && (item.ShuffleCycle == null
+            || item.ShuffleCycle != (_context.ScheduledPrograms.Where(program => program.ChannelEra.ChannelId == item.ChannelId).Max(program => program.ShuffleCycle)
+                ?? _context.ChannelScheduleEntries.Where(entry => entry.ChannelId == item.ChannelId).Max(entry => entry.ShuffleCycle)))).ExecuteDeleteAsync();
+    }
+
+    private static string CleanPath(string? path) => path?.Replace("wwwroot", "").Replace("\\", "/") ?? "";
+
+    private sealed record EligibleClip(ChannelEraInterlude Assignment, Interlude Clip);
+    private sealed record PriorProgram(int EpisodeId, int SeriesId, string TypeName, DateTime StartsAtUtc, DateTime EndsAtUtc, int? ShuffleCycle);
 }

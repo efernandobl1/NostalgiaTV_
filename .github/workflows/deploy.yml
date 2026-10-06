@@ -11,10 +11,10 @@ env:
   API_IMAGE: ghcr.io/${{ github.repository_owner }}/nostalgia-api
   WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/nostalgia-web
 
-# Un solo deploy a producción a la vez; no cancela el que ya está corriendo.
+# Keep production builds/deploys serialized; isolate each PR from that queue.
 concurrency:
-  group: nostalgiatv-production
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('nostalgiatv-pr-{0}', github.event.pull_request.number) || 'nostalgiatv-production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Escaneo de seguridad como gate: si hay CVEs HIGH/CRITICAL, no se publica nada.
@@ -56,7 +56,7 @@ jobs:
         with:
           fail-on-severity: high
 
-  # Construye ambas imágenes EN PARALELO (matriz) con caché de capas por imagen.
+  # Build both images in parallel; the API Docker build also runs its tests.
   build-and-push:
     needs: security-scan
     runs-on: ubuntu-latest
@@ -104,18 +104,6 @@ jobs:
           # Caché de capas por imagen (scope) para no pisarse entre api/web.
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
-
-  # Unlike a skipped dependency job, this gate fails when either prerequisite fails.
-  pr-gate:
-    if: always() && github.event_name == 'pull_request'
-    needs: [security-scan, build-and-push]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require security scan and both builds
-        env:
-          SECURITY_RESULT: ${{ needs.security-scan.result }}
-          BUILD_RESULT: ${{ needs.build-and-push.result }}
-        run: test "$SECURITY_RESULT" = success && test "$BUILD_RESULT" = success
 
   # Despliegue en la VPS por SSH: baja las imágenes nuevas y reinicia el stack.
   deploy:

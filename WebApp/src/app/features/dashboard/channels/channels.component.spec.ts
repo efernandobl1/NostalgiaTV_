@@ -16,7 +16,12 @@ describe('ChannelsComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ChannelsComponent],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations()]
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ChannelsComponent);
@@ -31,8 +36,17 @@ describe('ChannelsComponent', () => {
   });
 
   it('keeps schedule regeneration available from the channel detail', () => {
-    const channel: ChannelResponse = { id: 7, name: 'Jetix', logoPath: '', startDate: '2004-01-01', eras: [], seriesIds: [] };
+    const channel: ChannelResponse = {
+      id: 7,
+      name: 'Jetix',
+      logoPath: '',
+      startDate: '2004-01-01',
+      eras: [],
+      seriesIds: [],
+    };
     component.selectedChannel.set(channel);
+    component.detailTab.set('schedule');
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Regenerar programación');
@@ -41,5 +55,6 @@ describe('ChannelsComponent', () => {
     const request = http.expectOne(`${environment.apiUrl}/api/v1/channels/7/schedule/refresh`);
     expect(request.request.method).toBe('POST');
     request.flush({}, { status: 202, statusText: 'Accepted' });
+    http.expectOne(`${environment.apiUrl}/api/v1/public/channels/7/schedule`).flush([]);
   });
 });

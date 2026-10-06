@@ -22,6 +22,7 @@ export interface SeriesResponse {
     categoryNames?: string[];
     channelName?: string;
     episodeCount?: number;
+    seasonNumbers?: number[];
 }
 
 export interface SeriesUploadResult {

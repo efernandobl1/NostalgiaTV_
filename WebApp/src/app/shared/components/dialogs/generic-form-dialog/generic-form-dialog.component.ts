@@ -168,7 +168,7 @@ export class GenericFormDialogComponent {
     if (hasFiles) {
       const formData = new FormData();
       Object.keys(values).forEach((key) => {
-        if (values[key] !== null && values[key] !== undefined) {
+        if (values[key] !== null && values[key] !== undefined && !this.selectedFiles[key]) {
           formData.append(key, values[key]);
         }
       });
