@@ -641,7 +641,7 @@
   padding: 25px 0;
   border-top: 1px solid var(--room-line);
   display: grid;
-  grid-template-columns: 1.15fr 1fr auto;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   align-items: center;
   gap: 32px;
 }
@@ -1332,10 +1332,6 @@
     grid-template-columns: 1fr 1fr;
     gap: 20px;
   }
-  .now-and-next > button {
-    grid-column: 1 / -1;
-    justify-self: start;
-  }
   .public-footer {
     padding: 26px 22px;
     flex-wrap: wrap;
@@ -1495,9 +1491,6 @@
   .now-and-next {
     grid-template-columns: 1fr;
     gap: 20px;
-  }
-  .now-and-next > button {
-    grid-column: auto;
   }
   .public-footer {
     padding-inline: 16px;

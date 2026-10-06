@@ -33,8 +33,9 @@
     <button type="button" class="upload-dropzone" (click)="openFilePicker()" [disabled]="uploading()">
       <mat-icon>cloud_upload</mat-icon>
       <strong>Seleccionar archivos de video</strong>
-      <span>{{ allowedExtensions.join(' · ') }} — se conservan los nombres para detectar episodio y título</span>
+      <span>MP4, MKV, FLV y otros videos. Conservamos el nombre para detectar episodio y título.</span>
     </button>
+    <p>Los videos incompatibles necesitan el servicio de Transcodificación activo. Solo se incorporan al catálogo después de validarlos.</p>
 
     @if (items().length) {
       <div class="upload-queue">

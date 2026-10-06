@@ -60,6 +60,12 @@ export class DashboardLayoutComponent {
     },
     { label: 'Comunidad', icon: 'forum', url: '/dashboard/comments', access: [], admin: true },
     {
+      label: 'Transcodificación',
+      icon: 'video_settings',
+      url: '/dashboard/transcoding',
+      access: ['/dashboard/transcoding'],
+    },
+    {
       label: 'Actividad',
       icon: 'history',
       url: '/dashboard/activity',

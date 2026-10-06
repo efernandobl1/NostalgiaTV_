@@ -27,6 +27,37 @@ describe('RetroTvComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('keeps the schedule action only in the header while showing current and next programmes', () => {
+    component.state.set({
+      channelId: 1,
+      segmentId: 1,
+      episodeId: 1,
+      episodeTitle: 'Current episode',
+      filePath: '/episode.mp4',
+      seriesName: 'Retro series',
+      currentSecond: 0,
+      nextEpisodeId: 2,
+      nextEpisodeTitle: 'Next episode',
+      secondsUntilNext: 600,
+    });
+    fixture.detectChanges();
+
+    const programme = fixture.nativeElement.querySelector('.now-and-next');
+    expect(programme.textContent).toContain('Current episode');
+    expect(programme.textContent).toContain('Next episode');
+    expect(programme.querySelector('button')).toBeNull();
+
+    const scheduleButtons = Array.from<HTMLButtonElement>(
+      fixture.nativeElement.querySelectorAll('button'),
+    ).filter((button) => button.textContent?.includes('Programación'));
+    expect(scheduleButtons).toHaveLength(1);
+    expect(scheduleButtons[0].closest('.public-header')).toBeTruthy();
+
+    scheduleButtons[0].click();
+    fixture.detectChanges();
+    expect(component.showGuide()).toBe(true);
+  });
+
   it('shows a retry action when channels cannot load', () => {
     http
       .expectOne((request) => request.url.endsWith('/public/channels'))
