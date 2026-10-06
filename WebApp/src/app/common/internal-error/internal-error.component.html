@@ -1,15 +1,26 @@
-<main class="signal-page" aria-labelledby="error-title">
-  <div class="signal-page__scanlines" aria-hidden="true"></div>
-  <section class="signal-card signal-card--error">
-    <span class="signal-card__code">ERROR 500</span>
-    <div class="signal-card__screen" aria-hidden="true">
-      <span class="material-symbols-outlined">signal_disconnected</span>
-    </div>
-    <h1 id="error-title">Interferencia en la señal</h1>
-    <p>No pudimos completar la operación. Intenta nuevamente o vuelve al canal principal.</p>
-    <div class="signal-card__actions">
-      <button type="button" class="signal-button signal-button--secondary" (click)="retry()">Reintentar</button>
-      <a routerLink="/" class="signal-button signal-button--primary">Volver al inicio</a>
-    </div>
-  </section>
+<main class="signal-page" [class.signal-page--tv]="tvMode.enabled()">
+  <header class="signal-header">
+    <a class="signal-brand" routerLink="/" aria-label="NostalgiaTV, inicio">
+      <span class="signal-brand__screen" aria-hidden="true">N</span>NostalgiaTV
+    </a>
+    <a class="signal-back" routerLink="/" aria-label="Volver a ver TV" title="Volver a ver TV">
+      <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span
+      ><span>Volver a ver TV</span>
+    </a>
+  </header>
+  <div class="signal-main">
+    <section class="signal-card signal-card--error" aria-labelledby="error-title">
+      <div class="signal-card__screen" aria-hidden="true">500</div>
+      <div class="signal-card__message">
+        <h1 id="error-title">Interferencia en la señal.</h1>
+        <p>No pudimos completar la operación. Puedes intentarlo otra vez o volver a la sala.</p>
+        <div class="signal-card__actions">
+          <button type="button" class="signal-button signal-button--primary" (click)="retry()">
+            Reintentar
+          </button>
+          <a routerLink="/" class="signal-button signal-button--secondary">Volver a ver TV</a>
+        </div>
+      </div>
+    </section>
+  </div>
 </main>

@@ -76,7 +76,9 @@
   border: 1px solid var(--dashboard-border);
   border-radius: 3px;
   background: var(--dashboard-bg);
+  overflow: hidden;
   img {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: contain;

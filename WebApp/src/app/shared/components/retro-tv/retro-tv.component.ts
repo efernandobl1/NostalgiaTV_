@@ -109,6 +109,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   private endedHandler?: () => void;
 
   readonly channels = signal<Channel[]>([]);
+  readonly unavailableChannelLogos = signal<number[]>([]);
   readonly channelsLoading = signal(true);
   readonly channelsError = signal(false);
   readonly tuning = signal(false);
@@ -415,6 +416,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.http.get<Channel[]>(`${this.apiUrl}/api/v1/public/channels`).subscribe({
       next: (data) => {
         this.channels.set(data);
+        this.unavailableChannelLogos.set([]);
         this.channelsLoading.set(false);
         this.applyDeepLink();
       },
@@ -462,6 +464,12 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
 
   logo(path?: string): string {
     return path ? `${this.apiUrl}${path}` : '';
+  }
+
+  markChannelLogoUnavailable(channelId: number): void {
+    this.unavailableChannelLogos.update((ids) =>
+      ids.includes(channelId) ? ids : [...ids, channelId],
+    );
   }
 
   tune(channel: Channel): void {

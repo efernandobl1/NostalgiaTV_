@@ -59,6 +59,94 @@ describe('RetroTvComponent', () => {
     expect(fixture.nativeElement.querySelector('.cinema-overlay')).toBeNull();
   });
 
+  it('identifies channels with their logos and keeps browsing actions in the header', () => {
+    const channel = { id: 1, name: 'Jetix', logoPath: '/uploads/channels/jetix.png' };
+    http.expectOne((request) => request.url.endsWith('/public/channels')).flush([channel]);
+    fixture.detectChanges();
+
+    const station = fixture.nativeElement.querySelector('.channel-station');
+    expect(station.getAttribute('aria-label')).toBe('Ver canal Jetix');
+    expect(station.querySelector('img').getAttribute('src')).toBe(component.logo(channel.logoPath));
+    expect(fixture.nativeElement.querySelector('#channel-panel-title').textContent.trim()).toBe(
+      'Canales',
+    );
+    expect(fixture.nativeElement.querySelector('.station-number')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.library-invitation')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.public-header nav').textContent).toContain(
+      'Series',
+    );
+
+    component.enterTvMode();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.cinema-channel img').getAttribute('src')).toBe(
+      component.logo(channel.logoPath),
+    );
+
+    component.guideRows.set([{ channel, entries: [] }]);
+    component.showGuide.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.guide-channel img').getAttribute('src')).toBe(
+      component.logo(channel.logoPath),
+    );
+  });
+
+  it('shows one image action and no sound or fullscreen controls in TV mode', () => {
+    component.enterTvMode();
+    fixture.detectChanges();
+
+    const overlay = fixture.nativeElement.querySelector('.cinema-overlay');
+    expect(overlay.querySelectorAll('button').length).toBe(4);
+    expect(overlay.querySelectorAll('.sound-controls')).toHaveLength(0);
+    expect(overlay.querySelector('[aria-label="Volumen"]')).toBeNull();
+    expect(overlay.textContent).toContain('Volver a la sala');
+    expect(overlay.textContent).not.toContain('fullscreen_exit');
+    expect(overlay.textContent.match(/Imagen/g)).toHaveLength(1);
+
+    component.fullscreen.set(true);
+    fixture.detectChanges();
+    expect(overlay.querySelector('.sound-controls')).toBeNull();
+  });
+
+  it('keeps sound and exit fullscreen at the top with a single image action', () => {
+    const video = fixture.nativeElement.querySelector('video');
+    component.fullscreen.set(true);
+    fixture.detectChanges();
+
+    const overlay = fixture.nativeElement.querySelector('.cinema-overlay');
+    expect(overlay.querySelector('.cinema-toolbar [aria-label="Volumen"]')).toBeTruthy();
+    expect(overlay.querySelector('.cinema-bottom .sound-controls')).toBeNull();
+    expect(overlay.querySelector('.cinema-toolbar').textContent).toContain(
+      'Salir de pantalla completa',
+    );
+    expect(overlay.textContent).not.toContain('Volver a la sala');
+    expect(overlay.textContent.match(/Imagen/g)).toHaveLength(1);
+    expect(fixture.nativeElement.querySelector('video')).toBe(video);
+    expect(fixture.nativeElement.querySelector('.player-controls').hasAttribute('inert')).toBe(
+      true,
+    );
+  });
+
+  it('keeps channels usable when a logo is missing or fails to load', () => {
+    http
+      .expectOne((request) => request.url.endsWith('/public/channels'))
+      .flush([
+        { id: 1, name: 'Jetix', logoPath: '/uploads/missing.png' },
+        { id: 2, name: 'Retro channel' },
+      ]);
+    fixture.detectChanges();
+
+    const stations = fixture.nativeElement.querySelectorAll('.channel-station');
+    stations[0].querySelector('img').dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+
+    for (const station of stations) {
+      expect(station.querySelector('img')).toBeNull();
+      expect(station.querySelector('.station-logo').textContent.trim()).toBe('live_tv');
+      expect(station.disabled).toBe(false);
+      expect(station.querySelector('.station-name').textContent.trim()).toBeTruthy();
+    }
+  });
+
   it('keeps volume and fullscreen controls available when the tuner is collapsed', () => {
     component.panelOpen.set(false);
     fixture.detectChanges();
