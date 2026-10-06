@@ -1,0 +1,8 @@
+<p>Recuerdos y conversaciones. Los comentarios se revisan antes de publicarse.</p>
+@if (error()) { <p class="comment-error" role="alert">{{ error() }} @if (loginRequired()) { <a routerLink="/dashboard/login">Entrar</a> } @else { <button type="button" (click)="load()">Reintentar lectura</button> }</p> }
+@if (loading()) { <p role="status">Cargando comentarios…</p> } @else {
+  <div class="public-comment-list">@for (comment of comments(); track comment.id) { <article><header><strong>{{ comment.author }}</strong><time>{{ comment.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</time></header><p>{{ comment.body }}</p></article> } @empty { <p>Todavía no hay comentarios publicados. Comparte el primer recuerdo.</p> }</div>
+  @if (page() > 1 || nextAvailable()) { <nav aria-label="Páginas de comentarios"><button type="button" [disabled]="page() === 1" (click)="changePage(-1)">Anterior</button><span>Página {{ page() }}</span><button type="button" [disabled]="!nextAvailable()" (click)="changePage(1)">Siguiente</button></nav> }
+}
+<form (ngSubmit)="send()"><label for="public-comment-body">Tu comentario</label><textarea id="public-comment-body" name="comment" [(ngModel)]="body" maxlength="2000" rows="4" required aria-describedby="comment-help"></textarea><small id="comment-help">{{ body.length }}/2000. Necesitas iniciar sesión para enviar; el perfil de reproducción no es una cuenta de administración.</small><button type="submit" [disabled]="sending() || !body.trim()">{{ sending() ? 'Enviando…' : 'Enviar para revisión' }}</button></form>
+@if (message()) { <p role="status">{{ message() }}</p> }

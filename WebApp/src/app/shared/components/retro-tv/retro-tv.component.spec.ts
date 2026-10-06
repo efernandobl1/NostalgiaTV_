@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { RetroTvComponent } from './retro-tv.component';
+import { WatchedService } from '../../../core/services/watched.service';
 
 describe('RetroTvComponent', () => {
   let component: RetroTvComponent;
@@ -25,6 +26,26 @@ describe('RetroTvComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('records continuous live-channel playback but ignores a seek and bumper playback', () => {
+    const watched = TestBed.inject(WatchedService);
+    const report = vi.spyOn(watched, 'recordInterval');
+    const clock = vi.spyOn(performance, 'now');
+    const tracker = component as unknown as { recordPlayback(video: HTMLVideoElement): void; flushPlayback(): void; videoSrc(path: string): string };
+    const video = { src: new URL(tracker.videoSrc('/episode.mp4'), document.baseURI).href, duration: 100, currentTime: 0,
+      paused: false, ended: false, seeking: false, playbackRate: 1 } as HTMLVideoElement;
+    component.state.set({ channelId: 1, segmentId: 7, episodeId: 11, seriesId: 2, season: 1, episodeNumber: 3,
+      filePath: '/episode.mp4', episodeTitle: 'Test', seriesName: 'Test', nextEpisodeId: 12, nextEpisodeTitle: 'Next', currentSecond: 0, secondsUntilNext: 100 });
+    clock.mockReturnValue(0); tracker.recordPlayback(video);
+    for (let second = 1; second <= 5; second++) { clock.mockReturnValue(second * 1000); video.currentTime = second; tracker.recordPlayback(video); }
+    expect(report).toHaveBeenCalledWith(2, { id: 11, season: 1, episodeNumber: 3 }, 0, 5, 100, 5);
+    report.mockClear(); clock.mockReturnValue(6000); video.currentTime = 99; tracker.recordPlayback(video); tracker.flushPlayback();
+    expect(report).not.toHaveBeenCalled();
+    component.state.update(state => ({ ...state!, episodeId: 0, isBumper: true }));
+    clock.mockReturnValue(7000); video.currentTime = 100; tracker.recordPlayback(video); tracker.flushPlayback();
+    expect(report).not.toHaveBeenCalled();
+    clock.mockRestore(); report.mockRestore();
   });
 
   it('keeps the schedule action only in the header while showing current and next programmes', () => {
@@ -126,7 +147,8 @@ describe('RetroTvComponent', () => {
     fixture.detectChanges();
 
     const overlay = fixture.nativeElement.querySelector('.cinema-overlay');
-    expect(overlay.querySelectorAll('button').length).toBe(4);
+    expect(overlay.querySelectorAll('button').length).toBe(5);
+    expect(overlay.textContent).toContain('Sincronizar');
     expect(overlay.querySelectorAll('.sound-controls')).toHaveLength(0);
     expect(overlay.querySelector('[aria-label="Volumen"]')).toBeNull();
     expect(overlay.textContent).toContain('Volver a la sala');

@@ -9,6 +9,9 @@ namespace ApplicationCore.DTOs.Channel
         public int ChannelId { get; set; }
         public long SegmentId { get; set; }
         public int EpisodeId { get; set; }
+        public int SeriesId { get; set; }
+        public int Season { get; set; }
+        public int EpisodeNumber { get; set; }
         public string EpisodeTitle { get; set; } = string.Empty;
         public string FilePath { get; set; } = string.Empty;
         public string SeriesName { get; set; } = string.Empty;

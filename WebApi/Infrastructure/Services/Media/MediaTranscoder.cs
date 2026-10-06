@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace Infrastructure.Services.Media;
 
-public sealed class MediaTranscoder(MediaProbe probe, MediaProcessRunner runner, IOptions<MediaProcessingSettings> settings)
+public sealed class MediaTranscoder(MediaProbe probe, MediaProcessRunner runner, IOptions<MediaProcessingSettings> settings, MediaCpuGovernor? governor = null)
 {
     public async Task<string> ConvertAsync(LibraryFile file, Func<double, Task> progress, CancellationToken token)
     {
@@ -28,13 +28,14 @@ public sealed class MediaTranscoder(MediaProbe probe, MediaProcessRunner runner,
         var outputLimit = (drive.AvailableFreeSpace - reserve).ToString(CultureInfo.InvariantCulture);
         var temporary = output + $".transcoding.{Guid.NewGuid():N}.mp4";
         var timeout = TimeSpan.FromHours(Math.Clamp(settings.Value.ConversionTimeoutHours, 1, 48));
+        var threads = (governor?.EncodingThreads ?? 1).ToString(CultureInfo.InvariantCulture);
         try
         {
             await runner.RunAsync(probe.Binary("ffmpeg"),
-                ["-nostdin", "-hide_banner", "-loglevel", "error", "-n", "-protocol_whitelist", "file,pipe", "-threads", "1",
+                ["-nostdin", "-hide_banner", "-loglevel", "error", "-n", "-protocol_whitelist", "file,pipe", "-threads", threads,
                  "-i", file.FullPath, "-map", "0:v:0", "-map", "0:a:0?", "-sn", "-dn", "-map_metadata", "-1",
-                 "-c:v", "libx264", "-threads", "1", "-preset", "medium", "-crf", "22", "-profile:v", "main", "-level:v", "4.0", "-maxrate", "8M", "-bufsize", "16M",
-                 "-filter_threads", "1", "-vf", "scale=w='min(1920,iw)':h='min(1080,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2,fps=30",
+                 "-c:v", "libx264", "-threads", threads, "-preset", "medium", "-crf", "22", "-profile:v", "main", "-level:v", "4.0", "-maxrate", "8M", "-bufsize", "16M",
+                 "-filter_threads", threads, "-vf", "scale=w='min(1920,iw)':h='min(1080,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2,fps=30",
                  "-pix_fmt", "yuv420p", "-tag:v", "avc1", "-c:a", "aac", "-b:a", "160k", "-ac", "2", "-ar", "48000",
                  "-movflags", "+faststart", "-fs", outputLimit, "-progress", "pipe:1", "-nostats", "-f", "mp4", temporary], timeout, token,
                 line =>
@@ -47,7 +48,7 @@ public sealed class MediaTranscoder(MediaProbe probe, MediaProcessRunner runner,
                 throw new IOException("Converted video failed compatibility or full-duration validation; original preserved.");
             // Decode the complete output before publishing it. A valid container alone does not prove a complete episode.
             await runner.RunAsync(probe.Binary("ffmpeg"),
-                ["-nostdin", "-v", "error", "-xerror", "-protocol_whitelist", "file,pipe", "-threads", "1", "-i", temporary,
+                ["-nostdin", "-v", "error", "-xerror", "-protocol_whitelist", "file,pipe", "-threads", threads, "-i", temporary,
                  "-map", "0:v:0", "-map", "0:a:0?", "-progress", "pipe:1", "-nostats", "-f", "null", "-"], timeout, token,
                 line => Report(line, result.Duration, 90, 9, progress));
             MediaLibraryService.EnsureUnchanged(file);

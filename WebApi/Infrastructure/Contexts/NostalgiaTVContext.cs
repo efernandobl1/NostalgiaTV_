@@ -41,10 +41,18 @@ namespace Infrastructure.Contexts
         public DbSet<ScheduledPlaybackSegment> ScheduledPlaybackSegments { get; set; }
         public DbSet<MediaProcessingJob> MediaProcessingJobs { get; set; }
         public DbSet<MediaWorkerState> MediaWorkerStates { get; set; }
+        public DbSet<MediaResourcePolicy> MediaResourcePolicies { get; set; }
+        public DbSet<ViewerProfile> ViewerProfiles { get; set; }
+        public DbSet<ViewerDevice> ViewerDevices { get; set; }
+        public DbSet<ViewerPairingCode> ViewerPairingCodes { get; set; }
+        public DbSet<ViewerProgress> ViewerProgress { get; set; }
+        public DbSet<ViewerWatchRange> ViewerWatchRanges { get; set; }
+        public DbSet<ChannelComment> ChannelComments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.ConfigureViewing();
 
             modelBuilder.Entity<MediaProcessingJob>(job =>
             {

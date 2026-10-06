@@ -29,7 +29,9 @@ namespace WebApi.Extensions
                         return LogEventLevel.Warning;
 
                     // Un sondeo de salud exitoso no debe ahogar el tráfico real en Docker/Loki.
-                    return context.Request.Path.StartsWithSegments("/health")
+                    return context.Request.Path.StartsWithSegments("/health") ||
+                        context.Request.Path.StartsWithSegments("/api/v1/viewer/session") ||
+                        context.Request.Path.StartsWithSegments("/api/v1/viewer/progress")
                         ? LogEventLevel.Debug
                         : LogEventLevel.Information;
                 };

@@ -24,7 +24,24 @@
         </section>
       }
     </div>
-    <p class="processing-note">Pausar deja terminar el archivo actual. Solo se leen temporadas, especiales y películas de series registradas; los archivos en carga se omiten. El límite de recursos se configura en Docker.</p>
+    <p class="processing-note">Pausar deja terminar el archivo actual. Solo se leen temporadas, especiales y películas de series registradas; los archivos en carga se omiten.</p>
+    @if (resourceDraft; as policy) {
+      <section class="resource-console" aria-labelledby="resource-title">
+        <header><h2 id="resource-title">Ritmo de trabajo</h2><p>Menos núcleos mientras ves la tele. Más capacidad durante la madrugada.</p></header>
+        <form (ngSubmit)="saveResources()">
+          <div class="resource-fields">
+            <label>Núcleos de día<select name="dayCores" [(ngModel)]="policy.dayCores"><option [ngValue]="1">1 núcleo</option><option [ngValue]="2">2 núcleos</option></select></label>
+            <label>Núcleos de madrugada<select name="nightCores" [(ngModel)]="policy.nightCores">@for (cores of [1, 2, 3, 4]; track cores) { <option [ngValue]="cores">{{ cores }} {{ cores === 1 ? 'núcleo' : 'núcleos' }}</option> }</select></label>
+            <label>Desde<input name="nightStart" type="time" [(ngModel)]="startTime" required></label>
+            <label>Hasta<input name="nightEnd" type="time" [(ngModel)]="endTime" required></label>
+            <label>Zona horaria<select name="timeZone" [(ngModel)]="policy.timeZoneId"><option value="America/Guatemala">Guatemala (UTC−6)</option><option value="America/Mexico_City">Ciudad de México</option><option value="America/Bogota">Bogotá</option><option value="Europe/Madrid">Madrid</option><option value="UTC">UTC</option></select></label>
+          </div>
+          <label class="night-switch"><input name="nightEnabled" type="checkbox" [(ngModel)]="policy.nightEnabled">Usar el horario de madrugada</label>
+          <div class="resource-actions"><button class="admin-button" type="submit" [disabled]="resourcesSaving() || error()">{{ resourcesSaving() ? 'Guardando…' : 'Guardar horario' }}</button><span role="status">{{ resourcesMessage() }}</span></div>
+        </form>
+        <p class="processing-note">Límite aplicado: {{ status()?.resourcePolicy?.appliedCores || 'pendiente' }} núcleos. Máximo del worker: {{ status()?.resourcePolicy?.availableCores || 'pendiente' }}. Si Docker permite solo uno, el horario no puede superar ese límite; cambia <code>MEDIA_WORKER_CPUS</code> y recrea el worker.</p>
+      </section>
+    }
     @if (!online('transcode') || !online('index')) {
       <p class="processing-note">El contenedor <code>media-worker</code> debe estar iniciado. Antes de activar la conversión, detén el transcoder externo anterior para evitar que ambos procesen la misma carpeta.</p>
     }

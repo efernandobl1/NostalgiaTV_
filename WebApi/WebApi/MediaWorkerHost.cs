@@ -2,6 +2,7 @@ using ApplicationCore.Settings;
 using Infrastructure;
 using Infrastructure.BackgroundServices;
 using Infrastructure.Contexts;
+using Infrastructure.Services.Media;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -17,6 +18,7 @@ public static class MediaWorkerHost
         builder.Services.AddSerilog(config => config.ReadFrom.Configuration(builder.Configuration));
         builder.Services.AddDbContext<NostalgiaTVContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
         builder.Services.AddMediaProcessing(builder.Configuration);
+        builder.Services.AddHostedService(services => services.GetRequiredService<MediaCpuGovernor>());
         builder.Services.AddHostedService<MediaTranscodingService>();
         builder.Services.AddHostedService<MediaLibraryIndexingService>();
         var root = Path.GetFullPath(builder.Configuration["MediaSettings:BasePath"] ?? "wwwroot/uploads");
@@ -26,6 +28,7 @@ public static class MediaWorkerHost
         // A shared-volume lock prevents two worker containers from processing the same library.
         using var lease = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         using var host = builder.Build();
+        host.Services.GetRequiredService<MediaCpuGovernor>().InitializeWorker();
         await host.RunAsync();
     }
 }

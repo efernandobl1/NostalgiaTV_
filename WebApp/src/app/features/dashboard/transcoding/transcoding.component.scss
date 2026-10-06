@@ -39,3 +39,12 @@
   .job-state { grid-column: 2; text-align: left; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; }
   .job-state button { grid-column: 1 / -1; justify-self: start; }
 }
+ .resource-console { margin-block: 28px; padding-block: 24px; border-block: 1px solid var(--dashboard-border); }
+ .resource-console h2 { font: 30px/1.2 VT323, monospace; margin: 0; }
+ .resource-console header p { color: var(--dashboard-muted); margin: 12px 0 24px; }
+ .resource-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 20px; }
+ .resource-fields label { display: grid; gap: 8px; }
+ .resource-fields :is(input, select) { width: 100%; min-height: 44px; color: var(--dashboard-text); background: var(--dashboard-bg); border: 1px solid var(--dashboard-control-border); padding: 10px; font: inherit; color-scheme: inherit; }
+ .night-switch { display: flex; gap: 12px; align-items: center; margin-block: 24px; }
+ .night-switch input { width: 22px; height: 22px; accent-color: var(--dashboard-green); }
+ .resource-actions { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }

@@ -33,8 +33,10 @@ export interface BreakPoint {
 }
 export interface ModeratedComment {
   id: number;
-  seriesId: number;
-  seriesName: string;
+  seriesId?: number;
+  seriesName?: string;
+  channelId?: number;
+  channelName?: string;
   author: string;
   parentCommentId?: number;
   body: string;
@@ -149,7 +151,7 @@ export class BroadcastAdminService {
   }
   moderate(comment: ModeratedComment, status: string) {
     return this.http.put(
-      `${this.base}/series/${comment.seriesId}/comments/${comment.id}/moderation`,
+      `${this.base}/${comment.channelId ? 'channels/' + comment.channelId : 'series/' + comment.seriesId}/comments/${comment.id}/moderation`,
       { status },
       this.options,
     );

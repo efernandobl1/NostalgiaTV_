@@ -17,7 +17,8 @@ export class CommunityComponent {
   readonly count = signal(0);
   readonly page = signal(1);
   readonly loading = signal(true);
-  readonly busy = signal<number | null>(null);
+  readonly busy = signal<string | null>(null);
+  readonly commentKey = (comment: ModeratedComment) => `${comment.channelId ? 'channel' : 'series'}-${comment.id}`;
   readonly error = signal('');
   readonly filters = [
     { value: 'Pending', label: 'Por revisar' },
@@ -56,7 +57,7 @@ export class CommunityComponent {
   }
   moderate(comment: ModeratedComment, status: string): void {
     if (this.busy() !== null) return;
-    this.busy.set(comment.id);
+    this.busy.set(this.commentKey(comment));
     this.service.moderate(comment, status).subscribe({
       next: () => {
         this.busy.set(null);

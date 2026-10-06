@@ -37,7 +37,9 @@ public class SeriesCommentsController : ControllerBase
                 comment.CreatedAtUtc,
                 comment.EditedAtUtc
             }).Skip((page - 1) * 50).Take(50).ToListAsync();
-        return Ok(comments);
+        return Ok(comments.Select(item => new { item.Id, item.ParentCommentId, item.Author, item.Body,
+            CreatedAtUtc = DateTime.SpecifyKind(item.CreatedAtUtc, DateTimeKind.Utc),
+            EditedAtUtc = item.EditedAtUtc.HasValue ? DateTime.SpecifyKind(item.EditedAtUtc.Value, DateTimeKind.Utc) : (DateTime?)null }));
     }
 
     [HttpPost]
@@ -50,6 +52,7 @@ public class SeriesCommentsController : ControllerBase
         if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
             return Unauthorized();
         if (!await _context.Series.AnyAsync(series => series.Id == seriesId)) return NotFound();
+        if (!await _context.Users.AnyAsync(user => user.Id == userId)) return Unauthorized();
         if (request.ParentCommentId is long parentId
             && !await _context.SeriesComments.AnyAsync(comment =>
                 comment.Id == parentId && comment.SeriesId == seriesId && comment.Status == "Approved"))
@@ -82,16 +85,24 @@ public class SeriesCommentsController : ControllerBase
     {
         if (status is not ("Pending" or "Approved" or "Rejected" or "Hidden") || page is < 1 or > 10000)
             return BadRequest("Invalid moderation filter.");
-        var query = from comment in _context.SeriesComments.AsNoTracking()
+        var seriesQuery = from comment in _context.SeriesComments.AsNoTracking()
                     join author in _context.Users.AsNoTracking() on comment.UserId equals author.Id
                     join series in _context.Series.AsNoTracking() on comment.SeriesId equals series.Id
                     where comment.Status == status && (seriesId == null || comment.SeriesId == seriesId)
-                    select new { comment.Id, comment.SeriesId, SeriesName = series.Name, Author = author.Username,
-                        comment.ParentCommentId, comment.Body, comment.Status, comment.CreatedAtUtc };
+                    select new { comment.Id, SeriesId = (int?)comment.SeriesId, ChannelId = (int?)null, SeriesName = series.Name,
+                        ChannelName = (string?)null, Author = author.Username, comment.ParentCommentId, comment.Body, comment.Status, comment.CreatedAtUtc };
+        var channelsQuery = from comment in _context.ChannelComments.AsNoTracking()
+                            join author in _context.Users on comment.UserId equals author.Id
+                            join channel in _context.Channels on comment.ChannelId equals channel.Id
+                            where comment.Status == status && seriesId == null
+                            select new { comment.Id, SeriesId = (int?)null, ChannelId = (int?)comment.ChannelId, SeriesName = (string?)null,
+                                ChannelName = channel.Name, Author = author.Username, ParentCommentId = (long?)null, comment.Body, comment.Status, comment.CreatedAtUtc };
+        var query = seriesQuery.Concat(channelsQuery);
         var count = await query.CountAsync();
         var items = await query.OrderByDescending(comment => comment.CreatedAtUtc).ThenByDescending(comment => comment.Id)
             .Skip((page - 1) * 25).Take(25).ToListAsync();
-        return Ok(new { Items = items, TotalCount = count });
+        return Ok(new { Items = items.Select(item => new { item.Id, item.SeriesId, item.ChannelId, item.SeriesName, item.ChannelName,
+            item.Author, item.ParentCommentId, item.Body, item.Status, CreatedAtUtc = DateTime.SpecifyKind(item.CreatedAtUtc, DateTimeKind.Utc) }), TotalCount = count });
     }
 
     [HttpPut("{commentId}/moderation")]

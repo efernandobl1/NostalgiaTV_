@@ -59,6 +59,7 @@ namespace Infrastructure
             services.Configure<MediaSettings>(configuration.GetSection("MediaSettings"));
             services.Configure<MediaProcessingSettings>(configuration.GetSection("MediaProcessing"));
             services.AddSingleton<MediaProcessRunner>();
+            services.AddSingleton<MediaCpuGovernor>();
             services.AddSingleton<MediaProbe>();
             services.AddSingleton<MediaTranscoder>();
             services.AddScoped<MediaLibraryService>();

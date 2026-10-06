@@ -1,12 +1,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, exhaustMap, of, timer } from 'rxjs';
-import { MediaStatus, MediaWorker, TranscodingService, WorkerId } from './transcoding.service';
+import { MediaStatus, MediaWorker, ResourcePolicy, TranscodingService, WorkerId } from './transcoding.service';
 
 @Component({
   selector: 'app-transcoding',
-  imports: [DatePipe, DecimalPipe],
+  imports: [DatePipe, DecimalPipe, FormsModule],
   templateUrl: './transcoding.component.html',
   styleUrl: './transcoding.component.scss',
 })
@@ -17,6 +18,11 @@ export class TranscodingComponent {
   readonly actionError = signal('');
   readonly busy = signal<string | number | null>(null);
   readonly filter = signal<WorkerId | 'all'>('all');
+  resourceDraft: ResourcePolicy | null = null;
+  startTime = '00:00';
+  endTime = '05:00';
+  readonly resourcesSaving = signal(false);
+  readonly resourcesMessage = signal('');
   readonly jobs = computed(() => this.status()?.jobs.filter(job => this.filter() === 'all' || job.worker === this.filter()) ?? []);
   readonly workers: { id: WorkerId; title: string; icon: string; description: string }[] = [
     { id: 'transcode', title: 'Convertir videos', icon: 'video_settings', description: 'MP4 · H.264 · AAC. Una conversión a la vez, sin borrar el original.' },
@@ -27,7 +33,31 @@ export class TranscodingComponent {
     timer(0, 5000).pipe(
       exhaustMap(() => this.service.getStatus().pipe(catchError(() => of(null)))),
       takeUntilDestroyed(),
-    ).subscribe(status => { this.error.set(status === null); if (status) this.status.set(status); });
+    ).subscribe(status => {
+      this.error.set(status === null);
+      if (status) {
+        this.status.set(status);
+        if (!this.resourceDraft && status.resourcePolicy) {
+          this.resourceDraft = { ...status.resourcePolicy };
+          this.startTime = this.time(status.resourcePolicy.nightStartMinute);
+          this.endTime = this.time(status.resourcePolicy.nightEndMinute);
+        }
+      }
+    });
+  }
+
+  private time(minutes: number): string { return `${Math.floor(minutes / 60).toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}`; }
+  saveResources(): void {
+    if (!this.resourceDraft || this.resourcesSaving()) return;
+    if (!/^\d{2}:\d{2}$/.test(this.startTime) || !/^\d{2}:\d{2}$/.test(this.endTime) || this.startTime === this.endTime) {
+      this.actionError.set('Selecciona horas de inicio y fin distintas.'); return;
+    }
+    const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+    this.resourcesSaving.set(true); this.resourcesMessage.set(''); this.actionError.set('');
+    this.service.saveResources({ ...this.resourceDraft, nightStartMinute: minutes(this.startTime), nightEndMinute: minutes(this.endTime) }).subscribe({
+      next: () => { this.resourcesSaving.set(false); this.resourcesMessage.set('Horario guardado. El servicio lo aplica en unos segundos.'); this.refresh(); },
+      error: () => { this.resourcesSaving.set(false); this.actionError.set('No se pudo guardar. Revisa los núcleos, el horario y la zona horaria.'); },
+    });
   }
 
   worker(id: WorkerId): MediaWorker | undefined { return this.status()?.workers.find(worker => worker.id === id); }
