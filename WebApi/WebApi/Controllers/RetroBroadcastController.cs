@@ -5,6 +5,7 @@ using FFMpegCore;
 using Infrastructure.BackgroundServices;
 using Infrastructure.Contexts;
 using Infrastructure.Services;
+using Infrastructure.Services.Media;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -134,8 +135,8 @@ public class RetroBroadcastController : ControllerBase
             return BadRequest("The historical year range is invalid.");
 
         var name = $"{Guid.NewGuid():N}.mp4";
-        var directory = Path.Combine(_media.BasePath, "interludes");
-        Directory.CreateDirectory(directory);
+        var folder = MediaStorageLayout.BroadcastFolder(request.Kind);
+        var directory = MediaStorageLayout.CreateDirectory(_media.BasePath, folder);
         var path = Path.Combine(directory, name);
         try
         {
@@ -162,7 +163,7 @@ public class RetroBroadcastController : ControllerBase
             {
                 Kind = request.Kind,
                 Title = request.Title.Trim(),
-                FilePath = $"/uploads/interludes/{name}",
+                FilePath = $"/uploads/{folder}/{name}",
                 DurationSeconds = decimal.Round((decimal)info.Duration.TotalSeconds, 3),
                 OriginalYearFrom = request.OriginalYearFrom,
                 OriginalYearTo = request.OriginalYearTo,

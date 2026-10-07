@@ -109,20 +109,21 @@ namespace Infrastructure.Services
             var channel = await _context.Channels.FindAsync(channelId)
                 ?? throw new NotFoundException($"Channel {channelId} not found");
 
-            var eraFolderPath = _folderService.CreateChannelEraFolder(channel.Name, request.Name);
-
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             var era = new ChannelEra
             {
                 ChannelId = channelId,
                 Name = request.Name,
                 Description = request.Description,
                 StartDate = request.StartDate,
-                EndDate = request.EndDate,
-                FolderPath = eraFolderPath
+                EndDate = request.EndDate
             };
 
             _context.ChannelEras.Add(era);
             await _context.SaveChangesAsync();
+            era.FolderPath = _folderService.CreateChannelEraFolder(channelId, era.Id);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             var response = era.Adapt<ChannelEraResponse>();
             response.ChannelName = channel.Name;

@@ -6,6 +6,9 @@ namespace ApplicationCore.Settings
     /// </summary>
     public class ChannelSchedulingSettings
     {
+        public string TimeZoneId { get; set; } = "America/Guatemala";
+        public bool HalloweenEnabled { get; set; } = true;
+
         /// <summary>Maximum preferred gap between airings; reduced for small catalogs.</summary>
         public int NoRepeatWindowHours { get; set; } = 24;
 
