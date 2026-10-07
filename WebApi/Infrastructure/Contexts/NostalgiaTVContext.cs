@@ -52,6 +52,7 @@ namespace Infrastructure.Contexts
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<Episode>().Property(episode => episode.IsAvailable).HasDefaultValue(true);
             modelBuilder.ConfigureViewing();
 
             modelBuilder.Entity<MediaProcessingJob>(job =>

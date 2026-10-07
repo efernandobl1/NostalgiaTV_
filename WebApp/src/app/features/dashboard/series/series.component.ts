@@ -1,4 +1,6 @@
 import { AsyncPipe } from '@angular/common';
+import { StorageComponent, formatBytes } from '../storage/storage.component';
+import { SeriesStorage, StorageResponse } from '../../../shared/models/dashboard.model';
 import { SeriesEditorComponent } from './series-editor.component';
 import { map } from 'rxjs';
 import { Component, OnInit, ViewChild, signal } from '@angular/core';
@@ -26,6 +28,7 @@ import { ActivatedRoute } from '@angular/router';
   selector: 'app-series',
   imports: [
     SeriesEditorComponent,
+    StorageComponent,
     AsyncPipe,
     MatTableModule,
     MatPaginatorModule,
@@ -46,6 +49,29 @@ export class SeriesComponent implements OnInit {
   readonly loadError = signal(false);
   readonly editingSeries = signal<SeriesResponse | null>(null);
   readonly editorTab = signal<'data' | 'episodes'>('data');
+  readonly storageBySeries = signal<Record<number, SeriesStorage>>({});
+  readonly size = formatBytes;
+  private sortBy = 'name';
+
+  setStorage(data: StorageResponse): void {
+    this.storageBySeries.set(Object.fromEntries(data.series.map((item) => [item.id, item])));
+    this.sortSeries(this.sortBy);
+  }
+
+  sortSeries(order: string): void {
+    this.sortBy = order;
+    this.dataSource.data = [...this.dataSource.data].sort((first, second) => {
+      const difference =
+        order === 'size'
+          ? (this.storageBySeries()[second.id]?.sizeBytes ?? -1) -
+            (this.storageBySeries()[first.id]?.sizeBytes ?? -1)
+          : order === 'episodes'
+            ? (second.episodeCount ?? 0) - (first.episodeCount ?? 0)
+            : 0;
+      return difference || first.name.localeCompare(second.name);
+    });
+    this.paginator?.firstPage();
+  }
 
   paginator!: MatPaginator;
   @ViewChild(MatPaginator) set page(value: MatPaginator) {
@@ -127,6 +153,7 @@ export class SeriesComponent implements OnInit {
     this.seriesService.getAll().subscribe({
       next: (data) => {
         this.dataSource.data = data;
+        this.sortSeries(this.sortBy);
         this.loading.set(false);
         const requestedId = Number(this.route.snapshot.queryParamMap.get('seriesId'));
         if (requestedId && !this.initialSeriesOpened) {
@@ -214,6 +241,10 @@ export class SeriesComponent implements OnInit {
     this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
   }
   private showError(msg: string) {
-    this.snackBar.open(msg, 'Cerrar', { duration: 0, panelClass: 'error-snack', politeness: 'assertive' });
+    this.snackBar.open(msg, 'Cerrar', {
+      duration: 0,
+      panelClass: 'error-snack',
+      politeness: 'assertive',
+    });
   }
 }

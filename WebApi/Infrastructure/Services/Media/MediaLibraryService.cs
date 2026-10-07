@@ -52,11 +52,15 @@ public sealed class MediaLibraryService(NostalgiaTVContext context, MediaProbe p
             job.Worker == "transcode" && job.Status == "Completed" && job.OutputPath == file.RelativePath)
             .OrderByDescending(job => job.Id).FirstOrDefaultAsync(token);
         var originalPath = conversion == null ? path : "wwwroot/uploads/" + conversion.SourcePath;
+        var originalRelative = conversion?.SourcePath ?? file.RelativePath;
+        var aliases = new[] { path, originalPath, "/uploads/" + file.RelativePath, "/uploads/" + originalRelative,
+            file.FullPath, Path.Combine(Root, originalRelative) };
         var existing = await database.Episodes.Where(item => item.SeriesId == file.SeriesId &&
-            (item.FilePath == path || item.FilePath == originalPath)).OrderByDescending(item => item.FilePath == path).FirstOrDefaultAsync(token);
+            aliases.Contains(item.FilePath)).OrderByDescending(item => item.FilePath == path).FirstOrDefaultAsync(token);
         if (existing != null)
         {
             existing.FilePath = path;
+            existing.IsAvailable = true;
             await database.SaveChangesAsync(token);
         }
         else
@@ -74,6 +78,7 @@ public sealed class MediaLibraryService(NostalgiaTVContext context, MediaProbe p
 
     public async Task ScanSeriesAsync(Series series, CancellationToken token)
     {
+        await ReconcileAsync(series, token);
         foreach (var file in Files(series))
         {
             if (file.ModifiedUtc > DateTime.UtcNow.AddSeconds(-120)) continue;
@@ -84,6 +89,46 @@ public sealed class MediaLibraryService(NostalgiaTVContext context, MediaProbe p
             }
             catch (IOException) { /* Invalid or unfinished files are never added to the catalogue. */ }
         }
+    }
+
+    public string ResolveEpisodePath(string path)
+    {
+        var relative = path.Replace('\\', '/');
+        if (relative.StartsWith("wwwroot/uploads/", StringComparison.OrdinalIgnoreCase)) relative = relative[16..];
+        else if (relative.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)) relative = relative[9..];
+        return Path.GetFullPath(Path.Combine(Root, relative));
+    }
+
+    public long? FileSize(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        try { return new FileInfo(MediaFilePolicy.SafePath(Root, ResolveEpisodePath(path))).Length; }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException) { return null; }
+    }
+
+    public async Task ReconcileAsync(Series series, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(series.FolderPath)) return;
+        // An absent/unreadable mount is not evidence that the user deleted every episode.
+        var folder = MediaFilePolicy.SafePath(Root, series.FolderPath);
+        _ = Directory.GetFileSystemEntries(folder);
+        var episodes = await context.Episodes.AsNoTracking().Where(episode => episode.SeriesId == series.Id && episode.IsAvailable)
+            .ToListAsync(token);
+        var missing = new List<int>();
+        foreach (var episode in episodes)
+        {
+            if (string.IsNullOrWhiteSpace(episode.FilePath)) continue;
+            var path = ResolveEpisodePath(episode.FilePath);
+            try { MediaFilePolicy.SafePath(Root, path); }
+            catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+            {
+                // Only an actual missing path changes availability; permission and safety errors abort the scan.
+                missing.Add(episode.Id);
+            }
+        }
+        if (missing.Count > 0)
+            await context.Episodes.Where(episode => missing.Contains(episode.Id))
+                .ExecuteUpdateAsync(update => update.SetProperty(episode => episode.IsAvailable, false), token);
     }
 
     public static void EnsureUnchanged(LibraryFile file)

@@ -22,6 +22,35 @@ public class MediaProcessingTests
     [Fact]
     public void AcceptsBroadlyCompatibleMp4() => Assert.True(MediaProbe.Parse(Metadata(), ".mp4").Compatible);
 
+    [Fact]
+    public void CompatibilityExplainsWhyAPlayableVideoNeedsConversion()
+    {
+        Assert.Null(MediaProbe.Parse(Metadata(), ".mp4").IncompatibilityReason);
+        Assert.Contains("AAC-LC", MediaProbe.Parse(Metadata(audio: "mp3"), ".mp4").IncompatibilityReason);
+        Assert.Contains("nivel H.264", MediaProbe.Parse(Metadata().Replace("\"level\":40", "\"level\":41"), ".mp4").IncompatibilityReason);
+        Assert.Contains("FPS", MediaProbe.Parse(Metadata().Replace("30/1", "60/1"), ".mp4").IncompatibilityReason);
+    }
+
+    [Fact]
+    public async Task CompatibleVideosAreNeverEncodedAgain()
+    {
+        var (probe, runner, transcoder) = Tools();
+        var directory = Directory.CreateTempSubdirectory("nostalgia-compatible-test-");
+        try
+        {
+            var input = Path.Combine(directory.FullName, "episode.mp4");
+            await runner.RunAsync(probe.Binary("ffmpeg"), ["-v", "error", "-f", "lavfi", "-i", "testsrc=size=160x120:rate=25",
+                "-t", "2", "-c:v", "libx264", "-pix_fmt", "yuv420p", input], TimeSpan.FromSeconds(30), CancellationToken.None);
+            var info = new FileInfo(input);
+            var hash = SHA256.HashData(await File.ReadAllBytesAsync(input));
+            Assert.Equal(input, await transcoder.ConvertAsync(new LibraryFile(1, input, info.Name, info.Length, info.LastWriteTimeUtc),
+                _ => throw new InvalidOperationException("Compatible input must not be encoded."), CancellationToken.None));
+            Assert.Equal(hash, SHA256.HashData(await File.ReadAllBytesAsync(input)));
+            Assert.Single(Directory.GetFiles(directory.FullName));
+        }
+        finally { directory.Delete(recursive: true); }
+    }
+
     [Theory]
     [InlineData(".mkv", "h264", "yuv420p", "aac", 2)]
     [InlineData(".webm", "h264", "yuv420p", "aac", 2)]

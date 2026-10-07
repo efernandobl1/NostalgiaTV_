@@ -9,6 +9,7 @@ namespace ApplicationCore.Entities
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
         public string? FilePath { get; set; }
+        public bool IsAvailable { get; set; } = true;
         public int EpisodeTypeId { get; set; }
         public EpisodeType EpisodeType { get; set; } = null!;
         public int Season { get; set; }

@@ -49,6 +49,7 @@ public abstract class MediaProcessingWorker(IServiceScopeFactory scopes, IOption
         {
             try
             {
+                if (Worker == "index") await library.ReconcileAsync(item, token);
                 foreach (var file in library.Files(item))
                 {
                     token.ThrowIfCancellationRequested();
@@ -56,9 +57,33 @@ public abstract class MediaProcessingWorker(IServiceScopeFactory scopes, IOption
                     var stable = observations.TryGetValue(file.RelativePath, out var previous) && previous == file.Fingerprint;
                     observations[file.RelativePath] = file.Fingerprint;
                     if (!stable || file.ModifiedUtc > DateTime.UtcNow.AddSeconds(-Math.Max(30, settings.Value.StableAgeSeconds))) continue;
-                    if (await context.MediaProcessingJobs.AnyAsync(job => job.Worker == Worker && job.Fingerprint == file.Fingerprint, token)) continue;
+                    var previousJob = await context.MediaProcessingJobs.AsNoTracking()
+                        .FirstOrDefaultAsync(job => job.Worker == Worker && job.Fingerprint == file.Fingerprint, token);
+                    if (previousJob != null)
+                    {
+                        if (Worker == "index" && previousJob.Status == "Completed" &&
+                            await context.Episodes.AnyAsync(episode => episode.SeriesId == item.Id && !episode.IsAvailable &&
+                                episode.FilePath == "wwwroot/uploads/" + file.RelativePath, token))
+                            await library.ImportAsync(file, token);
+                        continue;
+                    }
+                    MediaInfo? info = null;
+                    string? probeError = null;
+                    try
+                    {
+                        if (Worker == "transcode") info = await scope.ServiceProvider.GetRequiredService<MediaProbe>().ReadAsync(file.FullPath, token);
+                        MediaLibraryService.EnsureUnchanged(file);
+                    }
+                    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                    {
+                        logger.LogWarning(exception, "Media file {Path} cannot be validated", file.RelativePath);
+                        probeError = "No se pudo validar el archivo; revisa el video y sus permisos antes de reintentar.";
+                    }
                     context.MediaProcessingJobs.Add(new MediaProcessingJob { Worker = Worker, SeriesId = file.SeriesId,
-                        Fingerprint = file.Fingerprint, SourcePath = file.RelativePath, SourceSize = file.Size, SourceModifiedUtc = file.ModifiedUtc });
+                        Fingerprint = file.Fingerprint, SourcePath = file.RelativePath, SourceSize = file.Size, SourceModifiedUtc = file.ModifiedUtc,
+                        Status = probeError != null ? "Failed" : info?.Compatible == true ? "Skipped" : "Queued", Progress = info?.Compatible == true ? 100 : 0,
+                        Message = probeError ?? (info == null ? null : info.Compatible ? "El archivo ya es compatible; no se recodifica."
+                            : "Conversión necesaria: " + info.IncompatibilityReason) });
                     await context.SaveChangesAsync(token);
                 }
             }
@@ -89,6 +114,10 @@ public abstract class MediaProcessingWorker(IServiceScopeFactory scopes, IOption
                 }
                 else
                 {
+                    var info = await scope.ServiceProvider.GetRequiredService<MediaProbe>().ReadAsync(path, token);
+                    job.Message = info.Compatible ? "El archivo ya es compatible; no se recodifica."
+                        : "Conversión necesaria: " + info.IncompatibilityReason;
+                    await context.SaveChangesAsync(token);
                     var lastUpdate = DateTime.MinValue;
                     var output = await scope.ServiceProvider.GetRequiredService<MediaTranscoder>().ConvertAsync(file, async percent =>
                     {
@@ -104,7 +133,8 @@ public abstract class MediaProcessingWorker(IServiceScopeFactory scopes, IOption
                     }, token);
                     job.OutputPath = Path.GetRelativePath(library.Root, output).Replace('\\', '/');
                     job.Status = output == path ? "Skipped" : "Completed";
-                    job.Message = output == path ? "El archivo ya es compatible." : "Conversión validada; original conservado.";
+                    job.Message = output == path ? "El archivo ya es compatible; no se recodifica."
+                        : "Conversión validada; original conservado. Motivo: " + info.IncompatibilityReason;
                 }
                 job.Progress = 100;
             }

@@ -1,4 +1,24 @@
 @use '../../../../styles/dashboard-components';
+.series-order {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--dashboard-text);
+}
+.series-order select {
+  padding: 10px;
+  min-height: 44px;
+  max-width: 100%;
+  background: var(--dashboard-surface);
+  color: var(--dashboard-text);
+  border: 1px solid var(--dashboard-border);
+  border-radius: 4px;
+}
+.series-order select:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
 .video-shelf {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
