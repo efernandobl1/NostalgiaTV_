@@ -32,6 +32,8 @@ namespace Infrastructure.Services
                 .Where(e => e.SeriesId == seriesId && e.IsAvailable)
                 .Include(e => e.EpisodeType)
                 .OrderBy(e => e.Season)
+                .ThenBy(e => e.EpisodeNumber)
+                .ThenBy(e => e.Id)
                 .ProjectToType<EpisodeResponse>()
                 .ToListAsync();
 

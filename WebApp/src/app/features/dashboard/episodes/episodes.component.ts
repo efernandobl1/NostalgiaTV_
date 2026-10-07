@@ -76,6 +76,12 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
   series = signal<SeriesResponse[]>([]);
   selectedSeriesId = signal<number | null>(null);
   selectedSeason = signal<number | null>(null);
+  readonly filtersOpen = signal(false);
+  readonly search = signal('');
+  readonly selectedType = signal<number | null>(null);
+  readonly activeFilterCount = computed(
+    () => Number(!!this.search().trim()) + Number(this.selectedType() !== null),
+  );
   // Nombre de la serie seleccionada (encabezado "Episodios — <serie>").
   selectedSeriesName = computed(
     () => this.series().find((s) => s.id === this.selectedSeriesId())?.name ?? null,
@@ -90,6 +96,23 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
   ]);
 
   readonly allEpisodes = signal<EpisodeResponse[]>([]);
+  readonly filteredEpisodes = computed(() => {
+    const season = this.selectedSeason();
+    const type = this.selectedType();
+    const query = this.normalize(this.search().trim());
+    const episodeNumber = /^\d+$/.test(query) ? Number(query) : null;
+    return this.allEpisodes()
+      .filter(
+        (episode) =>
+          (season === null || episode.season === season) &&
+          (type === null || episode.episodeTypeId === type) &&
+          (!query ||
+            (episodeNumber !== null
+              ? episode.episodeNumber === episodeNumber
+              : this.normalize(episode.title).includes(query))),
+      )
+      .sort((a, b) => a.season - b.season || a.episodeNumber - b.episodeNumber || a.id - b.id);
+  });
   readonly totalSizeBytes = computed(() =>
     this.allEpisodes().reduce((total, episode) => total + (episode.fileSizeBytes ?? 0), 0),
   );
@@ -108,6 +131,10 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
   });
 
   dataSource = new MatTableDataSource<EpisodeResponse>([]);
+  private readonly syncEpisodes = effect(() => {
+    this.dataSource.data = this.filteredEpisodes();
+    this.paginator?.firstPage();
+  });
   displayedColumns = ['id', 'season', 'episodeNumber', 'title', 'type', 'filePath', 'actions'];
 
   constructor(
@@ -140,12 +167,14 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
   onSeriesChange(seriesId: number) {
     this.selectedSeriesId.set(seriesId);
     this.selectedSeason.set(null);
+    this.clearFilters();
+    this.allEpisodes.set([]);
     this.loadEpisodes(seriesId);
   }
 
   onSeasonChange(season: number | null) {
     this.selectedSeason.set(season);
-    this.applySeasonFilter(season);
+    this.expandedId.set(null);
   }
 
   loadEpisodes(seriesId: number) {
@@ -157,19 +186,25 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
         if (this.selectedSeriesId() !== seriesId) return;
         this.allEpisodes.set(data);
         this.loading.set(false);
-        this.dataSource.data = data;
       },
       error: () => {
+        if (this.selectedSeriesId() !== seriesId) return;
         this.loading.set(false);
         this.loadError.set(true);
       },
     });
   }
 
-  private applySeasonFilter(season: number | null) {
-    const all = this.allEpisodes();
-    this.dataSource.data = season === null ? all : all.filter((e) => e.season === season);
-    if (this.paginator) this.paginator.firstPage();
+  clearFilters() {
+    this.search.set('');
+    this.selectedType.set(null);
+  }
+
+  private normalize(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('es');
   }
 
   scan() {
@@ -179,12 +214,12 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
       return;
     }
     this.scanning.set(true);
-    this.episodesService.scan(this.selectedSeriesId()!).subscribe({
+    const seriesId = this.selectedSeriesId()!;
+    this.episodesService.scan(seriesId).subscribe({
       next: (data) => {
-        this.allEpisodes.set(data);
         this.scanning.set(false);
-        this.dataSource.data = data;
-        this.selectedSeason.set(null);
+        if (this.selectedSeriesId() !== seriesId) return;
+        this.allEpisodes.set(data);
         this.showSuccess('Episodios sincronizados desde la carpeta');
       },
       error: () => {
@@ -254,7 +289,6 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
       this.episodesService.update(episode.id, request).subscribe({
         next: (updated) => {
           this.allEpisodes.update((list) => list.map((e) => (e.id === updated.id ? updated : e)));
-          this.applySeasonFilter(this.selectedSeason());
           this.showSuccess('Episodio actualizado');
         },
         error: () => this.showError('Error al actualizar el episodio'),
@@ -267,6 +301,10 @@ export class EpisodesComponent implements OnInit, AfterViewInit {
   }
 
   private showError(msg: string) {
-    this.snackBar.open(msg, 'Cerrar', { duration: 0, panelClass: 'error-snack', politeness: 'assertive' });
+    this.snackBar.open(msg, 'Cerrar', {
+      duration: 0,
+      panelClass: 'error-snack',
+      politeness: 'assertive',
+    });
   }
 }

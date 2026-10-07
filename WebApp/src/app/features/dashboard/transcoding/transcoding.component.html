@@ -26,8 +26,9 @@
     </div>
     <p class="processing-note">Pausar deja terminar el archivo actual. Solo se leen temporadas, especiales y películas de series registradas; los archivos en carga se omiten.</p>
     @if (resourceDraft; as policy) {
-      <section class="resource-console" aria-labelledby="resource-title">
-        <header><h2 id="resource-title">Ritmo de trabajo</h2><p>Menos núcleos mientras ves la tele. Más capacidad durante la madrugada.</p></header>
+      <details class="resource-console">
+        <summary><h2>Ritmo de trabajo</h2><span>Núcleos y horario</span></summary>
+        <p>Menos núcleos mientras ves la tele. Más capacidad durante la madrugada.</p>
         <form (ngSubmit)="saveResources()">
           <div class="resource-fields">
             <label>Núcleos de día<select name="dayCores" [(ngModel)]="policy.dayCores"><option [ngValue]="1">1 núcleo</option><option [ngValue]="2">2 núcleos</option></select></label>
@@ -40,21 +41,33 @@
           <div class="resource-actions"><button class="admin-button" type="submit" [disabled]="resourcesSaving() || error()">{{ resourcesSaving() ? 'Guardando…' : 'Guardar horario' }}</button><span role="status">{{ resourcesMessage() }}</span></div>
         </form>
         <p class="processing-note">Límite aplicado: {{ status()?.resourcePolicy?.appliedCores || 'pendiente' }} núcleos. Máximo del worker: {{ status()?.resourcePolicy?.availableCores || 'pendiente' }}. Si Docker permite solo uno, el horario no puede superar ese límite; cambia <code>MEDIA_WORKER_CPUS</code> y recrea el worker.</p>
-      </section>
+      </details>
     }
     @if (!online('transcode') || !online('index')) {
       <p class="processing-note">El contenedor <code>media-worker</code> debe estar iniciado. Antes de activar la conversión, detén el transcoder externo anterior para evitar que ambos procesen la misma carpeta.</p>
     }
-    <section class="processing-log" aria-labelledby="processing-log-title">
-      <header class="log-heading"><h2 id="processing-log-title">Recorrido de los archivos</h2><div class="job-filters" aria-label="Filtrar trabajos">
-        <button type="button" [attr.aria-pressed]="filter() === 'all'" (click)="filter.set('all')">Todos</button>
-        <button type="button" [attr.aria-pressed]="filter() === 'transcode'" (click)="filter.set('transcode')">Conversión</button>
-        <button type="button" [attr.aria-pressed]="filter() === 'index'" (click)="filter.set('index')">Videoteca</button>
+    <section class="processing-log" aria-labelledby="processing-log-title" [attr.aria-busy]="jobsLoading()">
+      <header class="log-heading"><div><h2 id="processing-log-title">Cola de trabajo</h2><p>Lo pendiente primero. El historial se conserva en sus filtros.</p></div><div class="job-filters" role="group" aria-label="Servicio">
+        <button type="button" [attr.aria-pressed]="filter() === 'all'" (click)="selectWorker('all')">Ambos servicios</button>
+        <button type="button" [attr.aria-pressed]="filter() === 'transcode'" (click)="selectWorker('transcode')">Conversión</button>
+        <button type="button" [attr.aria-pressed]="filter() === 'index'" (click)="selectWorker('index')">Videoteca</button>
       </div></header>
+      <div class="queue-views" role="group" aria-label="Estado de los archivos">
+        @for (item of views; track item.id) {
+          <button type="button" [attr.aria-pressed]="view() === item.id" (click)="selectView(item.id)">
+            {{ item.title }}<span class="view-count">{{ viewCount(item.statuses) }}</span>
+          </button>
+        }
+      </div>
+      @if (jobsLoading()) {
+        <div class="admin-state" role="status">Cargando archivos…</div>
+      } @else if (error()) {
+        <div class="admin-state" role="status">No se pudo actualizar la lista. Pulsa «Actualizar estado» para reintentar.</div>
+      } @else {
       @for (job of jobs(); track job.id) {
         <article class="processing-job" [class.processing-job--error]="job.status === 'Failed'">
           <span class="material-symbols-outlined job-icon" aria-hidden="true">{{ job.worker === 'transcode' ? 'video_settings' : 'video_library' }}</span>
-          <div class="job-copy"><strong>{{ job.seriesName }}</strong><span class="job-path">{{ job.sourcePath }}</span>
+          <div class="job-copy"><strong>{{ filename(job.sourcePath) }}</strong><span class="job-series">{{ job.seriesName }} · {{ job.worker === 'transcode' ? 'Conversión' : 'Videoteca' }}</span>
             @if (job.status === 'Processing' && job.worker === 'transcode') {
               @if (job.progress > 0) {
                 <progress max="100" [value]="job.progress" [attr.aria-label]="'Progreso de ' + job.sourcePath"></progress><span>{{ job.progress | number:'1.0-0' }}% · conversión y validación</span>
@@ -62,15 +75,26 @@
             } @else if (job.status === 'Processing') {
               <span>Validando compatibilidad e incorporando el episodio…</span>
             }
-            @if (job.message) { <small>{{ job.message }}</small> }
-            @if (job.outputPath && job.outputPath !== job.sourcePath) { <small>Salida: {{ job.outputPath }}</small> }
+            @if (job.status === 'Failed' && job.message) { <small>{{ job.message }}</small> }
+            <details class="job-details"><summary>Detalles del archivo</summary><div>
+              <span class="job-path">Origen: {{ job.sourcePath }}</span>
+              @if (job.status !== 'Failed' && job.message) { <small>{{ job.message }}</small> }
+              @if (job.outputPath && job.outputPath !== job.sourcePath) { <small>Salida: {{ job.outputPath }}</small> }
+            </div></details>
           </div>
           <div class="job-state"><strong>{{ label(job.status) }}</strong><span>{{ size(job.sourceSize) }}</span><time [attr.datetime]="job.updatedAtUtc">{{ job.updatedAtUtc | date:'dd/MM HH:mm' }}</time>
             @if (job.status === 'Failed') { <button type="button" class="admin-button" [disabled]="busy() !== null || error()" (click)="retry(job.id)" [attr.aria-label]="'Reintentar ' + job.sourcePath">Reintentar</button> }
           </div>
         </article>
-      } @empty { <div class="admin-empty"><strong>No hay archivos en este filtro.</strong><span>Activa los servicios y sube videos a una temporada desde Videoteca o SFTP.</span></div> }
-      <p class="processing-note">Se muestran los últimos 100 trabajos, con los archivos activos primero. Los estados se actualizan cada 5 segundos.</p>
+      } @empty { <div class="admin-empty"><strong>{{ emptyTitle() }}</strong><span>{{ view() === 'pending' ? 'Los completados y omitidos están en el historial. Los nuevos archivos aparecerán aquí cuando el servicio los detecte.' : 'Prueba otro estado o servicio para consultar los demás archivos.' }}</span></div> }
+      <nav class="queue-pagination" aria-label="Páginas de archivos">
+        <p class="processing-note">{{ firstJob() }}–{{ lastJob() }} de {{ status()?.jobsTotal ?? 0 }} archivos</p>
+        <div><button type="button" class="admin-button admin-button--secondary" [disabled]="currentPage() <= 1" (click)="changePage(currentPage() - 1)">Anterior</button>
+          <span>Página {{ currentPage() }} de {{ totalPages() }}</span>
+          <button type="button" class="admin-button admin-button--secondary" [disabled]="currentPage() >= totalPages()" (click)="changePage(currentPage() + 1)">Siguiente</button></div>
+      </nav>
+      }
+      <p class="processing-note">La lista se actualiza cada 5 segundos. Cambiar de filtro no elimina archivos ni historial.</p>
     </section>
   }
 </section>

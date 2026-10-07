@@ -16,16 +16,28 @@ namespace WebApi.Controllers;
 public sealed class TranscodingController(NostalgiaTVContext context, IOptions<MediaProcessingSettings> settings) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Status(CancellationToken token)
+    public async Task<IActionResult> Status(CancellationToken token, [FromQuery] string worker = "all",
+        [FromQuery] string view = "pending", [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
+        if (worker is not ("all" or "transcode" or "index") ||
+            view is not ("pending" or "Completed" or "Skipped" or "Failed" or "all") || page < 1 || pageSize is < 1 or > 100)
+            return BadRequest(new { message = "Selecciona un servicio, estado y página válidos." });
         var workers = await context.MediaWorkerStates.AsNoTracking().ToListAsync(token);
         var counts = await context.MediaProcessingJobs.GroupBy(job => new { job.Worker, job.Status })
             .Select(group => new { group.Key.Worker, group.Key.Status, Count = group.Count() }).ToListAsync(token);
-        var jobs = await (from job in context.MediaProcessingJobs.AsNoTracking()
+        var query = from job in context.MediaProcessingJobs.AsNoTracking()
                           join series in context.Series on job.SeriesId equals series.Id
-                          orderby job.Status == "Processing" descending, job.UpdatedAtUtc descending
                           select new { job.Id, job.Worker, job.Status, job.Progress, job.SourcePath, job.OutputPath,
-                              job.SourceSize, job.Message, job.UpdatedAtUtc, SeriesName = series.Name }).Take(100).ToListAsync(token);
+                              job.SourceSize, job.Message, job.UpdatedAtUtc, SeriesName = series.Name };
+        if (worker != "all") query = query.Where(job => job.Worker == worker);
+        if (view == "pending") query = query.Where(job => job.Status == "Queued" || job.Status == "Processing");
+        else if (view != "all") query = query.Where(job => job.Status == view);
+        var total = await query.CountAsync(token);
+        page = Math.Min(page, Math.Max(1, (int)Math.Ceiling((double)total / pageSize)));
+        var ordered = view == "pending"
+            ? query.OrderByDescending(job => job.Status == "Processing").ThenBy(job => job.Id)
+            : query.OrderByDescending(job => job.UpdatedAtUtc).ThenByDescending(job => job.Id);
+        var jobs = await ordered.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(token);
         return Ok(new
         {
             ResourcePolicy = await context.MediaResourcePolicies.AsNoTracking().SingleAsync(item => item.Id == 1, token),
@@ -33,6 +45,9 @@ public sealed class TranscodingController(NostalgiaTVContext context, IOptions<M
             Workers = workers.Select(worker => new { worker.Id, worker.Enabled,
                 HeartbeatUtc = worker.HeartbeatUtc.HasValue ? DateTime.SpecifyKind(worker.HeartbeatUtc.Value, DateTimeKind.Utc) : (DateTime?)null }),
             Counts = counts,
+            JobsTotal = total,
+            Page = page,
+            PageSize = pageSize,
             Jobs = jobs.Select(job => new { job.Id, job.Worker, job.Status, job.Progress, job.SourcePath, job.OutputPath,
                 job.SourceSize, job.Message, job.SeriesName, UpdatedAtUtc = DateTime.SpecifyKind(job.UpdatedAtUtc, DateTimeKind.Utc) })
         });
