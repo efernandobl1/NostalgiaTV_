@@ -23,6 +23,16 @@
         <button
           class="admin-button admin-button--secondary"
           type="button"
+          [attr.aria-expanded]="filtersOpen()"
+          aria-controls="episode-filters"
+          (click)="filtersOpen.set(!filtersOpen())"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">filter_list</span>
+          Filtros{{ activeFilterCount() ? ' (' + activeFilterCount() + ')' : '' }}
+        </button>
+        <button
+          class="admin-button admin-button--secondary"
+          type="button"
           (click)="scan()"
           [disabled]="scanning()"
         >
@@ -56,6 +66,41 @@
         </button>
       }
     </nav>
+    @if (filtersOpen()) {
+      <div
+        id="episode-filters"
+        class="episode-filters"
+        role="region"
+        aria-label="Filtros de episodios"
+      >
+        <label class="studio-field"
+          >Título o número de capítulo
+          <input
+            type="search"
+            [ngModel]="search()"
+            (ngModelChange)="search.set($event)"
+            placeholder="Por ejemplo: Homero o 9"
+          />
+        </label>
+        <label class="studio-field"
+          >Tipo de episodio
+          <select [ngModel]="selectedType()" (ngModelChange)="selectedType.set($event)">
+            <option [ngValue]="null">Todos los tipos</option>
+            @for (type of episodeTypes(); track type.id) {
+              <option [ngValue]="type.id">{{ type.name }}</option>
+            }
+          </select>
+        </label>
+        <button
+          type="button"
+          class="admin-button admin-button--secondary"
+          (click)="clearFilters()"
+          [disabled]="!activeFilterCount()"
+        >
+          Limpiar filtros
+        </button>
+      </div>
+    }
     @if (loading()) {
       <div class="admin-state" role="status">Cargando episodios…</div>
     } @else if (loadError()) {
@@ -66,6 +111,10 @@
         </button>
       </div>
     } @else {
+      <p class="episode-summary" role="status">
+        {{ filteredEpisodes().length }} de {{ allEpisodes().length }} episodios · Ordenados por
+        temporada y capítulo
+      </p>
       <div class="episode-archive">
         @for (episode of dataSource.connect() | async; track episode.id) {
           <article class="episode-file">
@@ -109,8 +158,18 @@
         } @empty {
           <div class="admin-empty">
             <span class="material-symbols-outlined" aria-hidden="true">video_library</span
-            ><strong>No hay episodios en esta sección</strong
-            ><span>Sube archivos o sincroniza la carpeta de esta serie.</span>
+            ><strong>{{
+              activeFilterCount()
+                ? 'Ningún episodio coincide con los filtros'
+                : 'No hay episodios en esta sección'
+            }}</strong>
+            @if (activeFilterCount()) {
+              <button type="button" class="admin-button" (click)="clearFilters()">
+                Limpiar filtros
+              </button>
+            } @else {
+              <span>Sube archivos o sincroniza la carpeta de esta serie.</span>
+            }
           </div>
         }
       </div>

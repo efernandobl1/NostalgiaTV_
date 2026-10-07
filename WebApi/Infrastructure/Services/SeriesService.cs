@@ -124,6 +124,9 @@ namespace Infrastructure.Services
             var episodes = await _context.Episodes
                 .Where(e => e.SeriesId == seriesId && e.IsAvailable)
                 .Include(e => e.EpisodeType)
+                .OrderBy(e => e.Season)
+                .ThenBy(e => e.EpisodeNumber)
+                .ThenBy(e => e.Id)
                 .ProjectToType<EpisodeResponse>()
                 .ToListAsync();
             foreach (var episode in episodes)

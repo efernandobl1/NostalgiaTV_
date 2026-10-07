@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 
 export type WorkerId = 'transcode' | 'index';
+export type JobView = 'pending' | 'Completed' | 'Skipped' | 'Failed' | 'all';
+export interface JobQuery { worker: WorkerId | 'all'; view: JobView; page: number; pageSize: number; }
 export interface ResourcePolicy {
   dayCores: number; nightCores: number; nightEnabled: boolean; nightStartMinute: number; nightEndMinute: number;
   timeZoneId: string; availableCores: number; appliedCores: number; appliedAtUtc: string | null;
@@ -18,13 +20,16 @@ export interface MediaStatus {
   workers: MediaWorker[];
   counts: { worker: WorkerId; status: string; count: number }[];
   jobs: MediaJob[];
+  jobsTotal: number;
+  page: number;
+  pageSize: number;
 }
 
 @Injectable({ providedIn: 'root' })
 export class TranscodingService {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.apiUrl}/api/v1/transcoding`;
-  getStatus() { return this.http.get<MediaStatus>(this.url, { withCredentials: true }); }
+  getStatus(query: JobQuery) { return this.http.get<MediaStatus>(this.url, { params: { ...query }, withCredentials: true }); }
   setEnabled(worker: WorkerId, enabled: boolean) {
     return this.http.put(`${this.url}/workers/${worker}`, { enabled }, { withCredentials: true });
   }
