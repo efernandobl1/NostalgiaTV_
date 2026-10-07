@@ -1,9 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, exhaustMap, of, timer } from 'rxjs';
-import { MediaStatus, MediaWorker, ResourcePolicy, TranscodingService, WorkerId } from './transcoding.service';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { catchError, exhaustMap, merge, of, Subject, switchMap, tap, timer } from 'rxjs';
+import { JobView, MediaStatus, MediaWorker, ResourcePolicy, TranscodingService, WorkerId } from './transcoding.service';
 
 @Component({
   selector: 'app-transcoding',
@@ -18,23 +18,45 @@ export class TranscodingComponent {
   readonly actionError = signal('');
   readonly busy = signal<string | number | null>(null);
   readonly filter = signal<WorkerId | 'all'>('all');
+  readonly view = signal<JobView>('pending');
+  readonly page = signal(1);
+  readonly jobsLoading = signal(true);
+  private readonly refreshRequests = new Subject<void>();
+  private readonly query = computed(() => ({ worker: this.filter(), view: this.view(), page: this.page(), pageSize: 20 }));
+  readonly views: { id: JobView; title: string; statuses: string[] }[] = [
+    { id: 'pending', title: 'Pendientes', statuses: ['Queued', 'Processing'] },
+    { id: 'Completed', title: 'Completados', statuses: ['Completed'] },
+    { id: 'Skipped', title: 'Omitidos', statuses: ['Skipped'] },
+    { id: 'Failed', title: 'Errores', statuses: ['Failed'] },
+    { id: 'all', title: 'Todos', statuses: [] },
+  ];
   resourceDraft: ResourcePolicy | null = null;
   startTime = '00:00';
   endTime = '05:00';
   readonly resourcesSaving = signal(false);
   readonly resourcesMessage = signal('');
-  readonly jobs = computed(() => this.status()?.jobs.filter(job => this.filter() === 'all' || job.worker === this.filter()) ?? []);
+  readonly jobs = computed(() => this.status()?.jobs ?? []);
+  readonly currentPage = computed(() => this.status()?.page ?? 1);
+  readonly totalPages = computed(() => Math.max(1, Math.ceil((this.status()?.jobsTotal ?? 0) / 20)));
+  readonly firstJob = computed(() => this.jobs().length ? (this.currentPage() - 1) * 20 + 1 : 0);
+  readonly lastJob = computed(() => this.jobs().length ? this.firstJob() + this.jobs().length - 1 : 0);
+  readonly emptyTitle = computed(() => ({ pending: 'No hay archivos pendientes.', Completed: 'No hay trabajos completados.',
+    Skipped: 'No hay archivos omitidos.', Failed: 'No hay errores en este servicio.', all: 'No hay trabajos registrados.' })[this.view()]);
   readonly workers: { id: WorkerId; title: string; icon: string; description: string }[] = [
     { id: 'transcode', title: 'Convertir videos', icon: 'video_settings', description: 'MP4 · H.264 · AAC. Una conversión a la vez, sin borrar el original.' },
     { id: 'index', title: 'Actualizar videoteca', icon: 'video_library', description: 'Detecta episodios compatibles en las carpetas de cada serie y los incorpora al catálogo.' },
   ];
 
   constructor() {
-    timer(0, 5000).pipe(
-      exhaustMap(() => this.service.getStatus().pipe(catchError(() => of(null)))),
+    toObservable(this.query).pipe(
+      tap(() => this.jobsLoading.set(true)),
+      switchMap(query => merge(timer(0, 5000), this.refreshRequests).pipe(
+        exhaustMap(() => this.service.getStatus(query).pipe(catchError(() => of(null)))),
+      )),
       takeUntilDestroyed(),
     ).subscribe(status => {
       this.error.set(status === null);
+      this.jobsLoading.set(false);
       if (status) {
         this.status.set(status);
         if (!this.resourceDraft && status.resourcePolicy) {
@@ -68,6 +90,14 @@ export class TranscodingComponent {
   count(id: WorkerId, statuses: string[]): number {
     return this.status()?.counts.filter(item => item.worker === id && statuses.includes(item.status)).reduce((total, item) => total + item.count, 0) ?? 0;
   }
+  viewCount(statuses: string[]): number {
+    return this.status()?.counts.filter(item => (this.filter() === 'all' || item.worker === this.filter()) &&
+      (!statuses.length || statuses.includes(item.status))).reduce((total, item) => total + item.count, 0) ?? 0;
+  }
+  selectWorker(worker: WorkerId | 'all'): void { this.filter.set(worker); this.page.set(1); }
+  selectView(view: JobView): void { this.view.set(view); this.page.set(1); }
+  changePage(page: number): void { this.page.set(page); }
+  filename(path: string): string { return path.split('/').pop() || path; }
   stateLabel(id: WorkerId): string {
     if (!this.online(id)) return 'Worker sin conexión';
     if (!this.worker(id)?.enabled) return this.count(id, ['Processing']) ? 'Terminando archivo actual' : 'En pausa';
@@ -94,6 +124,6 @@ export class TranscodingComponent {
     });
   }
   refresh(): void {
-    this.service.getStatus().subscribe({ next: status => { this.status.set(status); this.error.set(false); }, error: () => this.error.set(true) });
+    this.refreshRequests.next();
   }
 }
