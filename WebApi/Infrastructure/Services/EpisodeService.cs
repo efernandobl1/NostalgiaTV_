@@ -3,6 +3,7 @@ using ApplicationCore.Entities;
 using ApplicationCore.Exceptions;
 using ApplicationCore.Interfaces;
 using Infrastructure.Contexts;
+using Infrastructure.Services.Media;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -13,11 +14,13 @@ namespace Infrastructure.Services
     {
         private readonly NostalgiaTVContext _context;
         private readonly IHostEnvironment _environment;
+        private readonly MediaLibraryService? _library;
 
-        public EpisodeService(NostalgiaTVContext context, IHostEnvironment environment)
+        public EpisodeService(NostalgiaTVContext context, IHostEnvironment environment, MediaLibraryService? library = null)
         {
             _context = context;
             _environment = environment;
+            _library = library;
         }
 
         public async Task<List<EpisodeResponse>> GetBySeriesAsync(int seriesId)
@@ -26,7 +29,7 @@ namespace Infrastructure.Services
             if (!exists) throw new NotFoundException($"Series {seriesId} not found");
 
             var episodes = await _context.Episodes
-                .Where(e => e.SeriesId == seriesId)
+                .Where(e => e.SeriesId == seriesId && e.IsAvailable)
                 .Include(e => e.EpisodeType)
                 .OrderBy(e => e.Season)
                 .ProjectToType<EpisodeResponse>()
@@ -68,7 +71,7 @@ namespace Infrastructure.Services
         public async Task<IEnumerable<EpisodeResponse>> GetBySeriesPublicAsync(int seriesId)
         {
             return await _context.Episodes
-                .Where(e => e.SeriesId == seriesId && e.FilePath != null)
+                .Where(e => e.SeriesId == seriesId && e.IsAvailable && e.FilePath != null)
                 .OrderBy(e => e.Season)
                 .ThenBy(e => e.EpisodeNumber)
                 .ProjectToType<EpisodeResponse>()
@@ -77,6 +80,7 @@ namespace Infrastructure.Services
 
         private long? GetFileSize(string? filePath)
         {
+            if (_library != null) return _library.FileSize(filePath);
             if (string.IsNullOrWhiteSpace(filePath)) return null;
             try
             {
@@ -90,6 +94,7 @@ namespace Infrastructure.Services
             }
             catch (ArgumentException) { return null; }
             catch (IOException) { return null; }
+            catch (UnauthorizedAccessException) { return null; }
             catch (NotSupportedException) { return null; }
         }
     }

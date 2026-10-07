@@ -38,6 +38,7 @@ namespace Infrastructure.Services
         {
             var series = await _context.Series.ProjectToType<SeriesResponse>().ToListAsync();
             var seasons = await _context.Episodes.AsNoTracking()
+                .Where(episode => episode.IsAvailable)
                 .Select(episode => new { episode.SeriesId, episode.Season }).Distinct().ToListAsync();
             var bySeries = seasons.ToLookup(episode => episode.SeriesId, episode => episode.Season);
             foreach (var item in series)
@@ -120,11 +121,14 @@ namespace Infrastructure.Services
 
             await _library.ScanSeriesAsync(series, CancellationToken.None);
 
-            return await _context.Episodes
-                .Where(e => e.SeriesId == seriesId)
+            var episodes = await _context.Episodes
+                .Where(e => e.SeriesId == seriesId && e.IsAvailable)
                 .Include(e => e.EpisodeType)
                 .ProjectToType<EpisodeResponse>()
                 .ToListAsync();
+            foreach (var episode in episodes)
+                episode.FileSizeBytes = _library.FileSize(episode.FilePath);
+            return episodes;
         }
 
         // Upload to a temporary file, probe it and publish atomically. Only compatible videos are indexed.
@@ -195,9 +199,18 @@ namespace Infrastructure.Services
                     fullPath = Path.Combine(targetDir, $".upload-{Guid.NewGuid():N}.part");
                     await using (var stream = new FileStream(fullPath, FileMode.CreateNew))
                         await file.CopyToAsync(stream);
-                    await _probe.ReadAsync(fullPath, CancellationToken.None);
+                    var info = await _probe.ReadAsync(fullPath, CancellationToken.None, ext);
                     File.Move(fullPath, destination, overwrite: false);
                     fullPath = destination;
+
+                    // Dashboard uploads are already complete and validated; they need no SFTP settling delay.
+                    if (info.Compatible)
+                    {
+                        var saved = new FileInfo(destination);
+                        await _library.ImportAsync(new LibraryFile(seriesId, destination,
+                            Path.GetRelativePath(_library.Root, destination).Replace('\\', '/'), saved.Length, saved.LastWriteTimeUtc),
+                            CancellationToken.None);
+                    }
 
                     result.Success = true;
                     result.FilePath = ToRelativePath(fullPath);
@@ -282,7 +295,7 @@ namespace Infrastructure.Services
                 query = query.Where(s => s.Categories.Any(c => c.Id == filter.CategoryId));
 
             if (filter.EpisodeTypeId.HasValue)
-                query = query.Where(s => s.Episodes.Any(e => e.EpisodeTypeId == filter.EpisodeTypeId));
+                query = query.Where(s => s.Episodes.Any(e => e.IsAvailable && e.EpisodeTypeId == filter.EpisodeTypeId));
 
             var totalCount = await query.CountAsync();
 

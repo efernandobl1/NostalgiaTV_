@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { catchError, forkJoin, of } from 'rxjs';
 import { DashboardService } from '../dashboard.service';
+import { StorageComponent } from '../storage/storage.component';
 import { DashboardSummaryResponse } from '../../../shared/models/dashboard.model';
 import { ChannelsService } from '../channels/channels.service';
 import { SeriesService } from '../series/series.service';
@@ -20,7 +21,7 @@ interface ChannelStatePreview {
 @Component({
   selector: 'app-summary',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, RouterLink],
+  imports: [DatePipe, DecimalPipe, RouterLink, StorageComponent],
   templateUrl: './summary.component.html',
   styleUrl: './summary.component.scss',
 })

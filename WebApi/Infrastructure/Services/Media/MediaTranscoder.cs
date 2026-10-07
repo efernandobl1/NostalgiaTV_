@@ -21,7 +21,7 @@ public sealed class MediaTranscoder(MediaProbe probe, MediaProcessRunner runner,
             if (Guid.TryParseExact(identifier, "N", out _) && (File.GetAttributes(orphan) & FileAttributes.ReparsePoint) == 0)
                 File.Delete(orphan);
         }
-        var drive = new DriveInfo(Path.GetPathRoot(file.FullPath)!);
+        var drive = MediaStorageMeter.DriveForPath(file.FullPath);
         var required = checked(file.Size * 2 + (long)Math.Max(512, settings.Value.MinimumFreeSpaceMB) * 1024 * 1024);
         if (drive.AvailableFreeSpace < required) throw new IOException("Not enough free space to convert and preserve the original.");
         var reserve = (long)Math.Max(512, settings.Value.MinimumFreeSpaceMB) * 1024 * 1024;
