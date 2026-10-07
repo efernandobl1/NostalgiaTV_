@@ -56,7 +56,9 @@
           <span class="material-symbols-outlined job-icon" aria-hidden="true">{{ job.worker === 'transcode' ? 'video_settings' : 'video_library' }}</span>
           <div class="job-copy"><strong>{{ job.seriesName }}</strong><span class="job-path">{{ job.sourcePath }}</span>
             @if (job.status === 'Processing' && job.worker === 'transcode') {
-              <progress max="100" [value]="job.progress" [attr.aria-label]="'Progreso de ' + job.sourcePath"></progress><span>{{ job.progress | number:'1.0-0' }}% · conversión y validación</span>
+              @if (job.progress > 0) {
+                <progress max="100" [value]="job.progress" [attr.aria-label]="'Progreso de ' + job.sourcePath"></progress><span>{{ job.progress | number:'1.0-0' }}% · conversión y validación</span>
+              } @else { <span>Comprobando el archivo; todavía no indica que se esté recodificando.</span> }
             } @else if (job.status === 'Processing') {
               <span>Validando compatibilidad e incorporando el episodio…</span>
             }

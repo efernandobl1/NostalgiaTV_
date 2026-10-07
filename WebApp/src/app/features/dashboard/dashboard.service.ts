@@ -1,7 +1,11 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { ActivityResponse, DashboardSummaryResponse } from '../../shared/models/dashboard.model';
+import {
+  ActivityResponse,
+  DashboardSummaryResponse,
+  StorageResponse,
+} from '../../shared/models/dashboard.model';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
@@ -9,7 +13,13 @@ export class DashboardService {
   private readonly apiUrl = `${environment.apiUrl}/api/v1/dashboard`;
 
   getSummary() {
-    return this.http.get<DashboardSummaryResponse>(`${this.apiUrl}/summary`, { withCredentials: true });
+    return this.http.get<DashboardSummaryResponse>(`${this.apiUrl}/summary`, {
+      withCredentials: true,
+    });
+  }
+
+  getStorage() {
+    return this.http.get<StorageResponse>(`${this.apiUrl}/storage`, { withCredentials: true });
   }
 
   getActivity(days: number) {

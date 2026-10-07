@@ -68,6 +68,13 @@ public class ChannelScheduleService
         await gate.WaitAsync();
         try
         {
+            var now = DateTime.UtcNow;
+            var missingFrom = await _context.ScheduledPlaybackSegments
+                .Where(segment => segment.ScheduledProgram.ChannelEra.ChannelId == channelId &&
+                    !segment.ScheduledProgram.Episode.IsAvailable && segment.EndsAtUtc > now)
+                .MinAsync(segment => (DateTime?)segment.StartsAtUtc);
+            if (missingFrom.HasValue)
+                await DeleteChannelScheduleCoreAsync(channelId, missingFrom.Value < now ? now : missingFrom.Value, includeCurrent: true);
             await GenerateScheduleCoreAsync(channelId, until);
         }
         finally
@@ -154,7 +161,7 @@ public class ChannelScheduleService
 
             var episodes = await _context.Episodes.AsNoTracking()
                 .Include(episode => episode.EpisodeType)
-                .Where(episode => seriesIds.Contains(episode.SeriesId) && episode.FilePath != null)
+                .Where(episode => seriesIds.Contains(episode.SeriesId) && episode.IsAvailable && episode.FilePath != null)
                 .ToListAsync();
             episodes = episodes.Where(episode =>
             {
@@ -421,7 +428,7 @@ public class ChannelScheduleService
             .Include(segment => segment.ScheduledProgram).ThenInclude(program => program.ChannelEra)
             .Include(segment => segment.ScheduledProgram).ThenInclude(program => program.Episode).ThenInclude(episode => episode.Series)
             .Include(segment => segment.Interlude)
-            .Where(segment => segment.ScheduledProgram.ChannelEra.ChannelId == channelId);
+            .Where(segment => segment.ScheduledProgram.ChannelEra.ChannelId == channelId && segment.ScheduledProgram.Episode.IsAvailable);
 
     private static ChannelScheduleEntry ToEntry(ScheduledPlaybackSegment segment)
     {
@@ -477,10 +484,11 @@ public class ChannelScheduleService
             programs = includeCurrent
                 ? programs.Where(program => _context.ScheduledPlaybackSegments.Any(segment => segment.ScheduledProgramId == program.Id && segment.EndsAtUtc > from.Value))
                 : programs.Where(program => _context.ScheduledPlaybackSegments.Where(segment => segment.ScheduledProgramId == program.Id).Min(segment => segment.StartsAtUtc) >= from.Value);
-        var ids = programs.Select(item => item.Id);
+        // Capture IDs before deleting segments: the selection itself depends on those segments.
+        var ids = await programs.Select(item => item.Id).ToListAsync();
         await _context.ScheduledPlaybackSegments.Where(item => ids.Contains(item.ScheduledProgramId)).ExecuteDeleteAsync();
         await _context.ScheduledAdBreaks.Where(item => ids.Contains(item.ScheduledProgramId)).ExecuteDeleteAsync();
-        await programs.ExecuteDeleteAsync();
+        await _context.ScheduledPrograms.Where(item => ids.Contains(item.Id)).ExecuteDeleteAsync();
     }
 
     public async Task CleanupOldEntriesAsync()

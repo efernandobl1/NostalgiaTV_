@@ -1,0 +1,71 @@
+<section class="storage-deck" aria-label="Espacio de la videoteca">
+  <header>
+    <h2>
+      <span class="material-symbols-outlined" aria-hidden="true">hard_drive</span>Espacio de la
+      videoteca
+    </h2>
+    <button type="button" class="admin-button" (click)="refresh()" [disabled]="loading()">
+      {{ loading() ? 'Midiendo…' : 'Actualizar espacio' }}
+    </button>
+  </header>
+  @if (error()) {
+    <p role="alert">
+      No se pudo consultar el almacenamiento. Comprueba tu conexión y permisos e inténtalo de nuevo.
+    </p>
+  } @else if (storage(); as data) {
+    <dl>
+      <div>
+        <dt>Usado en disco</dt>
+        <dd>{{ size(data.usedBytes) }}</dd>
+      </div>
+      <div>
+        <dt>Disponible</dt>
+        <dd>{{ size(data.availableBytes) }}</dd>
+      </div>
+      <div>
+        <dt>Capacidad</dt>
+        <dd>{{ size(data.totalBytes) }}</dd>
+      </div>
+      <div>
+        <dt>Archivos de la videoteca</dt>
+        <dd>{{ size(data.libraryBytes) }}</dd>
+      </div>
+    </dl>
+    @if (usedPercent() !== null) {
+      <meter
+        min="0"
+        max="100"
+        low="70"
+        high="90"
+        optimum="0"
+        [value]="usedPercent()!"
+        aria-label="Porcentaje de disco usado"
+      >
+        {{ usedPercent() }}%
+      </meter>
+    }
+    <p class="storage-note">
+      Disco que contiene la videoteca, no todos los discos de la VPS. Los tamaños incluyen
+      originales, conversiones e imágenes.
+    </p>
+    @if (showSeries()) {
+      <ol class="storage-ranking" aria-label="Series con mayor tamaño">
+        @for (item of data.series.slice(0, 5); track item.id) {
+          <li>
+            <a routerLink="/dashboard/series" [queryParams]="{ seriesId: item.id }"
+              ><strong>{{ item.name }}</strong
+              ><span>{{ item.episodeCount }} episodios disponibles</span
+              ><span>{{ size(item.sizeBytes) }}</span></a
+            >
+          </li>
+        }
+      </ol>
+    }
+    <small
+      >Medición: {{ data.measuredAtUtc | date: 'dd/MM HH:mm:ss' }} · Se renueva como máximo cada 30
+      segundos.</small
+    >
+  } @else if (loading()) {
+    <p role="status">Consultando el almacenamiento…</p>
+  }
+</section>

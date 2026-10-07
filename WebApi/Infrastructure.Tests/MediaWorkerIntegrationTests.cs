@@ -63,7 +63,7 @@ public class MediaWorkerIntegrationTests
             Assert.False(await context.Episodes.AnyAsync(episode => episode.SeriesId == series.Id));
             Assert.True(await context.MediaProcessingJobs.AnyAsync(job => job.Worker == "index" && job.Status == "Skipped"));
             var existing = new Episode { SeriesId = series.Id, EpisodeTypeId = 1, Season = 1, EpisodeNumber = 2,
-                Title = "Manually edited title", FilePath = "wwwroot/uploads/series/Retro/season 1/" + Path.GetFileName(source) };
+                Title = "Manually edited title", FilePath = "/uploads/series/Retro/season 1/" + Path.GetFileName(source) };
             context.Episodes.Add(existing);
             await context.SaveChangesAsync();
             await transcode.Cycle(); await transcode.Cycle();
@@ -77,6 +77,44 @@ public class MediaWorkerIntegrationTests
             Assert.Equal(2, existing.EpisodeNumber);
             Assert.Equal(1, await context.Episodes.CountAsync(episode => episode.SeriesId == series.Id));
             Assert.True(await context.MediaProcessingJobs.AnyAsync(job => job.Worker == "index" && job.Status == "Completed"));
+            await transcode.Cycle(); await transcode.Cycle();
+            Assert.True(await context.MediaProcessingJobs.AnyAsync(job => job.Worker == "transcode" &&
+                job.SourcePath.EndsWith(".mp4") && job.Status == "Skipped"));
+            var originalId = existing.Id;
+            var backup = output + ".test-backup";
+            File.Move(output, backup);
+            await index.Cycle();
+            await context.Entry(existing).ReloadAsync();
+            Assert.False(existing.IsAvailable);
+            Assert.Equal(originalId, existing.Id);
+            Assert.Equal("Manually edited title", existing.Title);
+            File.Move(backup, output);
+            await index.Cycle(); await index.Cycle();
+            await context.Entry(existing).ReloadAsync();
+            Assert.True(existing.IsAvailable);
+            Assert.Equal(originalId, existing.Id);
+            Assert.Equal(1, await context.Episodes.CountAsync(episode => episode.SeriesId == series.Id));
+            var library = scope.ServiceProvider.GetRequiredService<MediaLibraryService>();
+            Assert.Equal(new FileInfo(output).Length, library.FileSize(existing.FilePath));
+            Assert.Equal(new FileInfo(output).Length, library.FileSize(existing.FilePath!.Replace("wwwroot/uploads/", "/uploads/")));
+            var movedFolder = series.FolderPath + "-test-unavailable";
+            Directory.Move(series.FolderPath!, movedFolder);
+            try
+            {
+                await Assert.ThrowsAnyAsync<IOException>(() => library.ReconcileAsync(series, CancellationToken.None));
+                await context.Entry(existing).ReloadAsync();
+                Assert.True(existing.IsAvailable);
+            }
+            finally { Directory.Move(movedFolder, series.FolderPath!); }
+            File.Move(output, backup);
+            await library.ScanSeriesAsync(series, CancellationToken.None);
+            await context.Entry(existing).ReloadAsync();
+            Assert.False(existing.IsAvailable);
+            File.Move(backup, output);
+            await library.ScanSeriesAsync(series, CancellationToken.None);
+            await context.Entry(existing).ReloadAsync();
+            Assert.True(existing.IsAvailable);
+            Assert.Equal(originalId, existing.Id);
             var state = await context.MediaWorkerStates.SingleAsync(worker => worker.Id == "transcode");
             state.Enabled = false;
             await context.SaveChangesAsync();

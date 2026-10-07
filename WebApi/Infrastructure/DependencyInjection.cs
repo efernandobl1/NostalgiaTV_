@@ -65,6 +65,7 @@ namespace Infrastructure
             services.AddSingleton<MediaProbe>();
             services.AddSingleton<MediaTranscoder>();
             services.AddScoped<MediaLibraryService>();
+            services.AddSingleton<MediaStorageMeter>();
             return services;
         }
     }

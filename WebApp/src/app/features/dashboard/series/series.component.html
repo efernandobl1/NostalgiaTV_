@@ -18,7 +18,18 @@
         <span class="material-symbols-outlined" aria-hidden="true">add</span>Añadir serie
       </button>
     </header>
+    <app-storage (loaded)="setStorage($event)" />
     <div class="studio-toolbar">
+      <label class="series-order"
+        >Ordenar por<select
+          aria-label="Ordenar series"
+          (change)="sortSeries($any($event.target).value)"
+        >
+          <option value="name">Nombre</option>
+          <option value="size">Mayor tamaño</option>
+          <option value="episodes">Más episodios</option>
+        </select></label
+      >
       <label class="studio-search"
         ><span class="material-symbols-outlined" aria-hidden="true">search</span
         ><input
@@ -66,6 +77,10 @@
                 >{{ item.episodeCount || 0 }} episodios · {{ item.seasons || 0 }} temporadas</span
               >
               <p>{{ getCategoryNames(item.categoryIds) || 'Sin categorías' }}</p>
+              <span>{{ size(storageBySeries()[item.id]?.sizeBytes) }} en archivos</span>
+              @if (storageBySeries()[item.id]?.missingEpisodeCount; as missing) {
+                <span>{{ missing }} episodios sin archivo · historial conservado</span>
+              }
             </div>
             <footer>
               <button type="button" (click)="manageEpisodes(item)">
