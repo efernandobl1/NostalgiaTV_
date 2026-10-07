@@ -326,8 +326,9 @@ public class ChannelScheduleService
 
     private Episode PickEpisode(List<Episode> episodes, List<PriorProgram> prior, DateTime current, TimeSpan preferredGap, ChannelEpisodeSelector selector)
     {
-        var day = current.Date;
-        var todays = prior.Where(item => item.StartsAtUtc.Date == day).ToList();
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(_rules.TimeZoneId);
+        var day = TimeZoneInfo.ConvertTimeFromUtc(current, zone).Date;
+        var todays = prior.Where(item => TimeZoneInfo.ConvertTimeFromUtc(item.StartsAtUtc, zone).Date == day).ToList();
         bool WithinCaps(Episode episode)
         {
             var name = episode.EpisodeType.Name;
@@ -341,7 +342,8 @@ public class ChannelScheduleService
         }
         var pool = episodes.Where(WithinCaps).ToList();
         if (pool.Count == 0) pool = episodes;
-        return selector.Choose(pool, current, preferredGap, Random.Shared);
+        return selector.Choose(pool, current, preferredGap, Random.Shared,
+            SeasonalProgrammingPolicy.IsHalloween(current, _rules) ? SeasonalProgrammingPolicy.IsHalloweenSpecial : null);
     }
 
     private static List<Interlude> PlanBreak(

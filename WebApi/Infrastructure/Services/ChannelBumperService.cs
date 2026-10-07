@@ -8,6 +8,8 @@ using Infrastructure.Services.InternalServices;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Infrastructure.Services.Media;
+using Microsoft.AspNetCore.Http;
 
 namespace Infrastructure.Services
 {
@@ -16,12 +18,14 @@ namespace Infrastructure.Services
         private readonly NostalgiaTVContext _context;
         private readonly FileUploadService _fileUploadService;
         private readonly MediaSettings _mediaSettings;
+        private readonly MediaProbe _probe;
 
-        public ChannelBumperService(NostalgiaTVContext context, FileUploadService fileUploadService, IOptions<MediaSettings> mediaSettings)
+        public ChannelBumperService(NostalgiaTVContext context, FileUploadService fileUploadService, IOptions<MediaSettings> mediaSettings, MediaProbe probe)
         {
             _context = context;
             _fileUploadService = fileUploadService;
             _mediaSettings = mediaSettings.Value;
+            _probe = probe;
         }
 
         public async Task<List<ChannelBumperResponse>> GetByEraAsync(int eraId)
@@ -67,18 +71,7 @@ namespace Infrastructure.Services
             string? filePath = null;
             if (request.File != null)
             {
-                var bumperFolder = Path.Combine(era.FolderPath ?? string.Empty, "bumpers");
-                Directory.CreateDirectory(bumperFolder);
-
-                var ext = Path.GetExtension(request.File.FileName).ToLowerInvariant();
-                var fileName = $"{Guid.NewGuid()}{ext}";
-                var fullPath = Path.Combine(bumperFolder, fileName);
-
-                using var stream = new FileStream(fullPath, FileMode.Create);
-                await request.File.CopyToAsync(stream);
-
-                var relativePath = fullPath.Replace(_mediaSettings.BasePath, "").Replace("\\", "/");
-                filePath = relativePath;
+                filePath = await UploadBumperAsync(era, request.File);
             }
 
             var bumper = new ChannelBumper
@@ -115,18 +108,7 @@ namespace Infrastructure.Services
                 var era = await _context.ChannelEras.FindAsync(bumper.ChannelEraId)
                     ?? throw new NotFoundException($"ChannelEra {bumper.ChannelEraId} not found");
 
-                var bumperFolder = Path.Combine(era.FolderPath ?? string.Empty, "bumpers");
-                Directory.CreateDirectory(bumperFolder);
-
-                var ext = Path.GetExtension(request.File.FileName).ToLowerInvariant();
-                var fileName = $"{Guid.NewGuid()}{ext}";
-                var fullPath = Path.Combine(bumperFolder, fileName);
-
-                using var stream = new FileStream(fullPath, FileMode.Create);
-                await request.File.CopyToAsync(stream);
-
-                var relativePath = fullPath.Replace(_mediaSettings.BasePath, "").Replace("\\", "/");
-                bumper.FilePath = relativePath;
+                bumper.FilePath = await UploadBumperAsync(era, request.File);
             }
 
             await _context.SaveChangesAsync();
@@ -148,9 +130,15 @@ namespace Infrastructure.Services
 
             if (!string.IsNullOrEmpty(bumper.FilePath))
             {
-                var fullPath = Path.Combine(_mediaSettings.BasePath, bumper.FilePath.TrimStart('/'));
+                var relative = bumper.FilePath.Replace('\\', '/').TrimStart('/');
+                if (relative.StartsWith("wwwroot/uploads/")) relative = relative["wwwroot/uploads/".Length..];
+                else if (relative.StartsWith("uploads/")) relative = relative["uploads/".Length..];
+                var fullPath = Path.GetFullPath(Path.Combine(_mediaSettings.BasePath, relative));
                 if (File.Exists(fullPath))
+                {
+                    MediaFilePolicy.SafePath(_mediaSettings.BasePath, fullPath);
                     File.Delete(fullPath);
+                }
             }
 
             _context.ChannelBumpers.Remove(bumper);
@@ -187,9 +175,8 @@ namespace Infrastructure.Services
             if (string.IsNullOrEmpty(era.FolderPath) || !Directory.Exists(era.FolderPath))
                 throw new BadRequestException("Era folder not found.");
 
-            var bumperFolder = Path.Combine(era.FolderPath, "bumpers");
-            if (!Directory.Exists(bumperFolder))
-                Directory.CreateDirectory(bumperFolder);
+            var bumperFolder = MediaStorageLayout.CreateDirectory(_mediaSettings.BasePath,
+                MediaStorageLayout.RelativeFolder(_mediaSettings.BasePath, era.FolderPath) + "/bumpers");
 
             var existingBumpers = await _context.ChannelBumpers
                 .Where(b => b.ChannelEraId == eraId)
@@ -199,11 +186,13 @@ namespace Infrastructure.Services
                 .Where(b => b.FilePath != null)
                 .ToDictionary(b => NormalizePath(b.FilePath!), b => b);
 
-            var videoExtensions = new HashSet<string> { ".mp4", ".mkv", ".avi", ".webm", ".mov", ".wmv", ".flv" };
-
-            var scannedFiles = Directory.GetFiles(bumperFolder)
-                .Where(f => videoExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
-                .ToList();
+            var scannedFiles = new List<string>();
+            foreach (var path in Directory.EnumerateFiles(bumperFolder).Where(MediaFilePolicy.IsCandidate))
+            {
+                MediaFilePolicy.SafePath(_mediaSettings.BasePath, path);
+                try { if ((await _probe.ReadAsync(path, CancellationToken.None)).Compatible) scannedFiles.Add(path); }
+                catch (IOException) { /* Unfinished or incompatible bumpers are not imported. */ }
+            }
 
             var scannedPaths = scannedFiles.Select(f => NormalizePath(ToRelativePath(f))).ToHashSet();
 
@@ -253,16 +242,40 @@ namespace Infrastructure.Services
                 .ToListAsync();
         }
 
-        private static string NormalizePath(string path) =>
-            path.Replace("\\", "/").ToLowerInvariant().Trim();
-
-        private static string ToRelativePath(string absolutePath)
+        private static string NormalizePath(string path)
         {
-            var normalized = absolutePath.Replace("\\", "/");
-            var wwwrootIndex = normalized.IndexOf("wwwroot", StringComparison.OrdinalIgnoreCase);
-            return wwwrootIndex >= 0
-                ? normalized[wwwrootIndex..]
-                : normalized;
+            var relative = path.Replace('\\', '/').Trim().TrimStart('/');
+            if (relative.StartsWith("wwwroot/", StringComparison.OrdinalIgnoreCase)) relative = relative["wwwroot/".Length..];
+            if (!relative.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase)) relative = "uploads/" + relative;
+            return relative.ToLowerInvariant();
+        }
+
+        private string ToRelativePath(string absolutePath)
+        {
+            return "/uploads/" + Path.GetRelativePath(_mediaSettings.BasePath, absolutePath).Replace('\\', '/');
+        }
+
+        private async Task<string> UploadBumperAsync(ChannelEra era, IFormFile file)
+        {
+            if (file.Length is <= 0 or > 524_288_000 || !Path.GetExtension(file.FileName).Equals(".mp4", StringComparison.OrdinalIgnoreCase))
+                throw new BadRequestException("A web-compatible MP4 under 500 MiB is required.");
+            if (string.IsNullOrWhiteSpace(era.FolderPath))
+                era.FolderPath = MediaStorageLayout.CreateDirectory(_mediaSettings.BasePath, MediaStorageLayout.EraFolder(era.ChannelId, era.Id));
+            var folder = MediaStorageLayout.CreateDirectory(_mediaSettings.BasePath,
+                MediaStorageLayout.RelativeFolder(_mediaSettings.BasePath, era.FolderPath) + "/bumpers");
+            var path = Path.Combine(folder, $"{Guid.NewGuid():N}.mp4");
+            try
+            {
+                await using (var stream = new FileStream(path, FileMode.CreateNew)) await file.CopyToAsync(stream);
+                if (!(await _probe.ReadAsync(path, CancellationToken.None)).Compatible)
+                    throw new BadRequestException("Bumpers require MP4/H.264/AAC compatible video.");
+                return ToRelativePath(path);
+            }
+            catch
+            {
+                if (File.Exists(path)) File.Delete(path);
+                throw;
+            }
         }
     }
 }

@@ -77,6 +77,7 @@ services:
       MediaSettings__BasePath: /app/wwwroot/uploads
       # Reglas de generación de programación (aleatoria). Configurables por .env.
       ChannelScheduling__NoRepeatWindowHours: ${SCHED_NO_REPEAT_HOURS:-24}
+      ChannelScheduling__TimeZoneId: ${TIME_ZONE:-America/Guatemala}
       ChannelScheduling__MaxSpecialsPerSeriesPerDay: ${SCHED_MAX_SPECIALS_PER_SERIES:-2}
       ChannelScheduling__MaxSpecialsPerDay: ${SCHED_MAX_SPECIALS_PER_DAY:-5}
       ChannelScheduling__MaxMoviesPerSeriesPerDay: ${SCHED_MAX_MOVIES_PER_SERIES:-2}

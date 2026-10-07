@@ -55,14 +55,15 @@ namespace Infrastructure.Services
         public async Task<SeriesResponse> CreateAsync(SeriesRequest request)
         {
             var series = request.Adapt<Series>();
-
-            if (request.Logo != null)
-                series.LogoPath = await _fileUploadService.UploadAsync(request.Logo, "series");
-
-            series.FolderPath = _folderService.CreateSeriesFolder(request.Name, request.Seasons);
-
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             _context.Series.Add(series);
             await _context.SaveChangesAsync();
+            series.FolderPath = _folderService.CreateSeriesFolder(request.Name, request.Seasons, series.Id);
+            if (request.Logo != null)
+                series.LogoPath = await _fileUploadService.UploadAsync(request.Logo,
+                    MediaStorageLayout.RelativeFolder(_library.Root, series.FolderPath));
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return series.Adapt<SeriesResponse>();
         }
 
@@ -73,13 +74,14 @@ namespace Infrastructure.Services
 
             request.Adapt(series);
 
-            if (request.Logo != null)
-                series.LogoPath = await _fileUploadService.UploadAsync(request.Logo, "series");
-
             if (!string.IsNullOrEmpty(series.FolderPath))
                 _folderService.UpdateSeriesFolders(series.FolderPath, request.Seasons);
             else
-                series.FolderPath = _folderService.CreateSeriesFolder(request.Name, request.Seasons);
+                series.FolderPath = _folderService.CreateSeriesFolder(request.Name, request.Seasons, series.Id);
+
+            if (request.Logo != null)
+                series.LogoPath = await _fileUploadService.UploadAsync(request.Logo,
+                    MediaStorageLayout.RelativeFolder(_library.Root, series.FolderPath));
 
             await _context.SaveChangesAsync();
             return series.Adapt<SeriesResponse>();
@@ -147,7 +149,7 @@ namespace Infrastructure.Services
             }
 
             if (string.IsNullOrEmpty(series.FolderPath))
-                series.FolderPath = _folderService.CreateSeriesFolder(series.Name, series.Seasons);
+                series.FolderPath = _folderService.CreateSeriesFolder(series.Name, series.Seasons, series.Id);
 
             var subfolder = target switch
             {
@@ -155,8 +157,8 @@ namespace Infrastructure.Services
                 "movies" => "movies",
                 _ => "specials"
             };
-            var targetDir = Path.GetFullPath(Path.Combine(series.FolderPath, subfolder));
-            Directory.CreateDirectory(targetDir);
+            var targetDir = MediaStorageLayout.CreateDirectory(_library.Root,
+                MediaStorageLayout.RelativeFolder(_library.Root, series.FolderPath) + "/" + subfolder);
 
             var maxBytes = (long)_uploadSettings.MaxFileSizeMB * 1024 * 1024;
             var results = new List<SeriesUploadResult>();

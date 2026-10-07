@@ -1,5 +1,6 @@
 ﻿using ApplicationCore.Settings;
 using Microsoft.Extensions.Options;
+using Infrastructure.Services.Media;
 
 namespace Infrastructure.Services.InternalServices
 {
@@ -12,24 +13,13 @@ namespace Infrastructure.Services.InternalServices
             _settings = settings.Value;
         }
 
-        private static string ToSafeFolderName(string name)
+        public string CreateSeriesFolder(string seriesName, int seasons, int seriesId)
         {
-            var invalid = new HashSet<char>(Path.GetInvalidFileNameChars()) { ':', '/', '\\' };
-            return new string(name.Select(c => invalid.Contains(c) ? '-' : c).ToArray()).Trim('-', ' ');
-        }
-
-        public string CreateSeriesFolder(string seriesName, int seasons)
-        {
-            var safeName = ToSafeFolderName(seriesName);
-            var seriesPath = Path.Combine(_settings.BasePath, "series", safeName);
-
-            Directory.CreateDirectory(seriesPath);
+            var seriesPath = MediaStorageLayout.CreateDirectory(_settings.BasePath, MediaStorageLayout.SeriesFolder(seriesName, seriesId));
 
             for (int i = 1; i <= seasons; i++)
-                Directory.CreateDirectory(Path.Combine(seriesPath, $"season {i}"));
-
-            Directory.CreateDirectory(Path.Combine(seriesPath, "specials"));
-            Directory.CreateDirectory(Path.Combine(seriesPath, "movies"));
+                MediaStorageLayout.CreateDirectory(_settings.BasePath,
+                    MediaStorageLayout.RelativeFolder(_settings.BasePath, seriesPath) + $"/season {i}");
 
             return seriesPath;
         }
@@ -37,6 +27,7 @@ namespace Infrastructure.Services.InternalServices
         public void UpdateSeriesFolders(string folderPath, int newSeasons)
         {
             if (!Directory.Exists(folderPath)) return;
+            MediaFilePolicy.SafePath(_settings.BasePath, folderPath);
 
             var existing = Directory.GetDirectories(folderPath)
                 .Select(Path.GetFileName)
@@ -48,19 +39,13 @@ namespace Infrastructure.Services.InternalServices
             var maxExisting = existing.Any() ? existing.Max() : 0;
 
             for (int i = maxExisting + 1; i <= newSeasons; i++)
-                Directory.CreateDirectory(Path.Combine(folderPath, $"season {i}"));
+                MediaStorageLayout.CreateDirectory(_settings.BasePath,
+                    MediaStorageLayout.RelativeFolder(_settings.BasePath, folderPath) + $"/season {i}");
         }
 
-        public string CreateChannelEraFolder(string channelName, string eraName)
+        public string CreateChannelEraFolder(int channelId, int eraId)
         {
-            var safeChannel = ToSafeFolderName(channelName);
-            var safeEra = ToSafeFolderName(eraName);
-            var eraPath = Path.Combine(_settings.BasePath, "channels", safeChannel, safeEra);
-
-            Directory.CreateDirectory(eraPath);
-            Directory.CreateDirectory(Path.Combine(eraPath, "bumpers"));
-
-            return eraPath;
+            return MediaStorageLayout.CreateDirectory(_settings.BasePath, MediaStorageLayout.EraFolder(channelId, eraId));
         }
     }
 }

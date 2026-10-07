@@ -7,6 +7,7 @@ using ApplicationCore.Interfaces;
 using Infrastructure.BackgroundServices;
 using Infrastructure.Contexts;
 using Infrastructure.Services.InternalServices;
+using Infrastructure.Services.Media;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 
@@ -69,15 +70,10 @@ namespace Infrastructure.Services
 
         public async Task<ChannelResponse> CreateAsync(ChannelRequest request)
         {
-            string logoPath = string.Empty;
-
-            if(request.Logo != null)
-                logoPath = await _fileUploadService.UploadAsync(request.Logo, "channels");
-
             var channel = new Channel
             {
                 Name = request.Name,
-                LogoPath = logoPath,
+                LogoPath = string.Empty,
                 History = request.History,
                 StartDate = request.StartDate,
                 EndDate = request.EndDate
@@ -85,6 +81,8 @@ namespace Infrastructure.Services
             await using var transaction = await _context.Database.BeginTransactionAsync();
             _context.Channels.Add(channel);
             await _context.SaveChangesAsync();
+            if (request.Logo != null)
+                channel.LogoPath = await _fileUploadService.UploadAsync(request.Logo, MediaStorageLayout.ChannelFolder(channel.Id));
             var era = new ChannelEra
             {
                 ChannelId = channel.Id,
@@ -151,7 +149,7 @@ namespace Infrastructure.Services
             channel.EndDate = request.EndDate;
 
             if (request.Logo != null)
-                channel.LogoPath = await _fileUploadService.UploadAsync(request.Logo, "channels");
+                channel.LogoPath = await _fileUploadService.UploadAsync(request.Logo, MediaStorageLayout.ChannelFolder(channel.Id));
 
             await _context.SaveChangesAsync();
             return channel.Adapt<ChannelResponse>();

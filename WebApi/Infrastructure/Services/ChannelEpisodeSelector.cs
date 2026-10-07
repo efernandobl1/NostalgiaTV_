@@ -44,7 +44,8 @@ public sealed class ChannelEpisodeSelector
     public static TimeSpan EstimatePreferredGap(TimeSpan maximum, int episodeCount, double averageDurationSeconds) =>
         TimeSpan.FromSeconds(Math.Round(Math.Max(0, Math.Min(maximum.TotalSeconds, episodeCount * averageDurationSeconds * 0.7))));
 
-    public Episode Choose(IReadOnlyList<Episode> available, DateTime current, TimeSpan preferredGap, Random random)
+    public Episode Choose(IReadOnlyList<Episode> available, DateTime current, TimeSpan preferredGap, Random random,
+        Func<Episode, bool>? preferred = null)
     {
         if (available.Count == 0) throw new ArgumentException("At least one episode is required.", nameof(available));
 
@@ -71,6 +72,10 @@ public sealed class ChannelEpisodeSelector
             !_airings.TryGetValue(episode.Id, out var times)
             || times.All(time => time <= current - preferredGap)).ToList();
         if (rested.Count > 0) pool = rested;
+
+        // Seasonal preference never bypasses the shuffle cycle, rest period or caller's daily caps.
+        var seasonal = preferred == null ? [] : pool.Where(preferred).ToList();
+        if (seasonal.Count > 0) pool = seasonal;
 
         var lowestPenalty = pool.Min(episode => SameSlotCount(episode.Id, current));
         var best = pool.Where(episode => SameSlotCount(episode.Id, current) == lowestPenalty).ToList();
