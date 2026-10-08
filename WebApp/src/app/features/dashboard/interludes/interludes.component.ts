@@ -1,7 +1,14 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
-import { BroadcastAdminService, Interlude } from '../broadcast-admin.service';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  BroadcastAdminService,
+  Interlude,
+  InterludeSeason,
+  INTERLUDE_SEASONS,
+  interludeSeasonLabel,
+} from '../broadcast-admin.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -12,9 +19,14 @@ import { environment } from '../../../../environments/environment';
 })
 export class InterludesComponent {
   private readonly service = inject(BroadcastAdminService);
+  private readonly route = inject(ActivatedRoute);
   readonly apiUrl = environment.apiUrl;
   readonly clips = signal<Interlude[]>([]);
   readonly filter = signal<number | null>(null);
+  readonly seasonFilter = signal<InterludeSeason | null>(null);
+  readonly seasons = INTERLUDE_SEASONS;
+  readonly halloweenLibrary = computed(() => this.seasonFilter() === 1);
+  readonly seasonLabel = interludeSeasonLabel;
   readonly search = signal('');
   readonly pendingOnly = signal(false);
   readonly loading = signal(true);
@@ -27,17 +39,23 @@ export class InterludesComponent {
     this.clips().filter(
       (clip) =>
         (this.filter() === null || clip.kind === this.filter()) &&
+        (this.seasonFilter() === null || (clip.season ?? 0) === this.seasonFilter()) &&
         (!this.pendingOnly() || !clip.approvedForBroadcast) &&
         clip.title.toLocaleLowerCase().includes(this.search().toLocaleLowerCase()),
     ),
   );
   title = '';
   kind = 0;
+  season: InterludeSeason = 0;
   yearFrom: number | null = null;
   yearTo: number | null = null;
   region = '';
   private file?: File;
   constructor() {
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const season = params.get('season');
+      this.seasonFilter.set(season === 'halloween' ? 1 : season === 'christmas' ? 2 : null);
+    });
     this.load();
   }
   load(): void {
@@ -54,10 +72,11 @@ export class InterludesComponent {
       },
     });
   }
-  open(clip?: Interlude): void {
+  open(clip?: Interlude, kind: 0 | 1 = 0): void {
     this.selected.set(clip ?? null);
     this.title = clip?.title ?? '';
-    this.kind = clip?.kind ?? 0;
+    this.kind = clip?.kind ?? kind;
+    this.season = clip?.season ?? this.seasonFilter() ?? 0;
     this.yearFrom = clip?.originalYearFrom ?? null;
     this.yearTo = clip?.originalYearTo ?? null;
     this.region = clip?.regionCode ?? '';
@@ -68,6 +87,8 @@ export class InterludesComponent {
   }
   chooseFile(event: Event): void {
     this.file = (event.target as HTMLInputElement).files?.[0];
+    if (this.file && !this.title.trim())
+      this.title = this.file.name.replace(/\.mp4$/i, '').slice(0, 300);
   }
   save(): void {
     if (this.busy()) return;
@@ -85,6 +106,7 @@ export class InterludesComponent {
     const body = new FormData();
     body.append('title', this.title.trim());
     body.append('kind', String(this.kind));
+    body.append('season', String(this.season));
     if (this.file) body.append('file', this.file);
     if (this.yearFrom !== null) body.append('originalYearFrom', String(this.yearFrom));
     if (this.yearTo !== null) body.append('originalYearTo', String(this.yearTo));
@@ -93,6 +115,7 @@ export class InterludesComponent {
       ? this.service.updateInterlude({
           ...clip,
           title: this.title.trim(),
+          season: this.season,
           originalYearFrom: this.yearFrom,
           originalYearTo: this.yearTo,
           regionCode: this.region || null,

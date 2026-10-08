@@ -49,7 +49,7 @@ namespace Infrastructure.Services
                 .FirstOrDefaultAsync(r => r.Token == token)
                 ?? throw new UnauthorizedException("Invalid refresh token");
 
-            // Token ya usado — posible robo, revocar toda la familia
+            // Reusing a rotated token revokes the user's active sessions.
             if (refreshToken.IsRevoked)
             {
                 await RevokeTokenFamily(refreshToken.User, ipAddress);
@@ -59,9 +59,9 @@ namespace Infrastructure.Services
             if (refreshToken.IsExpired)
                 throw new UnauthorizedException("Refresh token expired");
 
-            // Revocar el token actual y generar nuevos
+            // Preserve the original persistence preference during rotation.
             refreshToken.RevokedAt = DateTime.UtcNow;
-            var (newRefreshToken, _) = await GenerateAndSetTokens(refreshToken.User, response, ipAddress);
+            var (newRefreshToken, _) = await GenerateAndSetTokens(refreshToken.User, response, ipAddress, refreshToken.IsPersistent);
             refreshToken.ReplacedByToken = newRefreshToken;
 
             await _context.SaveChangesAsync();
@@ -99,7 +99,8 @@ namespace Infrastructure.Services
                 UserId = user.Id,
                 IpAddress = ipAddress,
                 CreatedAt = DateTime.UtcNow,
-                ExpiresAt = refreshExpiry
+                ExpiresAt = refreshExpiry,
+                IsPersistent = rememberMe
             });
 
             await _context.SaveChangesAsync();
@@ -109,7 +110,8 @@ namespace Infrastructure.Services
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.Lax,
-                Expires = rememberMe ? DateTimeOffset.UtcNow.AddDays(30) : null
+                Expires = rememberMe ? new DateTimeOffset(refreshExpiry) : null,
+                Path = "/"
             });
 
             response.Cookies.Append("refresh_token", refreshTokenValue, new CookieOptions
@@ -117,7 +119,8 @@ namespace Infrastructure.Services
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.Lax,
-                Expires = rememberMe ? DateTimeOffset.UtcNow.AddDays(30) : null
+                Expires = rememberMe ? new DateTimeOffset(refreshExpiry) : null,
+                Path = "/"
             });
 
             return (refreshTokenValue, accessToken);

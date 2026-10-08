@@ -75,6 +75,8 @@ internal static class RetroBroadcastModelConfiguration
         modelBuilder.Entity<Interlude>(interlude =>
         {
             interlude.Property(item => item.Kind).HasConversion<string>().HasMaxLength(30);
+            interlude.Property(item => item.Season).HasConversion<string>().HasMaxLength(30)
+                .HasDefaultValue(InterludeSeason.AllYear);
             interlude.Property(item => item.Title).HasMaxLength(300);
             interlude.Property(item => item.FilePath).HasMaxLength(1000);
             interlude.Property(item => item.RegionCode).HasMaxLength(20);
@@ -85,6 +87,7 @@ internal static class RetroBroadcastModelConfiguration
                 table.HasCheckConstraint("CK_Interludes_OriginalYears",
                     "[OriginalYearTo] IS NULL OR [OriginalYearFrom] IS NULL OR [OriginalYearTo] >= [OriginalYearFrom]");
                 table.HasCheckConstraint("CK_Interludes_Kind", "[Kind] IN ('Bumper', 'Advertisement')");
+                table.HasCheckConstraint("CK_Interludes_Season", "[Season] IN ('AllYear', 'Halloween', 'Christmas')");
             });
         });
 
