@@ -29,6 +29,9 @@ data class AppState(
     val series: List<Series> = emptyList(),
     val seriesPage: Int = 1,
     val totalSeries: Int = 0,
+    val categories: List<Category> = emptyList(),
+    val seriesFilter: SeriesFilter = SeriesFilter(),
+    val continueOnly: Boolean = false,
     val selectedSeries: Series? = null,
     val episodes: List<Episode> = emptyList(),
     val season: Int? = null,
@@ -43,6 +46,9 @@ data class AppState(
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
+    private val videoPreferences = VideoPreferences(application)
+    private val mutableVideoSettings = MutableStateFlow(videoPreferences.load())
+    val videoSettings = mutableVideoSettings.asStateFlow()
     private val origin = BuildConfig.API_BASE_URL.toHttpUrl()
     val api = NostalgiaApi(origin, SecureHttp.create(application, ViewerCookies(application, origin))
         .newBuilder().callTimeout(20, TimeUnit.SECONDS).build())
@@ -65,20 +71,41 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun loadCatalog() = load {
         val channels = async { api.channels() }
         val series = async { api.series(1) }
+        val categories = async { api.categories() }
         val result = series.await()
         val channelList = channels.await()
-        mutableState.update { it.copy(channels = channelList, series = result.items, totalSeries = result.totalCount, seriesPage = 1) }
+        val categoryList = categories.await()
+        mutableState.update { it.copy(channels = channelList, categories = categoryList, series = result.items, totalSeries = result.totalCount, seriesPage = 1, seriesFilter = SeriesFilter()) }
     }
 
     fun section(section: Section) {
         request?.cancel()
         mutableState.update { it.copy(section = section, selectedSeries = null, season = null, error = null, loading = false) }
-        if (section == Section.Profile) refreshSession()
+        if (section == Section.Profile || section == Section.Series) refreshSession()
+    }
+
+    fun showSeriesList() {
+        request?.cancel()
+        mutableState.update { it.copy(selectedSeries = null, season = null, error = null, loading = false) }
+        refreshSession()
     }
 
     fun seriesPage(page: Int) = load {
-        val result = api.series(page)
+        val result = api.series(page, state.value.seriesFilter)
         mutableState.update { it.copy(series = result.items, totalSeries = result.totalCount, seriesPage = page) }
+    }
+
+    fun filterSeries(filter: SeriesFilter) {
+        mutableState.update { it.copy(seriesFilter = filter, continueOnly = false) }
+        seriesPage(1)
+    }
+
+    fun continueOnly(enabled: Boolean) { mutableState.update { it.copy(continueOnly = enabled) } }
+
+    fun updateVideoSettings(settings: VideoSettings) {
+        val safe = settings.sanitized()
+        videoPreferences.save(safe)
+        mutableVideoSettings.value = safe
     }
 
     fun openSeries(series: Series) = load {
@@ -92,7 +119,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val series = state.value.selectedSeries ?: return
         val progress = state.value.session?.progress?.find { it.episodeId == episode.id }
         mutableState.update { it.copy(playback = Playback(episode.title, "${series.name} · T${episode.season} E${episode.episodeNumber}",
-            episode.filePath, episode.id, if (progress?.completed == false) progress.currentSecond else 0.0), error = null) }
+            episode.filePath, episode.id, if (progress?.completed == false) progress.currentSecond else 0.0,
+            seriesName = series.name, logoPath = series.logoPath, seriesId = series.id), error = null) }
+    }
+
+    fun nextEpisode(offset: Int) {
+        val episodes = state.value.episodes
+        val index = episodes.indexOfFirst { it.id == state.value.playback?.episodeId }
+        episodes.getOrNull(index + offset)?.let(::playEpisode)
     }
 
     fun playChannel(channel: Channel) = load {
@@ -162,12 +196,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return changed
     }
 
-    suspend fun recordProgress(episodeId: Int, start: Double, end: Double, duration: Double) {
+    suspend fun recordProgress(episodeId: Int, start: Double, end: Double, duration: Double, seriesId: Int = 0) {
         ensureSession()
         val completed = api.progress(episodeId, start, end, duration)
         mutableState.update { state ->
             state.copy(session = state.session?.let { session -> session.copy(progress =
-                session.progress.filterNot { it.episodeId == episodeId } + WatchProgress(episodeId, end, completed)) }, profileError = null)
+                session.progress.filterNot { it.episodeId == episodeId } + WatchProgress(episodeId, end, completed, seriesId)) }, profileError = null)
         }
     }
 
@@ -196,4 +230,4 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 }
 
 private fun ChannelState.playback(channel: Channel) = Playback(title, if (isBumper || seriesName == channel.name) channel.name else "$seriesName · ${channel.name}",
-    filePath, if (isBumper) 0 else episodeId, currentSecond.coerceAtLeast(0.0), channel, segmentId, secondsUntilNext)
+    filePath, if (isBumper) 0 else episodeId, currentSecond.coerceAtLeast(0.0), channel, segmentId, secondsUntilNext, seriesName, channel.logoPath, seriesId)

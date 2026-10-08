@@ -1,6 +1,12 @@
 package tv.nostalgia.android
 
 import android.content.pm.PackageManager
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.semantics.SemanticsActions
@@ -14,6 +20,14 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import tv.nostalgia.android.core.ViewerCookies
+import tv.nostalgia.android.core.VideoPreferences
+import tv.nostalgia.android.features.AppViewModel
+import tv.nostalgia.android.features.AppState
+import tv.nostalgia.android.features.EpisodesScreen
+import tv.nostalgia.android.core.Episode
+import tv.nostalgia.android.core.Series
+import tv.nostalgia.android.shared.RetroTheme
+import androidx.lifecycle.ViewModelProvider
 
 @RunWith(AndroidJUnit4::class)
 class TvNavigationTest {
@@ -69,5 +83,51 @@ class TvNavigationTest {
         compose.waitUntil(15000) { compose.onAllNodesWithText("Volver a series").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Mi perfil").performClick()
         compose.onNodeWithText("Vincular este dispositivo").assertIsDisplayed()
+    }
+
+    @Test fun catalogFiltersOfferSearchChannelsAndCategories() {
+        waitForCatalog()
+        compose.onNodeWithText("Series").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.onNodeWithText("Filtros").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.onNodeWithText("¿Qué serie recuerdas?").assertIsDisplayed()
+        compose.onNodeWithText("Todos los canales").assertIsDisplayed()
+        compose.onNodeWithText("Todas las categorías").assertIsDisplayed()
+        compose.onNodeWithText("Aplicar filtros").assertIsDisplayed()
+    }
+
+    @Test fun episodesRemainVisibleInShortPanels() {
+        val model = ViewModelProvider(compose.activity)[AppViewModel::class.java]
+        val tv = compose.activity.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+        compose.runOnUiThread {
+            compose.activity.setContent {
+                RetroTheme(isTv = tv) {
+                    Box(Modifier.fillMaxWidth().height(240.dp)) {
+                        EpisodesScreen(model, AppState(selectedSeries = Series(1, "Test series", null, 1),
+                            episodes = listOf(Episode(1, "Test episode", "/uploads/test.mp4", 1, 1))))
+                    }
+                }
+            }
+        }
+        compose.onNodeWithText("Volver a series").assertIsDisplayed()
+        compose.onNodeWithText("Test episode").assertIsDisplayed()
+        compose.onNodeWithText("T1 · E1").assertIsDisplayed()
+    }
+
+    @Test fun playerOffersWebActionsAndPersistentImageFilters() {
+        waitForCatalog()
+        compose.onNodeWithText("Los Simpson TV").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.waitUntil(20000) { compose.onAllNodesWithText("Imagen").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Sincronizar").assertIsDisplayed()
+        compose.onNodeWithText("Guía").assertIsDisplayed()
+        val tv = compose.activity.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+        compose.onNodeWithText(if (tv) "Volver a la sala" else "Salir de pantalla completa").assertIsDisplayed()
+        compose.onNodeWithText("Imagen").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.onNodeWithText("La imagen de antes.").assertIsDisplayed()
+        val before = VideoPreferences(compose.activity).load().enabled
+        compose.onNodeWithText("Efecto CRT").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.waitUntil { VideoPreferences(compose.activity).load().enabled != before }
+        compose.onNodeWithText("Restablecer imagen").performScrollTo().performSemanticsAction(SemanticsActions.OnClick) { it() }
+        compose.onNodeWithText("Cerrar").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        assertNotNull(ViewModelProvider(compose.activity)[AppViewModel::class.java].state.value.playback)
     }
 }

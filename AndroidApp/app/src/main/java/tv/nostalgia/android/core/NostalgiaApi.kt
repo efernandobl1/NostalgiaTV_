@@ -14,6 +14,9 @@ import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -24,12 +27,23 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient) {
         Channel(it.getInt("id"), it.getString("name"), it.nullableString("logoPath"))
     }
 
-    suspend fun series(page: Int): SeriesPage {
-        val result = json("public/series?Page=$page&PageSize=24")
+    suspend fun categories(): List<Category> = array("public/categories").objects().map { Category(it.getInt("id"), it.getString("name")) }
+
+    suspend fun series(page: Int, filter: SeriesFilter = SeriesFilter()): SeriesPage {
+        val query = base.newBuilder().addQueryParameter("Page", page.toString()).addQueryParameter("PageSize", "24")
+        if (filter.name.isNotBlank()) query.addQueryParameter("Name", filter.name.trim())
+        filter.channelId?.let { query.addQueryParameter("ChannelId", it.toString()) }
+        filter.categoryId?.let { query.addQueryParameter("CategoryId", it.toString()) }
+        val result = json("public/series?${query.build().encodedQuery}")
         return SeriesPage(result.getJSONArray("items").objects().map {
             Series(it.getInt("id"), it.getString("name"), it.nullableString("logoPath"), it.optInt("episodeCount"))
         }, result.getInt("totalCount"))
     }
+
+    suspend fun schedule(channelId: Int): List<ScheduleEntry> = array("public/channels/$channelId/schedule").objects().map {
+        ScheduleEntry(it.getLong("id"), if (it.optBoolean("isBumper")) it.optString("bumperTitle", "Pausa del canal") else it.optString("seriesName"),
+            it.optString("episodeTitle"), utcMillis(it.getString("startTime")), utcMillis(it.getString("endTime")))
+    }.sortedBy { it.startsAt }
 
     suspend fun episodes(seriesId: Int): List<Episode> = array("public/series/$seriesId/episodes").objects()
         .filter { !it.nullableString("filePath").isNullOrBlank() }
@@ -41,7 +55,7 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient) {
         return ChannelState(result.getLong("segmentId"), result.optInt("episodeId"),
             if (result.optBoolean("isBumper")) result.nullableString("bumperTitle") ?: "Pausa del canal"
             else result.optString("episodeTitle"), result.optString("seriesName"), result.getString("filePath"),
-            result.optDouble("currentSecond", 0.0), result.optDouble("secondsUntilNext", 10.0), result.optBoolean("isBumper"))
+            result.optDouble("currentSecond", 0.0), result.optDouble("secondsUntilNext", 10.0), result.optBoolean("isBumper"), result.optInt("seriesId"))
     }
 
     suspend fun viewerSession(): ViewerSession = parseSession(json("viewer/session"))
@@ -57,7 +71,7 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient) {
 
     private fun parseSession(result: JSONObject) = ViewerSession(result.getString("profileId"),
         result.getJSONArray("devices").length(), result.getJSONArray("progress").objects().map {
-            WatchProgress(it.getInt("episodeId"), it.getDouble("currentSecond"), it.getBoolean("completed"))
+            WatchProgress(it.getInt("episodeId"), it.getDouble("currentSecond"), it.getBoolean("completed"), it.optInt("seriesId"))
         })
 
     private suspend fun array(path: String) = withContext(Dispatchers.Default) { JSONArray(request(path)) }
@@ -90,3 +104,6 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient) {
 
 private fun JSONObject.nullableString(key: String): String? = if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }
 private fun JSONArray.objects(): List<JSONObject> = (0 until length()).map { getJSONObject(it) }
+
+private fun utcMillis(value: String): Long = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+    .apply { timeZone = TimeZone.getTimeZone("UTC") }.parse(value)?.time ?: throw IOException("Invalid schedule time")

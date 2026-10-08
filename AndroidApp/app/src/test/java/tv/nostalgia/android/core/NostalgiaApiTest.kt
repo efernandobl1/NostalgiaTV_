@@ -51,6 +51,32 @@ class NostalgiaApiTest {
         catch (exception: ApiException) { assertEquals(404, exception.status) }
     }
 
+    @Test fun appliesCatalogFiltersWithoutBreakingSpecialCharacters() = runTest {
+        server.enqueue(MockResponse().setBody("""{"items":[],"totalCount":0}"""))
+        api.series(1, SeriesFilter("Simpson & Friends ñ", channelId = 2, categoryId = 4))
+        val url = server.takeRequest().requestUrl!!
+        assertEquals("Simpson & Friends ñ", url.queryParameter("Name"))
+        assertEquals("2", url.queryParameter("ChannelId"))
+        assertEquals("4", url.queryParameter("CategoryId"))
+    }
+
+    @Test fun loadsCategories() = runTest {
+        server.enqueue(MockResponse().setBody("""[{"id":4,"name":"Animation"}]"""))
+        assertEquals(Category(4, "Animation"), api.categories().single())
+    }
+
+    @Test fun sortsGuideAndParsesUtcTimesOnAndroidSix() = runTest {
+        server.enqueue(MockResponse().setBody("""[
+          {"id":2,"seriesName":"Series","episodeTitle":"Second","startTime":"2026-10-08T08:00:00Z","endTime":"2026-10-08T08:20:00Z"},
+          {"id":1,"isBumper":true,"bumperTitle":"Bumper","startTime":"2026-10-08T07:40:00Z","endTime":"2026-10-08T08:00:00Z"}]
+        """))
+        val entries = api.schedule(1)
+        assertEquals(listOf(1L, 2L), entries.map { it.id })
+        assertEquals("Bumper", entries.first().title)
+        assertEquals(20 * 60000L, entries[1].endsAt - entries[1].startsAt)
+        assertEquals("/api/v1/public/channels/1/schedule", server.takeRequest().path)
+    }
+
     @Test fun sendsOnlyActualWatchedRanges() = runTest {
         server.enqueue(MockResponse().setBody("""{"completed":true}"""))
         assertTrue(api.progress(3, 10.0, 25.0, 1500.0))

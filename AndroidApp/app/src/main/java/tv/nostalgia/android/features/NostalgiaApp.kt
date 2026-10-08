@@ -63,8 +63,8 @@ private fun Header(model: AppViewModel, state: AppState, navFocus: FocusRequeste
         horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             NavigationGlyph(Section.Channels, Retro.Mint, Modifier.size(30.dp))
-            Text("NostalgiaTV", color = Retro.Cream, fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold, fontSize = if (tv) 25.sp else 22.sp)
+            Text("NostalgiaTV", color = Retro.Cream,
+                fontWeight = FontWeight.Normal, fontSize = if (tv) 32.sp else 28.sp, fontFamily = RetroDisplay)
         }
         if (tv) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             RetroButton("Canales", { model.section(Section.Channels) }, Modifier.focusRequester(navFocus), selected = state.section == Section.Channels)
@@ -113,11 +113,11 @@ private fun NavigationGlyph(section: Section, color: Color, modifier: Modifier) 
 private fun ChannelsScreen(model: AppViewModel, state: AppState, wide: Boolean) {
     if (wide) Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Las tardes no se olvidan.", color = Retro.Gold, fontFamily = FontFamily.Monospace, fontSize = 26.sp)
+            Text("Las tardes no se olvidan.", color = Retro.Gold, fontFamily = RetroDisplay, fontSize = 34.sp)
             RetroRoom(Modifier.weight(1f).fillMaxWidth())
         }
         Column(Modifier.weight(.95f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("¿Qué vemos hoy?", color = Retro.Cream, fontFamily = FontFamily.Monospace, fontSize = 26.sp)
+            Text("¿Qué vemos hoy?", color = Retro.Cream, fontFamily = RetroDisplay, fontSize = 34.sp)
             CatalogMessage(model, state, state.channels.isEmpty())
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(6.dp)) {
                 items(state.channels, key = { it.id }) { ChannelRow(model, it) }
@@ -125,9 +125,9 @@ private fun ChannelsScreen(model: AppViewModel, state: AppState, wide: Boolean) 
         }
     } else LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
         item {
-            Text("Las tardes no se olvidan.", color = Retro.Gold, fontFamily = FontFamily.Monospace, fontSize = 24.sp)
+            Text("Las tardes no se olvidan.", color = Retro.Gold, fontFamily = RetroDisplay, fontSize = 30.sp)
             RetroRoom(Modifier.fillMaxWidth().height(310.dp))
-            Text("¿Qué vemos hoy?", color = Retro.Cream, fontFamily = FontFamily.Monospace, fontSize = 22.sp)
+            Text("¿Qué vemos hoy?", color = Retro.Cream, fontFamily = RetroDisplay, fontSize = 30.sp)
             CatalogMessage(model, state, state.channels.isEmpty())
         }
         items(state.channels, key = { it.id }) { ChannelRow(model, it) }
@@ -154,15 +154,42 @@ private fun ChannelRow(model: AppViewModel, channel: Channel) {
 }
 
 @Composable
-private fun SeriesScreen(model: AppViewModel, state: AppState) {
+internal fun SeriesScreen(model: AppViewModel, state: AppState) {
     val tv = LocalTvDevice.current
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Tu colección de recuerdos.", color = Retro.Gold, fontFamily = FontFamily.Monospace, fontSize = if (tv) 28.sp else 24.sp)
-        CatalogMessage(model, state, state.series.isEmpty())
-        LazyVerticalGrid(GridCells.Adaptive(if (tv) 200.dp else 154.dp), modifier = Modifier.weight(1f),
+    var filtersOpen by remember { mutableStateOf(false) }
+    val resume = state.session?.progress.orEmpty().filter { !it.completed && it.currentSecond > 0 }.map { it.seriesId }.toSet()
+    val visibleSeries = state.series.filter { !state.continueOnly || it.id in resume }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+      val compact = maxHeight < 300.dp
+      Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp)) {
+        Text("Tu colección de recuerdos.", color = Retro.Gold, fontFamily = RetroDisplay, fontSize = if (tv) 34.sp else 28.sp)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(4.dp)) {
+            item { CinemaButton("Filtros", { filtersOpen = true }, selected = state.seriesFilter != SeriesFilter()) }
+            item { CinemaButton("Todas", { model.continueOnly(false) }, selected = !state.continueOnly) }
+            item { CinemaButton("Continuar viendo", { model.continueOnly(true) }, selected = state.continueOnly) }
+        }
+        CatalogMessage(model, state, state.series.isEmpty() && state.seriesFilter == SeriesFilter())
+        if (!state.loading && state.error == null && state.series.isEmpty() && state.seriesFilter != SeriesFilter())
+            Text("No encontramos esa serie. Prueba otro nombre o filtro.", color = Retro.Lavender, fontSize = 17.sp)
+        if (!state.loading && state.error == null && visibleSeries.isEmpty() && state.series.isNotEmpty())
+            Text("No hay episodios por continuar en esta página.", color = Retro.Lavender, fontSize = 17.sp)
+        if (compact) LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(4.dp)) {
+            items(visibleSeries, key = { it.id }) { series ->
+                RetroSurface({ model.openSeries(series) }, Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth().padding(10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Logo(imageUrl(model, series.logoPath), series.name, Modifier.size(40.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(series.name, fontSize = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(if (series.id in resume) "Continuar viendo" else "${series.episodeCount} episodios", fontSize = 14.sp)
+                        }
+                        Text("▶", fontSize = 18.sp)
+                    }
+                }
+            }
+        } else LazyVerticalGrid(GridCells.Adaptive(if (tv) 200.dp else 154.dp), modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(6.dp)) {
-            items(state.series, key = { it.id }) { series ->
-                TapeCard(series.name, imageUrl(model, series.logoPath), "${series.episodeCount} episodios", { model.openSeries(series) })
+            items(visibleSeries, key = { it.id }) { series ->
+                TapeCard(series.name, imageUrl(model, series.logoPath), if (series.id in resume) "Continuar viendo" else "${series.episodeCount} episodios", { model.openSeries(series) })
             }
         }
         if (state.totalSeries > 24) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -170,7 +197,9 @@ private fun SeriesScreen(model: AppViewModel, state: AppState) {
             Text("${state.seriesPage}", color = Retro.Cream, fontSize = 17.sp)
             RetroButton("Siguiente", { model.seriesPage(state.seriesPage + 1) }, enabled = state.seriesPage * 24 < state.totalSeries && !state.loading)
         }
+      }
     }
+    if (filtersOpen) CatalogFilters(model, state) { filtersOpen = false }
 }
 
 @Composable
@@ -181,29 +210,32 @@ private fun CatalogMessage(model: AppViewModel, state: AppState, empty: Boolean)
 }
 
 @Composable
-private fun EpisodesScreen(model: AppViewModel, state: AppState) {
+internal fun EpisodesScreen(model: AppViewModel, state: AppState, onPlay: () -> Unit = {}) {
     val series = state.selectedSeries ?: return
     val tv = LocalTvDevice.current
     val progress = remember(state.session) { state.session?.progress?.associateBy { it.episodeId }.orEmpty() }
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        RetroButton("Volver a series", model::back)
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+      val compact = maxHeight < 300.dp
+      Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp)) {
+        if (!compact) CinemaButton("Volver a series", model::showSeriesList)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Logo(imageUrl(model, series.logoPath), series.name, Modifier.size(if (tv) 82.dp else 64.dp))
+            Logo(imageUrl(model, series.logoPath), series.name, Modifier.size(if (compact) 40.dp else if (tv) 82.dp else 64.dp))
             Column(Modifier.weight(1f)) {
-                Text(series.name, color = Retro.Gold, fontSize = if (tv) 28.sp else 22.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text("${state.episodes.size} episodios disponibles", color = Retro.Lavender, fontSize = if (tv) 18.sp else 15.sp)
+                Text(series.name, color = Retro.Gold, fontSize = if (compact) 18.sp else if (tv) 28.sp else 22.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text("${state.episodes.size} episodios disponibles", color = Retro.Lavender, fontSize = if (compact) 14.sp else if (tv) 18.sp else 15.sp)
             }
+            if (compact) CinemaButton("Volver a series", model::showSeriesList)
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(4.dp)) {
-            item { RetroButton("Todas", { model.season(null) }, selected = state.season == null) }
+            item { CinemaButton("Todas", { model.season(null) }, selected = state.season == null) }
             items(state.episodes.map { it.season }.distinct(), key = { it }) { season ->
-                RetroButton("Temporada $season", { model.season(season) }, selected = state.season == season)
+                CinemaButton("Temporada $season", { model.season(season) }, selected = state.season == season)
             }
         }
         if (state.episodes.isEmpty()) Message("Esta serie todavía no tiene episodios disponibles.")
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(6.dp)) {
             items(state.episodes.filter { state.season == null || it.season == state.season }, key = { it.id }) { episode ->
-                RetroSurface({ model.playEpisode(episode) }, Modifier.fillMaxWidth()) {
+                RetroSurface({ model.playEpisode(episode); onPlay() }, Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(48.dp)) {
                             Text("T${episode.season}", fontSize = 13.sp)
@@ -222,6 +254,7 @@ private fun EpisodesScreen(model: AppViewModel, state: AppState) {
                 }
             }
         }
+      }
     }
 }
 
