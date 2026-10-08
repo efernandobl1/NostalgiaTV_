@@ -1,11 +1,13 @@
 namespace ApplicationCore.Entities;
 
 public enum InterludeKind { Bumper, Advertisement }
+public enum InterludeSeason { AllYear, Halloween, Christmas }
 
 public class Interlude
 {
     public int Id { get; set; }
     public InterludeKind Kind { get; set; }
+    public InterludeSeason Season { get; set; }
     public string Title { get; set; } = string.Empty;
     public string FilePath { get; set; } = string.Empty;
     public decimal DurationSeconds { get; set; }

@@ -177,7 +177,7 @@ public class ChannelScheduleService
                 join clip in _context.Interludes.AsNoTracking() on assignment.InterludeId equals clip.Id
                 where assignment.ChannelEraId == selection.ChannelEraId
                     && clip.ApprovedForBroadcast
-                select new EligibleClip(assignment, clip)).ToListAsync();
+                select new BroadcastClip(assignment, clip)).ToListAsync();
             var lastClipUse = await (
                 from segment in _context.ScheduledPlaybackSegments.AsNoTracking()
                 where segment.InterludeId != null
@@ -253,7 +253,9 @@ public class ChannelScheduleService
                 var startsAt = current;
                 foreach (var point in points)
                 {
-                    var planned = PlanBreak(clips, breakRule, lastClipUse, startsAt.AddSeconds((double)(point.OffsetSeconds - offset)));
+                    var breakStart = startsAt.AddSeconds((double)(point.OffsetSeconds - offset));
+                    var planned = CommercialBreakPlanner.Plan(clips, breakRule, lastClipUse, breakStart,
+                        SeasonalProgrammingPolicy.InterludeSeasonAt(breakStart, _rules));
                     if (planned.Count == 0) continue;
 
                     startsAt = AddEpisodeSegment(program.Id, ++sequence, startsAt, offset, point.OffsetSeconds);
@@ -351,54 +353,6 @@ public class ChannelScheduleService
         if (pool.Count == 0) pool = episodes;
         return selector.Choose(pool, current, preferredGap, Random.Shared,
             SeasonalProgrammingPolicy.IsHalloween(current, _rules) ? SeasonalProgrammingPolicy.IsHalloweenSpecial : null);
-    }
-
-    private static List<Interlude> PlanBreak(
-        List<EligibleClip> clips,
-        ChannelEraBreakRule? rule,
-        Dictionary<int, DateTime> lastUse,
-        DateTime startsAt)
-    {
-        if (rule == null) return [];
-        var planned = new List<Interlude>();
-        var proposedUse = new Dictionary<int, DateTime>(lastUse);
-        var cursor = startsAt;
-        var shortestAd = clips.Where(item => item.Assignment.Role == BreakRole.Advertisement
-            && item.Clip.Kind == InterludeKind.Advertisement)
-            .Select(item => item.Clip.DurationSeconds).DefaultIfEmpty(decimal.MaxValue).Min();
-        var shortestCloser = clips.Where(item => item.Assignment.Role == BreakRole.BreakCloser
-            && item.Clip.Kind == InterludeKind.Bumper)
-            .Select(item => item.Clip.DurationSeconds).DefaultIfEmpty(decimal.MaxValue).Min();
-        if (shortestAd == decimal.MaxValue || shortestCloser == decimal.MaxValue) return [];
-
-        bool Add(BreakRole role, int remainingAds)
-        {
-            var candidates = clips.Where(item =>
-                item.Assignment.Role == role
-                && item.Clip.Kind == (role == BreakRole.Advertisement ? InterludeKind.Advertisement : InterludeKind.Bumper)
-                && (!proposedUse.TryGetValue(item.Clip.Id, out var last)
-                    || cursor >= last.AddSeconds(item.Assignment.MinimumGapSeconds))
-                && (cursor - startsAt).TotalSeconds + (double)item.Clip.DurationSeconds
-                    + (double)(shortestAd * remainingAds)
-                    + (role == BreakRole.BreakCloser ? 0 : (double)shortestCloser)
-                    <= rule.MaximumBreakSeconds)
-                .ToList();
-            if (candidates.Count == 0) return false;
-            var total = candidates.Sum(item => item.Assignment.Weight);
-            var choice = Random.Shared.Next(total);
-            var selected = candidates.First(item => (choice -= item.Assignment.Weight) < 0);
-            planned.Add(selected.Clip);
-            cursor = cursor.AddSeconds((double)selected.Clip.DurationSeconds);
-            proposedUse[selected.Clip.Id] = cursor;
-            return true;
-        }
-
-        if (!Add(BreakRole.BreakOpener, rule.MinimumAds)) return [];
-        var adCount = Random.Shared.Next(rule.MinimumAds, rule.MaximumAds + 1);
-        for (var i = 0; i < adCount; i++)
-            if (!Add(BreakRole.Advertisement, Math.Max(0, rule.MinimumAds - i - 1)))
-                return i >= rule.MinimumAds && Add(BreakRole.BreakCloser, 0) ? planned : [];
-        return Add(BreakRole.BreakCloser, 0) ? planned : [];
     }
 
     private DateTime AddEpisodeSegment(long programId, int sequence, DateTime start, decimal from, decimal to)
@@ -511,6 +465,5 @@ public class ChannelScheduleService
 
     private static string CleanPath(string? path) => path?.Replace("wwwroot", "").Replace("\\", "/") ?? "";
 
-    private sealed record EligibleClip(ChannelEraInterlude Assignment, Interlude Clip);
     private sealed record PriorProgram(int EpisodeId, int SeriesId, string TypeName, DateTime StartsAtUtc, DateTime EndsAtUtc, int? ShuffleCycle);
 }

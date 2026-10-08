@@ -33,6 +33,24 @@ export class SignInComponent {
     });
 
     if (authService.isAuthenticated()) this.router.navigate(['/dashboard']);
+    else if (localStorage.getItem('rememberMe') === 'true') {
+      this.submitting = true;
+      authService
+        .checkSession()
+        .pipe(
+          takeUntilDestroyed(this.destroyRef),
+          finalize(() => (this.submitting = false)),
+        )
+        .subscribe({
+          next: () => this.router.navigate(['/dashboard']),
+          error: (error: HttpErrorResponse) => {
+            if (error.status === 401 || error.status === 403) localStorage.removeItem('rememberMe');
+            else
+              this.errorMessage =
+                'No pudimos recuperar la sesión. Comprueba tu conexión e intenta nuevamente.';
+          },
+        });
+    }
   }
 
   onSubmit() {
@@ -41,7 +59,8 @@ export class SignInComponent {
     if (this.authForm.invalid) return;
     this.errorMessage = '';
     this.submitting = true;
-    const { rememberMe, ...credentials } = this.authForm.value;
+    const credentials = this.authForm.getRawValue();
+    const { rememberMe } = credentials;
     this.authService
       .login(credentials)
       .pipe(
