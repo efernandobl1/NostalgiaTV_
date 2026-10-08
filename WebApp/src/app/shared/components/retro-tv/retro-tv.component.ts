@@ -676,7 +676,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
       }
     } catch {
       if (!document.fullscreenElement) {
-        this.tv.setEnabled(true);
+        this.enterTvMode();
         this.fullscreenNotice.set('Este navegador no permite pantalla completa. Se abrió el modo TV.');
       }
     }
@@ -686,8 +686,11 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.toggleFullscreen();
   }
 
-  private onFsChange = (): void =>
-    this.zone.run(() => this.fullscreen.set(document.fullscreenElement === this.fsRootRef?.nativeElement));
+  private onFsChange = (): void => this.zone.run(() => {
+    const active = document.fullscreenElement === this.fsRootRef?.nativeElement;
+    this.fullscreen.set(active);
+    if (active) this.pokeOverlay();
+  });
 
   // ── Filtros CRT ─────────────────────────────────────────────────────────
   toggleFilters(): void {

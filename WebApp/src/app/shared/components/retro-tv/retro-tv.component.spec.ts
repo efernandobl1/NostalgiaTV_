@@ -48,9 +48,11 @@ describe('RetroTvComponent', () => {
     document.dispatchEvent(new Event('fullscreenchange'));
     expect(component.fullscreen()).toBe(false);
     fullscreenElement = root;
+    component.showOverlay.set(false);
     document.dispatchEvent(new Event('fullscreenchange'));
     fixture.detectChanges();
     expect(component.fullscreen()).toBe(true);
+    expect(component.showOverlay()).toBe(true);
     expect(fixture.nativeElement.querySelector('video')).toBe(video);
     fullscreenElement = null;
     document.dispatchEvent(new Event('fullscreenchange'));
