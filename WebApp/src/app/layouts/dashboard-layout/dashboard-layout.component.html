@@ -59,17 +59,19 @@
           >open_in_new</span
         ></a
       >
+      @if (seasonal.canToggle()) {
       <button type="button" (click)="seasonal.toggle()" [attr.aria-pressed]="seasonal.enabled()">
         <span class="material-symbols-outlined" aria-hidden="true">dark_mode</span
         >{{ seasonal.enabled() ? 'Volver al tema clásico' : 'Especial Halloween' }}
       </button>
+      }
       @if (seasonal.enabled() && menuService.currentUser()?.rol?.id === 1) {
         <a routerLink="/dashboard/interludes" [queryParams]="{ season: 'halloween' }">
           <span class="material-symbols-outlined" aria-hidden="true">movie</span>Contenido de
           Halloween
         </a>
       }
-      @if (seasonal.enabled()) {
+      @if (seasonal.enabled() && seasonal.canToggleEffects()) {
         <button
           type="button"
           (click)="seasonal.toggleEffects()"

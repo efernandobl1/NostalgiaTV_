@@ -58,6 +58,11 @@ body.halloween-theme .television-face {
 body.halloween-theme .television {
   filter: drop-shadow(0 0 22px #c16a2630);
 }
+
+// A filtered ancestor would confine the fixed cinema screen to the television.
+body.halloween-theme .room-page--cinema .television {
+  filter: none;
+}
 body.halloween-theme .public-brand .brand-screen {
   border-color: #ffbe71;
   color: #ffbe71;

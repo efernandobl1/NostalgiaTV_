@@ -14,7 +14,9 @@
       >
       <nav aria-label="Navegación principal">
         <button class="nav-key" type="button" (click)="showProfile.set(true)"><span class="material-symbols-outlined" aria-hidden="true">devices</span>Mi perfil</button>
-        <button class="nav-key" type="button" (click)="seasonal.toggle()" [attr.aria-pressed]="seasonal.enabled()"><span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>{{ seasonal.enabled() ? 'Tema clásico' : 'Halloween' }}</button>
+        @if (seasonal.canToggle()) {
+          <button class="nav-key" type="button" (click)="seasonal.toggle()" [attr.aria-pressed]="seasonal.enabled()"><span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>{{ seasonal.enabled() ? 'Tema clásico' : 'Halloween' }}</button>
+        }
         <button class="nav-key" type="button" (click)="openBrowser()">
           <span class="material-symbols-outlined" aria-hidden="true">video_library</span>Series
         </button>
@@ -97,6 +99,7 @@
                       >
                         <header class="cinema-toolbar">
                           <span class="cinema-brand">NostalgiaTV</span>
+                          @if (fullscreenNotice()) { <p role="status">{{ fullscreenNotice() }}</p> }
                           <div class="cinema-actions">
                             <button class="control-key" type="button" (click)="showProfile.set(true)"><span class="material-symbols-outlined" aria-hidden="true">devices</span>Sincronizar</button>
                             @if (mode() === 'channels') {

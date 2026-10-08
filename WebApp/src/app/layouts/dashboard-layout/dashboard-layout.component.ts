@@ -81,6 +81,7 @@ export class DashboardLayoutComponent {
       access: ['/dashboard/users', '/dashboard/roles'],
       secondary: true,
     },
+    { label: 'Configuración', icon: 'settings', url: '/dashboard/settings', access: [], admin: true, secondary: true },
   ];
   readonly username = computed(() => this.menuService.currentUser()?.username ?? 'Usuario');
   readonly roleName = computed(() => this.menuService.currentUser()?.rol.name ?? '');

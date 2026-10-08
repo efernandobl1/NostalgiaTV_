@@ -1,0 +1,71 @@
+<section class="studio-page">
+  <header class="studio-heading">
+    <div><h1>Configuración</h1><p>La personalidad y el ritmo de tus canales.</p></div>
+    <button class="admin-button admin-button--primary" type="submit" form="platform-settings"
+      [disabled]="!loaded() || saving() || form.invalid || !form.dirty">
+      {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+    </button>
+  </header>
+  @if (error()) {
+    <div class="studio-error" role="alert">{{ error() }}
+      @if (loading() === false && !form.dirty) {
+        <button class="admin-button admin-button--secondary" type="button" (click)="load()">Reintentar</button>
+      }
+    </div>
+  }
+  @if (saved()) { <p class="studio-feedback" role="status">Configuración guardada.</p> }
+  @if (loading()) {
+    <div class="admin-state" role="status">Cargando configuración…</div>
+  } @else if (loaded()) {
+    <form id="platform-settings" [formGroup]="form" (ngSubmit)="save()">
+      <fieldset class="settings-section">
+        <legend><span class="material-symbols-outlined" aria-hidden="true">palette</span>Apariencia</legend>
+        @for (option of appearance; track option.key) {
+          <label class="setting-switch">
+            <span><strong>{{ option.title }}</strong><small>{{ option.description }}</small></span>
+            <input type="checkbox" [formControlName]="option.key" [attr.aria-label]="option.title" />
+          </label>
+        }
+      </fieldset>
+      <fieldset class="settings-section">
+        <legend><span class="material-symbols-outlined" aria-hidden="true">live_tv</span>Programación</legend>
+        @for (option of programming; track option.key) {
+          <label class="setting-switch">
+            <span><strong>{{ option.title }}</strong><small>{{ option.description }}</small></span>
+            <input type="checkbox" [formControlName]="option.key" [attr.aria-label]="option.title" />
+          </label>
+        }
+        <div class="settings-fields">
+          <label>Zona horaria
+            <select formControlName="timeZoneId" aria-describedby="timezone-help">
+              @for (zone of timeZones; track zone) { <option [value]="zone">{{ zone }}</option> }
+            </select><small id="timezone-help">Define el calendario estacional y los límites diarios. No cambia el horario de transcodificación.</small>
+          </label>
+          <label>Descanso preferido entre repeticiones (horas)
+            <input formControlName="noRepeatWindowHours" type="number" min="0" max="72" step="1" aria-describedby="repeat-help" />
+            <small id="repeat-help">De 0 a 72. Se adapta a catálogos pequeños para mantener la señal.</small>
+          </label>
+        </div>
+        <div class="daily-limits">
+          <div><h2>Especiales</h2><p>Máximo por canal y día.</p></div>
+          <label>Total diario<input formControlName="maxSpecialsPerDay" type="number" min="0" max="50" step="1" aria-label="Total diario de especiales" /></label>
+          <label>Por serie<input formControlName="maxSpecialsPerSeriesPerDay" type="number" min="0" max="50" step="1" aria-label="Especiales por serie al día" /></label>
+        </div>
+        <div class="daily-limits">
+          <div><h2>Películas</h2><p>Máximo por canal y día.</p></div>
+          <label>Total diario<input formControlName="maxMoviesPerDay" type="number" min="0" max="20" step="1" aria-label="Total diario de películas" /></label>
+          <label>Por serie<input formControlName="maxMoviesPerSeriesPerDay" type="number" min="0" max="20" step="1" aria-label="Películas por serie al día" /></label>
+        </div>
+        <p class="settings-note">Si solo quedan especiales o películas, el canal puede superar esos límites para no quedarse sin señal.</p>
+        @if (form.invalid) {
+          <p class="studio-error" role="alert">Usa números enteros dentro de los rangos indicados. El límite por serie no puede superar el total diario.</p>
+        }
+        <p class="settings-note">Los cambios se aplican a la próxima programación generada. Para actualizar la existente, usa «Refrescar programación» en el canal.</p>
+      </fieldset>
+    </form>
+    <footer class="settings-footer">
+      <p>Los núcleos y el horario de conversión se administran por separado.</p>
+      <a class="admin-button admin-button--secondary" routerLink="/dashboard/transcoding">Configurar transcodificación<span aria-hidden="true">→</span></a>
+    </footer>
+  }
+</section>

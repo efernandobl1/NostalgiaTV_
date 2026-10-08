@@ -5,7 +5,6 @@ using Infrastructure.Contexts;
 using Infrastructure.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 
 namespace Infrastructure.Services;
@@ -14,17 +13,14 @@ public class ChannelScheduleService
 {
     private readonly NostalgiaTVContext _context;
     private readonly ILogger<ChannelScheduleService> _logger;
-    private readonly ChannelSchedulingSettings _rules;
     private static readonly ConcurrentDictionary<int, SemaphoreSlim> Locks = new();
 
     public ChannelScheduleService(
         NostalgiaTVContext context,
-        ILogger<ChannelScheduleService> logger,
-        IOptions<ChannelSchedulingSettings> rules)
+        ILogger<ChannelScheduleService> logger)
     {
         _context = context;
         _logger = logger;
-        _rules = rules.Value;
     }
 
     public async Task<List<ChannelScheduleEntryResponse>> GetScheduleAsync(int channelId)
@@ -142,6 +138,8 @@ public class ChannelScheduleService
 
     private async Task GenerateScheduleCoreAsync(int channelId, DateTime until)
     {
+            var settings = await _context.PlatformSettings.AsNoTracking().SingleAsync();
+            var rules = settings.ToSchedulingRules();
             var selection = await EnsureEraSelectionAsync(channelId);
             if (selection == null) return;
 
@@ -223,12 +221,12 @@ public class ChannelScheduleService
                 .Select(item => (item.EndsAtUtc - item.StartsAtUtc).TotalSeconds).Where(seconds => seconds > 0).ToList();
             var averageDuration = previousDurations.Count > 0 ? previousDurations.Average() : 1800;
             var preferredGap = ChannelEpisodeSelector.EstimatePreferredGap(
-                TimeSpan.FromHours(Math.Max(0, _rules.NoRepeatWindowHours)), episodes.Count, averageDuration);
+                TimeSpan.FromHours(Math.Max(0, rules.NoRepeatWindowHours)), episodes.Count, averageDuration);
             var iterations = 0;
             while (current < until && iterations++ < 500)
             {
                 var programStart = current;
-                var episode = PickEpisode(episodes, previous, current, preferredGap, selector);
+                var episode = PickEpisode(episodes, previous, current, preferredGap, selector, rules);
                 var duration = await GetDurationAsync(episode.FilePath!, durations);
                 var points = await _context.EpisodeBreakPoints.AsNoTracking()
                     .Where(point => point.EpisodeId == episode.Id
@@ -255,7 +253,7 @@ public class ChannelScheduleService
                 {
                     var breakStart = startsAt.AddSeconds((double)(point.OffsetSeconds - offset));
                     var planned = CommercialBreakPlanner.Plan(clips, breakRule, lastClipUse, breakStart,
-                        SeasonalProgrammingPolicy.InterludeSeasonAt(breakStart, _rules));
+                        SeasonalProgrammingPolicy.InterludeSeasonAt(breakStart, rules));
                     if (planned.Count == 0) continue;
 
                     startsAt = AddEpisodeSegment(program.Id, ++sequence, startsAt, offset, point.OffsetSeconds);
@@ -333,26 +331,26 @@ public class ChannelScheduleService
         return selection;
     }
 
-    private Episode PickEpisode(List<Episode> episodes, List<PriorProgram> prior, DateTime current, TimeSpan preferredGap, ChannelEpisodeSelector selector)
+    private Episode PickEpisode(List<Episode> episodes, List<PriorProgram> prior, DateTime current, TimeSpan preferredGap, ChannelEpisodeSelector selector, ChannelSchedulingSettings rules)
     {
-        var zone = TimeZoneInfo.FindSystemTimeZoneById(_rules.TimeZoneId);
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(rules.TimeZoneId);
         var day = TimeZoneInfo.ConvertTimeFromUtc(current, zone).Date;
         var todays = prior.Where(item => TimeZoneInfo.ConvertTimeFromUtc(item.StartsAtUtc, zone).Date == day).ToList();
         bool WithinCaps(Episode episode)
         {
             var name = episode.EpisodeType.Name;
             if (name.Equals("Movie", StringComparison.OrdinalIgnoreCase))
-                return todays.Count(item => item.TypeName.Equals("Movie", StringComparison.OrdinalIgnoreCase)) < _rules.MaxMoviesPerDay
-                    && todays.Count(item => item.SeriesId == episode.SeriesId && item.TypeName.Equals("Movie", StringComparison.OrdinalIgnoreCase)) < _rules.MaxMoviesPerSeriesPerDay;
+                return todays.Count(item => item.TypeName.Equals("Movie", StringComparison.OrdinalIgnoreCase)) < rules.MaxMoviesPerDay
+                    && todays.Count(item => item.SeriesId == episode.SeriesId && item.TypeName.Equals("Movie", StringComparison.OrdinalIgnoreCase)) < rules.MaxMoviesPerSeriesPerDay;
             if (name.Contains("Special", StringComparison.OrdinalIgnoreCase))
-                return todays.Count(item => item.TypeName.Contains("Special", StringComparison.OrdinalIgnoreCase)) < _rules.MaxSpecialsPerDay
-                    && todays.Count(item => item.SeriesId == episode.SeriesId && item.TypeName.Contains("Special", StringComparison.OrdinalIgnoreCase)) < _rules.MaxSpecialsPerSeriesPerDay;
+                return todays.Count(item => item.TypeName.Contains("Special", StringComparison.OrdinalIgnoreCase)) < rules.MaxSpecialsPerDay
+                    && todays.Count(item => item.SeriesId == episode.SeriesId && item.TypeName.Contains("Special", StringComparison.OrdinalIgnoreCase)) < rules.MaxSpecialsPerSeriesPerDay;
             return true;
         }
         var pool = episodes.Where(WithinCaps).ToList();
         if (pool.Count == 0) pool = episodes;
         return selector.Choose(pool, current, preferredGap, Random.Shared,
-            SeasonalProgrammingPolicy.IsHalloween(current, _rules) ? SeasonalProgrammingPolicy.IsHalloweenSpecial : null);
+            SeasonalProgrammingPolicy.EpisodePreferenceAt(current, rules));
     }
 
     private DateTime AddEpisodeSegment(long programId, int sequence, DateTime start, decimal from, decimal to)

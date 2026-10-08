@@ -26,9 +26,6 @@ namespace Infrastructure
             //Configurations
             services.Configure<FileUploadSettings>(configuration.GetSection("FileUpload"));
             services.Configure<SeriesUploadSettings>(configuration.GetSection("SeriesUpload"));
-            services.AddOptions<ChannelSchedulingSettings>().Bind(configuration.GetSection("ChannelScheduling"))
-                .Validate(settings => TimeZoneInfo.TryFindSystemTimeZoneById(settings.TimeZoneId, out _),
-                    "Channel scheduling requires a valid time zone.").ValidateOnStart();
             services.AddMediaProcessing(configuration);
 
             //Services
