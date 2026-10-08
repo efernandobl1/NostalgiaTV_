@@ -13,6 +13,7 @@ describe('SignInComponent', () => {
   let auth: {
     isAuthenticated: ReturnType<typeof signal<boolean>>;
     login: ReturnType<typeof vi.fn>;
+    checkSession: ReturnType<typeof vi.fn>;
   };
   let router: Router;
 
@@ -20,7 +21,11 @@ describe('SignInComponent', () => {
     localStorage.removeItem('rememberMe');
     sessionStorage.removeItem('sessionActive');
     response = new Subject<void>();
-    auth = { isAuthenticated: signal(false), login: vi.fn(() => response.asObservable()) };
+    auth = {
+      isAuthenticated: signal(false),
+      login: vi.fn(() => response.asObservable()),
+      checkSession: vi.fn(() => response.asObservable()),
+    };
     await TestBed.configureTestingModule({
       imports: [SignInComponent],
       providers: [provideRouter([]), { provide: AuthService, useValue: auth }],
@@ -59,7 +64,11 @@ describe('SignInComponent', () => {
     component.onSubmit();
     fixture.detectChanges();
     expect(auth.login).toHaveBeenCalledOnce();
-    expect(auth.login).toHaveBeenCalledWith({ username: 'operator', password: 'test-passphrase' });
+    expect(auth.login).toHaveBeenCalledWith({
+      username: 'operator',
+      password: 'test-passphrase',
+      rememberMe: false,
+    });
     expect(fixture.nativeElement.querySelector('form').getAttribute('aria-busy')).toBe('true');
     expect(fixture.nativeElement.querySelector('[type="submit"]').disabled).toBe(true);
     expect(sessionStorage.getItem('sessionActive')).toBeNull();
@@ -76,6 +85,42 @@ describe('SignInComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
     expect(component.submitting).toBe(false);
   });
+
+  it('sends the persistence preference to the API', () => {
+    fillForm(true);
+    component.onSubmit();
+    expect(auth.login).toHaveBeenCalledWith({
+      username: 'operator',
+      password: 'test-passphrase',
+      rememberMe: true,
+    });
+  });
+
+  it('restores a remembered session after a new browser session opens the login page', () => {
+    localStorage.setItem('rememberMe', 'true');
+    fixture.destroy();
+    fixture = TestBed.createComponent(SignInComponent);
+    expect(auth.checkSession).toHaveBeenCalledOnce();
+    expect(fixture.componentInstance.submitting).toBe(true);
+    response.next();
+    response.complete();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+    expect(localStorage.getItem('rememberMe')).toBe('true');
+    expect(fixture.componentInstance.submitting).toBe(false);
+  });
+
+  it.each([401, 503])(
+    'handles a %s restoration failure without submitting credentials',
+    (status) => {
+      localStorage.setItem('rememberMe', 'true');
+      fixture.destroy();
+      fixture = TestBed.createComponent(SignInComponent);
+      response.error(new HttpErrorResponse({ status }));
+      expect(auth.login).not.toHaveBeenCalled();
+      expect(localStorage.getItem('rememberMe')).toBe(status === 401 ? null : 'true');
+      expect(fixture.componentInstance.submitting).toBe(false);
+    },
+  );
 
   it('only marks the current browser session after a successful login', () => {
     fillForm();

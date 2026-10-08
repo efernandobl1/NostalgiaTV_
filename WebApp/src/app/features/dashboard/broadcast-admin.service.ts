@@ -6,12 +6,22 @@ export interface Interlude {
   id: number;
   title: string;
   kind: 0 | 1;
+  season: InterludeSeason;
   filePath: string;
   durationSeconds: number;
   originalYearFrom: number | null;
   originalYearTo: number | null;
   regionCode: string | null;
   approvedForBroadcast: boolean;
+}
+export type InterludeSeason = 0 | 1 | 2;
+export const INTERLUDE_SEASONS = [
+  { id: 0 as InterludeSeason, label: 'Todo el año' },
+  { id: 1 as InterludeSeason, label: 'Halloween · octubre' },
+  { id: 2 as InterludeSeason, label: 'Navidad · diciembre' },
+];
+export function interludeSeasonLabel(season: InterludeSeason = 0): string {
+  return INTERLUDE_SEASONS.find((item) => item.id === season)?.label ?? 'Todo el año';
 }
 export interface ClipAssignment {
   channelEraId: number;

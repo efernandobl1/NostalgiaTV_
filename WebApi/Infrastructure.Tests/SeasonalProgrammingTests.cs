@@ -8,6 +8,18 @@ namespace Infrastructure.Tests;
 public class SeasonalProgrammingTests
 {
     [Theory]
+    [InlineData("2026-10-01T05:59:59Z", InterludeSeason.AllYear)]
+    [InlineData("2026-10-01T06:00:00Z", InterludeSeason.Halloween)]
+    [InlineData("2026-11-01T06:00:00Z", InterludeSeason.AllYear)]
+    [InlineData("2026-12-01T05:59:59Z", InterludeSeason.AllYear)]
+    [InlineData("2026-12-01T06:00:00Z", InterludeSeason.Christmas)]
+    [InlineData("2027-01-01T06:00:00Z", InterludeSeason.AllYear)]
+    [InlineData("2027-10-01T06:00:00Z", InterludeSeason.Halloween)]
+    [InlineData("2027-12-01T06:00:00Z", InterludeSeason.Christmas)]
+    public void AdvertisingSeasonsFollowTheBroadcastCalendarEveryYear(string utc, InterludeSeason expected) =>
+        Assert.Equal(expected, SeasonalProgrammingPolicy.InterludeSeasonAt(DateTime.Parse(utc).ToUniversalTime(), "America/Guatemala"));
+
+    [Theory]
     [InlineData("2026-10-01T05:59:59Z", false)]
     [InlineData("2026-10-01T06:00:00Z", true)]
     [InlineData("2026-11-01T05:59:59Z", true)]
@@ -19,6 +31,14 @@ public class SeasonalProgrammingTests
     [Fact]
     public void SeasonalProgrammingCanBeDisabled() =>
         Assert.False(SeasonalProgrammingPolicy.IsHalloween(new DateTime(2026, 10, 15), new() { HalloweenEnabled = false }));
+
+    [Fact]
+    public void DisablingHalloweenAlsoExcludesItsClipsWithoutDisablingChristmas()
+    {
+        var rules = new ChannelSchedulingSettings { HalloweenEnabled = false };
+        Assert.Equal(InterludeSeason.AllYear, SeasonalProgrammingPolicy.InterludeSeasonAt(new DateTime(2026, 10, 15), rules));
+        Assert.Equal(InterludeSeason.Christmas, SeasonalProgrammingPolicy.InterludeSeasonAt(new DateTime(2026, 12, 15), rules));
+    }
 
     [Fact]
     public void HalloweenPreferenceDoesNotRepeatAnEpisodeBeforeTheCycleEnds()

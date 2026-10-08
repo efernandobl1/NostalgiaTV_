@@ -59,8 +59,26 @@
           >open_in_new</span
         ></a
       >
-      <button type="button" (click)="seasonal.toggle()" [attr.aria-pressed]="seasonal.enabled()"><span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>{{ seasonal.enabled() ? 'Volver al tema clásico' : 'Especial Halloween' }}</button>
-      @if (seasonal.enabled()) { <button type="button" (click)="seasonal.toggleEffects()" [attr.aria-pressed]="seasonal.effects()"><span class="material-symbols-outlined" aria-hidden="true">animation</span>{{ seasonal.effects() ? 'Desactivar efectos' : 'Activar efectos' }}</button> }
+      <button type="button" (click)="seasonal.toggle()" [attr.aria-pressed]="seasonal.enabled()">
+        <span class="material-symbols-outlined" aria-hidden="true">dark_mode</span
+        >{{ seasonal.enabled() ? 'Volver al tema clásico' : 'Especial Halloween' }}
+      </button>
+      @if (seasonal.enabled() && menuService.currentUser()?.rol?.id === 1) {
+        <a routerLink="/dashboard/interludes" [queryParams]="{ season: 'halloween' }">
+          <span class="material-symbols-outlined" aria-hidden="true">movie</span>Contenido de
+          Halloween
+        </a>
+      }
+      @if (seasonal.enabled()) {
+        <button
+          type="button"
+          (click)="seasonal.toggleEffects()"
+          [attr.aria-pressed]="seasonal.effects()"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">animation</span
+          >{{ seasonal.effects() ? 'Desactivar efectos' : 'Activar efectos' }}
+        </button>
+      }
       <button type="button" (click)="themeService.toggleTheme()" [disabled]="seasonal.enabled()">
         <span class="material-symbols-outlined" aria-hidden="true">{{
           themeService.isDark() ? 'light_mode' : 'dark_mode'

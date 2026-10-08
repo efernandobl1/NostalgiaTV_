@@ -1,4 +1,17 @@
 @use '../../../../styles/dashboard-components';
+.season-filter {
+  width: min(100%, 260px);
+}
+.clip-season {
+  color: var(--dashboard-purple);
+  font-size: 14px;
+}
+#season-help {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--dashboard-muted);
+  line-height: 1.5;
+}
 .clip-shelf {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));

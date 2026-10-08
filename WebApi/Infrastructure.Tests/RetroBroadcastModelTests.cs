@@ -2,11 +2,31 @@ using ApplicationCore.Entities;
 using Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using ApplicationCore.Settings;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using WebApi.Controllers;
 
 namespace Infrastructure.Tests;
 
 public class RetroBroadcastModelTests
 {
+    [Fact]
+    public async Task InvalidAdvertisingSeasonsAreRejectedBeforeWritingFilesOrQueryingTheDatabase()
+    {
+        using var context = CreateContext();
+        var controller = new RetroBroadcastController(context, null!, null!, Options.Create(new MediaSettings()));
+        var invalid = (InterludeSeason)99;
+        Assert.IsType<BadRequestObjectResult>(await controller.UpdateInterlude(1, new("Bumper", null, null, null, invalid)));
+        using var stream = new MemoryStream([1]);
+        Assert.IsType<BadRequestObjectResult>(await controller.UploadInterlude(new()
+        {
+            Title = "Seasonal ad", Kind = InterludeKind.Advertisement, Season = invalid,
+            File = new FormFile(stream, 0, 1, "file", "test.mp4")
+        }, CancellationToken.None));
+    }
+
     private static NostalgiaTVContext CreateContext() => new(new DbContextOptionsBuilder<NostalgiaTVContext>()
         .UseSqlServer("Server=(local);Database=NostalgiaTvModelTests;Integrated Security=True;TrustServerCertificate=True")
         .Options);

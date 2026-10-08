@@ -5,7 +5,17 @@
     </button>
     <header class="studio-heading">
       <div>
-        <h1>{{ selected() ? selected()!.title : 'Nuevo archivo publicitario' }}</h1>
+        <h1>
+          {{
+            selected()
+              ? selected()!.title
+              : season === 1
+                ? kind === 0
+                  ? 'Nuevo bumper de Halloween'
+                  : 'Nuevo anuncio de Halloween'
+                : 'Nuevo archivo publicitario'
+          }}
+        </h1>
         <p>Una pieza del canal: anuncio de la época o bumper de entrada y salida.</p>
       </div>
     </header>
@@ -34,6 +44,23 @@
             >Año final<input name="yearTo" type="number" min="1900" max="2100" [(ngModel)]="yearTo"
           /></label>
         </div>
+        <label class="studio-field"
+          ><span id="season-label">Temporada de emisión</span>
+          <select
+            name="season"
+            [(ngModel)]="season"
+            aria-labelledby="season-label"
+            aria-describedby="season-help"
+          >
+            @for (item of seasons; track item.id) {
+              <option [ngValue]="item.id">{{ item.label }}</option>
+            }
+          </select>
+          <span id="season-help"
+            >Las piezas de temporada se prefieren en su mes y no se emiten fuera de él. Se usa la
+            zona horaria del canal.</span
+          >
+        </label>
         <label class="studio-field"
           >Región<input
             name="region"
@@ -98,12 +125,41 @@
   } @else {
     <header class="studio-heading">
       <div>
-        <h1>Archivo publicitario</h1>
-        <p>Los anuncios y las señales que completan la identidad de cada era.</p>
+        <h1>{{ halloweenLibrary() ? 'Archivo de Halloween' : 'Archivo publicitario' }}</h1>
+        <p>
+          {{
+            halloweenLibrary()
+              ? 'Bumpers y anuncios exclusivos de octubre.'
+              : 'Los anuncios y las señales que completan la identidad de cada era.'
+          }}
+        </p>
       </div>
-      <button type="button" class="admin-button admin-button--primary" (click)="open()">
-        <span class="material-symbols-outlined" aria-hidden="true">upload</span>Subir archivo
-      </button>
+      <div class="studio-actions">
+        @if (halloweenLibrary()) {
+          <button
+            type="button"
+            class="admin-button admin-button--secondary"
+            (click)="open(undefined, 0)"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">movie</span>Subir bumper
+          </button>
+          <button
+            type="button"
+            class="admin-button admin-button--primary"
+            (click)="open(undefined, 1)"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">upload</span>Subir anuncio
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="admin-button admin-button--primary"
+            (click)="open(undefined, filter() === 1 ? 1 : 0)"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">upload</span>Subir archivo
+          </button>
+        }
+      </div>
     </header>
     <div class="studio-toolbar">
       <nav class="studio-tabs" aria-label="Tipo de archivo">
@@ -125,6 +181,15 @@
       /></label>
     </div>
     <div class="studio-toolbar">
+      <label class="studio-field season-filter"
+        >Temporada
+        <select [ngModel]="seasonFilter()" (ngModelChange)="seasonFilter.set($event)">
+          <option [ngValue]="null">Todas las temporadas</option>
+          @for (item of seasons; track item.id) {
+            <option [ngValue]="item.id">{{ item.label }}</option>
+          }
+        </select>
+      </label>
       <label class="studio-check"
         ><input
           type="checkbox"
@@ -149,7 +214,11 @@
                 >{{ clip.originalYearFrom || 'Época sin indicar'
                 }}{{ clip.originalYearTo ? ' – ' + clip.originalYearTo : '' }}</span
               ></span
-            ><span class="clip-status" [class.approved]="clip.approvedForBroadcast">{{
+            >
+            @if (clip.season) {
+              <span class="clip-season">{{ seasonLabel(clip.season) }}</span>
+            }
+            <span class="clip-status" [class.approved]="clip.approvedForBroadcast">{{
               clip.approvedForBroadcast ? 'Aprobado' : 'Por revisar'
             }}</span>
           </button>

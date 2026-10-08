@@ -129,7 +129,7 @@ public class RetroBroadcastController : ControllerBase
             return BadRequest("A compatible MP4 file under 500 MiB is required.");
         if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Length > 300)
             return BadRequest("A title of at most 300 characters is required.");
-        if (!Enum.IsDefined(request.Kind) || request.RegionCode?.Length > 20)
+        if (!Enum.IsDefined(request.Kind) || !Enum.IsDefined(request.Season) || request.RegionCode?.Length > 20)
             return BadRequest("Invalid clip metadata.");
         if (request.OriginalYearTo < request.OriginalYearFrom)
             return BadRequest("The historical year range is invalid.");
@@ -162,6 +162,7 @@ public class RetroBroadcastController : ControllerBase
             var interlude = new Interlude
             {
                 Kind = request.Kind,
+                Season = request.Season,
                 Title = request.Title.Trim(),
                 FilePath = $"/uploads/{folder}/{name}",
                 DurationSeconds = decimal.Round((decimal)info.Duration.TotalSeconds, 3),
@@ -243,7 +244,8 @@ public class RetroBroadcastController : ControllerBase
     public async Task<IActionResult> UpdateInterlude(int id, InterludeDetailsRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Length > 300
-            || request.RegionCode?.Length > 20 || request.OriginalYearTo < request.OriginalYearFrom)
+            || request.RegionCode?.Length > 20 || request.OriginalYearTo < request.OriginalYearFrom
+            || !Enum.IsDefined(request.Season))
             return BadRequest("Invalid clip metadata.");
         var clip = await _context.Interludes.FindAsync(id);
         if (clip == null) return NotFound();
@@ -251,7 +253,17 @@ public class RetroBroadcastController : ControllerBase
         clip.OriginalYearFrom = request.OriginalYearFrom;
         clip.OriginalYearTo = request.OriginalYearTo;
         clip.RegionCode = request.RegionCode?.Trim();
+        var seasonChanged = clip.Season != request.Season;
+        clip.Season = request.Season;
         await _context.SaveChangesAsync();
+        if (seasonChanged)
+        {
+            var channels = await (from assignment in _context.ChannelEraInterludes
+                join era in _context.ChannelEras on assignment.ChannelEraId equals era.Id
+                where assignment.InterludeId == id
+                select era.ChannelId).Distinct().ToListAsync();
+            foreach (var channelId in channels) await _broadcast.ReloadChannelAsync(channelId);
+        }
         return Ok(clip);
     }
 
@@ -320,12 +332,14 @@ public class RetroBroadcastController : ControllerBase
 public sealed record BreakPointRequest(decimal OffsetSeconds, string? Label);
 public sealed record BreakRulesRequest(int MinimumAds, int MaximumAds, int MaximumBreakSeconds);
 public sealed record ApprovalRequest(bool Approved);
-public sealed record InterludeDetailsRequest(string Title, int? OriginalYearFrom, int? OriginalYearTo, string? RegionCode);
+public sealed record InterludeDetailsRequest(string Title, int? OriginalYearFrom, int? OriginalYearTo, string? RegionCode,
+    InterludeSeason Season = InterludeSeason.AllYear);
 public sealed record ClipAssignmentRequest(int Weight, int MinimumGapSeconds);
 public sealed class InterludeUploadRequest
 {
     public string Title { get; set; } = string.Empty;
     public InterludeKind Kind { get; set; }
+    public InterludeSeason Season { get; set; }
     public IFormFile? File { get; set; }
     public int? OriginalYearFrom { get; set; }
     public int? OriginalYearTo { get; set; }
