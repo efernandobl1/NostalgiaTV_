@@ -71,7 +71,8 @@
                     ? 'Aprobado'
                     : 'Sin aprobar: no se emitirá'
                 }}
-                · Frecuencia {{ item.weight }} · Separación {{ item.minimumGapSeconds }} s</small
+                · {{ seasonLabel(clip(item.interludeId)?.season) }} · Frecuencia {{ item.weight }} ·
+                Separación {{ item.minimumGapSeconds }} s</small
               >
             </div>
             <div class="studio-actions">
@@ -137,7 +138,8 @@
               <option [ngValue]="null">Seleccionar archivo</option>
               @for (clip of options(role.id); track clip.id) {
                 <option [ngValue]="clip.id">
-                  {{ clip.title }}{{ clip.approvedForBroadcast ? '' : ' (sin aprobar)' }}
+                  {{ clip.title }} · {{ seasonLabel(clip.season)
+                  }}{{ clip.approvedForBroadcast ? '' : ' (sin aprobar)' }}
                 </option>
               }
             </select></label

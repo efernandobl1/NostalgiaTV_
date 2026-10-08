@@ -7,6 +7,7 @@ import {
   BreakRules,
   ClipAssignment,
   Interlude,
+  interludeSeasonLabel,
 } from '../broadcast-admin.service';
 
 @Component({
@@ -16,6 +17,7 @@ import {
   styleUrl: './commercial-breaks.component.scss',
 })
 export class CommercialBreaksComponent {
+  readonly seasonLabel = interludeSeasonLabel;
   readonly eraId = input.required<number>();
   private readonly service = inject(BroadcastAdminService);
   readonly clips = signal<Interlude[]>([]);
