@@ -48,12 +48,27 @@ namespace Infrastructure.Contexts
         public DbSet<ViewerProgress> ViewerProgress { get; set; }
         public DbSet<ViewerWatchRange> ViewerWatchRanges { get; set; }
         public DbSet<ChannelComment> ChannelComments { get; set; }
+        public DbSet<PlatformSettings> PlatformSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<Episode>().Property(episode => episode.IsAvailable).HasDefaultValue(true);
             modelBuilder.ConfigureViewing();
+            modelBuilder.Entity<PlatformSettings>(settings =>
+            {
+                settings.Property(item => item.Id).ValueGeneratedNever();
+                settings.Property(item => item.TimeZoneId).HasMaxLength(100);
+                settings.ToTable("PlatformSettings", table =>
+                {
+                    table.HasCheckConstraint("CK_PlatformSettings_Singleton", "[Id] = 1");
+                    table.HasCheckConstraint("CK_PlatformSettings_Limits",
+                        "[NoRepeatWindowHours] BETWEEN 0 AND 72 AND [MaxSpecialsPerDay] BETWEEN 0 AND 50 " +
+                        "AND [MaxSpecialsPerSeriesPerDay] BETWEEN 0 AND [MaxSpecialsPerDay] " +
+                        "AND [MaxMoviesPerDay] BETWEEN 0 AND 20 AND [MaxMoviesPerSeriesPerDay] BETWEEN 0 AND [MaxMoviesPerDay]");
+                });
+                settings.HasData(new PlatformSettings());
+            });
 
             modelBuilder.Entity<MediaProcessingJob>(job =>
             {
@@ -101,6 +116,7 @@ namespace Infrastructure.Contexts
                 // Hijos de Seguridad
                 new Menu { Id = 6, Name = "Roles", Caption = "Roles", Icon = "admin_panel_settings", Url = "/dashboard/roles", IsVisible = true, SortOrder = 1, ParentId = 2 },
                 new Menu { Id = 7, Name = "Users", Caption = "Usuarios", Icon = "people", Url = "/dashboard/users", IsVisible = true, SortOrder = 2, ParentId = 2 },
+                new Menu { Id = 12, Name = "Settings", Caption = "Configuración", Icon = "settings", Url = "/dashboard/settings", IsVisible = true, SortOrder = 3, ParentId = 2 },
 
                 // Hijos de Contenido
                 new Menu { Id = 3, Name = "Series", Caption = "Series", Icon = "movie", Url = "/dashboard/series", IsVisible = true, SortOrder = 1, ParentId = 1 },
@@ -124,7 +140,8 @@ namespace Infrastructure.Contexts
                 new { MenusId = 8, RolesId = 1 },
                 new { MenusId = 9, RolesId = 1 },
                 new { MenusId = 10, RolesId = 1 },
-                new { MenusId = 11, RolesId = 1 }
+                new { MenusId = 11, RolesId = 1 },
+                new { MenusId = 12, RolesId = 1 }
             );
 
             // Seed User

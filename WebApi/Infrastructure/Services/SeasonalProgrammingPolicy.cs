@@ -7,6 +7,7 @@ public static class SeasonalProgrammingPolicy
 {
     public static InterludeSeason InterludeSeasonAt(DateTime startsAtUtc, ChannelSchedulingSettings rules)
     {
+        if (!rules.SeasonalInterludesEnabled) return InterludeSeason.AllYear;
         var season = InterludeSeasonAt(startsAtUtc, rules.TimeZoneId);
         return season == InterludeSeason.Halloween && !rules.HalloweenEnabled ? InterludeSeason.AllYear : season;
     }
@@ -21,7 +22,18 @@ public static class SeasonalProgrammingPolicy
         };
 
     public static bool IsHalloween(DateTime startsAtUtc, ChannelSchedulingSettings rules) =>
-        InterludeSeasonAt(startsAtUtc, rules) == InterludeSeason.Halloween;
+        rules.HalloweenEnabled && rules.SeasonalEpisodesEnabled
+        && InterludeSeasonAt(startsAtUtc, rules.TimeZoneId) == InterludeSeason.Halloween;
+
+    public static Func<Episode, bool>? EpisodePreferenceAt(DateTime startsAtUtc, ChannelSchedulingSettings rules)
+    {
+        if (!rules.SeasonalEpisodesEnabled) return null;
+        var season = InterludeSeasonAt(startsAtUtc, rules.TimeZoneId);
+        if (season == InterludeSeason.Halloween && rules.HalloweenEnabled) return IsHalloweenSpecial;
+        return season == InterludeSeason.Christmas
+            ? episode => episode.EpisodeType.Name.Equals("Christmas Special", StringComparison.OrdinalIgnoreCase)
+            : null;
+    }
 
     public static bool IsHalloweenSpecial(Episode episode) =>
         episode.EpisodeType.Name.Equals("Halloween Special", StringComparison.OrdinalIgnoreCase);

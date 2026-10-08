@@ -8,7 +8,7 @@ import { DashboardLayoutComponent } from './dashboard-layout.component';
 
 describe('DashboardLayoutComponent Halloween archive access', () => {
   const user = signal<UserResponse | null>(null);
-  const seasonal = { enabled: signal(true), effects: signal(true) };
+  const seasonal = { enabled: signal(true), effects: signal(true), canToggle: signal(false), canToggleEffects: signal(true) };
   beforeEach(() => {
     user.set({ id: 1, username: 'Admin', rol: { id: 1, name: 'Administrator', description: '' } });
     seasonal.enabled.set(true);

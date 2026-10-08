@@ -28,6 +28,39 @@ describe('RetroTvComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('falls back to TV mode when the browser rejects fullscreen', async () => {
+    const root = fixture.nativeElement.querySelector('.retro-surface');
+    root.requestFullscreen = vi.fn().mockRejectedValue(new Error('Denied'));
+    await component.toggleFullscreen();
+    expect(component.fullscreen()).toBe(false);
+    expect(component.tv.enabled()).toBe(true);
+    expect(component.fullscreenNotice()).toContain('modo TV');
+    component.exitTvMode();
+    expect(component.fullscreenNotice()).toBe('');
+  });
+  it('only responds to fullscreen for its own root and preserves the video element', () => {
+    const root = fixture.nativeElement.querySelector('.retro-surface');
+    const video = fixture.nativeElement.querySelector('video');
+    expect(video).toBeTruthy();
+    const descriptor = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
+    let fullscreenElement: Element | null = document.body;
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => fullscreenElement });
+    document.dispatchEvent(new Event('fullscreenchange'));
+    expect(component.fullscreen()).toBe(false);
+    fullscreenElement = root;
+    component.showOverlay.set(false);
+    document.dispatchEvent(new Event('fullscreenchange'));
+    fixture.detectChanges();
+    expect(component.fullscreen()).toBe(true);
+    expect(component.showOverlay()).toBe(true);
+    expect(fixture.nativeElement.querySelector('video')).toBe(video);
+    fullscreenElement = null;
+    document.dispatchEvent(new Event('fullscreenchange'));
+    expect(component.fullscreen()).toBe(false);
+    if (descriptor) Object.defineProperty(document, 'fullscreenElement', descriptor);
+    else Reflect.deleteProperty(document, 'fullscreenElement');
+  });
+
   it('records continuous live-channel playback but ignores a seek and bumper playback', () => {
     const watched = TestBed.inject(WatchedService);
     const report = vi.spyOn(watched, 'recordInterval');

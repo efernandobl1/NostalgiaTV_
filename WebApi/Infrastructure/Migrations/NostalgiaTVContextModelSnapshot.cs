@@ -795,6 +795,17 @@ namespace Infrastructure.Migrations
                         },
                         new
                         {
+                            Id = 12,
+                            Caption = "Configuración",
+                            Icon = "settings",
+                            IsVisible = true,
+                            Name = "Settings",
+                            ParentId = 2,
+                            SortOrder = 3,
+                            Url = "/dashboard/settings"
+                        },
+                        new
+                        {
                             Id = 3,
                             Caption = "Series",
                             Icon = "movie",
@@ -929,6 +940,69 @@ namespace Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("MetadataProviders");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.PlatformSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxMoviesPerDay")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxMoviesPerSeriesPerDay")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxSpecialsPerDay")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxSpecialsPerSeriesPerDay")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NoRepeatWindowHours")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("SeasonalEffectsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("SeasonalEpisodesEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("SeasonalInterludesEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("SeasonalThemesEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlatformSettings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlatformSettings_Limits", "[NoRepeatWindowHours] BETWEEN 0 AND 72 AND [MaxSpecialsPerDay] BETWEEN 0 AND 50 AND [MaxSpecialsPerSeriesPerDay] BETWEEN 0 AND [MaxSpecialsPerDay] AND [MaxMoviesPerDay] BETWEEN 0 AND 20 AND [MaxMoviesPerSeriesPerDay] BETWEEN 0 AND [MaxMoviesPerDay]");
+
+                            t.HasCheckConstraint("CK_PlatformSettings_Singleton", "[Id] = 1");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            MaxMoviesPerDay = 2,
+                            MaxMoviesPerSeriesPerDay = 2,
+                            MaxSpecialsPerDay = 5,
+                            MaxSpecialsPerSeriesPerDay = 2,
+                            NoRepeatWindowHours = 24,
+                            SeasonalEffectsEnabled = true,
+                            SeasonalEpisodesEnabled = true,
+                            SeasonalInterludesEnabled = true,
+                            SeasonalThemesEnabled = true,
+                            TimeZoneId = "America/Guatemala"
+                        });
                 });
 
             modelBuilder.Entity("ApplicationCore.Entities.RefreshToken", b =>
@@ -1482,6 +1556,11 @@ namespace Infrastructure.Migrations
                         new
                         {
                             MenusId = 11,
+                            RolesId = 1
+                        },
+                        new
+                        {
+                            MenusId = 12,
                             RolesId = 1
                         });
                 });

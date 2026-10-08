@@ -796,8 +796,10 @@
   box-shadow: none;
   aspect-ratio: auto;
 }
-.room-page--cinema .public-header {
-  visibility: hidden;
+.room-page--cinema {
+  height: 100dvh;
+  overflow: clip;
+  .public-header { visibility: hidden; }
 }
 .cinema-overlay {
   position: absolute;
