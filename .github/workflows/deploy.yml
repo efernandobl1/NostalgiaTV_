@@ -17,6 +17,33 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      web: ${{ steps.detect.outputs.web }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: detect
+        shell: bash
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo 'web=true' >> "$GITHUB_OUTPUT"
+          else
+            changed=$(git diff --name-only "$BASE" "$HEAD" | awk '
+              /^(AndroidApp\/|\.github\/workflows\/android\.yml$)/ { next }
+              { found=1 }
+              END { print found ? "true" : "false" }')
+            echo "web=$changed" >> "$GITHUB_OUTPUT"
+          fi
   # Escaneo de seguridad como gate: si hay CVEs HIGH/CRITICAL, no se publica nada.
   security-scan:
     runs-on: ubuntu-latest
@@ -58,7 +85,8 @@ jobs:
 
   # Build both images in parallel; the API Docker build also runs its tests.
   build-and-push:
-    needs: security-scan
+    needs: [changes, security-scan]
+    if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
