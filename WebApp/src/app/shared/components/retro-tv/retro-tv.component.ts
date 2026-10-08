@@ -146,6 +146,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   readonly muted = signal(false);
   readonly volume = signal(1);
   readonly fullscreen = signal(false);
+  readonly fullscreenNotice = signal('');
   readonly panelOpen = signal(true);
   readonly clock = signal(this.formatClock());
   readonly showOverlay = signal(true);
@@ -663,19 +664,30 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
     this.muted.set(value === 0);
   }
 
-  toggleFullscreen(): void {
+  async toggleFullscreen(): Promise<void> {
     const el = this.fsRootRef?.nativeElement;
     if (!el) return;
-    if (!document.fullscreenElement) el.requestFullscreen?.();
-    else document.exitFullscreen?.();
+    this.fullscreenNotice.set('');
+    try {
+      if (document.fullscreenElement === el) await document.exitFullscreen();
+      else {
+        if (!el.requestFullscreen) throw new Error('Fullscreen is unavailable');
+        await el.requestFullscreen();
+      }
+    } catch {
+      if (!document.fullscreenElement) {
+        this.tv.setEnabled(true);
+        this.fullscreenNotice.set('Este navegador no permite pantalla completa. Se abrió el modo TV.');
+      }
+    }
   }
-  /** El video es persistente, así que fullscreen NO recarga: sólo cambia el layout. */
+  /** Fullscreen changes the layout without remounting the video. */
   goFullscreenCinema(): void {
     this.toggleFullscreen();
   }
 
   private onFsChange = (): void =>
-    this.zone.run(() => this.fullscreen.set(!!document.fullscreenElement));
+    this.zone.run(() => this.fullscreen.set(document.fullscreenElement === this.fsRootRef?.nativeElement));
 
   // ── Filtros CRT ─────────────────────────────────────────────────────────
   toggleFilters(): void {
@@ -699,6 +711,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
   }
   exitTvMode(): void {
     this.tv.setEnabled(false);
+    this.fullscreenNotice.set('');
   }
   leaveCinema(): void {
     this.exitTvMode();

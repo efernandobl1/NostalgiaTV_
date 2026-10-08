@@ -2,12 +2,14 @@ namespace ApplicationCore.Settings
 {
     /// <summary>
     /// Configurable rules for random channel scheduling.
-    /// Bound from the "ChannelScheduling" section or ChannelScheduling__Xxx environment variables.
+    /// Snapshot of the database settings used during one schedule-generation pass.
     /// </summary>
     public class ChannelSchedulingSettings
     {
         public string TimeZoneId { get; set; } = "America/Guatemala";
         public bool HalloweenEnabled { get; set; } = true;
+        public bool SeasonalEpisodesEnabled { get; set; } = true;
+        public bool SeasonalInterludesEnabled { get; set; } = true;
 
         /// <summary>Maximum preferred gap between airings; reduced for small catalogs.</summary>
         public int NoRepeatWindowHours { get; set; } = 24;

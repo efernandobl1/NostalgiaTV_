@@ -89,7 +89,7 @@ public class MediaLayoutIntegrationTests
                 new ScheduledPlaybackSegment { ScheduledProgram = historical, Sequence = 1, StartsAtUtc = now.AddHours(-2), EndsAtUtc = now.AddHours(-1), MediaStartSecond = 0, MediaEndSecond = 2 },
                 new ScheduledPlaybackSegment { ScheduledProgram = future, Sequence = 1, StartsAtUtc = now.AddMinutes(-1), EndsAtUtc = now.AddMinutes(5), MediaStartSecond = 0, MediaEndSecond = 2 });
             await context.SaveChangesAsync();
-            var schedules = new ChannelScheduleService(context, NullLogger<ChannelScheduleService>.Instance, Options.Create(new ChannelSchedulingSettings()));
+            var schedules = new ChannelScheduleService(context, NullLogger<ChannelScheduleService>.Instance);
             await schedules.EnsureScheduleGeneratedAsync(channel.Id, now.AddHours(24));
             Assert.True(await context.ScheduledPrograms.AnyAsync(item => item.Id == historical.Id));
             Assert.False(await context.ScheduledPrograms.AnyAsync(item => item.Id == future.Id));

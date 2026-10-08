@@ -26,6 +26,7 @@ export const routes: Routes = [
           { path: '', redirectTo: 'summary', pathMatch: 'full' },
           { path: 'summary', loadComponent: () => import('./features/dashboard/summary/summary.component').then(m => m.SummaryComponent) },
           { path: 'activity', loadComponent: () => import('./features/dashboard/activity/activity.component').then(m => m.ActivityComponent) },
+          { path: 'settings', canActivate: [adminGuard], loadComponent: () => import('./features/dashboard/settings/settings.component').then(m => m.SettingsComponent) },
           { path: 'transcoding', canActivate: [menuGuard], loadComponent: () => import('./features/dashboard/transcoding/transcoding.component').then(m => m.TranscodingComponent) },
           { path: 'interludes', canActivate: [adminGuard], loadComponent: () => import('./features/dashboard/interludes/interludes.component').then(m => m.InterludesComponent) },
           { path: 'comments', canActivate: [adminGuard], loadComponent: () => import('./features/dashboard/community/community.component').then(m => m.CommunityComponent) },

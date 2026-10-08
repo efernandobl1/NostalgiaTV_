@@ -24,7 +24,8 @@ public class PersistentSessionIntegrationTests
         await using var context = new NostalgiaTVContext(new DbContextOptionsBuilder<NostalgiaTVContext>().UseSqlServer(connection.ConnectionString).Options);
         try
         {
-            var previous = context.Database.GetMigrations().Reverse().Skip(1).First();
+            var previous = context.Database.GetMigrations()
+                .TakeWhile(migration => !migration.EndsWith("_AddInterludeSeasonsAndPersistentSessions", StringComparison.Ordinal)).Last();
             await context.GetService<IMigrator>().MigrateAsync(previous);
             await context.Database.ExecuteSqlRawAsync("INSERT INTO Interludes (Kind, Title, FilePath, DurationSeconds, ApprovedForBroadcast) VALUES ('Bumper', 'Existing bumper', '/uploads/test.mp4', 5, 1)");
             var user = new User { Username = "test-operator", PasswordHash = AuthService.HashPassword("test-passphrase"), RolId = 1 };
