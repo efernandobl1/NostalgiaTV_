@@ -13,6 +13,9 @@ export interface Interlude {
   originalYearTo: number | null;
   regionCode: string | null;
   approvedForBroadcast: boolean;
+  sourceUrl?: string | null;
+  license?: string | null;
+  redistributionAllowed?: boolean;
 }
 export type InterludeSeason = 0 | 1 | 2;
 export const INTERLUDE_SEASONS = [
@@ -88,6 +91,13 @@ export class BroadcastAdminService {
   }
   uploadInterlude(body: FormData) {
     return this.http.post<Interlude>(`${this.base}/retro/interludes`, body, this.options);
+  }
+  uploadInterludeWithProgress(body: FormData) {
+    return this.http.post<Interlude>(`${this.base}/retro/interludes`, body, {
+      ...this.options,
+      observe: 'events',
+      reportProgress: true,
+    });
   }
   updateInterlude(clip: Interlude) {
     return this.http.put<Interlude>(`${this.base}/retro/interludes/${clip.id}`, clip, this.options);

@@ -108,7 +108,7 @@
               }
             </nav>
             @if (eraTab() === 'advertising') {
-              <app-commercial-breaks [eraId]="era.id" />
+              <app-commercial-breaks [eraId]="era.id" [channelId]="selectedChannelId()" />
             } @else {
               <div class="lineup-heading">
                 <span>{{ selectedSeriesIds().length }} series seleccionadas</span

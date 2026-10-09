@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -48,6 +50,23 @@ public class SecurityRequestTests
             new ConfigurationBuilder().Build(), NullLogger<SecurityRequestMiddleware>.Instance).InvokeAsync(request);
         Assert.False(called);
         Assert.Equal(413, request.Response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(2_097_152, 200)]
+    [InlineData(525_336_577, 413)]
+    public async Task PackageUploadsRespectTheirExplicitLimit(long bytes, int expected)
+    {
+        var request = new DefaultHttpContext();
+        request.Request.Path = "/api/v1/channel-packages/import";
+        request.Request.Method = "POST";
+        request.Request.ContentLength = bytes;
+        request.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(
+            new EnableRateLimitingAttribute("PackagePolicy"), new RequestSizeLimitAttribute(525_336_576),
+            new RequestFormLimitsAttribute { MultipartBodyLengthLimit = 525_336_576 }), "Package upload"));
+        await new SecurityRequestMiddleware(_ => Task.CompletedTask, new ConfigurationBuilder().Build(),
+            NullLogger<SecurityRequestMiddleware>.Instance).InvokeAsync(request);
+        Assert.Equal(expected, request.Response.StatusCode);
     }
 
     [Theory]

@@ -27,7 +27,9 @@ public sealed class SecurityRequestMiddleware(RequestDelegate next, IConfigurati
                 return;
             }
         }
-        var upload = context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName == "UploadPolicy";
+        var metadata = context.GetEndpoint()?.Metadata;
+        var upload = metadata?.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName == "UploadPolicy"
+            || metadata?.GetMetadata<RequestFormLimitsAttribute>() != null;
         var sizeLimit = upload ? context.GetEndpoint()?.Metadata.GetMetadata<IRequestSizeLimitMetadata>()?.MaxRequestBodySize ?? 10L * 1024 * 1024 : 1024 * 1024;
         var feature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
         if (feature is { IsReadOnly: false }) feature.MaxRequestBodySize = sizeLimit;

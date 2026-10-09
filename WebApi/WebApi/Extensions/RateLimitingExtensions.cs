@@ -32,7 +32,7 @@ public static class RateLimitingExtensions
                         context.HttpContext.Connection.RemoteIpAddress, context.HttpContext.Request.Path);
                 return ValueTask.CompletedTask;
             };
-            foreach (var (name, limit) in new[] { ("ViewerPolicy", 120), ("PairingPolicy", 5), ("ViewerCreationPolicy", 10) })
+            foreach (var (name, limit) in new[] { ("ViewerPolicy", 120), ("PairingPolicy", 5), ("ViewerCreationPolicy", 10), ("PackagePolicy", 5) })
                 options.AddPolicy(name, context => RateLimitPartition.GetFixedWindowLimiter(
                     context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
                     { PermitLimit = limit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));

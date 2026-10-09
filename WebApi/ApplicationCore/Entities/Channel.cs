@@ -7,6 +7,7 @@ namespace ApplicationCore.Entities
     public class Channel
     {
         public int Id { get; set; }
+        public Guid ShareId { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
         public string? LogoPath { get; set; }
         public string? History { get; set; }

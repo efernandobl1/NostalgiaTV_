@@ -60,6 +60,15 @@ describe('InterludesComponent', () => {
     fixture.detectChanges();
   });
   afterEach(() => http.verify());
+  it('opens direct multiple upload without the metadata form', () => {
+    fixture.componentInstance.open(undefined, 0);
+    fixture.detectChanges();
+    expect(
+      fixture.nativeElement.querySelector('app-interlude-uploader input[multiple]'),
+    ).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('input[name="title"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('input[name="license"]')).toBeNull();
+  });
 
   it('opens the Halloween archive directly from its seasonal URL', async () => {
     await TestBed.inject(Router).navigateByUrl('/?season=halloween');
@@ -127,7 +136,13 @@ describe('InterludesComponent', () => {
     component.season = 2;
     component.save();
     const request = http.expectOne(`${base}/1`);
-    expect(request.request.body).toEqual({ ...clips[0], season: 2 });
+    expect(request.request.body).toEqual({
+      ...clips[0],
+      season: 2,
+      sourceUrl: null,
+      license: null,
+      redistributionAllowed: false,
+    });
     request.flush({ ...clips[0], season: 2 });
     http.expectOne(base).flush(clips);
     expect(component.selected()?.season).toBe(2);
@@ -158,5 +173,51 @@ describe('InterludesComponent', () => {
     const select = fixture.nativeElement.querySelector('[name="season"]');
     expect(select.closest('label').textContent).toContain('Temporada de emisión');
     expect(select.getAttribute('aria-describedby')).toBe('season-help');
+  });
+  it('requires a license only for redistributable clips', () => {
+    const component = fixture.componentInstance;
+    component.open(clips[0]);
+    component.redistributionAllowed = true;
+    component.save();
+    http.expectNone(`${base}/1`);
+    expect(component.error()).toContain('licencia');
+    component.license = 'CC0';
+    component.save();
+    const request = http.expectOne(`${base}/1`);
+    expect(request.request.body.redistributionAllowed).toBe(true);
+    expect(request.request.body.license).toBe('CC0');
+    request.flush({ ...clips[0], license: 'CC0', redistributionAllowed: true });
+    http.expectOne(base).flush(clips);
+  });
+  it('uploads and assigns a seasonal bumper directly to the chosen era', async () => {
+    await TestBed.inject(Router).navigateByUrl('/?eraId=7&role=2&new=1&season=christmas');
+    const component = fixture.componentInstance;
+    expect(component.editor()).toBe(true);
+    expect(component.season).toBe(2);
+    component.chooseFile({
+      target: { files: [new File(['test'], 'Christmas.mp4')] },
+    } as unknown as Event);
+    component.save();
+    http.expectOne(base).flush({ ...clips[0], id: 9, season: 2 });
+    const assignment = http.expectOne(`${environment.apiUrl}/api/v1/retro/eras/7/interludes/9/2`);
+    assignment.flush({ channelEraId: 7, interludeId: 9, role: 2, weight: 1, minimumGapSeconds: 0 });
+    http.expectOne(base).flush(clips);
+    expect(component.assignmentPending()).toBe(false);
+  });
+  it('retries a failed assignment without uploading a duplicate clip', async () => {
+    await TestBed.inject(Router).navigateByUrl('/?eraId=7&role=1&new=1');
+    const component = fixture.componentInstance;
+    component.chooseFile({ target: { files: [new File(['test'], 'ad.mp4')] } } as unknown as Event);
+    component.save();
+    http.expectOne(base).flush(clips[1]);
+    const url = `${environment.apiUrl}/api/v1/retro/eras/7/interludes/2/1`;
+    http.expectOne(url).flush({}, { status: 500, statusText: 'Error' });
+    expect(component.selected()?.id).toBe(2);
+    expect(component.assignmentPending()).toBe(true);
+    component.save();
+    http.expectOne(`${base}/2`).flush(clips[1]);
+    http.expectOne(url).flush({});
+    http.expectOne(base).flush(clips);
+    expect(component.assignmentPending()).toBe(false);
   });
 });

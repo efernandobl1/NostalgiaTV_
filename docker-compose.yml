@@ -53,6 +53,7 @@ services:
       ReverseProxy__TrustForwardedHeaders: "true"
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads
+      CommunityCatalog__PublicUrl: ${COMMUNITY_CATALOG_URL:-}
       # Scheduling preferences are stored in SQL Server and edited in dashboard Settings.
     ports:
       - "127.0.0.1:${API_HTTP_PORT:-8080}:8080"

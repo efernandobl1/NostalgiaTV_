@@ -7,6 +7,8 @@ internal static class RetroBroadcastModelConfiguration
 {
     public static void ConfigureRetroBroadcast(this ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Channel>().Property(item => item.ShareId).HasDefaultValueSql("NEWID()");
+        modelBuilder.Entity<Channel>().HasIndex(item => item.ShareId).IsUnique();
         modelBuilder.Entity<ChannelEra>(era =>
         {
             era.Property(item => item.StartDate).HasColumnName("HistoricalStartDate");
@@ -80,6 +82,8 @@ internal static class RetroBroadcastModelConfiguration
             interlude.Property(item => item.Title).HasMaxLength(300);
             interlude.Property(item => item.FilePath).HasMaxLength(1000);
             interlude.Property(item => item.RegionCode).HasMaxLength(20);
+            interlude.Property(item => item.SourceUrl).HasMaxLength(1000);
+            interlude.Property(item => item.License).HasMaxLength(500);
             interlude.Property(item => item.DurationSeconds).HasColumnType("decimal(12,3)");
             interlude.ToTable(table =>
             {
@@ -88,6 +92,7 @@ internal static class RetroBroadcastModelConfiguration
                     "[OriginalYearTo] IS NULL OR [OriginalYearFrom] IS NULL OR [OriginalYearTo] >= [OriginalYearFrom]");
                 table.HasCheckConstraint("CK_Interludes_Kind", "[Kind] IN ('Bumper', 'Advertisement')");
                 table.HasCheckConstraint("CK_Interludes_Season", "[Season] IN ('AllYear', 'Halloween', 'Christmas')");
+                table.HasCheckConstraint("CK_Interludes_Redistribution", "[RedistributionAllowed] = 0 OR LEN(LTRIM(RTRIM([License]))) > 0 AND [License] IS NOT NULL");
             });
         });
 
