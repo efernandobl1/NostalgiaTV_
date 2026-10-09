@@ -1,25 +1,10 @@
 version: 2
 
-# Version updates target both branches. Security updates always target main.
+# Version and security updates target main only.
 updates:
   - package-ecosystem: "npm"
     directory: "/WebApp"
-    schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 14
-      semver-major-days: 30
-    open-pull-requests-limit: 5
-    groups:
-      minor-dependencies:
-        update-types: ["minor", "patch"]
-    ignore:
-      - dependency-name: "@angular/*"
-        update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: "npm"
-    directory: "/WebApp"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     cooldown:
@@ -35,19 +20,7 @@ updates:
 
   - package-ecosystem: "nuget"
     directory: "/WebApi"
-    schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 14
-      semver-major-days: 30
-    open-pull-requests-limit: 5
-    groups:
-      minor-dependencies:
-        update-types: ["minor", "patch"]
-
-  - package-ecosystem: "nuget"
-    directory: "/WebApi"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     cooldown:
@@ -60,17 +33,7 @@ updates:
 
   - package-ecosystem: "docker"
     directory: "/WebApp"
-    schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 14
-    ignore:
-      - dependency-name: "node"
-        update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: "docker"
-    directory: "/WebApp"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     cooldown:
@@ -81,14 +44,7 @@ updates:
 
   - package-ecosystem: "docker"
     directory: "/WebApi/WebApi"
-    schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 14
-
-  - package-ecosystem: "docker"
-    directory: "/WebApi/WebApi"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     cooldown:
@@ -96,14 +52,7 @@ updates:
 
   - package-ecosystem: "github-actions"
     directory: "/"
-    schedule:
-      interval: "weekly"
-    cooldown:
-      default-days: 14
-
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    target-branch: "develop"
+    target-branch: "main"
     schedule:
       interval: "weekly"
     cooldown:
