@@ -5,34 +5,34 @@ import { isEligible, reconcile } from './dependabot-cleanup.mjs';
 const repository = 'owner/project';
 const pull = {
   number: 1, state: 'open', draft: false, user: { login: 'dependabot[bot]' },
-  head: { repo: { full_name: repository } },
-  base: { ref: 'main', sha: 'old', repo: { full_name: repository } },
+  head: { sha: 'head', repo: { full_name: repository } },
+  base: { ref: 'main', sha: 'new', repo: { full_name: repository } },
 };
 const signedCommit = {
   author: { login: 'dependabot[bot]' }, commit: { verification: { verified: true } },
 };
 
 test('selects an untouched Dependabot PR against an older main', () => {
-  assert.equal(isEligible(pull, repository, 'new'), true);
+  assert.equal(isEligible(pull, repository), true);
 });
 
 for (const [name, change] of [
   ['human author', { user: { login: 'someone' } }],
   ['fork', { head: { repo: { full_name: 'other/project' } } }],
   ['another base', { base: { ...pull.base, ref: 'develop' } }],
-  ['current base', { base: { ...pull.base, sha: 'new' } }],
   ['draft', { draft: true }],
   ['closed PR', { state: 'closed' }],
 ]) {
-  test(`ignores ${name}`, () => assert.equal(isEligible({ ...pull, ...change }, repository, 'new'), false));
+  test(`ignores ${name}`, () => assert.equal(isEligible({ ...pull, ...change }, repository), false));
 }
 
-async function requestsFor(commits = [signedCommit], comments = []) {
+async function requestsFor(commits = [signedCommit], comments = [], mergeBase = 'old') {
   const writes = [];
   const api = async (path, body) => {
     if (body) { writes.push({ path, body }); return {}; }
     if (path.endsWith('/branches/main')) return { commit: { sha: 'new' } };
     if (path.includes('/pulls?')) return [pull];
+    if (path.includes('/compare/')) return { merge_base_commit: { sha: mergeBase } };
     if (path.includes('/commits?')) return commits;
     if (path.includes('/comments?')) return comments;
     throw new Error(`Unexpected request: ${path}`);
@@ -52,6 +52,12 @@ test('does not repeat a check for the same main commit', async () => {
   assert.deepEqual(await requestsFor([signedCommit], [{
     user: { login: 'github-actions[bot]' }, body: '<!-- dependabot-cleanup:new -->',
   }]), []);
+});
+
+test('uses the merge base instead of the current PR base tip to detect stale branches', async () => {
+  assert.equal((await requestsFor()).length, 1);
+  assert.deepEqual(await requestsFor([signedCommit], [], 'new'), []);
+  assert.deepEqual(await requestsFor([signedCommit], [], null), []);
 });
 
 test('does not trust a duplicate marker posted by another user', async () => {
