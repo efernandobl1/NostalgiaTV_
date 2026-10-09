@@ -7,6 +7,8 @@ COPY . .
 RUN pnpm exec ng build --configuration production
 
 FROM nginx:1.31-alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2 AS final
+# Patch runtime libraries without changing the pinned base or disabling image scans.
+RUN apk upgrade --no-cache libexpat pcre2 tiff
 COPY --from=build /app/dist/WebApp/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 

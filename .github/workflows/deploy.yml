@@ -101,6 +101,8 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm audit --audit-level high
           pnpm exec ng test --watch=false
+      - name: Test dependency cleanup safeguards
+        run: node --test .github/scripts/dependabot-cleanup.test.mjs
       - name: Check the production bundle with its security policy
         working-directory: WebApp
         run: |
@@ -176,6 +178,11 @@ jobs:
           provenance: false
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+      - name: Check the non-root web server after runtime updates
+        if: matrix.name == 'web'
+        env:
+          SCANNED_IMAGE: ${{ matrix.image }}:${{ github.sha }}
+        run: docker run --rm --add-host webapi:127.0.0.1 --entrypoint nginx "$SCANNED_IMAGE" -t
       - name: Scan final runtime image
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
