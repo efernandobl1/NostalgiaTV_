@@ -1,4 +1,7 @@
 @use '../../../../styles/dashboard-components';
+.studio-page {
+  grid-template-columns: minmax(0, 1fr);
+}
 .season-filter {
   width: min(100%, 260px);
 }

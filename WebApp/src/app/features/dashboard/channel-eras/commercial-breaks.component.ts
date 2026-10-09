@@ -1,6 +1,7 @@
 import { Component, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { InterludeUploaderComponent } from '../interludes/interlude-uploader.component';
 import { catchError, forkJoin, of, throwError } from 'rxjs';
 import {
   BroadcastAdminService,
@@ -12,13 +13,14 @@ import {
 
 @Component({
   selector: 'app-commercial-breaks',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, InterludeUploaderComponent],
   templateUrl: './commercial-breaks.component.html',
   styleUrl: './commercial-breaks.component.scss',
 })
 export class CommercialBreaksComponent {
   readonly seasonLabel = interludeSeasonLabel;
   readonly eraId = input.required<number>();
+  readonly channelId = input<number | null>(null);
   private readonly service = inject(BroadcastAdminService);
   readonly clips = signal<Interlude[]>([]);
   readonly assignments = signal<ClipAssignment[]>([]);
@@ -29,9 +31,18 @@ export class CommercialBreaksComponent {
   readonly error = signal('');
   readonly feedback = signal('');
   readonly editing = signal<ClipAssignment | null>(null);
+  readonly uploadRole = signal<number | null>(null);
+  uploaded(clips: Interlude[]): void {
+    this.clips.update((items) => [...items, ...clips]);
+    this.service.getAssignments(this.eraId()).subscribe({
+      next: (items) => this.assignments.set(items),
+      error: () =>
+        this.error.set('Los archivos se guardaron. Recarga para actualizar las asignaciones.'),
+    });
+  }
   editWeight = 1;
   editGap = 0;
-  readonly roles = [
+  readonly roles: { id: 0 | 1 | 2; title: string; subtitle: string }[] = [
     { id: 0, title: 'Entrada a publicidad', subtitle: 'Bumper antes de los anuncios' },
     { id: 1, title: 'Anuncios', subtitle: 'Piezas publicitarias de esta era' },
     { id: 2, title: 'Regreso a la serie', subtitle: 'Bumper al terminar los anuncios' },

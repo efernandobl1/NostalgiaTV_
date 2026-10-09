@@ -128,6 +128,15 @@ namespace WebApi
             app.UseAuthorization();
             app.UseMiddleware<Middleware.ActivityLoggingMiddleware>();
             app.UseRateLimiter();
+            app.Use(async (context, next) =>
+            {
+                if (context.Request.Path.StartsWithSegments("/uploads/.packages", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+                await next(context);
+            });
             app.UseStaticFiles();
             app.MapControllers();
 

@@ -6,6 +6,7 @@ using Infrastructure.BackgroundServices;
 using Infrastructure.Contexts;
 using Infrastructure.Services;
 using Infrastructure.Services.Media;
+using Infrastructure.Services.Packages;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -121,18 +122,24 @@ public class RetroBroadcastController : ControllerBase
 
     [HttpPost("interludes")]
     [Consumes("multipart/form-data")]
-    [RequestSizeLimit(524_288_000)]
+    [RequestSizeLimit(525_336_576)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 525_336_576)]
     public async Task<IActionResult> UploadInterlude([FromForm] InterludeUploadRequest request, CancellationToken ct)
     {
         if (request.File == null || request.File.Length is <= 0 or > 524_288_000
             || !Path.GetExtension(request.File.FileName).Equals(".mp4", StringComparison.OrdinalIgnoreCase))
             return BadRequest("A compatible MP4 file under 500 MiB is required.");
-        if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Length > 300)
+        var title = string.IsNullOrWhiteSpace(request.Title)
+            ? Path.GetFileNameWithoutExtension(request.File.FileName.Replace('\\', '/')).Trim()
+            : request.Title.Trim();
+        if (string.IsNullOrWhiteSpace(title) || title.Length > 300)
             return BadRequest("A title of at most 300 characters is required.");
         if (!Enum.IsDefined(request.Kind) || !Enum.IsDefined(request.Season) || request.RegionCode?.Length > 20)
             return BadRequest("Invalid clip metadata.");
         if (request.OriginalYearTo < request.OriginalYearFrom)
             return BadRequest("The historical year range is invalid.");
+        try { ValidateSharing(request.SourceUrl, request.License, request.RedistributionAllowed); }
+        catch (InvalidDataException error) { return BadRequest(new { message = error.Message }); }
 
         var name = $"{Guid.NewGuid():N}.mp4";
         var folder = MediaStorageLayout.BroadcastFolder(request.Kind);
@@ -163,19 +170,22 @@ public class RetroBroadcastController : ControllerBase
             {
                 Kind = request.Kind,
                 Season = request.Season,
-                Title = request.Title.Trim(),
+                Title = title,
                 FilePath = $"/uploads/{folder}/{name}",
                 DurationSeconds = decimal.Round((decimal)info.Duration.TotalSeconds, 3),
                 OriginalYearFrom = request.OriginalYearFrom,
                 OriginalYearTo = request.OriginalYearTo,
                 RegionCode = request.RegionCode?.Trim(),
+                SourceUrl = request.SourceUrl?.Trim(),
+                License = request.License?.Trim(),
+                RedistributionAllowed = request.RedistributionAllowed,
                 ApprovedForBroadcast = false
             };
             _context.Interludes.Add(interlude);
             await _context.SaveChangesAsync(ct);
             return Ok(interlude);
         }
-        catch (Exception error) when (error is not OperationCanceledException)
+        catch
         {
             if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
             throw;
@@ -247,12 +257,17 @@ public class RetroBroadcastController : ControllerBase
             || request.RegionCode?.Length > 20 || request.OriginalYearTo < request.OriginalYearFrom
             || !Enum.IsDefined(request.Season))
             return BadRequest("Invalid clip metadata.");
+        try { ValidateSharing(request.SourceUrl, request.License, request.RedistributionAllowed); }
+        catch (InvalidDataException error) { return BadRequest(new { message = error.Message }); }
         var clip = await _context.Interludes.FindAsync(id);
         if (clip == null) return NotFound();
         clip.Title = request.Title.Trim();
         clip.OriginalYearFrom = request.OriginalYearFrom;
         clip.OriginalYearTo = request.OriginalYearTo;
         clip.RegionCode = request.RegionCode?.Trim();
+        clip.SourceUrl = request.SourceUrl?.Trim();
+        clip.License = request.License?.Trim();
+        clip.RedistributionAllowed = request.RedistributionAllowed;
         var seasonChanged = clip.Season != request.Season;
         clip.Season = request.Season;
         await _context.SaveChangesAsync();
@@ -327,21 +342,30 @@ public class RetroBroadcastController : ControllerBase
         await _broadcast.ReloadChannelAsync(era.ChannelId);
         return NoContent();
     }
+    private static void ValidateSharing(string? sourceUrl, string? license, bool allowed)
+    {
+        ChannelPackageArchive.ValidateSource(sourceUrl);
+        ChannelPackageArchive.Require(license?.Length is not > 500 && (!allowed || !string.IsNullOrWhiteSpace(license)),
+            "Indica una licencia o permiso de redistribución de hasta 500 caracteres para compartir el archivo.");
+    }
 }
 
 public sealed record BreakPointRequest(decimal OffsetSeconds, string? Label);
 public sealed record BreakRulesRequest(int MinimumAds, int MaximumAds, int MaximumBreakSeconds);
 public sealed record ApprovalRequest(bool Approved);
 public sealed record InterludeDetailsRequest(string Title, int? OriginalYearFrom, int? OriginalYearTo, string? RegionCode,
-    InterludeSeason Season = InterludeSeason.AllYear);
+    InterludeSeason Season = InterludeSeason.AllYear, string? SourceUrl = null, string? License = null, bool RedistributionAllowed = false);
 public sealed record ClipAssignmentRequest(int Weight, int MinimumGapSeconds);
 public sealed class InterludeUploadRequest
 {
-    public string Title { get; set; } = string.Empty;
+    public string? Title { get; set; }
     public InterludeKind Kind { get; set; }
     public InterludeSeason Season { get; set; }
     public IFormFile? File { get; set; }
     public int? OriginalYearFrom { get; set; }
     public int? OriginalYearTo { get; set; }
     public string? RegionCode { get; set; }
+    public string? SourceUrl { get; set; }
+    public string? License { get; set; }
+    public bool RedistributionAllowed { get; set; }
 }

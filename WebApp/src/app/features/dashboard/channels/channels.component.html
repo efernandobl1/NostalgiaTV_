@@ -44,8 +44,22 @@
       >
         Datos del canal
       </button>
+      @if (isAdmin()) {
+        <button
+          type="button"
+          [attr.aria-pressed]="detailTab() === 'share'"
+          (click)="detailTab.set('share')"
+        >
+          Compartir canal
+        </button>
+      }
     </nav>
     @switch (detailTab()) {
+      @case ('share') {
+        @if (isAdmin()) {
+          <app-channel-package [channelId]="channel.id" />
+        }
+      }
       @case ('eras') {
         <app-channel-eras [channelId]="channel.id" />
       }
@@ -156,10 +170,24 @@
         <h1>Tus canales</h1>
         <p>Cada estación tiene su propia identidad, eras y programación.</p>
       </div>
-      <button type="button" class="admin-button admin-button--primary" (click)="openForm()">
-        <span class="material-symbols-outlined" aria-hidden="true">add</span>Crear canal
-      </button>
+      <div class="studio-actions">
+        @if (isAdmin()) {
+          <button
+            type="button"
+            class="admin-button admin-button--secondary"
+            (click)="importing.set(!importing())"
+          >
+            {{ importing() ? 'Cerrar importación' : 'Importar canal' }}
+          </button>
+        }
+        <button type="button" class="admin-button admin-button--primary" (click)="openForm()">
+          <span class="material-symbols-outlined" aria-hidden="true">add</span>Crear canal
+        </button>
+      </div>
     </header>
+    @if (importing() && isAdmin()) {
+      <app-channel-package (imported)="onImported($event)" />
+    }
     <div class="studio-toolbar">
       <label class="studio-search"
         ><span class="material-symbols-outlined" aria-hidden="true">search</span
