@@ -13,115 +13,181 @@
                 ? kind === 0
                   ? 'Nuevo bumper de Halloween'
                   : 'Nuevo anuncio de Halloween'
-                : 'Nuevo archivo publicitario'
+                : kind === 0
+                  ? 'Subir bumpers'
+                  : 'Subir anuncios'
           }}
         </h1>
-        <p>Una pieza del canal: anuncio de la época o bumper de entrada y salida.</p>
+        <p>
+          {{
+            selected()
+              ? 'Datos opcionales y revisión de la pieza.'
+              : 'Selecciona tus archivos. No necesitas completar una ficha por cada uno.'
+          }}
+        </p>
       </div>
     </header>
-    <div class="clip-editor">
-      <form class="admin-panel studio-form" (ngSubmit)="save()">
+    @if (!selected()) {
+      @if (!targetEraId()) {
         <label class="studio-field"
-          >Título<input name="title" [(ngModel)]="title" required maxlength="300"
-        /></label>
-        @if (!selected()) {
+          >Tipo de archivo<select [(ngModel)]="kind" [disabled]="busy()">
+            <option [ngValue]="0">Bumpers</option>
+            <option [ngValue]="1">Anuncios</option>
+          </select></label
+        >
+      }
+      <app-interlude-uploader
+        [kind]="kind === 1 ? 1 : 0"
+        [season]="season"
+        [eraId]="targetEraId()"
+        [role]="targetRole()"
+        (busyChange)="busy.set($event)"
+        (completed)="uploaded($event)"
+      />
+      @if (targetChannelId()) {
+        <a
+          routerLink="/dashboard/channel-eras"
+          [queryParams]="{
+            channelId: targetChannelId(),
+            eraId: targetEraId(),
+            section: 'advertising',
+          }"
+          >Volver a esta era</a
+        >
+      }
+    } @else {
+      <div class="clip-editor">
+        <form class="admin-panel studio-form" (ngSubmit)="save()">
           <label class="studio-field"
-            >Tipo<select name="kind" [(ngModel)]="kind">
-              <option [ngValue]="0">Bumper</option>
-              <option [ngValue]="1">Anuncio</option>
-            </select></label
-          >
-        }
-        <div class="studio-field-grid">
-          <label class="studio-field"
-            >Año inicial<input
-              name="yearFrom"
-              type="number"
-              min="1900"
-              max="2100"
-              [(ngModel)]="yearFrom" /></label
-          ><label class="studio-field"
-            >Año final<input name="yearTo" type="number" min="1900" max="2100" [(ngModel)]="yearTo"
+            >Título<input name="title" [(ngModel)]="title" required maxlength="300"
           /></label>
-        </div>
-        <label class="studio-field"
-          ><span id="season-label">Temporada de emisión</span>
-          <select
-            name="season"
-            [(ngModel)]="season"
-            aria-labelledby="season-label"
-            aria-describedby="season-help"
-          >
-            @for (item of seasons; track item.id) {
-              <option [ngValue]="item.id">{{ item.label }}</option>
-            }
-          </select>
-          <span id="season-help"
-            >Las piezas de temporada se prefieren en su mes y no se emiten fuera de él. Se usa la
-            zona horaria del canal.</span
-          >
-        </label>
-        <label class="studio-field"
-          >Región<input
-            name="region"
-            [(ngModel)]="region"
-            maxlength="20"
-            placeholder="Por ejemplo: Latinoamérica"
-        /></label>
-        @if (!selected()) {
+          <div class="studio-field-grid">
+            <label class="studio-field"
+              >Año inicial<input
+                name="yearFrom"
+                type="number"
+                min="1900"
+                max="2100"
+                [(ngModel)]="yearFrom" /></label
+            ><label class="studio-field"
+              >Año final<input
+                name="yearTo"
+                type="number"
+                min="1900"
+                max="2100"
+                [(ngModel)]="yearTo"
+            /></label>
+          </div>
           <label class="studio-field"
-            >Archivo MP4<input
-              type="file"
-              accept=".mp4,video/mp4"
-              required
-              (change)="chooseFile($event)"
-            /><small
-              >H.264 y audio AAC. Máximo 500 MiB. Se guarda sin aprobar para que puedas revisarlo
-              primero.</small
+            ><span id="season-label">Temporada de emisión</span>
+            <select
+              name="season"
+              [(ngModel)]="season"
+              aria-labelledby="season-label"
+              aria-describedby="season-help"
+            >
+              @for (item of seasons; track item.id) {
+                <option [ngValue]="item.id">{{ item.label }}</option>
+              }
+            </select>
+            <span id="season-help"
+              >Las piezas de temporada se prefieren en su mes y no se emiten fuera de él. Se usa la
+              zona horaria del canal.</span
+            >
+          </label>
+          <label class="studio-field"
+            >Región<input
+              name="region"
+              [(ngModel)]="region"
+              maxlength="20"
+              placeholder="Por ejemplo: Latinoamérica"
+          /></label>
+          <label class="studio-field"
+            >Fuente original (opcional)<input
+              name="sourceUrl"
+              type="url"
+              [(ngModel)]="sourceUrl"
+              maxlength="1000"
+              placeholder="https://…"
+          /></label>
+          <label class="studio-check"
+            ><input
+              name="redistributionAllowed"
+              type="checkbox"
+              [(ngModel)]="redistributionAllowed"
+            />Puedo redistribuir este archivo en paquetes de canal</label
+          >
+          <label class="studio-field"
+            >Licencia o permiso de redistribución<input
+              name="license"
+              [(ngModel)]="license"
+              maxlength="500"
+              [required]="redistributionAllowed"
+              aria-describedby="license-help"
+            /><small id="license-help"
+              >Compartir solo contenido propio o con permiso. Este ajuste no aprueba la pieza para
+              emisión.</small
             ></label
           >
-        }
-        <div class="studio-actions">
-          <button type="submit" class="admin-button admin-button--primary" [disabled]="busy()">
-            {{ busy() ? 'Guardando…' : 'Guardar archivo' }}
-          </button>
-          @if (selected()) {
-            <button
-              type="button"
-              class="admin-button admin-button--danger"
-              [disabled]="busy()"
-              (click)="delete()"
-            >
-              Eliminar registro
-            </button>
-          }
-        </div>
-      </form>
-      @if (selected(); as clip) {
-        <aside class="admin-panel studio-form">
-          <video [src]="apiUrl + clip.filePath" controls preload="metadata" playsinline></video>
           <div class="studio-actions">
-            <span class="studio-tag">{{ clip.kind === 0 ? 'Bumper' : 'Anuncio' }}</span
-            ><span>{{ duration(clip.durationSeconds) }}</span
-            ><span class="studio-tag" [class.studio-tag--active]="clip.approvedForBroadcast">{{
-              clip.approvedForBroadcast ? 'Aprobado para emisión' : 'Pendiente de revisión'
-            }}</span>
+            <button type="submit" class="admin-button admin-button--primary" [disabled]="busy()">
+              {{
+                busy()
+                  ? 'Guardando…'
+                  : assignmentPending()
+                    ? 'Guardar y añadir a esta era'
+                    : 'Guardar archivo'
+              }}
+            </button>
+            @if (selected()) {
+              <button
+                type="button"
+                class="admin-button admin-button--danger"
+                [disabled]="busy()"
+                (click)="delete()"
+              >
+                Eliminar registro
+              </button>
+            }
           </div>
-          <button
-            class="admin-button admin-button--secondary"
-            type="button"
-            [disabled]="busy()"
-            (click)="approve()"
-          >
-            {{ clip.approvedForBroadcast ? 'Retirar de la emisión' : 'Aprobar para emisión' }}
-          </button>
-          <p>
-            Asigna esta pieza a una era desde Canales. La aprobación no la añade automáticamente a
-            ningún canal.
-          </p>
-        </aside>
-      }
-    </div>
+        </form>
+        @if (selected(); as clip) {
+          <aside class="admin-panel studio-form">
+            <video [src]="apiUrl + clip.filePath" controls preload="metadata" playsinline></video>
+            <div class="studio-actions">
+              <span class="studio-tag">{{ clip.kind === 0 ? 'Bumper' : 'Anuncio' }}</span
+              ><span>{{ duration(clip.durationSeconds) }}</span
+              ><span class="studio-tag" [class.studio-tag--active]="clip.approvedForBroadcast">{{
+                clip.approvedForBroadcast ? 'Aprobado para emisión' : 'Pendiente de revisión'
+              }}</span>
+            </div>
+            <button
+              class="admin-button admin-button--secondary"
+              type="button"
+              [disabled]="busy()"
+              (click)="approve()"
+            >
+              {{ clip.approvedForBroadcast ? 'Retirar de la emisión' : 'Aprobar para emisión' }}
+            </button>
+            @if (targetChannelId()) {
+              <a
+                routerLink="/dashboard/channel-eras"
+                [queryParams]="{
+                  channelId: targetChannelId(),
+                  eraId: targetEraId(),
+                  section: 'advertising',
+                }"
+                >Volver a la publicidad de esta era</a
+              >
+            }
+            <p>
+              Asigna esta pieza a una era desde Canales. La aprobación no la añade automáticamente a
+              ningún canal.
+            </p>
+          </aside>
+        }
+      </div>
+    }
   } @else {
     <header class="studio-heading">
       <div>

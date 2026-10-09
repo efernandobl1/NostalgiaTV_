@@ -15,4 +15,7 @@ public class Interlude
     public int? OriginalYearTo { get; set; }
     public string? RegionCode { get; set; }
     public bool ApprovedForBroadcast { get; set; }
+    public string? SourceUrl { get; set; }
+    public string? License { get; set; }
+    public bool RedistributionAllowed { get; set; }
 }
