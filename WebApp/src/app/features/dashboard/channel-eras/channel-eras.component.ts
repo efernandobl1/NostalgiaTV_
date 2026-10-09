@@ -109,6 +109,10 @@ export class ChannelErasComponent implements OnInit {
     });
     // Deep-link desde Canales: preselecciona el canal y carga sus eras.
     const channelId = Number(this.route.snapshot.queryParamMap.get('channelId'));
+    const eraId = Number(this.route.snapshot.queryParamMap.get('eraId'));
+    if (Number.isSafeInteger(eraId) && eraId > 0) this.selectedEraId.set(eraId);
+    if (this.route.snapshot.queryParamMap.get('section') === 'advertising')
+      this.eraTab.set('advertising');
     if (channelId) {
       this.selectedChannelId.set(channelId);
       this.loadEras(channelId);
@@ -300,6 +304,10 @@ export class ChannelErasComponent implements OnInit {
     this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
   }
   private showError(msg: string) {
-    this.snackBar.open(msg, 'Cerrar', { duration: 0, panelClass: 'error-snack', politeness: 'assertive' });
+    this.snackBar.open(msg, 'Cerrar', {
+      duration: 0,
+      panelClass: 'error-snack',
+      politeness: 'assertive',
+    });
   }
 }

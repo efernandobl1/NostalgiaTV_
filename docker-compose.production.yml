@@ -75,6 +75,7 @@ services:
       ReverseProxy__TrustForwardedHeaders: "true"
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads
+      CommunityCatalog__PublicUrl: ${COMMUNITY_CATALOG_URL:-}
       # Reglas de generación de programación (aleatoria). Configurables por .env.
       ChannelScheduling__NoRepeatWindowHours: ${SCHED_NO_REPEAT_HOURS:-24}
       ChannelScheduling__TimeZoneId: ${TIME_ZONE:-America/Guatemala}

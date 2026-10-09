@@ -32,6 +32,7 @@ namespace Infrastructure
             services.AddSingleton<ChannelBroadcastService>();
 
             services.AddScoped<ChannelScheduleService>();
+            services.AddScoped<Infrastructure.Services.Packages.ChannelPackageService>();
             services.AddScoped<FileUploadService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ISeriesService, SeriesService>();

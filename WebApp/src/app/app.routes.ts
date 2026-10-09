@@ -17,6 +17,7 @@ export const routes: Routes = [
         ]
     },
     { path: 'dashboard/login', component: SignInComponent },
+    { path: 'connect', loadComponent: () => import('./features/servers/server-connect.component').then(m => m.ServerConnectComponent) },
     { path: 'dashboard/logout', loadComponent: () => import('./features/dashboard/authentication/logout/logout.component').then(m => m.LogoutComponent) },
     {
       path: 'dashboard',

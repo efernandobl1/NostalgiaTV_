@@ -1,0 +1,43 @@
+<main class="signal-page">
+  <header class="signal-header">
+    <a class="signal-brand" routerLink="/"><span class="signal-brand__screen" aria-hidden="true">N</span>NostalgiaTV</a>
+    <a class="signal-back" routerLink="/dashboard/login">Volver a este servidor</a>
+  </header>
+  <div class="signal-main connection-layout">
+    <section class="connection-intro" aria-labelledby="connection-title">
+      <div class="connection-screen" aria-hidden="true">Ntv<span>Buscando señal</span></div>
+      <h1 id="connection-title">¿Dónde está tu señal?</h1>
+      <p>Conecta con tu servidor de NostalgiaTV. Cada servidor tiene sus propias cuentas, canales y videoteca.</p>
+      <p class="connection-muted">Tu historial se sincroniza entre dispositivos conectados al mismo perfil, no entre servidores distintos.</p>
+    </section>
+    <section class="connection-panel" aria-labelledby="server-title">
+      <h2 id="server-title">Conectar a un servidor</h2>
+      <form (ngSubmit)="inspect()">
+        <label for="server-address">IP o dominio</label>
+        <input id="server-address" name="address" [(ngModel)]="address" (ngModelChange)="destination.set(''); error.set('')"
+          placeholder="https://tv.ejemplo.com" autocomplete="url" autocapitalize="none" spellcheck="false" required
+          maxlength="300" aria-describedby="server-help" [attr.aria-invalid]="!!error()" />
+        <p id="server-help" class="connection-muted">En una VPN también puedes usar una IP privada, como http://10.77.77.1:8090.</p>
+        <button class="signal-button signal-button--primary" type="submit">Revisar dirección</button>
+      </form>
+      @if (error()) { <p class="connection-error" role="alert">{{ error() }}</p> }
+      @if (destination(); as origin) {
+        <div class="connection-confirmation" role="status">
+          <strong>{{ origin }}</strong>
+          <p>Se abrirá el login de esa dirección. Comprueba que sea tu servidor antes de introducir tus credenciales.</p>
+          <a class="signal-button signal-button--primary" [href]="origin + '/dashboard/login'" (click)="servers.remember(origin)">Abrir este servidor</a>
+        </div>
+      }
+      <div class="connection-current"><span>Servidor actual</span><strong>{{ servers.current }}</strong><a routerLink="/dashboard/login">Entrar aquí</a></div>
+      @if (servers.recent().length) {
+        <h3>Direcciones recientes</h3>
+        <ul class="connection-recent">
+          @for (origin of servers.recent(); track origin) {
+            <li><a [href]="origin + '/dashboard/login'" (click)="servers.remember(origin)">{{ origin }}</a>
+              <button type="button" (click)="servers.forget(origin)" [attr.aria-label]="'Olvidar ' + origin" title="Olvidar dirección">Olvidar</button></li>
+          }
+        </ul>
+      }
+    </section>
+  </div>
+</main>
