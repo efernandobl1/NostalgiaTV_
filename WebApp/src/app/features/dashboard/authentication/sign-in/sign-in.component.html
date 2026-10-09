@@ -19,7 +19,8 @@
     </section>
     <section class="access-panel" aria-labelledby="login-title">
       <h2 id="login-title">Entrar al panel</h2>
-      <p class="access-caption">Usa tu cuenta de administración.</p>
+      <p class="access-caption">Usa tu cuenta de este servidor.</p>
+      <div class="access-server"><span>{{ servers.current }}</span><a routerLink="/connect">Cambiar servidor</a></div>
       <form [formGroup]="authForm" (ngSubmit)="onSubmit()" [attr.aria-busy]="submitting">
         <div class="access-field">
           <label for="username">Usuario</label>

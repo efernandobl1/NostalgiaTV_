@@ -1,4 +1,7 @@
 @use '../../../../styles/dashboard-components';
+.studio-page {
+  grid-template-columns: minmax(0, 1fr);
+}
 .break-rules {
   display: grid;
   gap: 18px;
@@ -32,6 +35,13 @@
   padding-top: 24px;
   header {
     margin-bottom: 16px;
+  }
+}
+.existing-clips {
+  margin-top: 16px;
+  summary {
+    cursor: pointer;
+    color: var(--dashboard-muted);
   }
 }
 .pool-item {
