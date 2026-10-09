@@ -1,0 +1,178 @@
+<section class="admin-panel package-panel" [attr.aria-busy]="busy()">
+  @if (channelId()) {
+    <header>
+      <span class="package-stamp" aria-hidden="true">NTV / EXPORT</span>
+      <h2>Compartir este canal</h2>
+      <p>
+        Un archivo con sus eras, series, temporadas elegidas y reglas publicitarias. Los episodios y
+        los datos personales no se incluyen.
+      </p>
+    </header>
+    <label class="studio-check"
+      ><input type="checkbox" [(ngModel)]="includeMedia" [disabled]="busy()" />Incluir logo, bumpers
+      y anuncios</label
+    >
+    @if (includeMedia) {
+      <label class="studio-field"
+        >Permiso para compartir las piezas de este canal (opcional)
+        <input
+          [(ngModel)]="sharingPermission"
+          maxlength="500"
+          [disabled]="busy()"
+          aria-describedby="sharing-permission-help"
+        />
+        <small id="sharing-permission-help"
+          >Indícalo una sola vez para incluir todos los bumpers y anuncios asociados a sus eras. Si
+          lo dejas vacío, solo se incluyen los que ya tienen permiso guardado. No cambia sus
+          permisos locales.</small
+        >
+      </label>
+      <p>
+        Se conservan las temporadas de Halloween y Navidad. Los bumpers del importador antiguo no se
+        incluyen.
+      </p>
+      <label class="studio-check"
+        ><input type="checkbox" [(ngModel)]="rightsConfirmed" [disabled]="busy()" />Tengo permiso
+        para compartir los archivos y el logo de este canal</label
+      >
+    }
+    <div class="studio-actions">
+      @if (catalogUrl(); as url) {
+        <a
+          class="admin-button admin-button--secondary"
+          [href]="url + '/#publish'"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Publicar en el catálogo</a
+        >
+      }
+      <button
+        type="button"
+        class="admin-button admin-button--primary"
+        (click)="download()"
+        [disabled]="busy() || (includeMedia && !rightsConfirmed)"
+      >
+        Descargar canal .ntv.zip
+      </button>
+    </div>
+    <small
+      >Máximo 500 MiB. Descarga el paquete y súbelo con tu cuenta independiente del catálogo. Los
+      horarios fijos aún no se incluyen.</small
+    >
+  } @else {
+    <header>
+      <span class="package-stamp" aria-hidden="true">NTV / IMPORT</span>
+      <h2>Instalar un canal</h2>
+      <p>
+        Revisa el contenido antes de instalar. Las series se enlazan con tu biblioteca; las que
+        falten se crean sin episodios.
+      </p>
+      @if (catalogUrl(); as url) {
+        <a
+          class="admin-button admin-button--secondary"
+          [href]="url + '/#catalog'"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Explorar canales compartidos</a
+        >
+      }
+    </header>
+    <label class="studio-field"
+      >Paquete del canal<input
+        type="file"
+        accept=".zip,.ntv.zip"
+        (change)="chooseFile($event)"
+        [disabled]="busy()"
+      /><small>.ntv.zip · máximo 500 MiB</small></label
+    >
+    <div class="studio-actions">
+      <button
+        type="button"
+        class="admin-button admin-button--secondary"
+        (click)="inspect()"
+        [disabled]="busy()"
+      >
+        Revisar paquete
+      </button>
+    </div>
+    @if (preview(); as data) {
+      <section class="package-preview">
+        <h3>{{ data.manifest.name }}</h3>
+        <p>
+          {{ data.manifest.eras.length }} eras · {{ data.series.length }} series ·
+          {{ data.manifest.clips.length }} piezas publicitarias
+        </p>
+        <h3>Eras y temporadas</h3>
+        @for (era of data.manifest.eras; track era.key) {
+          <div class="package-row">
+            <strong>{{ era.name }}</strong>
+            @for (selection of era.series; track selection.seriesKey) {
+              @for (series of data.series; track series.key) {
+                @if (series.key === selection.seriesKey) {
+                  <span
+                    >{{ series.name }} ·
+                    {{
+                      selection.hasSeasonFilter
+                        ? 'Temporadas: ' + selection.seasons.join(', ')
+                        : 'Todas las temporadas'
+                    }}</span
+                  >
+                }
+              }
+            }
+          </div>
+        }
+        <h3>Tu biblioteca</h3>
+        @for (series of data.series; track series.key) {
+          <div class="package-row">
+            <strong>{{ series.name }}</strong
+            ><span>{{
+              series.existingId
+                ? series.availableEpisodes + ' episodios disponibles'
+                : 'Nueva ficha · debes añadir sus episodios'
+            }}</span>
+          </div>
+        }
+        @if (data.manifest.clips.length) {
+          <h3>Bumpers y anuncios</h3>
+          @for (clip of data.manifest.clips; track clip.key) {
+            <div class="package-row">
+              <strong>{{ clip.title }}</strong
+              ><span
+                >{{ clip.kind === 0 ? 'Bumper' : 'Anuncio' }} · {{ seasonLabel(clip.season) }} ·
+                {{ clip.license }}</span
+              >
+            </div>
+          }
+          <p>
+            Se comprobarán los archivos al instalar. Las piezas quedarán pendientes de aprobación.
+            Después, regenera la programación del canal para emitirlo.
+          </p>
+        }
+        @if (data.manifest.excludedClips) {
+          <p>{{ data.manifest.excludedClips }} piezas quedaron fuera del paquete de origen.</p>
+        }
+        @if (data.alreadyInstalled) {
+          <p role="status">Este canal ya está instalado. No se creará un duplicado.</p>
+        }
+        <button
+          type="button"
+          class="admin-button admin-button--primary"
+          (click)="install()"
+          [disabled]="busy() || data.alreadyInstalled"
+        >
+          Instalar canal
+        </button>
+      </section>
+    }
+  }
+  @if (busy()) {
+    <p role="status" aria-live="polite">{{ stage() }}</p>
+  }
+  @if (error()) {
+    <p class="studio-error" role="alert">{{ error() }}</p>
+  }
+  @if (feedback()) {
+    <p class="studio-feedback" role="status">{{ feedback() }}</p>
+  }
+</section>

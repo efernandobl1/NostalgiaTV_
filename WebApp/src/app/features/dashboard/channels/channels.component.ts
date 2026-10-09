@@ -1,5 +1,7 @@
 import { ChannelErasComponent } from '../channel-eras/channel-eras.component';
-import { Component, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, OnInit, signal, ViewChild, computed, inject } from '@angular/core';
+import { ChannelPackageComponent } from './channel-package.component';
+import { MenuService } from '../../../core/services/menu.service';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
@@ -58,13 +60,26 @@ interface ScheduleEntry {
     MatTooltipModule,
     DatePipe,
     ChannelErasComponent,
+    ChannelPackageComponent,
   ],
   templateUrl: './channels.component.html',
   styleUrl: './channels.component.scss',
 })
 export class ChannelsComponent implements OnInit {
   readonly selectedChannel = signal<ChannelResponse | null>(null);
-  readonly detailTab = signal<'eras' | 'schedule' | 'history'>('eras');
+  readonly detailTab = signal<'eras' | 'schedule' | 'history' | 'share'>('eras');
+  private readonly menu = inject(MenuService);
+  readonly isAdmin = computed(() => this.menu.currentUser()?.rol.id === 1);
+  readonly importing = signal(false);
+  onImported(channelId: number): void {
+    this.importing.set(false);
+    this.router
+      .navigate([], { relativeTo: this.route, queryParams: { channelId } })
+      .then(() => this.loadChannels());
+    this.showSuccess(
+      'Canal instalado. Revisa sus piezas y regenera la programación para emitirlo.',
+    );
+  }
   readonly searchTerm = signal('');
   readonly loading = signal(true);
   readonly loadError = signal(false);
@@ -269,6 +284,10 @@ export class ChannelsComponent implements OnInit {
     this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
   }
   private showError(msg: string) {
-    this.snackBar.open(msg, 'Cerrar', { duration: 0, panelClass: 'error-snack', politeness: 'assertive' });
+    this.snackBar.open(msg, 'Cerrar', {
+      duration: 0,
+      panelClass: 'error-snack',
+      politeness: 'assertive',
+    });
   }
 }

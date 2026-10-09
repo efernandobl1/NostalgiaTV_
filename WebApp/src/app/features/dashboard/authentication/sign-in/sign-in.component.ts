@@ -6,6 +6,7 @@ import { RouterLink, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TvModeService } from '../../../../core/services/tv-mode.service';
+import { ServerConnectionsService } from '../../../../core/services/server-connections.service';
 
 @Component({
   selector: 'app-sign-in',
@@ -15,6 +16,7 @@ import { TvModeService } from '../../../../core/services/tv-mode.service';
 })
 export class SignInComponent {
   readonly tvMode = inject(TvModeService);
+  readonly servers = inject(ServerConnectionsService);
   private readonly destroyRef = inject(DestroyRef);
   hide = true;
   authForm: FormGroup;

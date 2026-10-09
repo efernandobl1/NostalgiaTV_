@@ -1,0 +1,82 @@
+<section class="upload-area" [attr.aria-busy]="busy()">
+  <details class="upload-options">
+    <summary>Temporada de emisión (opcional)</summary>
+    <label class="studio-field"
+      >Temporada<select
+        [value]="effectiveSeason()"
+        (change)="chooseSeason($event)"
+        [disabled]="busy()"
+      >
+        @for (item of seasons; track item.id) {
+          <option [value]="item.id">{{ item.label }}</option>
+        }
+      </select></label
+    >
+  </details>
+  <label class="upload-picker">
+    <span class="material-symbols-outlined" aria-hidden="true">upload</span>
+    <strong>{{ kind() === 1 ? 'Seleccionar anuncios' : 'Seleccionar bumpers' }}</strong>
+    <input
+      type="file"
+      accept=".mp4,video/mp4"
+      multiple
+      [disabled]="busy()"
+      (change)="choose($event)"
+    />
+  </label>
+  <p class="upload-hint">Uno o varios MP4. El título se toma del nombre del archivo.</p>
+  <small
+    >H.264 · AAC · hasta 500 MiB por archivo. Quedan pendientes de aprobación para emisión.</small
+  >
+  @if (error()) {
+    <p class="upload-error" role="alert">{{ error() }}</p>
+  }
+  @if (items().length) {
+    <ul class="upload-list" aria-label="Progreso de archivos">
+      @for (item of items(); track item) {
+        <li>
+          <strong>{{ item.file.name }}</strong>
+          @switch (item.status) {
+            @case ('queued') {
+              <span>En espera</span>
+            }
+            @case ('uploading') {
+              <span>{{
+                item.progress === 100 ? 'Validando archivo…' : 'Subiendo · ' + item.progress + '%'
+              }}</span>
+              <progress
+                max="100"
+                [value]="item.progress"
+                [attr.aria-label]="'Subida de ' + item.file.name"
+              ></progress>
+            }
+            @case ('assigning') {
+              <span>Añadiendo a la era…</span>
+            }
+            @case ('completed') {
+              <span class="upload-success"
+                >{{ eraId() ? 'Añadido a esta era' : 'Guardado' }} · por revisar</span
+              >
+            }
+            @case ('failed') {
+              <span class="upload-error">{{ item.message }}</span>
+            }
+          }
+        </li>
+      }
+    </ul>
+    @if (hasFailed()) {
+      <button
+        type="button"
+        class="admin-button admin-button--secondary"
+        [disabled]="busy()"
+        (click)="retry()"
+      >
+        Reintentar archivos fallidos
+      </button>
+    }
+    <span class="upload-status" role="status" aria-live="polite">{{
+      busy() ? 'Subiendo archivos de uno en uno…' : 'Tanda terminada'
+    }}</span>
+  }
+</section>
