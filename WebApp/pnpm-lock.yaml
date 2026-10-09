@@ -69,8 +69,8 @@ importers:
         specifier: ^2.31.0
         version: 2.31.0
       ng-apexcharts:
-        specifier: ^2.3.0
-        version: 2.5.0(@angular/common@21.2.22(@angular/core@21.2.22(@angular/compiler@21.2.22)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.22(@angular/compiler@21.2.22)(rxjs@7.8.2)(zone.js@0.16.3))(apexcharts@6.10.0)(rxjs@7.8.2)
+        specifier: ^3.1.0
+        version: 3.1.0(@angular/common@21.2.22(@angular/core@21.2.22(@angular/compiler@21.2.22)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.22(@angular/compiler@21.2.22)(rxjs@7.8.2)(zone.js@0.16.3))(apexcharts@6.10.0)(rxjs@7.8.2)
       ngx-editor:
         specifier: ^19.0.0-beta.1
         version: 19.0.0-beta.1(3c1f5c7104cbea78a26cc7aa8fde784f)
@@ -2994,12 +2994,12 @@ packages:
     resolution: {integrity: sha512-NMPBRMJgiQHjbd8phG3Vebdx4kZ1H121rbl5IkMqeOsahptB9BKo/d7oJ3zTXqTgagn2bWlNSXkh0QUGM31RYg==}
     engines: {node: '>=18'}
 
-  ng-apexcharts@2.5.0:
-    resolution: {integrity: sha512-kVDSo8MQPEZaiRAtlWicBXxwsLHqxebmMLcunk1AJHEV9QafUmdxN6kXggc5xRdlHd1L/HMBzvSAfZozYElf6w==}
+  ng-apexcharts@3.1.0:
+    resolution: {integrity: sha512-d9Hg5a7BPa4ChJ07vWptqkTjMkuI5xASeQEV7ZlVt8dbtUa+QsP8/OCI4mZlG5P0RoBY9sVWO4fre8Pwt8D8QA==}
     peerDependencies:
       '@angular/common': '>=20.0.0'
       '@angular/core': '>=20.0.0'
-      apexcharts: ^5.10.3 || ^6.0.0
+      apexcharts: ^6.0.0 || ^7.0.0
       rxjs: ^7.8.2
 
   ngx-editor@19.0.0-beta.1:
@@ -6694,7 +6694,7 @@ snapshots:
     dependencies:
       content-type: 2.1.0
 
-  ng-apexcharts@2.5.0(@angular/common@21.2.22(@angular/core@21.2.22(@angular/compiler@21.2.22)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.22(@angular/compiler@21.2.22)(rxjs@7.8.2)(zone.js@0.16.3))(apexcharts@6.10.0)(rxjs@7.8.2):
+  ng-apexcharts@3.1.0(@angular/common@21.2.22(@angular/core@21.2.22(@angular/compiler@21.2.22)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.22(@angular/compiler@21.2.22)(rxjs@7.8.2)(zone.js@0.16.3))(apexcharts@6.10.0)(rxjs@7.8.2):
     dependencies:
       '@angular/common': 21.2.22(@angular/core@21.2.22(@angular/compiler@21.2.22)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2)
       '@angular/core': 21.2.22(@angular/compiler@21.2.22)(rxjs@7.8.2)(zone.js@0.16.3)
