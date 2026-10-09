@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [develop, main]
+    branches: [main]
 
 env:
   REGISTRY: ghcr.io
@@ -53,6 +53,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Test branch synchronization
+        run: node --test .github/scripts/sync-develop.test.mjs
 
       # Cachea la base de datos de vulnerabilidades de Trivy entre corridas.
       - name: Cache Trivy DB
@@ -132,6 +135,27 @@ jobs:
           # Caché de capas por imagen (scope) para no pisarse entre api/web.
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  sync-develop:
+    name: Synchronize develop
+    needs: [changes, security-scan, build-and-push]
+    if: >-
+      always() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.changes.result == 'success' && needs.security-scan.result == 'success' &&
+      (needs.build-and-push.result == 'success' ||
+       (needs.changes.outputs.web == 'false' && needs.build-and-push.result == 'skipped'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Fast-forward develop to validated main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/sync-develop.mjs
 
   # Despliegue en la VPS por SSH: baja las imágenes nuevas y reinicia el stack.
   deploy:

@@ -9,23 +9,27 @@ Angular + SQL Server).
 | Rama | Rol |
 |------|-----|
 | **`main`** | Producción. Es lo que se despliega en la VPS. Historia limpia (sin secretos). |
-| **`develop`** | Integración. Todo lo nuevo se junta acá antes de pasar a `main`. |
+| **`develop`** | Base de trabajo, sincronizada automáticamente con los commits validados de `main`. |
 | **`feature/*`** | Trabajo puntual (una funcionalidad o fix). Sale de `develop`. |
 
-> La rama de integración es **`develop`** (no `dev`).
+> La rama base de trabajo es **`develop`** (no `dev`). Los PR se abren hacia `main`.
 >
 > `main` y `develop` comparten la misma historia limpia. Nunca introducir secretos
 > reales ni recuperar commits de la historia anterior que contenía claves JWT/DB.
 
 ## Flujo de trabajo
 
-Todo cambio va **`feature/*` → `develop` → `main`**. Nunca commitear directo a
-`main`.
+Todo cambio va **`feature/*` → PR a `main`**. Nunca commitear directo a `main`.
+Después de validar el commit integrado, CI actualiza `develop` por fast-forward,
+sin otro PR y sin forzar la historia. El despliegue se ejecuta desde `main`.
 
 ```bash
 # 1. Partir siempre de develop actualizada
-git checkout develop
+git fetch origin
+git switch develop
 git pull --ff-only origin develop
+# Incorporar main si la sincronización automática todavía está en curso
+git merge --ff-only origin/main
 
 # 2. Crear la rama de trabajo
 git checkout -b feature/nombre-corto
@@ -34,31 +38,28 @@ git checkout -b feature/nombre-corto
 git add -A
 git commit -m "feat: short description"
 
-# 4. Subir y abrir PR hacia develop
+# 4. Subir y abrir el único PR hacia main
 git push -u origin feature/nombre-corto
-#   → abrir Pull Request: feature/nombre-corto → develop
-
-# 5. Cuando develop está probado, promover a main
-git checkout main
-git pull --ff-only origin main
-git merge --ff-only develop
-git push origin main
+#   → abrir Pull Request: feature/nombre-corto → main
+# 5. Integrar el PR cuando sus comprobaciones estén aprobadas
+# CI publica/despliega desde main y sincroniza develop automáticamente
 ```
 
 - Prefijos de rama sugeridos: `feature/`, `fix/`, `chore/`, `hardening/`, `ci/`.
 - Borrar la rama de trabajo una vez fusionada.
-- Mantener `develop` y `main` sincronizadas: después de promover a `main`, ambas
-  deben quedar en el mismo commit.
+- No abrir PR de promoción ni de sincronización hacia `develop`. Si contiene
+  commits fuera de `main`, CI se detiene sin sobrescribirlos; revisar primero
+  esa divergencia.
 - No agregar trailers `Co-authored-by` a los commits.
 
 ## Mantener las ramas locales actualizadas (obligatorio)
 
-- Antes de crear una rama de trabajo, actualizar la rama base, normalmente
-  `develop`. Nunca ramificar desde una rama local atrasada.
+- Antes de crear una rama de trabajo, actualizar `develop` desde el remoto y
+  hacer fast-forward al último `origin/main`. Nunca ramificar desde una base atrasada.
 - Antes de empezar cualquier cambio o revisión, actualizar la rama sobre la que
   se trabajará.
-- Al hacer `push` o `merge`, actualizar también las ramas locales relacionadas
-  (`develop` y `main`).
+- Tras integrar un PR, actualizar las ramas locales relacionadas (`develop` y
+  `main`). La sincronización del remoto no actualiza las copias locales.
 - Si un cambio quedó pendiente durante bastante tiempo, reintegrar el estado más
   reciente de `develop` antes de continuar.
 - Si una rama local tiene una historia antigua o divergente, no forzarla sobre el
@@ -68,6 +69,7 @@ git push origin main
 # Actualizar las ramas base
 git fetch origin
 git checkout develop && git pull --ff-only origin develop
+git merge --ff-only origin/main
 git checkout main    && git pull --ff-only origin main
 
 # Reincorporar la feature al último develop
@@ -120,6 +122,16 @@ Al integrar en `main`, `.github/workflows/deploy.yml`:
 3. Despliega automáticamente en la VPS por SSH mediante el dispatcher restringido,
    enviándole el proyecto `nostalgiatv` para ejecutar `docker compose pull` y
    `docker compose up -d` en `/opt/nostalgiatv`.
+
+También sincroniza `develop` con `main` después del escaneo y las construcciones
+correctas, independientemente del resultado del despliegue SSH. No se ejecuta
+desde PR ni fuerza actualizaciones. `main` sigue requiriendo PR y sus comprobaciones;
+`develop` conserva las comprobaciones y la prohibición de force-push, pero no
+exige PR para recibir commits ya validados. No requiere nuevos secretos.
+
+Dependabot abre sus actualizaciones únicamente hacia `main`; conserva los plazos
+de espera y la política de auto-merge existente. Android se valida en PR a `main`
+y publica sus APK al integrar allí, sin ejecuciones duplicadas desde `develop`.
 
 - Requiere en el entorno de GitHub **`production`** los secrets
   `VPS_SSH_PRIVATE_KEY`, `VPS_KNOWN_HOSTS`, `VPS_HOST`, `VPS_PORT` y `VPS_USER`.

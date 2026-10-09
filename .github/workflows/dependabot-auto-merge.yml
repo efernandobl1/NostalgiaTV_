@@ -13,7 +13,7 @@ jobs:
     if: >-
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      (github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'develop')
+      github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     steps:
       # The action verifies the Dependabot author and signed commits. No PR code is checked out.

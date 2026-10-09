@@ -206,15 +206,18 @@ La salud de la WebApp no sustituye la comprobación de readiness de la API.
 
 ## CI/CD y producción
 
-Flujo de contribución: **`feature/* → develop → main`**, con commits
+Flujo de contribución: **`develop` actualizada → `feature/*` → un PR a `main`**, con commits
 Conventional Commits en inglés y sin coautor. Ver [CONTRIBUTING.md](CONTRIBUTING.md).
 
-- **PR hacia develop o main:** activa revisión de dependencias, escaneo de
+- **PR hacia main:** activa revisión de dependencias, escaneo de
   seguridad y construcción de API/WebApp. El build de la API ejecuta sus
   pruebas. No publica imágenes ni despliega.
 - **Push a main:** tras aprobar los gates, publica en GHCR las imágenes
   `nostalgia-api` y `nostalgia-web` con `:latest` y `:<sha>`, y despliega
   mediante SSH con una clave restringida y el dispatcher autorizado.
+- **Sincronización de develop:** recibe automáticamente los commits validados de
+  `main` por fast-forward, sin otro PR ni force-push. Antes de crear una feature,
+  actualizar también la copia local de `develop`. Dependabot sólo abre PR a `main`.
 - Trivy en este workflow excluye `WebApp/`; la revisión de dependencias del PR
   comprueba vulnerabilidades nuevas. Esto no equivale a una auditoría completa
   de todas las dependencias existentes del frontend ni a revisión visual.
