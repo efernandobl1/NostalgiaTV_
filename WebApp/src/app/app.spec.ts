@@ -1,11 +1,16 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { App } from './app';
+import { SeasonalThemeService } from './core/services/seasonal-theme.service';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App, RouterModule.forRoot([])],
+      providers: [{ provide: SeasonalThemeService, useValue: {
+        enabled: signal(false), effects: signal(false),
+      } }],
     }).compileComponents();
   });
 
