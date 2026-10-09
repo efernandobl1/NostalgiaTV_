@@ -9,7 +9,7 @@ Angular + SQL Server).
 | Rama | Rol |
 |------|-----|
 | **`main`** | Producción. Es lo que se despliega en la VPS. Historia limpia (sin secretos). |
-| **`develop`** | Base de trabajo, sincronizada automáticamente con los commits validados de `main`. |
+| **`develop`** | Base de trabajo. Se actualiza desde `main` antes de crear cada feature. |
 | **`feature/*`** | Trabajo puntual (una funcionalidad o fix). Sale de `develop`. |
 
 > La rama base de trabajo es **`develop`** (no `dev`). Los PR se abren hacia `main`.
@@ -20,16 +20,18 @@ Angular + SQL Server).
 ## Flujo de trabajo
 
 Todo cambio va **`feature/*` → PR a `main`**. Nunca commitear directo a `main`.
-Después de validar el commit integrado, CI actualiza `develop` por fast-forward,
-sin otro PR y sin forzar la historia. El despliegue se ejecuta desde `main`.
+El despliegue se ejecuta desde `main`. Antes de crear cada feature, integrar
+los últimos cambios de `main` en `develop` por fast-forward, sin otro PR y
+sin forzar la historia. CI no sincroniza las ramas automáticamente.
 
 ```bash
 # 1. Partir siempre de develop actualizada
 git fetch origin
 git switch develop
 git pull --ff-only origin develop
-# Incorporar main si la sincronización automática todavía está en curso
+# Integrar los últimos cambios de main y actualizar develop remota
 git merge --ff-only origin/main
+git push origin develop
 
 # 2. Crear la rama de trabajo
 git checkout -b feature/nombre-corto
@@ -42,24 +44,24 @@ git commit -m "feat: short description"
 git push -u origin feature/nombre-corto
 #   → abrir Pull Request: feature/nombre-corto → main
 # 5. Integrar el PR cuando sus comprobaciones estén aprobadas
-# CI publica/despliega desde main y sincroniza develop automáticamente
+# CI publica/despliega desde main; develop se actualizará antes de la próxima feature
 ```
 
 - Prefijos de rama sugeridos: `feature/`, `fix/`, `chore/`, `hardening/`, `ci/`.
 - Borrar la rama de trabajo una vez fusionada.
-- No abrir PR de promoción ni de sincronización hacia `develop`. Si contiene
-  commits fuera de `main`, CI se detiene sin sobrescribirlos; revisar primero
-  esa divergencia.
+- No abrir PR de promoción ni de sincronización hacia `develop`. Si el
+  fast-forward falla, detenerse y revisar la divergencia; no sobrescribir commits.
 - No agregar trailers `Co-authored-by` a los commits.
 
 ## Mantener las ramas locales actualizadas (obligatorio)
 
 - Antes de crear una rama de trabajo, actualizar `develop` desde el remoto y
-  hacer fast-forward al último `origin/main`. Nunca ramificar desde una base atrasada.
+  hacer fast-forward al último `origin/main`, luego subir `develop`.
+  Esperar que las comprobaciones de `main` estén aprobadas. Nunca ramificar desde una base atrasada.
 - Antes de empezar cualquier cambio o revisión, actualizar la rama sobre la que
   se trabajará.
-- Tras integrar un PR, actualizar las ramas locales relacionadas (`develop` y
-  `main`). La sincronización del remoto no actualiza las copias locales.
+- Actualizar las ramas locales relacionadas (`develop` y `main`) antes de
+  crear una feature. Integrar un PR no actualiza `develop` automáticamente.
 - Si un cambio quedó pendiente durante bastante tiempo, reintegrar el estado más
   reciente de `develop` antes de continuar.
 - Si una rama local tiene una historia antigua o divergente, no forzarla sobre el
@@ -70,6 +72,7 @@ git push -u origin feature/nombre-corto
 git fetch origin
 git checkout develop && git pull --ff-only origin develop
 git merge --ff-only origin/main
+git push origin develop
 git checkout main    && git pull --ff-only origin main
 
 # Reincorporar la feature al último develop
@@ -123,9 +126,9 @@ Al integrar en `main`, `.github/workflows/deploy.yml`:
    enviándole el proyecto `nostalgiatv` para ejecutar `docker compose pull` y
    `docker compose up -d` en `/opt/nostalgiatv`.
 
-También sincroniza `develop` con `main` después del escaneo y las construcciones
-correctas, independientemente del resultado del despliegue SSH. No se ejecuta
-desde PR ni fuerza actualizaciones. `main` sigue requiriendo PR y sus comprobaciones;
+No actualiza `develop` automáticamente. Esa sincronización se hace antes de
+crear cada feature, mediante el fast-forward descrito arriba.
+`main` sigue requiriendo PR y sus comprobaciones;
 `develop` conserva las comprobaciones y la prohibición de force-push, pero no
 exige PR para recibir commits ya validados. No requiere nuevos secretos.
 

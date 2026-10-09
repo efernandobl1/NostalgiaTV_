@@ -215,9 +215,9 @@ Conventional Commits en inglés y sin coautor. Ver [CONTRIBUTING.md](CONTRIBUTIN
 - **Push a main:** tras aprobar los gates, publica en GHCR las imágenes
   `nostalgia-api` y `nostalgia-web` con `:latest` y `:<sha>`, y despliega
   mediante SSH con una clave restringida y el dispatcher autorizado.
-- **Sincronización de develop:** recibe automáticamente los commits validados de
-  `main` por fast-forward, sin otro PR ni force-push. Antes de crear una feature,
-  actualizar también la copia local de `develop`. Dependabot sólo abre PR a `main`.
+- **Antes de crear cada feature:** actualizar `develop`, integrar el último
+  `origin/main` por fast-forward y subir `develop`, sin otro PR ni force-push.
+  No hay sincronización automática. Dependabot sólo abre PR a `main`.
 - Trivy en este workflow excluye `WebApp/`; la revisión de dependencias del PR
   comprueba vulnerabilidades nuevas. Esto no equivale a una auditoría completa
   de todas las dependencias existentes del frontend ni a revisión visual.
