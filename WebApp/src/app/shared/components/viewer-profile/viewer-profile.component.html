@@ -1,0 +1,156 @@
+<p class="profile-intro">Comparte lo visto entre tu TV, computadora y celular.</p>
+@if (error()) {
+  <p class="profile-error" role="alert">{{ error() }}</p>
+}
+@if (watched.syncError()) {
+  <p class="profile-error" role="status">{{ watched.syncError() }}</p>
+}
+@if (message()) {
+  <p class="profile-feedback" role="status">{{ message() }}</p>
+}
+@if (!watched.session()) {
+  <form (ngSubmit)="connect()">
+    <label
+      >Nombre de este dispositivo<input
+        name="deviceName"
+        [(ngModel)]="name"
+        maxlength="80"
+        placeholder="TV de la sala"
+        autocomplete="off"
+    /></label>
+    <button class="profile-primary" type="submit" [disabled]="busy()">
+      {{ busy() ? 'Activando…' : 'Activar sincronización' }}
+    </button>
+    <p class="profile-note">
+      Lo visto antes de activar la sincronización se conserva solo en este navegador.
+    </p>
+  </form>
+} @else {
+  @if (!pairingMode()) {
+    <section class="profile-overview">
+      <p class="profile-status">
+        <span class="material-symbols-outlined" aria-hidden="true">devices</span>Sincronización
+        activada
+      </p>
+      <button
+        #addDeviceButton
+        class="profile-primary"
+        type="button"
+        (click)="startPairing()"
+        [disabled]="busy()"
+      >
+        Añadir dispositivo
+      </button>
+    </section>
+  } @else {
+    <section class="pairing-flow" aria-labelledby="pairing-title">
+      @switch (pairingMode()) {
+        @case ('choose') {
+          <h3 #pairingTitle id="pairing-title" tabindex="-1">¿Qué pantalla estás usando?</h3>
+          <div class="pairing-choices">
+            <button type="button" (click)="generate()" [disabled]="busy()">
+              <span class="material-symbols-outlined" aria-hidden="true">tv</span
+              ><span
+                ><strong>La nueva pantalla</strong
+                ><small>Muestra un código para conectarla a tu perfil.</small></span
+              ><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+            </button>
+            <button type="button" (click)="enterPairingCode()" [disabled]="busy()">
+              <span class="material-symbols-outlined" aria-hidden="true">keyboard</span
+              ><span
+                ><strong>La que ya uso</strong
+                ><small>Introduce el código que aparece en la nueva pantalla.</small></span
+              ><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+            </button>
+          </div>
+        }
+        @case ('show') {
+          <h3 #pairingTitle id="pairing-title" tabindex="-1">Conecta esta pantalla</h3>
+          <p>
+            En el dispositivo que ya usas, abre «Mi perfil» → «Añadir dispositivo» → «La que ya uso»
+            e introduce este código.
+          </p>
+          @if (code(); as pairing) {
+            <output class="pairing-code" aria-label="Código de vinculación" aria-live="polite">{{
+              pairing.code
+            }}</output>
+            <p class="profile-note">
+              Válido hasta {{ pairing.expiresAtUtc | date: 'HH:mm' }}. Un solo uso; no lo compartas
+              públicamente.
+            </p>
+          } @else if (busy()) {
+            <p role="status">Generando código…</p>
+          }
+          <button type="button" (click)="generate()" [disabled]="busy()">
+            {{ code() ? 'Generar otro código' : 'Reintentar' }}
+          </button>
+        }
+        @case ('enter') {
+          <h3 #pairingTitle id="pairing-title" tabindex="-1">Introduce el código</h3>
+          <p>
+            En la nueva pantalla, abre «Mi perfil» → «Añadir dispositivo» → «La nueva pantalla».
+          </p>
+          <form (ngSubmit)="pair()">
+            <label
+              >Código de la nueva pantalla<input
+                name="pairCode"
+                [(ngModel)]="enteredCode"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                maxlength="32"
+                placeholder="ABC-DEF-GHJ-KLM"
+                required
+                aria-describedby="pairing-help"
+            /></label>
+            <p id="pairing-help" class="profile-note">
+              La nueva pantalla compartirá este perfil. Su historial sincronizado se añadirá sin
+              borrar el de aquí.
+            </p>
+            <button
+              class="profile-primary"
+              type="submit"
+              [disabled]="busy() || !enteredCode.trim()"
+            >
+              {{ busy() ? 'Vinculando…' : 'Vincular dispositivo' }}
+            </button>
+          </form>
+        }
+      }
+      <button class="profile-cancel" type="button" (click)="cancelPairing()" [disabled]="busy()">
+        Cancelar
+      </button>
+    </section>
+  }
+  <details class="profile-details">
+    <summary>Dispositivos conectados ({{ watched.session()?.devices?.length }})</summary>
+    <ul class="viewer-devices">
+      @for (device of watched.session()?.devices; track device.id) {
+        <li>
+          <span
+            ><strong>{{ device.name }}{{ device.current ? ' (este dispositivo)' : '' }}</strong
+            ><small>Última conexión: {{ device.lastSeenUtc | date: 'dd/MM HH:mm' }}</small></span
+          ><button
+            type="button"
+            (click)="unlink(device.id)"
+            [disabled]="busy()"
+            [attr.aria-label]="'Desvincular ' + device.name"
+          >
+            Desvincular
+          </button>
+        </li>
+      }
+    </ul>
+    <p class="profile-note">
+      Estos dispositivos solo comparten lo visto; no tienen acceso al panel de administración.
+    </p>
+  </details>
+}
+@if (theme.enabled()) {
+  <details class="profile-details">
+    <summary>Apariencia</summary>
+    <button type="button" (click)="theme.toggleEffects()" [attr.aria-pressed]="theme.effects()">
+      {{ theme.effects() ? 'Desactivar efectos de Halloween' : 'Activar efectos de Halloween' }}
+    </button>
+  </details>
+}

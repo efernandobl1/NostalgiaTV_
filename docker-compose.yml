@@ -52,12 +52,8 @@ services:
       ReverseProxy__TrustForwardedHeaders: "true"
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads
-      # Reglas de generación de programación (aleatoria). Configurables por .env.
-      ChannelScheduling__NoRepeatWindowHours: ${SCHED_NO_REPEAT_HOURS:-24}
-      ChannelScheduling__MaxSpecialsPerSeriesPerDay: ${SCHED_MAX_SPECIALS_PER_SERIES:-2}
-      ChannelScheduling__MaxSpecialsPerDay: ${SCHED_MAX_SPECIALS_PER_DAY:-5}
-      ChannelScheduling__MaxMoviesPerSeriesPerDay: ${SCHED_MAX_MOVIES_PER_SERIES:-2}
-      ChannelScheduling__MaxMoviesPerDay: ${SCHED_MAX_MOVIES_PER_DAY:-2}
+      CommunityCatalog__PublicUrl: ${COMMUNITY_CATALOG_URL:-}
+      # Scheduling preferences are stored in SQL Server and edited in dashboard Settings.
     ports:
       - "127.0.0.1:${API_HTTP_PORT:-8080}:8080"
     volumes:
@@ -76,6 +72,43 @@ services:
       timeout: 5s
       retries: 10
       start_period: 40s
+
+  media-worker:
+    build:
+      context: ./WebApi
+      dockerfile: WebApi/Dockerfile
+    container_name: nostalgia-media-worker
+    command: ["--media-worker"]
+    restart: unless-stopped
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=NostalgiaTV;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True;Encrypt=True
+      FFmpeg__BinaryFolder: /usr/bin
+      MediaSettings__BasePath: /app/wwwroot/uploads
+      MediaProcessing__PollSeconds: ${MEDIA_POLL_SECONDS:-60}
+      MediaProcessing__StableAgeSeconds: ${MEDIA_STABLE_SECONDS:-120}
+    volumes:
+      - uploads:/app/wwwroot/uploads
+      - media_files:/app/wwwroot/uploads/media
+      - media_worker_logs:/app/Logs
+    depends_on:
+      webapi:
+        condition: service_healthy
+    networks:
+      - nostalgia-net
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    cpus: ${MEDIA_WORKER_CPUS:-4.0}
+    cpu_shares: 128
+    mem_limit: 768m
+    pids_limit: 128
+    stop_grace_period: 30s
+    logging: *default-log-options
 
   webapp:
     build:
@@ -107,6 +140,7 @@ volumes:
   webapi_logs:
   media_files:
   uploads:
+  media_worker_logs:
 
 networks:
   nostalgia-net:

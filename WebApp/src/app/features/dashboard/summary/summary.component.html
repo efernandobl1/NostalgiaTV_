@@ -1,67 +1,147 @@
 @if (loading()) {
-  <div class="admin-state" role="status"><span class="material-symbols-outlined">hourglass_top</span>Cargando inicio…</div>
+  <div class="admin-state" role="status">Abriendo el estudio…</div>
 } @else if (error()) {
   <div class="admin-state admin-state--error" role="alert">
-    <span class="material-symbols-outlined">signal_disconnected</span>
-    <div><strong>No se pudo cargar el panel</strong><span>Comprueba la conexión con la API.</span></div>
-    <button type="button" class="admin-button admin-button--secondary" (click)="load()">Reintentar</button>
+    <strong>No se pudo cargar el estudio</strong
+    ><span>Comprueba la conexión y vuelve a intentarlo.</span
+    ><button type="button" class="admin-button" (click)="load()">Reintentar</button>
   </div>
 } @else if (summary(); as data) {
-  <section class="studio-home" aria-label="Inicio del panel">
+  <section class="studio-page">
     <header class="studio-heading">
-      <div><h1>Mesa de emisión</h1><p>Consulta tus canales y continúa organizando la videoteca.</p></div>
-      <a routerLink="/dashboard/channels" class="admin-button admin-button--secondary">Ver todos los canales <span class="material-symbols-outlined">arrow_forward</span></a>
+      <div>
+        <h1>Control de emisión</h1>
+        <p>Tus estaciones, su programación y el archivo que les da vida.</p>
+      </div>
+      <a
+        routerLink="/dashboard/channels"
+        [queryParams]="{ new: 1 }"
+        class="admin-button admin-button--primary"
+        ><span class="material-symbols-outlined" aria-hidden="true">add</span>Crear canal</a
+      >
     </header>
-
-    <div class="studio-grid">
-      <section class="broadcast-deck" aria-labelledby="liveTitle">
-        <header><h2 id="liveTitle">Ahora en pantalla</h2><span>{{ channels().length }} canales</span></header>
-        @for (channel of channels(); track channel.id) {
-          <article class="broadcast-row">
-            <span class="broadcast-dial" aria-hidden="true">{{ channel.id }}</span>
-            <div class="broadcast-program">
-              <small>{{ channel.name }}</small>
-              <h3>{{ channelStates()[channel.id]?.episodeTitle || 'Sin emisión programada' }}</h3>
-              <p>Después: {{ channelStates()[channel.id]?.nextEpisodeTitle || 'Sin próximo episodio' }}</p>
+    <div class="control-room">
+      <section class="broadcast-console" aria-labelledby="air-title">
+        <header>
+          <h2 id="air-title">En tus canales</h2>
+          <a routerLink="/dashboard/channels">Gestionar canales</a>
+        </header>
+        <div class="console-slots">
+          @for (channel of channels(); track channel.id) {
+            <a
+              class="console-channel"
+              routerLink="/dashboard/channels"
+              [queryParams]="{ channelId: channel.id }"
+              ><div class="console-frequency">
+                <small>Canal</small><strong>{{ channel.id }}</strong>
+              </div>
+              <div class="console-program">
+                <h3>{{ channel.name }}</h3>
+                <p>{{ channelStates()[channel.id]?.episodeTitle || 'Sin emisión disponible' }}</p>
+                <span>{{
+                  channelStates()[channel.id]?.seriesName || 'Configura su era y contenido'
+                }}</span>
+              </div>
+              <span
+                class="console-led"
+                [class.is-on]="!!channelStates()[channel.id]"
+                aria-hidden="true"
+              ></span
+            ></a>
+          } @empty {
+            <div class="admin-empty">
+              <strong>{{
+                channelsLoadFailed()
+                  ? 'No se pudieron cargar los canales'
+                  : 'Tu estudio todavía no tiene canales'
+              }}</strong
+              ><span>{{
+                channelsLoadFailed()
+                  ? 'Vuelve a cargar el inicio.'
+                  : 'Crea el primero y elige las series de su época.'
+              }}</span>
             </div>
-            <a [routerLink]="['/dashboard/channels']" [queryParams]="{ channelId: channel.id }">Gestionar <span class="material-symbols-outlined">arrow_forward</span></a>
-          </article>
-        } @empty {
-          <div class="admin-empty"><strong>{{ channelsLoadFailed() ? 'No se pudieron cargar los canales' : 'Todavía no hay canales' }}</strong><span>{{ channelsLoadFailed() ? 'Intenta recargar el inicio.' : 'Crea uno para empezar a organizar su emisión.' }}</span></div>
-        }
-      </section>
-
-      <aside class="studio-side">
-        <section class="work-bay" aria-labelledby="workTitle">
-          <h2 id="workTitle">Seguir trabajando</h2>
-          <a routerLink="/dashboard/channels" [queryParams]="{ new: 1 }"><span><strong>Crear un canal</strong><small>Configura sus eras y series</small></span><span class="material-symbols-outlined">arrow_forward</span></a>
-          <a routerLink="/dashboard/series" [queryParams]="{ new: 1 }"><span><strong>Añadir una serie</strong><small>Organiza temporadas y archivos</small></span><span class="material-symbols-outlined">arrow_forward</span></a>
-          @if (data.incompleteSeriesCount || data.missingEpisodeFiles) {
-            <p class="work-bay__pending">{{ data.incompleteSeriesCount }} series incompletas · {{ data.missingEpisodeFiles }} episodios sin archivo</p>
           }
-        </section>
-        <section class="activity-peek" aria-labelledby="recentTitle">
-          <h2 id="recentTitle">Últimos movimientos</h2>
-          @for (entry of data.latestActivity.slice(0, 2); track entry.id) {
-            <div class="activity-peek__entry"><strong>{{ entry.description }}</strong><small>{{ entry.createdAtUtc | date:'dd/MM/yyyy HH:mm' }}</small></div>
-          } @empty { <p>Los cambios del panel aparecerán aquí.</p> }
-          <a routerLink="/dashboard/activity">Ver actividad <span class="material-symbols-outlined">arrow_forward</span></a>
-        </section>
+        </div>
+        <div class="console-base" aria-hidden="true"><span></span><span></span><span></span></div>
+      </section>
+      <aside class="studio-notebook">
+        <h2>El archivo</h2>
+        <dl>
+          <div>
+            <dt>Series</dt>
+            <dd>{{ data.seriesCount | number }}</dd>
+          </div>
+          <div>
+            <dt>Episodios</dt>
+            <dd>{{ data.episodeCount | number }}</dd>
+          </div>
+          <div>
+            <dt>Eras</dt>
+            <dd>{{ data.eraCount | number }}</dd>
+          </div>
+        </dl>
+        <a
+          routerLink="/dashboard/series"
+          [queryParams]="{ new: 1 }"
+          class="admin-button admin-button--secondary"
+          ><span class="material-symbols-outlined" aria-hidden="true">video_library</span>Añadir
+          serie</a
+        >
+        @if (data.incompleteSeriesCount || data.missingEpisodeFiles) {
+          <div class="archive-review">
+            <h3>Por completar</h3>
+            <p>{{ data.incompleteSeriesCount }} fichas sin portada o categorías</p>
+            <p>{{ data.missingEpisodeFiles }} episodios sin archivo</p>
+            <a routerLink="/dashboard/series">Revisar videoteca</a>
+          </div>
+        }
       </aside>
     </div>
-
-    <section class="studio-library" aria-labelledby="libraryTitle">
-      <header><h2 id="libraryTitle">Videoteca</h2><a routerLink="/dashboard/series">Todas las series <span class="material-symbols-outlined">arrow_forward</span></a></header>
-      <div class="studio-library__track">
-        @for (item of series().slice(0, 4); track item.id) {
-          <a routerLink="/dashboard/series" [queryParams]="{ seriesId: item.id }">
-            <strong>{{ item.name }}</strong><small>{{ item.seasons || 0 }} temporadas · {{ item.episodeCount || 0 }} episodios</small>
-          </a>
-        } @empty { <p>{{ seriesLoadFailed() ? 'No se pudieron cargar las series.' : 'Añade tu primera serie para completar la videoteca.' }}</p> }
+    <app-storage [showSeries]="true" />
+    <section class="library-preview">
+      <header class="admin-panel__header">
+        <h2>En la videoteca</h2>
+        <a routerLink="/dashboard/series">Abrir videoteca</a>
+      </header>
+      <div class="library-preview__shelf">
+        @for (item of series().slice(0, 5); track item.id) {
+          <a routerLink="/dashboard/series" [queryParams]="{ seriesId: item.id }"
+            ><div class="library-cover">
+              @if (item.logoPath) {
+                <img [src]="apiUrl + item.logoPath" [alt]="item.name" loading="lazy" />
+              } @else {
+                <span class="material-symbols-outlined" aria-hidden="true">movie</span>
+              }
+            </div>
+            <strong>{{ item.name }}</strong
+            ><span>{{ item.episodeCount || 0 }} episodios</span></a
+          >
+        } @empty {
+          <p>
+            {{
+              seriesLoadFailed()
+                ? 'No se pudieron cargar las series.'
+                : 'Añade una serie para empezar a llenar tu archivo.'
+            }}
+          </p>
+        }
       </div>
     </section>
-    <footer class="studio-facts">
-      <span>{{ data.seriesCount | number }} series</span><span>{{ data.episodeCount | number }} episodios</span><span>{{ data.eraCount | number }} eras</span><span>{{ data.userCount | number }} usuarios</span>
-    </footer>
+    <section class="recent-log">
+      <header class="admin-panel__header">
+        <h2>Últimos movimientos</h2>
+        <a routerLink="/dashboard/activity">Ver actividad</a>
+      </header>
+      @for (entry of data.latestActivity.slice(0, 3); track entry.id) {
+        <div>
+          <time>{{ entry.createdAtUtc | date: 'dd/MM HH:mm' }}</time>
+          <p>{{ entry.description }}</p>
+          <span>{{ entry.username }}</span>
+        </div>
+      } @empty {
+        <p>Los cambios del estudio aparecerán aquí.</p>
+      }
+    </section>
   </section>
 }

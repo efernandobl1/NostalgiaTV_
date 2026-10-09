@@ -1,15 +1,52 @@
-<main class="signal-page" aria-labelledby="logout-title">
-  <div class="signal-page__scanlines" aria-hidden="true"></div>
-  <section class="signal-card signal-card--success">
-    <span class="signal-card__code">FIN DE TRANSMISIÓN</span>
-    <div class="signal-card__screen" aria-hidden="true">
-      <span class="material-symbols-outlined">power_settings_new</span>
-    </div>
-    <h1 id="logout-title">Sesión cerrada</h1>
-    <p>Tu sesión terminó correctamente. Puedes volver a la programación o iniciar sesión otra vez.</p>
-    <div class="signal-card__actions">
-      <a routerLink="/" class="signal-button signal-button--secondary">Volver a ver TV</a>
-      <a routerLink="/dashboard/login" class="signal-button signal-button--primary">Iniciar sesión</a>
-    </div>
-  </section>
+<main class="signal-page" [class.signal-page--tv]="tvMode.enabled()">
+  <header class="signal-header">
+    <a class="signal-brand" routerLink="/" aria-label="NostalgiaTV, inicio">
+      <span class="signal-brand__screen" aria-hidden="true">N</span>NostalgiaTV
+    </a>
+    <a class="signal-back" routerLink="/" aria-label="Volver a ver TV" title="Volver a ver TV">
+      <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span
+      ><span>Volver a ver TV</span>
+    </a>
+  </header>
+  <div class="signal-main">
+    <section class="signal-card" aria-labelledby="logout-title" [attr.aria-busy]="pending">
+      <div class="signal-card__screen" aria-hidden="true">
+        <span class="material-symbols-outlined">{{
+          pending ? 'hourglass_top' : failed ? 'sync_problem' : 'power_settings_new'
+        }}</span>
+      </div>
+      <div class="signal-card__message">
+        <h1 id="logout-title">
+          {{
+            pending
+              ? 'Cerrando sesión…'
+              : failed
+                ? 'No pudimos cerrar la sesión.'
+                : 'Sesión cerrada.'
+          }}
+        </h1>
+        <p [attr.role]="failed ? 'alert' : 'status'">
+          {{
+            pending
+              ? 'Espera un momento mientras cerramos tu cuenta.'
+              : failed
+                ? 'No se confirmó el cierre de sesión. Intenta nuevamente antes de dejar este dispositivo.'
+                : 'Todo queda guardado. La programación sigue cuando quieras volver.'
+          }}
+        </p>
+        <div class="signal-card__actions">
+          @if (failed) {
+            <button type="button" class="signal-button signal-button--primary" (click)="logout()">
+              Reintentar cierre de sesión
+            </button>
+          } @else if (!pending) {
+            <a routerLink="/dashboard/login" class="signal-button signal-button--primary"
+              >Iniciar sesión</a
+            >
+          }
+          <a routerLink="/" class="signal-button signal-button--secondary">Volver a ver TV</a>
+        </div>
+      </div>
+    </section>
+  </div>
 </main>

@@ -9,10 +9,21 @@ import { CategoriesService } from '../categories/categories.service';
 import { ChannelsService } from '../channels/channels.service';
 import { EpisodesComponent } from '../episodes/episodes.component';
 import { environment } from '../../../../environments/environment';
+import { RouterLink } from '@angular/router';
+import { SeriesSourcesComponent } from './series-sources.component';
+import { CommunityComponent } from '../community/community.component';
+import { MenuService } from '../../../core/services/menu.service';
 
 @Component({
   selector: 'app-series-editor',
-  imports: [MatTooltipModule, ReactiveFormsModule, EpisodesComponent],
+  imports: [
+    MatTooltipModule,
+    ReactiveFormsModule,
+    EpisodesComponent,
+    RouterLink,
+    SeriesSourcesComponent,
+    CommunityComponent,
+  ],
   templateUrl: './series-editor.component.html',
   styleUrl: './series-editor.component.scss',
 })
@@ -21,7 +32,9 @@ export class SeriesEditorComponent implements OnInit {
   readonly initialTab = input<'data' | 'episodes'>('data');
   readonly closed = output<void>();
   readonly saved = output<SeriesResponse>();
-  readonly tab = signal<'data' | 'episodes' | 'channels' | 'pending'>('data');
+  readonly tab = signal<'data' | 'episodes' | 'channels' | 'sources' | 'comments'>('data');
+  readonly menuService = inject(MenuService);
+  readonly logoPreview = signal('');
   readonly current = signal<SeriesResponse | null>(null);
   readonly categories = signal<CategoryResponse[]>([]);
   readonly channels = signal<ChannelResponse[]>([]);
@@ -39,8 +52,10 @@ export class SeriesEditorComponent implements OnInit {
   private logoFile?: File;
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(100)]],
-    description: ['', Validators.maxLength(500)], history: ['', Validators.maxLength(1000)],
-    startDate: ['', Validators.required], endDate: [''],
+    description: ['', Validators.maxLength(500)],
+    history: ['', Validators.maxLength(1000)],
+    startDate: ['', Validators.required],
+    endDate: [''],
     rating: [0, [Validators.min(0), Validators.max(10)]],
     seasons: [1, [Validators.required, Validators.min(1)]],
   });
@@ -50,22 +65,43 @@ export class SeriesEditorComponent implements OnInit {
     this.current.set(series);
     this.tab.set(this.initialTab());
     if (series) {
-      this.form.patchValue({ name: series.name, description: series.description ?? '', history: series.history ?? '',
-        startDate: series.startDate.slice(0, 10), endDate: series.endDate?.slice(0, 10) ?? '',
-        rating: series.rating ?? 0, seasons: series.seasons ?? 1 });
+      this.form.patchValue({
+        name: series.name,
+        description: series.description ?? '',
+        history: series.history ?? '',
+        startDate: series.startDate.slice(0, 10),
+        endDate: series.endDate?.slice(0, 10) ?? '',
+        rating: series.rating ?? 0,
+        seasons: series.seasons ?? 1,
+      });
       this.selectedCategories.set(series.categoryIds);
     }
-    this.categoryService.getAll().subscribe({ next: items => this.categories.set(items), error: () => this.error.set('No se pudieron cargar las categorías. Vuelve a abrir el editor.') });
-    this.channelService.getAll().subscribe({ next: items => this.channels.set(items), error: () => this.error.set('No se pudieron cargar los canales.') });
+    this.categoryService
+      .getAll()
+      .subscribe({
+        next: (items) => this.categories.set(items),
+        error: () =>
+          this.error.set('No se pudieron cargar las categorías. Vuelve a abrir el editor.'),
+      });
+    this.channelService
+      .getAll()
+      .subscribe({
+        next: (items) => this.channels.set(items),
+        error: () => this.error.set('No se pudieron cargar los canales.'),
+      });
   }
 
   selectLogo(event: Event): void {
+    if (this.logoPreview()) URL.revokeObjectURL(this.logoPreview());
     this.logoFile = (event.target as HTMLInputElement).files?.[0];
+    this.logoPreview.set(this.logoFile ? URL.createObjectURL(this.logoFile) : '');
     this.form.markAsDirty();
   }
 
   toggleCategory(id: number, checked: boolean): void {
-    this.selectedCategories.update(ids => checked ? [...ids, id] : ids.filter(value => value !== id));
+    this.selectedCategories.update((ids) =>
+      checked ? [...ids, id] : ids.filter((value) => value !== id),
+    );
     this.form.markAsDirty();
   }
 
@@ -78,16 +114,26 @@ export class SeriesEditorComponent implements OnInit {
     const name = this.categoryName().trim();
     if (!name) return;
     const editingId = this.editingCategoryId();
-    const duplicate = this.categories().some(category => category.name.toLocaleLowerCase() === name.toLocaleLowerCase() && category.id !== editingId);
-    if (duplicate) { this.error.set('Ya existe una categoría con ese nombre.'); return; }
+    const duplicate = this.categories().some(
+      (category) =>
+        category.name.toLocaleLowerCase() === name.toLocaleLowerCase() && category.id !== editingId,
+    );
+    if (duplicate) {
+      this.error.set('Ya existe una categoría con ese nombre.');
+      return;
+    }
     const request = editingId
       ? this.categoryService.update(editingId, { name })
       : this.categoryService.create({ name });
     request.subscribe({
-      next: category => {
-        this.categories.update(items => editingId ? items.map(item => item.id === category.id ? category : item) : [...items, category]);
+      next: (category) => {
+        this.categories.update((items) =>
+          editingId
+            ? items.map((item) => (item.id === category.id ? category : item))
+            : [...items, category],
+        );
         if (!editingId) {
-          this.selectedCategories.update(ids => [...ids, category.id]);
+          this.selectedCategories.update((ids) => [...ids, category.id]);
           this.form.markAsDirty();
         }
         this.categoryName.set('');
@@ -100,29 +146,72 @@ export class SeriesEditorComponent implements OnInit {
 
   save(): void {
     if (this.busy()) return;
-    if (this.form.invalid) { this.form.markAllAsTouched(); this.error.set('Revisa los campos obligatorios y los valores del formulario.'); return; }
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.error.set('Revisa los campos obligatorios y los valores del formulario.');
+      return;
+    }
     this.busy.set(true);
     this.error.set('');
     this.message.set('Guardando…');
     const payload = new FormData();
-    for (const [key, value] of Object.entries(this.form.getRawValue())) payload.append(key, String(value));
+    for (const [key, value] of Object.entries(this.form.getRawValue()))
+      payload.append(key, String(value));
     if (this.logoFile) payload.append('logo', this.logoFile);
     const current = this.current();
     (current ? this.service.update(current.id, payload) : this.service.create(payload)).subscribe({
-      next: result => {
+      next: (result) => {
         this.current.set(result);
         this.saved.emit(result);
         this.service.assignCategories(result.id, this.selectedCategories()).subscribe({
-          next: updated => { this.current.set(updated); this.saved.emit(updated); this.form.markAsPristine(); this.busy.set(false); this.message.set('Cambios guardados'); },
-          error: () => { this.busy.set(false); this.message.set(''); this.error.set('La serie se guardó, pero sus categorías no. Pulsa Guardar cambios para reintentarlo.'); },
+          next: (updated) => {
+            this.current.set(updated);
+            this.saved.emit(updated);
+            this.form.markAsPristine();
+            this.busy.set(false);
+            this.message.set('Cambios guardados');
+          },
+          error: () => {
+            this.busy.set(false);
+            this.message.set('');
+            this.error.set(
+              'La serie se guardó, pero sus categorías no. Pulsa Guardar cambios para reintentarlo.',
+            );
+          },
         });
       },
-      error: () => { this.busy.set(false); this.message.set(''); this.error.set('No se pudo guardar la serie. Revisa los datos e inténtalo de nuevo.'); },
+      error: () => {
+        this.busy.set(false);
+        this.message.set('');
+        this.error.set('No se pudo guardar la serie. Revisa los datos e inténtalo de nuevo.');
+      },
     });
   }
 
   channelNames(): string[] {
     const id = this.current()?.id;
-    return this.channels().filter(channel => channel.seriesIds.includes(id!) || channel.eras.some(era => era.seriesIds.includes(id!))).map(channel => channel.name);
+    return this.channels()
+      .filter(
+        (channel) =>
+          channel.seriesIds.includes(id!) ||
+          channel.eras.some((era) => era.seriesIds.includes(id!)),
+      )
+      .map((channel) => channel.name);
+  }
+
+  linkedChannels(): ChannelResponse[] {
+    const id = this.current()?.id;
+    return this.channels().filter((channel) =>
+      channel.eras.some((era) => era.seriesIds.includes(id!)),
+    );
+  }
+
+  close(): void {
+    if (this.form.dirty && !confirm('Hay cambios sin guardar. ¿Quieres descartarlos?')) return;
+    this.closed.emit();
+  }
+
+  ngOnDestroy(): void {
+    if (this.logoPreview()) URL.revokeObjectURL(this.logoPreview());
   }
 }

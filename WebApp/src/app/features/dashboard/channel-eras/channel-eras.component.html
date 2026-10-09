@@ -1,29 +1,219 @@
-<section class="era-console">
+<section class="studio-page">
   @if (!channelId()) {
-    <header class="era-standalone"><a routerLink="/dashboard/channels" class="admin-back" aria-label="Volver a canales"><span class="material-symbols-outlined">arrow_back</span></a><mat-form-field appearance="outline"><mat-label>Canal</mat-label><mat-select [value]="selectedChannelId()" (selectionChange)="onChannelChange($event.value)">@for (channel of channels(); track channel.id) { <mat-option [value]="channel.id">{{ channel.name }}</mat-option> }</mat-select></mat-form-field></header>
+    <header class="studio-heading">
+      <div>
+        <h1>Eras de los canales</h1>
+        <p>Elige el canal para configurar su identidad y contenido.</p>
+      </div>
+    </header>
+    <label class="studio-field"
+      >Canal<select
+        [value]="selectedChannelId() ?? ''"
+        (change)="onChannelChange(+$any($event.target).value)"
+      >
+        <option value="" disabled>Seleccionar canal</option>
+        @for (channel of channels(); track channel.id) {
+          <option [value]="channel.id">{{ channel.name }}</option>
+        }
+      </select></label
+    >
   }
   @if (selectedChannelId()) {
-    <aside class="era-rail" aria-label="Eras del canal">
-      <header><h2>Eras</h2><button type="button" (click)="openForm()" matTooltip="Añadir era" aria-label="Añadir era"><span class="material-symbols-outlined">add</span></button></header>
-      <div class="era-rail__list">
-        @for (era of dataSource.data; track era.id; let index = $index) {
-          <button type="button" class="era-track" [attr.aria-current]="selectedEraId() === era.id ? 'true' : null" (click)="selectEra(era)"><span>{{ index + 1 }}</span><span><strong>{{ era.name }}</strong><small>{{ era.seriesIds.length }} series · {{ era.bumpers.length }} bumpers</small></span></button>
-        } @empty { <p class="era-empty">No hay eras. Crea la primera para organizar la emisión.</p> }
+    <div class="studio-heading">
+      <div>
+        <h2>Eras de {{ selectedChannelName() || 'este canal' }}</h2>
+        <p>Las fechas describen la época original. La era activa determina qué se emite ahora.</p>
       </div>
-    </aside>
-    <div class="era-workbench">
-      @if (selectedEra(); as era) {
-        <header class="workbench-head"><div><span>CONFIGURACIÓN DE ERA</span><h2>{{ era.name }}</h2><p>{{ era.description || 'Sin descripción.' }}</p><small>{{ era.startDate | date:'dd/MM/yyyy' }} – {{ era.endDate ? (era.endDate | date:'dd/MM/yyyy') : 'actualidad' }}</small></div><div class="workbench-actions"><button type="button" class="admin-button admin-button--secondary" (click)="openForm(era)">Editar era</button><button type="button" class="delete-era" (click)="deleteEra(era)" matTooltip="Eliminar era" aria-label="Eliminar era"><span class="material-symbols-outlined">delete</span></button></div></header>
-        <section class="workbench-section"><div class="section-head"><div><h3>Series en emisión</h3><p>Elige las series y temporadas que se emitirán en esta era.</p></div>@if (!seriesPickerOpen()) {<button type="button" class="admin-button admin-button--secondary" (click)="assignSeries(era)">Elegir series y temporadas</button>}</div>
-          @if (seriesPickerOpen()) {
-            <div class="program-list">@for (program of series(); track program.id) {<div class="program-row program-row--editing"><label class="program-series"><input type="checkbox" [checked]="selectedSeriesIds().includes(program.id)" (change)="toggleSeries(program.id, $any($event.target).checked)"><span><strong>{{ program.name }}</strong><small>{{ program.seasons }} temporadas disponibles</small></span></label>@if (selectedSeriesIds().includes(program.id)) {<div class="season-options" [attr.aria-label]="'Temporadas de ' + program.name">@for (season of availableSeasons(program); track season) {<label><input type="checkbox" [checked]="isSeasonSelected(program, season)" (change)="toggleSeason(program, season, $any($event.target).checked)"><span>{{ season === 0 ? 'Especiales' : 'T' + season }}</span></label>}</div>}</div>} @empty {<p class="era-empty">Crea una serie antes de configurar esta era.</p>}</div>
-            <div class="selection-actions"><button type="button" class="admin-button admin-button--primary" (click)="saveSeriesSelection(era)" [disabled]="savingSelection()">{{ savingSelection() ? 'Guardando…' : 'Guardar selección' }}</button><button type="button" class="admin-button admin-button--secondary" (click)="seriesPickerOpen.set(false)" [disabled]="savingSelection()">Cancelar</button><small>Después, regenera la programación del canal para aplicar el cambio.</small></div>
-          } @else {
-            <div class="program-list">@for (seriesId of era.seriesIds; track seriesId) {<div class="program-row"><div><strong>{{ getSeriesNames([seriesId]) }}</strong><small>@if (era.seasonSelections[seriesId]; as seasons) { {{ seasons.length ? 'Temporadas: ' + seasons.join(', ') : 'Sin temporadas' }} } @else { Todas las temporadas }</small></div><a routerLink="/dashboard/series" [queryParams]="{seriesId:seriesId}">Ver episodios <span class="material-symbols-outlined">arrow_forward</span></a></div>} @empty {<p class="era-empty">Aún no hay series asignadas a esta era.</p>}</div>
-          }
-        </section>
-        <section class="workbench-section"><div class="section-head"><div><h3>Bumpers de la era</h3><p>Identificadores y cortes de la programación.</p></div><button type="button" class="admin-button admin-button--secondary" (click)="manageBumpers(era)"><span class="material-symbols-outlined">add</span>Añadir bumper</button></div><div class="cue-list">@for (bumper of era.bumpers; track bumper.id) {<button type="button" (click)="manageBumpers(era)"><span class="material-symbols-outlined">play_arrow</span>{{ bumper.title }}<span class="material-symbols-outlined">edit</span></button>} @empty {<p class="era-empty">Esta era todavía no tiene bumpers.</p>}</div></section>
-      } @else {<div class="workbench-head"><div><h2>Empieza con una era</h2><p>Organiza aquí las series y bumpers del canal.</p></div><button type="button" class="admin-button admin-button--primary" (click)="openForm()">Crear era</button></div>}
+      <button type="button" class="admin-button" (click)="openForm()">
+        <span class="material-symbols-outlined" aria-hidden="true">add</span>Añadir era
+      </button>
     </div>
-  } @else {<div class="admin-empty"><strong>Selecciona un canal</strong><span>Sus eras aparecerán aquí.</span></div>}
+    @if (loading()) {
+      <div class="admin-state" role="status">Cargando eras…</div>
+    } @else if (loadError()) {
+      <div class="admin-state admin-state--error" role="alert">
+        <strong>No se pudieron cargar las eras</strong
+        ><button type="button" class="admin-button" (click)="loadEras(selectedChannelId()!)">
+          Reintentar
+        </button>
+      </div>
+    } @else {
+      <div class="era-workspace">
+        <nav class="era-rail" aria-label="Eras del canal">
+          @for (era of dataSource.data; track era.id) {
+            <button
+              type="button"
+              [attr.aria-pressed]="selectedEraId() === era.id"
+              (click)="selectEra(era)"
+            >
+              <strong>{{ era.name }}</strong
+              ><span
+                >{{ era.startDate | date: 'yyyy'
+                }}{{ era.endDate ? ' – ' + (era.endDate | date: 'yyyy') : '' }}</span
+              >
+              @if (era.isActive) {
+                <span class="studio-tag studio-tag--active">En emisión</span>
+              }
+            </button>
+          } @empty {
+            <div class="admin-empty">
+              <strong>Crea la primera era</strong
+              ><span>Después podrás añadir series y publicidad.</span>
+            </div>
+          }
+        </nav>
+        @if (selectedEra(); as era) {
+          <section class="era-desk admin-panel">
+            <header class="admin-panel__header">
+              <div>
+                <h2>{{ era.name }}</h2>
+                <p>{{ era.description }}</p>
+              </div>
+              <div class="studio-actions">
+                @if (!era.isActive) {
+                  <button
+                    type="button"
+                    class="admin-button admin-button--primary"
+                    (click)="activate(era)"
+                    [disabled]="activating()"
+                  >
+                    {{ activating() ? 'Activando…' : 'Emitir esta era' }}
+                  </button>
+                }
+                <button
+                  class="admin-button admin-button--secondary"
+                  type="button"
+                  (click)="openForm(era)"
+                >
+                  Editar era
+                </button>
+              </div>
+            </header>
+            <nav class="studio-tabs" aria-label="Contenido de la era">
+              <button
+                type="button"
+                [attr.aria-pressed]="eraTab() === 'lineup'"
+                (click)="eraTab.set('lineup')"
+              >
+                Series y temporadas
+              </button>
+              @if (menuService.currentUser()?.rol?.id === 1) {
+                <button
+                  type="button"
+                  [attr.aria-pressed]="eraTab() === 'advertising'"
+                  (click)="eraTab.set('advertising')"
+                >
+                  Publicidad
+                </button>
+              }
+            </nav>
+            @if (eraTab() === 'advertising') {
+              <app-commercial-breaks [eraId]="era.id" [channelId]="selectedChannelId()" />
+            } @else {
+              <div class="lineup-heading">
+                <span>{{ selectedSeriesIds().length }} series seleccionadas</span
+                ><button
+                  type="button"
+                  class="admin-button"
+                  (click)="seriesPickerOpen.set(!seriesPickerOpen())"
+                >
+                  {{ seriesPickerOpen() ? 'Ver seleccionadas' : 'Añadir series' }}
+                </button>
+              </div>
+              <div class="era-lineup">
+                @for (item of series(); track item.id) {
+                  @if (seriesPickerOpen() || selectedSeriesIds().includes(item.id)) {
+                    <article class="lineup-series">
+                      <div class="lineup-cover">
+                        @if (item.logoPath) {
+                          <img [src]="apiUrl + item.logoPath" [alt]="item.name" />
+                        } @else {
+                          <span class="material-symbols-outlined" aria-hidden="true">movie</span>
+                        }
+                      </div>
+                      <div class="lineup-body">
+                        <label class="studio-check"
+                          ><input
+                            type="checkbox"
+                            [checked]="selectedSeriesIds().includes(item.id)"
+                            (change)="toggleSeries(item.id, $any($event.target).checked)"
+                          /><strong>{{ item.name }}</strong></label
+                        ><span class="studio-muted"
+                          >{{ item.episodeCount || 0 }} episodios disponibles</span
+                        >
+                        @if (selectedSeriesIds().includes(item.id)) {
+                          <div class="season-pills">
+                            @for (season of availableSeasons(item); track season) {
+                              <label
+                                ><input
+                                  type="checkbox"
+                                  [checked]="isSeasonSelected(item, season)"
+                                  (change)="toggleSeason(item, season, $any($event.target).checked)"
+                                /><span>{{
+                                  season === 0 ? 'Especiales y películas' : 'Temporada ' + season
+                                }}</span></label
+                              >
+                            } @empty {
+                              <span class="studio-muted"
+                                >Esta serie aún no tiene episodios. Súbelos desde su ficha.</span
+                              >
+                            }
+                          </div>
+                        }
+                      </div>
+                      <a
+                        routerLink="/dashboard/series"
+                        [queryParams]="{ seriesId: item.id }"
+                        [attr.aria-label]="'Abrir ficha de ' + item.name"
+                        title="Abrir ficha de la serie"
+                        ><span class="material-symbols-outlined" aria-hidden="true"
+                          >open_in_new</span
+                        ></a
+                      >
+                    </article>
+                  }
+                }
+                @if (!selectedSeriesIds().length && !seriesPickerOpen()) {
+                  <div class="admin-empty">
+                    <strong>Añade las series de esta época</strong
+                    ><span>Podrás elegir únicamente las temporadas que quieres emitir.</span>
+                  </div>
+                }
+              </div>
+              <div class="lineup-footer">
+                <button
+                  class="admin-button admin-button--primary"
+                  type="button"
+                  [disabled]="savingSelection()"
+                  (click)="saveSeriesSelection(era)"
+                >
+                  {{ savingSelection() ? 'Guardando…' : 'Guardar series y temporadas' }}</button
+                ><button
+                  class="admin-button admin-button--secondary"
+                  type="button"
+                  (click)="selectEra(era)"
+                  [disabled]="savingSelection()"
+                >
+                  Descartar cambios
+                </button>
+              </div>
+            }
+            <footer class="era-footer">
+              <span class="studio-muted"
+                >{{ era.startDate | date: 'dd/MM/yyyy'
+                }}{{ era.endDate ? ' — ' + (era.endDate | date: 'dd/MM/yyyy') : '' }}</span
+              ><button
+                type="button"
+                class="studio-back"
+                [disabled]="era.isActive"
+                (click)="deleteEra(era)"
+              >
+                Eliminar era
+              </button>
+            </footer>
+          </section>
+        }
+      </div>
+    }
+  }
 </section>

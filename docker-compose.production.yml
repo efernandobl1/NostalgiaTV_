@@ -75,8 +75,10 @@ services:
       ReverseProxy__TrustForwardedHeaders: "true"
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads
+      CommunityCatalog__PublicUrl: ${COMMUNITY_CATALOG_URL:-}
       # Reglas de generación de programación (aleatoria). Configurables por .env.
       ChannelScheduling__NoRepeatWindowHours: ${SCHED_NO_REPEAT_HOURS:-24}
+      ChannelScheduling__TimeZoneId: ${TIME_ZONE:-America/Guatemala}
       ChannelScheduling__MaxSpecialsPerSeriesPerDay: ${SCHED_MAX_SPECIALS_PER_SERIES:-2}
       ChannelScheduling__MaxSpecialsPerDay: ${SCHED_MAX_SPECIALS_PER_DAY:-5}
       ChannelScheduling__MaxMoviesPerSeriesPerDay: ${SCHED_MAX_MOVIES_PER_SERIES:-2}
@@ -108,6 +110,43 @@ services:
       timeout: 5s
       retries: 10
       start_period: 60s
+
+  media-worker:
+    image: ${API_IMAGE:?Defina API_IMAGE}
+    container_name: nostalgia-media-worker
+    command: ["--media-worker"]
+    restart: unless-stopped
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      TZ: ${TIME_ZONE:-America/Guatemala}
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=NostalgiaTV;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True;Encrypt=True
+      FFmpeg__BinaryFolder: /usr/bin
+      MediaSettings__BasePath: /app/wwwroot/uploads
+      MediaProcessing__PollSeconds: ${MEDIA_POLL_SECONDS:-60}
+      MediaProcessing__StableAgeSeconds: ${MEDIA_STABLE_SECONDS:-120}
+    volumes:
+      - ./uploads:/app/wwwroot/uploads
+      - ./media:/app/wwwroot/uploads/media
+      - ./logs/media-worker:/app/Logs
+    depends_on:
+      webapi:
+        condition: service_healthy
+    networks:
+      - data-net
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # This is the hard ceiling. The worker limits itself to the dashboard day/night policy.
+    cpus: ${MEDIA_WORKER_CPUS:-4.0}
+    cpu_shares: 128
+    mem_limit: 768m
+    pids_limit: 128
+    stop_grace_period: 30s
+    logging: *default-log-options
 
   # Sirve la SPA + reverse proxy a la API (oculta). Publica sólo en localhost:
   # el nginx del host termina TLS y enruta el dominio hacia aquí. No expone 80/443

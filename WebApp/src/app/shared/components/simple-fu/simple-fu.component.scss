@@ -1,0 +1,36 @@
+:host { display: block; }
+:host ::ng-deep .file-uploader {
+  --ngx-file-upload-text: var(--dashboard-text, #292033);
+  --ngx-file-upload-accent: var(--dashboard-green, #365b2a);
+  --ngx-file-upload-icon-color: var(--dashboard-muted, #665a73);
+  padding: 18px;
+  min-height: 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .upload-input,
+  &.list-visible .upload-input {
+    position: static;
+    width: 100%;
+    margin: 0;
+    transform: none;
+    opacity: 1 !important;
+    transition: none;
+    text-align: center;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--dashboard-text, #292033) !important;
+  }
+
+  .file-info,
+  .remove-btn {
+    color: var(--dashboard-text, #292033) !important;
+  }
+
+  .upload-list {
+    min-width: 0;
+    width: 100%;
+  }
+}
+.upload-placeholder { display: flex; flex-direction: column; gap: 4px; color: inherit; }

@@ -1,44 +1,117 @@
-<main class="sign-in-area">
-  <section class="login-intro">
-    <span class="login-brand">NOSTALGIA TV</span>
-    <h1>Panel de administración</h1>
-    <p>Gestiona canales, eras, series, episodios y bumpers. Solo para cuentas con rol autorizado.</p>
-    <a routerLink="/"><span class="material-symbols-outlined">arrow_back</span>Volver a ver TV</a>
-  </section>
-
-  <section class="login-panel" aria-labelledby="login-title">
-    <span class="access-label">ACCESO</span>
-    <h2 id="login-title" class="mobile-title">Panel de administración</h2>
-    <form [formGroup]="authForm" (ngSubmit)="onSubmit()">
-      <label for="username">Usuario</label>
-      <mat-form-field>
-        <input matInput id="username" type="text" formControlName="username" autocomplete="username" placeholder="Ingresá tu usuario">
-      </mat-form-field>
-      @if (authForm.get('username')!.hasError('required') && authForm.get('username')!.touched) {
-        <div class="error">El usuario es obligatorio.</div>
-      }
-
-      <label for="password">Contraseña</label>
-      <mat-form-field>
-        <input matInput [type]="hide ? 'password' : 'text'" id="password" formControlName="password" autocomplete="current-password" placeholder="Ingresá tu contraseña">
-        <button mat-icon-button matSuffix type="button" (click)="hide = !hide" matTooltip="Mostrar u ocultar contraseña" aria-label="Mostrar u ocultar contraseña" [attr.aria-pressed]="!hide">
-          <span class="material-symbols-outlined">{{ hide ? 'visibility_off' : 'visibility' }}</span>
-        </button>
-      </mat-form-field>
-      @if (authForm.get('password')?.hasError('required') && authForm.get('password')?.touched) {
-        <div class="error">La contraseña es obligatoria.</div>
-      }
-      @if (authForm.get('password')!.hasError('minlength') && authForm.get('password')!.touched) {
-        <div class="error">La contraseña debe tener al menos 8 caracteres.</div>
-      }
-
-      <div class="login-options">
-        <mat-checkbox formControlName="rememberMe">Recordarme</mat-checkbox>
-        <span class="password-help">Olvidé mi contraseña</span>
+<main class="signal-page" [class.signal-page--tv]="tvMode.enabled()">
+  <header class="signal-header">
+    <a class="signal-brand" routerLink="/" aria-label="NostalgiaTV, inicio">
+      <span class="signal-brand__screen" aria-hidden="true">N</span>NostalgiaTV
+    </a>
+    <a class="signal-back" routerLink="/" aria-label="Volver a ver TV" title="Volver a ver TV">
+      <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span
+      ><span>Volver a ver TV</span>
+    </a>
+  </header>
+  <div class="signal-main access-layout">
+    <section class="access-intro" aria-labelledby="access-title">
+      <div class="access-television" aria-hidden="true">
+        <div class="access-screen"><span>Ntv</span></div>
+        <div class="access-hardware"><i></i><span></span></div>
       </div>
-      <button mat-button class="submit-button" type="submit" [disabled]="authForm.invalid">Entrar al panel</button>
-      @if (errorMessage) { <div class="error submit-error">{{ errorMessage }}</div> }
-    </form>
-    <a class="mobile-back" routerLink="/">Volver a ver TV</a>
-  </section>
+      <h1 id="access-title">La sala de control.</h1>
+      <p>Da vida a tus canales y organiza las historias que vuelven a la pantalla.</p>
+    </section>
+    <section class="access-panel" aria-labelledby="login-title">
+      <h2 id="login-title">Entrar al panel</h2>
+      <p class="access-caption">Usa tu cuenta de este servidor.</p>
+      <div class="access-server"><span>{{ servers.current }}</span><a routerLink="/connect">Cambiar servidor</a></div>
+      <form [formGroup]="authForm" (ngSubmit)="onSubmit()" [attr.aria-busy]="submitting">
+        <div class="access-field">
+          <label for="username">Usuario</label>
+          <input
+            id="username"
+            type="text"
+            formControlName="username"
+            autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
+            required
+            [readOnly]="submitting"
+            [attr.aria-invalid]="
+              authForm.get('username')!.invalid && authForm.get('username')!.touched
+            "
+            [attr.aria-describedby]="
+              authForm.get('username')!.invalid && authForm.get('username')!.touched
+                ? 'username-error'
+                : null
+            "
+          />
+          @if (authForm.get('username')!.invalid && authForm.get('username')!.touched) {
+            <p id="username-error" class="access-error">Introduce tu usuario.</p>
+          }
+        </div>
+        <div class="access-field">
+          <label for="password">Contraseña</label>
+          <div class="access-password">
+            <input
+              id="password"
+              [type]="hide ? 'password' : 'text'"
+              formControlName="password"
+              autocomplete="current-password"
+              required
+              [readOnly]="submitting"
+              [attr.aria-invalid]="
+                authForm.get('password')!.invalid && authForm.get('password')!.touched
+              "
+              [attr.aria-describedby]="
+                authForm.get('password')!.invalid && authForm.get('password')!.touched
+                  ? 'password-error'
+                  : null
+              "
+            />
+            <button
+              class="access-reveal"
+              type="button"
+              (click)="hide = !hide"
+              [attr.aria-label]="hide ? 'Mostrar contraseña' : 'Ocultar contraseña'"
+              [attr.title]="hide ? 'Mostrar contraseña' : 'Ocultar contraseña'"
+              [attr.aria-pressed]="!hide"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">{{
+                hide ? 'visibility' : 'visibility_off'
+              }}</span>
+            </button>
+          </div>
+          @if (authForm.get('password')!.invalid && authForm.get('password')!.touched) {
+            <p id="password-error" class="access-error">
+              {{
+                authForm.get('password')!.hasError('required')
+                  ? 'Introduce tu contraseña.'
+                  : 'La contraseña debe tener al menos 8 caracteres.'
+              }}
+            </p>
+          }
+        </div>
+        <label class="access-remember">
+          <input
+            type="checkbox"
+            formControlName="rememberMe"
+            [attr.disabled]="submitting ? '' : null"
+          />Recordarme en este dispositivo
+        </label>
+        @if (errorMessage) {
+          <p class="access-error access-error--submit" role="alert">{{ errorMessage }}</p>
+        }
+        <button
+          class="signal-button signal-button--primary access-submit"
+          type="submit"
+          [disabled]="submitting"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">{{
+            submitting ? 'hourglass_top' : 'login'
+          }}</span>
+          {{ submitting ? 'Entrando…' : 'Entrar al panel' }}
+        </button>
+        <span class="access-status" role="status">{{
+          submitting ? 'Comprobando tu cuenta…' : ''
+        }}</span>
+      </form>
+    </section>
+  </div>
 </main>

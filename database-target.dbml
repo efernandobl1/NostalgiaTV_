@@ -1,0 +1,300 @@
+Project NostalgiaTVProposed {
+  database_type: 'SQL Server'
+  Note: 'Future-state model only. Not the current database or an applied migration.'
+}
+
+Enum InterludeKind {
+  Bumper
+  Advertisement
+}
+
+Enum BreakRole {
+  BreakOpener
+  Advertisement
+  BreakCloser
+}
+
+Table Users {
+  Id int [pk, increment]
+  Username nvarchar(200) [not null]
+}
+
+Table Series {
+  Id int [pk, increment]
+  Name nvarchar(300) [not null]
+  Description nvarchar(max)
+  History nvarchar(max)
+  StartDate date
+  EndDate date
+  LogoPath nvarchar(1000)
+  Rating decimal(4,2)
+  Seasons int [note: 'Review whether this can be derived from Episodes.']
+}
+
+Table Categories {
+  Id int [pk, increment]
+  Name nvarchar(200) [not null, unique]
+}
+
+Table SeriesCategories {
+  SeriesId int [not null]
+  CategoryId int [not null]
+
+  indexes {
+    (SeriesId, CategoryId) [pk]
+  }
+}
+
+Table Episodes {
+  Id int [pk, increment]
+  SeriesId int [not null]
+  Season int [not null]
+  EpisodeNumber int [not null]
+  Title nvarchar(300) [not null]
+  FilePath nvarchar(1000)
+}
+
+Table MetadataProviders {
+  Id int [pk, increment]
+  Code nvarchar(80) [not null, unique]
+  Name nvarchar(200) [not null]
+}
+
+Table SeriesExternalIds {
+  Id int [pk, increment]
+  SeriesId int [not null]
+  ProviderId int [not null]
+  ExternalId nvarchar(300) [not null]
+
+  indexes {
+    (ProviderId, ExternalId) [unique]
+  }
+}
+
+Table MetadataImportRuns {
+  Id bigint [pk, increment]
+  SeriesExternalId int [not null]
+  LanguageCode nvarchar(20)
+  Status nvarchar(40) [not null]
+  StartedAtUtc datetime2 [not null]
+  FinishedAtUtc datetime2
+
+  Note: 'Record import provenance; review imported fields before overwriting local edits.'
+}
+
+Table SeriesComments {
+  Id bigint [pk, increment]
+  SeriesId int [not null]
+  UserId int [not null]
+  ParentCommentId bigint
+  Body nvarchar(max) [not null]
+  Status nvarchar(40) [not null]
+  CreatedAtUtc datetime2 [not null]
+  EditedAtUtc datetime2
+
+  indexes {
+    (Id, SeriesId) [unique]
+  }
+
+  Note: 'A composite self-reference ensures replies stay within the same series. Moderate and rate-limit public posting.'
+}
+
+Table Channels {
+  Id int [pk, increment]
+  Name nvarchar(200) [not null]
+}
+
+Table ChannelEras {
+  Id int [pk, increment]
+  ChannelId int [not null]
+  Name nvarchar(200) [not null]
+  HistoricalStartDate date
+  HistoricalEndDate date
+
+  indexes {
+    (ChannelId, Id) [unique]
+  }
+
+  checks {
+    `HistoricalEndDate IS NULL OR HistoricalStartDate IS NULL OR HistoricalEndDate >= HistoricalStartDate` [name: 'CK_ChannelEras_HistoricalDates']
+  }
+
+  Note: 'Historical editorial identity, such as Cartoon Network City. Historical dates never activate an era.'
+}
+
+Table ChannelEraSelections {
+  ChannelId int [pk]
+  ChannelEraId int [not null]
+  SelectedAtUtc datetime2 [not null]
+
+  Note: 'One explicitly selected active era per channel.'
+}
+
+Table ChannelEraSeries {
+  ChannelEraId int [not null]
+  SeriesId int [not null]
+  HasSeasonFilter bit [not null]
+
+  indexes {
+    (ChannelEraId, SeriesId) [pk]
+  }
+
+  Note: 'False means all seasons; true with no selected rows means none.'
+}
+
+Table ChannelEraSelectedSeasons {
+  ChannelEraId int [not null]
+  SeriesId int [not null]
+  SeasonNumber int [not null]
+
+  indexes {
+    (ChannelEraId, SeriesId, SeasonNumber) [pk]
+  }
+}
+
+Table EpisodeBreakPoints {
+  Id int [pk, increment]
+  EpisodeId int [not null]
+  OffsetSeconds decimal(12,3) [not null]
+  Label nvarchar(200)
+
+  indexes {
+    (EpisodeId, OffsetSeconds) [unique]
+  }
+
+  checks {
+    `OffsetSeconds > 0` [name: 'CK_EpisodeBreakPoints_Offset']
+  }
+
+  Note: 'Safe source-media offset where an airing can pause for a commercial break.'
+}
+
+Table Interludes {
+  Id int [pk, increment]
+  Kind InterludeKind [not null]
+  Title nvarchar(300) [not null]
+  FilePath nvarchar(1000) [not null]
+  DurationSeconds decimal(12,3) [not null]
+  OriginalYearFrom int
+  OriginalYearTo int
+  RegionCode nvarchar(20)
+  ApprovedForBroadcast bit [not null, default: 0]
+
+  checks {
+    `DurationSeconds > 0` [name: 'CK_Interludes_Duration']
+    `OriginalYearTo IS NULL OR OriginalYearFrom IS NULL OR OriginalYearTo >= OriginalYearFrom` [name: 'CK_Interludes_OriginalYears']
+  }
+}
+
+Table ChannelEraInterludes {
+  ChannelEraId int [not null]
+  InterludeId int [not null]
+  Role BreakRole [not null]
+  Weight int [not null]
+  MinimumGapSeconds int [not null]
+
+  indexes {
+    (ChannelEraId, InterludeId, Role) [pk]
+  }
+
+  checks {
+    `Weight > 0` [name: 'CK_ChannelEraInterludes_Weight']
+    `MinimumGapSeconds >= 0` [name: 'CK_ChannelEraInterludes_Gap']
+  }
+
+  Note: 'Validate that opener and closer roles use bumper media and the advertisement role uses advertisement media.'
+}
+
+Table ChannelEraBreakRules {
+  ChannelEraId int [pk]
+  MinimumAds int [not null]
+  MaximumAds int [not null]
+  MaximumBreakSeconds int [not null]
+
+  checks {
+    `MinimumAds >= 1 AND MaximumAds >= MinimumAds` [name: 'CK_ChannelEraBreakRules_AdCount']
+    `MaximumBreakSeconds > 0` [name: 'CK_ChannelEraBreakRules_Duration']
+  }
+}
+
+Table ScheduledPrograms {
+  Id bigint [pk, increment]
+  ChannelEraId int [not null]
+  EpisodeId int [not null]
+  ShuffleCycle int [note: 'Persisted shuffled playback cycle; null for imported history.']
+  GeneratedAtUtc datetime2 [not null]
+
+  Note: 'One airing of an eligible episode. Start and end times are derived from its playback segments.'
+}
+
+Table ScheduledAdBreaks {
+  Id bigint [pk, increment]
+  ScheduledProgramId bigint [not null]
+  EpisodeBreakPointId int [not null]
+  Ordinal int [not null]
+
+  indexes {
+    (ScheduledProgramId, Ordinal) [unique]
+    (ScheduledProgramId, EpisodeBreakPointId) [unique]
+    (Id, ScheduledProgramId) [unique]
+  }
+
+  checks {
+    `Ordinal > 0` [name: 'CK_ScheduledAdBreaks_Ordinal']
+  }
+
+  Note: 'Validate that the break point belongs to the episode of this scheduled program.'
+}
+
+Table ScheduledPlaybackSegments {
+  Id bigint [pk, increment]
+  ScheduledProgramId bigint [not null]
+  ScheduledAdBreakId bigint
+  InterludeId int
+  Sequence int [not null]
+  StartsAtUtc datetime2 [not null]
+  EndsAtUtc datetime2 [not null]
+  MediaStartSecond decimal(12,3)
+  MediaEndSecond decimal(12,3)
+
+  indexes {
+    (ScheduledProgramId, Sequence) [unique]
+    (StartsAtUtc, EndsAtUtc)
+  }
+
+  checks {
+    `Sequence > 0` [name: 'CK_ScheduledPlaybackSegments_Sequence']
+    `EndsAtUtc > StartsAtUtc` [name: 'CK_ScheduledPlaybackSegments_Time']
+    `(InterludeId IS NULL AND ScheduledAdBreakId IS NULL AND MediaStartSecond IS NOT NULL AND MediaEndSecond IS NOT NULL AND MediaEndSecond > MediaStartSecond AND MediaStartSecond >= 0) OR (InterludeId IS NOT NULL AND ScheduledAdBreakId IS NOT NULL AND MediaStartSecond IS NULL AND MediaEndSecond IS NULL)` [name: 'CK_ScheduledPlaybackSegments_Content']
+  }
+
+  Note: 'Ordered shared UTC timeline. Validate no channel overlap, contiguous episode ranges, and opener then ads then closer within each break.'
+}
+
+Ref: Series.Id < SeriesCategories.SeriesId
+Ref: Categories.Id < SeriesCategories.CategoryId
+Ref: Series.Id < Episodes.SeriesId
+Ref: MetadataProviders.Id < SeriesExternalIds.ProviderId
+Ref: Series.Id < SeriesExternalIds.SeriesId
+Ref: SeriesExternalIds.Id < MetadataImportRuns.SeriesExternalId
+Ref: Users.Id < SeriesComments.UserId
+Ref: Series.Id < SeriesComments.SeriesId
+Ref: SeriesComments.(Id, SeriesId) < SeriesComments.(ParentCommentId, SeriesId)
+
+Ref: Channels.Id < ChannelEras.ChannelId
+Ref: Channels.Id - ChannelEraSelections.ChannelId
+Ref: ChannelEras.(ChannelId, Id) < ChannelEraSelections.(ChannelId, ChannelEraId)
+Ref: ChannelEras.Id < ChannelEraSeries.ChannelEraId
+Ref: Series.Id < ChannelEraSeries.SeriesId
+Ref: ChannelEraSeries.(ChannelEraId, SeriesId) < ChannelEraSelectedSeasons.(ChannelEraId, SeriesId)
+Ref: Episodes.Id < EpisodeBreakPoints.EpisodeId
+Ref: ChannelEras.Id < ChannelEraInterludes.ChannelEraId
+Ref: Interludes.Id < ChannelEraInterludes.InterludeId
+Ref: ChannelEras.Id - ChannelEraBreakRules.ChannelEraId
+Ref: ChannelEras.Id < ScheduledPrograms.ChannelEraId
+Ref: Episodes.Id < ScheduledPrograms.EpisodeId
+Ref: ScheduledPrograms.Id < ScheduledAdBreaks.ScheduledProgramId
+Ref: EpisodeBreakPoints.Id < ScheduledAdBreaks.EpisodeBreakPointId
+Ref: ScheduledPrograms.Id < ScheduledPlaybackSegments.ScheduledProgramId
+Ref: ScheduledAdBreaks.(Id, ScheduledProgramId) < ScheduledPlaybackSegments.(ScheduledAdBreakId, ScheduledProgramId)
+Ref: Interludes.Id < ScheduledPlaybackSegments.InterludeId

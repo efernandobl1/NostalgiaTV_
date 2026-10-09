@@ -1,49 +1,59 @@
-# Actualizaciones automáticas como PRs revisables: Dependabot abre PRs agrupados de
-# minor/patch, el workflow (Trivy + build de imágenes) corre sobre cada uno y sólo se
-# fusiona si pasa. Los "major" llegan en su propio PR para revisarlos con cuidado.
 version: 2
 
+# Version and security updates target main only.
 updates:
-  # --- Frontend Angular (npm) ---
   - package-ecosystem: "npm"
     directory: "/WebApp"
+    target-branch: "main"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 14
+      semver-major-days: 30
     open-pull-requests-limit: 5
     groups:
-      angular-y-deps-menores:
+      minor-dependencies:
         update-types: ["minor", "patch"]
     ignore:
-      # Los "major" de Angular se migran con `ng update`, no con un bump ciego.
       - dependency-name: "@angular/*"
         update-types: ["version-update:semver-major"]
 
-  # --- Backend .NET (NuGet) ---
   - package-ecosystem: "nuget"
     directory: "/WebApi"
+    target-branch: "main"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 14
+      semver-major-days: 30
     open-pull-requests-limit: 5
     groups:
-      nuget-menores:
+      minor-dependencies:
         update-types: ["minor", "patch"]
 
-  # --- Imágenes base de Docker (tags/digests de los Dockerfile) ---
   - package-ecosystem: "docker"
     directory: "/WebApp"
+    target-branch: "main"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 14
     ignore:
-      # Review Node major upgrades against Angular and pnpm compatibility first.
       - dependency-name: "node"
         update-types: ["version-update:semver-major"]
+
   - package-ecosystem: "docker"
     directory: "/WebApi/WebApi"
+    target-branch: "main"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 14
 
-  # --- Acciones de GitHub del workflow de CI/CD ---
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "main"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 14

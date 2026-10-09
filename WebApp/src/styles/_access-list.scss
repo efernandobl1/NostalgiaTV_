@@ -1,13 +1,84 @@
-.access-module { display:flex; flex-direction:column; gap:14px; }
-.access-list { display:flex; flex-direction:column; overflow:hidden; border:1px solid rgba(139,125,255,.22); border-radius:14px; background:var(--dashboard-surface); }
-.access-row { display:flex; min-height:72px; align-items:center; gap:14px; padding:12px 18px; border-bottom:1px solid rgba(139,125,255,.14); }
-.access-row:last-child { border-bottom:0; }
-.access-avatar { display:grid; width:42px; height:42px; flex:0 0 42px; place-items:center; border-radius:50%; color:#fff; background:linear-gradient(135deg,#8b7dff,#5a4fe0); font-size:.8125rem; font-weight:600; }
-.access-row > div:nth-child(2) { display:flex; min-width:0; flex:1; flex-direction:column; gap:3px; }
-.access-row strong { font-size:1rem; font-weight:400; }
-.access-row div span { color:var(--dashboard-muted); font-size:.8125rem; }
-.access-badge { padding:5px 10px; border-radius:999px; color:var(--dashboard-purple-soft); background:rgba(139,125,255,.14); font-size:.75rem; }
-.access-actions { display:flex; gap:4px; }
-.access-actions button { display:grid; width:44px; height:44px; place-items:center; border:0; border-radius:10px; color:var(--dashboard-purple-soft); background:transparent; }
-.access-actions button.is-danger { color:var(--dashboard-red); }
-@media(max-width:48rem){ .access-row{padding:12px 14px;flex-wrap:wrap}.access-actions{margin-left:auto}.access-badge{white-space:normal} }
+.access-module {
+  display: grid;
+  gap: 24px;
+}
+.access-list {
+  border-top: 3px solid var(--dashboard-purple);
+  background: var(--dashboard-surface);
+}
+.access-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px;
+  border-bottom: 1px solid var(--dashboard-border);
+}
+.access-avatar {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 52px;
+  flex: 0 0 46px;
+  border: 1px solid var(--dashboard-border);
+  border-radius: 3px;
+  background: var(--dashboard-raised);
+  color: var(--dashboard-purple);
+  font:
+    26px/1 VT323,
+    monospace;
+}
+.access-row > div:nth-child(2) {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+  strong {
+    font-size: 18px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  span {
+    color: var(--dashboard-muted);
+    font-size: 14px;
+  }
+}
+.access-badge {
+  border: 1px solid var(--dashboard-border);
+  border-radius: 3px;
+  padding: 5px 10px;
+  font-size: 14px;
+  color: var(--dashboard-purple);
+}
+.access-actions {
+  display: flex;
+  gap: 8px;
+  button {
+    min-width: 44px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    color: var(--dashboard-muted);
+    border: 1px solid var(--dashboard-border);
+    border-radius: 4px;
+    background: transparent;
+    &:hover {
+      background: var(--dashboard-raised);
+    }
+    &.is-danger {
+      color: var(--dashboard-red);
+    }
+  }
+}
+@media (max-width: 600px) {
+  .access-row {
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 18px;
+  }
+  .access-badge {
+    margin-left: 60px;
+  }
+  .access-actions {
+    margin-left: auto;
+  }
+}

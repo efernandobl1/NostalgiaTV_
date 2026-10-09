@@ -1,11 +1,12 @@
-import { AsyncPipe } from '@angular/common';
 import { ChannelErasComponent } from '../channel-eras/channel-eras.component';
-import { Component, OnInit, signal, ViewChild, Inject } from '@angular/core';
+import { Component, OnInit, signal, ViewChild, computed, inject } from '@angular/core';
+import { ChannelPackageComponent } from './channel-package.component';
+import { MenuService } from '../../../core/services/menu.service';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatDialogModule, MatDialog, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
 import { Validators } from '@angular/forms';
@@ -16,7 +17,7 @@ import {
   DialogConfig,
   GenericFormDialogComponent,
 } from '../../../shared/components/dialogs/generic-form-dialog/generic-form-dialog.component';
-import { DatePipe, CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { environment } from '../../../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -29,6 +30,8 @@ interface ChannelStatePreview {
 }
 
 interface ScheduleEntry {
+  contentKind?: 'Episode' | 'Bumper' | 'Advertisement';
+  mediaStartSecond?: number;
   id: number;
   channelId: number;
   episodeId?: number;
@@ -45,82 +48,6 @@ interface ScheduleEntry {
 }
 
 @Component({
-  selector: 'app-schedule-dialog',
-  standalone: true,
-  imports: [CommonModule, DatePipe, MatButtonModule, MatIconModule, MatDialogModule, MatCardModule],
-  template: `
-    <div class="dialog-header">
-      <h2>{{ config.title }}</h2>
-      <button mat-icon-button (click)="close()"><mat-icon>close</mat-icon></button>
-    </div>
-    <div class="dialog-body">
-      @if (entries.length === 0) {
-        <p class="empty-msg">No hay programación disponible.</p>
-      } @else {
-        @for (entry of entries; track entry.id) {
-          <div class="schedule-item">
-            <div class="time-col">
-              <div class="time-start">{{ toLocalTime(entry.startTime) | date:'HH:mm' }}</div>
-              <div class="time-end">{{ toLocalTime(entry.endTime) | date:'HH:mm' }}</div>
-            </div>
-            <div class="info-col">
-              <div class="series-name">{{ entry.seriesName }}</div>
-              <div class="ep-title">{{ entry.episodeTitle }}
-                @if (entry.season > 0) { · T{{ entry.season }} }
-                @if (entry.episodeNumber > 0) { EP{{ entry.episodeNumber }} }
-              </div>
-            </div>
-            @if (entry.seriesLogoPath) {
-              <img [src]="apiUrl + entry.seriesLogoPath" [alt]="'Logo de ' + entry.seriesName" class="series-logo" />
-            }
-          </div>
-        }
-      }
-    </div>
-  `,
-  styles: [`
-    :host { display:block; }
-    .dialog-header {
-      display:flex; justify-content:space-between; align-items:center;
-      padding:16px 24px; border-bottom:1px solid var(--mat-sys-outline-variant, rgba(0,0,0,0.12));
-    }
-    .dialog-header h2 { margin:0; font-size:18px; }
-    .dialog-body { padding:16px 24px; max-height:60vh; overflow-y:auto; }
-    .empty-msg { text-align:center; opacity:0.6; }
-    .schedule-item {
-      display:flex; align-items:center; gap:12px;
-      padding:10px 0; border-bottom:1px solid var(--mat-sys-outline-variant, rgba(0,0,0,0.08));
-    }
-    .time-col { min-width:100px; }
-    .time-start { font-weight:bold; font-size:14px; }
-    .time-end { font-size:12px; opacity:0.6; }
-    .info-col { flex:1; }
-    .series-name { font-weight:500; }
-    .ep-title { font-size:12px; opacity:0.6; }
-    .series-logo { height:32px; border-radius:4px; }
-  `],
-})
-export class ScheduleDialogComponent {
-  entries: ScheduleEntry[] = [];
-  apiUrl = environment.apiUrl;
-
-  constructor(
-    @Inject(MAT_DIALOG_DATA) public config: DialogConfig,
-    private dialogRef: MatDialogRef<ScheduleDialogComponent>,
-  ) {
-    this.entries = config.data?.['entries'] ?? [];
-  }
-
-  toLocalTime(utc: string): Date {
-    return new Date(utc);
-  }
-
-  close() {
-    this.dialogRef.close();
-  }
-}
-
-@Component({
   selector: 'app-channels',
   imports: [
     MatTableModule,
@@ -133,18 +60,41 @@ export class ScheduleDialogComponent {
     MatTooltipModule,
     DatePipe,
     ChannelErasComponent,
-    AsyncPipe,
+    ChannelPackageComponent,
   ],
   templateUrl: './channels.component.html',
   styleUrl: './channels.component.scss',
 })
 export class ChannelsComponent implements OnInit {
   readonly selectedChannel = signal<ChannelResponse | null>(null);
-  readonly detailTab = signal<'eras' | 'history'>('eras');
+  readonly detailTab = signal<'eras' | 'schedule' | 'history' | 'share'>('eras');
+  private readonly menu = inject(MenuService);
+  readonly isAdmin = computed(() => this.menu.currentUser()?.rol.id === 1);
+  readonly importing = signal(false);
+  onImported(channelId: number): void {
+    this.importing.set(false);
+    this.router
+      .navigate([], { relativeTo: this.route, queryParams: { channelId } })
+      .then(() => this.loadChannels());
+    this.showSuccess(
+      'Canal instalado. Revisa sus piezas y regenera la programación para emitirlo.',
+    );
+  }
+  readonly searchTerm = signal('');
+  readonly loading = signal(true);
+  readonly loadError = signal(false);
+  readonly schedule = signal<ScheduleEntry[]>([]);
+  readonly scheduleLoading = signal(false);
+  readonly scheduleError = signal(false);
+  readonly refreshing = signal(false);
+  readonly showPast = signal(false);
   readonly channelStates = signal<Record<number, ChannelStatePreview | null>>({});
   paginator!: MatPaginator;
   @ViewChild(MatPaginator) set page(value: MatPaginator) {
-    if (value) { this.paginator = value; this.dataSource.paginator = value; }
+    if (value) {
+      this.paginator = value;
+      this.dataSource.paginator = value;
+    }
   }
 
   displayedColumns = ['id', 'name', 'logo', 'history', 'startDate', 'endDate', 'actions'];
@@ -175,18 +125,28 @@ export class ChannelsComponent implements OnInit {
   }
 
   loadChannels() {
+    this.loading.set(true);
+    this.loadError.set(false);
     this.channelsService.getAll().subscribe({
       next: (data) => {
         this.dataSource.data = data;
-        const selectedId = this.selectedChannel()?.id ?? Number(this.route.snapshot.queryParamMap.get('channelId'));
-        this.selectedChannel.set(data.find(channel => channel.id === selectedId) ?? null);
+        this.loading.set(false);
+        const selectedId =
+          this.selectedChannel()?.id ?? Number(this.route.snapshot.queryParamMap.get('channelId'));
+        this.selectedChannel.set(data.find((channel) => channel.id === selectedId) ?? null);
         for (const channel of data) {
-          this.http.get<ChannelStatePreview>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/state`)
+          this.http
+            .get<ChannelStatePreview>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/state`)
             .pipe(catchError(() => of(null)))
-            .subscribe(state => this.channelStates.update(states => ({ ...states, [channel.id]: state })));
+            .subscribe((state) =>
+              this.channelStates.update((states) => ({ ...states, [channel.id]: state })),
+            );
         }
       },
-      error: () => this.showError('Error al cargar los canales'),
+      error: () => {
+        this.loading.set(false);
+        this.loadError.set(true);
+      },
     });
   }
 
@@ -252,44 +212,82 @@ export class ChannelsComponent implements OnInit {
     });
   }
 
+  selectChannel(channel: ChannelResponse): void {
+    this.selectedChannel.set(channel);
+    this.detailTab.set('eras');
+    this.router.navigate([], { queryParams: { channelId: channel.id }, replaceUrl: true });
+  }
+  backToChannels(): void {
+    this.selectedChannel.set(null);
+    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+  }
+
+  visibleChannels(): ChannelResponse[] {
+    return this.dataSource.data.filter((channel) =>
+      channel.name.toLocaleLowerCase().includes(this.searchTerm().toLocaleLowerCase()),
+    );
+  }
+
+  visibleSchedule(): ScheduleEntry[] {
+    return this.showPast()
+      ? this.schedule()
+      : this.schedule().filter((entry) => new Date(entry.endTime).getTime() > Date.now());
+  }
+
+  mediaTime(seconds: number): string {
+    return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+  }
+
   viewSchedule(channel: ChannelResponse) {
-    this.http.get<ScheduleEntry[]>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/schedule`).subscribe({
-      next: (entries) => {
-        const seen = new Set<string>();
-        const unique = entries.filter(e => {
-          const key = `${e.episodeId}-${e.startTime}-${e.bumperId ?? 0}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-        const config: DialogConfig = {
-          title: `Programación — ${channel.name}`,
-          fields: [],
-          data: { entries: unique },
-        };
-        this.dialog.open(ScheduleDialogComponent, {
-          width: '700px',
-          maxWidth: '95vw',
-          data: config,
-        });
-      },
-      error: () => this.showError('Error al cargar la programación'),
-    });
+    this.detailTab.set('schedule');
+    this.scheduleLoading.set(true);
+    this.scheduleError.set(false);
+    this.schedule.set([]);
+    this.http
+      .get<ScheduleEntry[]>(`${this.apiUrl}/api/v1/public/channels/${channel.id}/schedule`)
+      .subscribe({
+        next: (entries) => {
+          if (this.selectedChannel()?.id !== channel.id) return;
+          this.schedule.set(entries);
+          this.scheduleLoading.set(false);
+        },
+        error: () => {
+          this.scheduleLoading.set(false);
+          this.scheduleError.set(true);
+        },
+      });
   }
 
   refreshSchedule(channel: ChannelResponse) {
+    if (this.refreshing()) return;
+    if (
+      !confirm(
+        `¿Regenerar la programación de ${channel.name}? El episodio actual continuará hasta terminar.`,
+      )
+    )
+      return;
+    this.refreshing.set(true);
     this.http.post(`${this.apiUrl}/api/v1/channels/${channel.id}/schedule/refresh`, {}).subscribe({
       next: () => {
-        this.showSuccess('Regeneración iniciada. Consulta la programación cuando termine.');
+        this.refreshing.set(false);
+        this.showSuccess('Programación regenerada');
+        this.viewSchedule(channel);
       },
-      error: () => this.showError('Error al regenerar la programación'),
+      error: () => {
+        this.refreshing.set(false);
+        this.showError('Error al regenerar la programación');
+      },
     });
   }
 
   private showSuccess(msg: string) {
-    this.snackBar.open(msg, 'Cerrar', { duration: 3000 });
+    this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
   }
   private showError(msg: string) {
-    this.snackBar.open(msg, 'Cerrar', { duration: 3000, panelClass: 'error-snack' });
+    this.snackBar.open(msg, 'Cerrar', {
+      duration: 0,
+      panelClass: 'error-snack',
+      politeness: 'assertive',
+    });
   }
 }

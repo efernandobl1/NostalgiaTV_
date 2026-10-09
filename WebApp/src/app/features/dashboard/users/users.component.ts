@@ -99,6 +99,6 @@ export class UsersComponent implements OnInit, AfterViewInit {
         });
     }
 
-    private showSuccess(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 3000 }); }
-    private showError(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 3000, panelClass: 'error-snack' }); }
+    private showSuccess(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 5000 }); }
+    private showError(msg: string) { this.snackBar.open(msg, 'Cerrar', { duration: 0, panelClass: 'error-snack', politeness: 'assertive' }); }
 }

@@ -1,1 +1,10 @@
-<file-upload class="file-uploader" [control]="fileUploadControl" [multiple]="false"></file-upload>
+<file-upload class="file-uploader" [control]="fileUploadControl" [multiple]="false">
+  <ng-template #placeholder>
+    <span class="upload-placeholder"><strong>Seleccionar imagen</strong><span>o arrastrarla aquí</span></span>
+  </ng-template>
+  <ng-template #item let-file="file" let-index="index" let-control="control">
+    <file-upload-list-item [file]="file" [index]="index" [control]="control"
+      >Quitar</file-upload-list-item
+    >
+  </ng-template>
+</file-upload>

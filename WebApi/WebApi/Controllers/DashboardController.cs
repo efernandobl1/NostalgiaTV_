@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using Infrastructure.Contexts;
+using Infrastructure.Services.Media;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,9 +24,9 @@ public sealed class DashboardController : ControllerBase
     public async Task<IActionResult> GetSummary(CancellationToken cancellationToken)
     {
         var seriesCount = await _database.Series.CountAsync(cancellationToken);
-        var episodeCount = await _database.Episodes.CountAsync(cancellationToken);
+        var episodeCount = await _database.Episodes.CountAsync(episode => episode.IsAvailable && episode.FilePath != null, cancellationToken);
         var missingEpisodeFiles = await _database.Episodes.CountAsync(
-            episode => episode.FilePath == null || episode.FilePath == string.Empty,
+            episode => !episode.IsAvailable || episode.FilePath == null || episode.FilePath == string.Empty,
             cancellationToken);
         var activeChannelCount = await _database.Channels.CountAsync(cancellationToken);
         var eraCount = await _database.ChannelEras.CountAsync(cancellationToken);
@@ -89,5 +90,21 @@ public sealed class DashboardController : ControllerBase
             .ToListAsync(cancellationToken);
 
         return Ok(activity);
+    }
+
+    [HttpGet("storage")]
+    [Authorize(Policy = "Series")]
+    public async Task<IActionResult> GetStorage([FromServices] MediaStorageMeter meter, CancellationToken token)
+    {
+        var series = await _database.Series.AsNoTracking().OrderBy(item => item.Name)
+            .Select(item => new { item.Id, item.Name, item.FolderPath,
+                EpisodeCount = item.Episodes.Count(episode => episode.IsAvailable && episode.FilePath != null),
+                MissingEpisodeCount = item.Episodes.Count(episode => !episode.IsAvailable || episode.FilePath == null) })
+            .ToListAsync(token);
+        var storage = await meter.MeasureAsync(series.ToDictionary(item => item.Id, item => item.FolderPath), token);
+        return Ok(new { storage.MeasuredAtUtc, storage.LibraryBytes, storage.TotalBytes, storage.AvailableBytes,
+            UsedBytes = storage.TotalBytes - storage.FreeBytes,
+            Series = series.Select(item => new { item.Id, item.Name, item.EpisodeCount, item.MissingEpisodeCount,
+                SizeBytes = storage.SeriesBytes.GetValueOrDefault(item.Id) }).OrderByDescending(item => item.SizeBytes) });
     }
 }

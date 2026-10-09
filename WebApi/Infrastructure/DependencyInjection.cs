@@ -6,6 +6,7 @@ using Infrastructure.Contexts;
 using Infrastructure.Mappings;
 using Infrastructure.Services;
 using Infrastructure.Services.InternalServices;
+using Infrastructure.Services.Media;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,14 +25,14 @@ namespace Infrastructure
 
             //Configurations
             services.Configure<FileUploadSettings>(configuration.GetSection("FileUpload"));
-            services.Configure<MediaSettings>(configuration.GetSection("MediaSettings"));
             services.Configure<SeriesUploadSettings>(configuration.GetSection("SeriesUpload"));
-            services.Configure<ChannelSchedulingSettings>(configuration.GetSection("ChannelScheduling"));
+            services.AddMediaProcessing(configuration);
 
             //Services
             services.AddSingleton<ChannelBroadcastService>();
 
             services.AddScoped<ChannelScheduleService>();
+            services.AddScoped<Infrastructure.Services.Packages.ChannelPackageService>();
             services.AddScoped<FileUploadService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ISeriesService, SeriesService>();
@@ -50,6 +51,19 @@ namespace Infrastructure
             services.AddHostedService<TokenCleanupService>();
             services.AddHostedService(sp => sp.GetRequiredService<ChannelBroadcastService>());
 
+            return services;
+        }
+
+        public static IServiceCollection AddMediaProcessing(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.Configure<MediaSettings>(configuration.GetSection("MediaSettings"));
+            services.Configure<MediaProcessingSettings>(configuration.GetSection("MediaProcessing"));
+            services.AddSingleton<MediaProcessRunner>();
+            services.AddSingleton<MediaCpuGovernor>();
+            services.AddSingleton<MediaProbe>();
+            services.AddSingleton<MediaTranscoder>();
+            services.AddScoped<MediaLibraryService>();
+            services.AddSingleton<MediaStorageMeter>();
             return services;
         }
     }

@@ -7,6 +7,7 @@ using ApplicationCore.Interfaces;
 using Infrastructure.BackgroundServices;
 using Infrastructure.Contexts;
 using Infrastructure.Services.InternalServices;
+using Infrastructure.Services.Media;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,12 +36,15 @@ namespace Infrastructure.Services
                 .ToListAsync();
 
             var responses = new List<ChannelResponse>();
+            var selections = await _context.ChannelEraSelections.AsNoTracking()
+                .ToDictionaryAsync(selection => selection.ChannelId, selection => selection.ChannelEraId);
             foreach (var channel in channels)
             {
                 var response = channel.Adapt<ChannelResponse>();
                 response.Eras = channel.Eras.Select(e => new ChannelEraResponse
                 {
                     Id = e.Id,
+                    IsActive = selections.GetValueOrDefault(channel.Id) == e.Id,
                     ChannelId = e.ChannelId,
                     ChannelName = channel.Name,
                     Name = e.Name,
@@ -66,21 +70,36 @@ namespace Infrastructure.Services
 
         public async Task<ChannelResponse> CreateAsync(ChannelRequest request)
         {
-            string logoPath = string.Empty;
-
-            if(request.Logo != null)
-                logoPath = await _fileUploadService.UploadAsync(request.Logo, "channels");
-
             var channel = new Channel
             {
                 Name = request.Name,
-                LogoPath = logoPath,
+                LogoPath = string.Empty,
                 History = request.History,
                 StartDate = request.StartDate,
                 EndDate = request.EndDate
             };
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             _context.Channels.Add(channel);
             await _context.SaveChangesAsync();
+            if (request.Logo != null)
+                channel.LogoPath = await _fileUploadService.UploadAsync(request.Logo, MediaStorageLayout.ChannelFolder(channel.Id));
+            var era = new ChannelEra
+            {
+                ChannelId = channel.Id,
+                Name = "Default lineup",
+                StartDate = channel.StartDate,
+                EndDate = channel.EndDate
+            };
+            _context.ChannelEras.Add(era);
+            await _context.SaveChangesAsync();
+            _context.ChannelEraSelections.Add(new ChannelEraSelection
+            {
+                ChannelId = channel.Id,
+                ChannelEraId = era.Id,
+                SelectedAtUtc = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return channel.Adapt<ChannelResponse>();
         }
 
@@ -91,11 +110,30 @@ namespace Infrastructure.Services
                 .FirstOrDefaultAsync(c => c.Id == channelId)
                 ?? throw new NotFoundException($"Channel {channelId} not found");
 
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             channel.Series = await _context.Series
                 .Where(s => request.SeriesIds.Contains(s.Id))
                 .ToListAsync();
 
             await _context.SaveChangesAsync();
+            var selectedEraId = await _context.ChannelEraSelections
+                .Where(item => item.ChannelId == channelId)
+                .Select(item => (int?)item.ChannelEraId)
+                .FirstOrDefaultAsync();
+            if (selectedEraId is int eraId)
+            {
+                await _context.ChannelEraSelectedSeasons
+                    .Where(item => item.ChannelEraId == eraId).ExecuteDeleteAsync();
+                await _context.ChannelEraSeries
+                    .Where(item => item.ChannelEraId == eraId).ExecuteDeleteAsync();
+                _context.ChannelEraSeries.AddRange(channel.Series.Select(series => new ChannelEraSeries
+                {
+                    ChannelEraId = eraId,
+                    SeriesId = series.Id
+                }));
+                await _context.SaveChangesAsync();
+            }
+            await transaction.CommitAsync();
             await _broadcastService.ReloadChannelAsync(channelId);
             return channel.Adapt<ChannelResponse>();
         }
@@ -111,7 +149,7 @@ namespace Infrastructure.Services
             channel.EndDate = request.EndDate;
 
             if (request.Logo != null)
-                channel.LogoPath = await _fileUploadService.UploadAsync(request.Logo, "channels");
+                channel.LogoPath = await _fileUploadService.UploadAsync(request.Logo, MediaStorageLayout.ChannelFolder(channel.Id));
 
             await _context.SaveChangesAsync();
             return channel.Adapt<ChannelResponse>();

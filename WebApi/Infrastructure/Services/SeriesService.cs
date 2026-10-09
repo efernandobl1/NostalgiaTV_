@@ -7,6 +7,7 @@ using ApplicationCore.Models;
 using ApplicationCore.Settings;
 using Infrastructure.Contexts;
 using Infrastructure.Services.InternalServices;
+using Infrastructure.Services.Media;
 using Mapster;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -20,57 +21,30 @@ namespace Infrastructure.Services
         private readonly FileUploadService _fileUploadService;
         private readonly SeriesFolderService _folderService;
         private readonly SeriesUploadSettings _uploadSettings;
+        private readonly MediaLibraryService _library;
+        private readonly MediaProbe _probe;
 
-        public SeriesService(NostalgiaTVContext context, FileUploadService fileUploadService, SeriesFolderService folderService, IOptions<SeriesUploadSettings> uploadSettings)
+        public SeriesService(NostalgiaTVContext context, FileUploadService fileUploadService, SeriesFolderService folderService, IOptions<SeriesUploadSettings> uploadSettings, MediaLibraryService library, MediaProbe probe)
         {
             _context = context;
             _fileUploadService = fileUploadService;
             _folderService = folderService;
             _uploadSettings = uploadSettings.Value;
+            _library = library;
+            _probe = probe;
         }
 
-        // Sólo formatos reproducibles directamente en un <video> HTML5. Se omiten
-        // contenedores/códecs que el navegador no reproduce (.flv, .avi, .wmv, .mkv):
-        // indexarlos generaba episodios que fallaban al reproducir en la web.
-        private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
-            { ".mp4", ".m4v", ".webm", ".ogg", ".ogv", ".mov" };
-
-        // Devuelve sólo archivos de video reales, ignorando artefactos de
-        // transcodificación (p. ej. "X.mp4.transcoding.mp4", "X.mp4.web-compatible")
-        // y temporales. Antes el scan tomaba TODO archivo de la carpeta, por lo que
-        // registraba esos temporales como episodios y la programación terminaba
-        // apuntando a rutas que luego no existían en disco (404 al reproducir).
-        private static IEnumerable<string> GetVideoFiles(string dir)
+        public async Task<List<SeriesResponse>> GetAllAsync()
         {
-            return Directory.GetFiles(dir).Where(path =>
-            {
-                var name = Path.GetFileName(path);
-                if (name.Contains(".transcoding.", StringComparison.OrdinalIgnoreCase) ||
-                    name.Contains(".web-compatible", StringComparison.OrdinalIgnoreCase) ||
-                    name.EndsWith(".part", StringComparison.OrdinalIgnoreCase) ||
-                    name.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase))
-                    return false;
-                return VideoExtensions.Contains(Path.GetExtension(path));
-            });
+            var series = await _context.Series.ProjectToType<SeriesResponse>().ToListAsync();
+            var seasons = await _context.Episodes.AsNoTracking()
+                .Where(episode => episode.IsAvailable)
+                .Select(episode => new { episode.SeriesId, episode.Season }).Distinct().ToListAsync();
+            var bySeries = seasons.ToLookup(episode => episode.SeriesId, episode => episode.Season);
+            foreach (var item in series)
+                item.SeasonNumbers = bySeries[item.Id].Order().ToList();
+            return series;
         }
-
-        // Corrige nombres mal decodificados (UTF-8 leído como Latin-1): "correrÃ­a"
-        // -> "correría". Ocurre al escanear en contenedores sin locale UTF-8. Sólo
-        // re-decodifica cuando aparecen los patrones típicos de mojibake y el
-        // resultado no introduce caracteres inválidos (así no daña nombres correctos).
-        private static string FixMojibake(string text)
-        {
-            if (string.IsNullOrEmpty(text)) return text;
-            if (text.IndexOf('Ã') < 0 && text.IndexOf('Â') < 0 && !text.Contains("â€")) return text;
-            try
-            {
-                var repaired = System.Text.Encoding.UTF8.GetString(System.Text.Encoding.Latin1.GetBytes(text));
-                return repaired.Contains('�') ? text : repaired;
-            }
-            catch { return text; }
-        }
-
-        public async Task<List<SeriesResponse>> GetAllAsync() => await _context.Series.ProjectToType<SeriesResponse>().ToListAsync();
 
         public async Task<SeriesResponse> GetByIdAsync(int id)
         {
@@ -82,14 +56,15 @@ namespace Infrastructure.Services
         public async Task<SeriesResponse> CreateAsync(SeriesRequest request)
         {
             var series = request.Adapt<Series>();
-
-            if (request.Logo != null)
-                series.LogoPath = await _fileUploadService.UploadAsync(request.Logo, "series");
-
-            series.FolderPath = _folderService.CreateSeriesFolder(request.Name, request.Seasons);
-
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             _context.Series.Add(series);
             await _context.SaveChangesAsync();
+            series.FolderPath = _folderService.CreateSeriesFolder(request.Name, request.Seasons, series.Id);
+            if (request.Logo != null)
+                series.LogoPath = await _fileUploadService.UploadAsync(request.Logo,
+                    MediaStorageLayout.RelativeFolder(_library.Root, series.FolderPath));
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return series.Adapt<SeriesResponse>();
         }
 
@@ -100,13 +75,14 @@ namespace Infrastructure.Services
 
             request.Adapt(series);
 
-            if (request.Logo != null)
-                series.LogoPath = await _fileUploadService.UploadAsync(request.Logo, "series");
-
             if (!string.IsNullOrEmpty(series.FolderPath))
                 _folderService.UpdateSeriesFolders(series.FolderPath, request.Seasons);
             else
-                series.FolderPath = _folderService.CreateSeriesFolder(request.Name, request.Seasons);
+                series.FolderPath = _folderService.CreateSeriesFolder(request.Name, request.Seasons, series.Id);
+
+            if (request.Logo != null)
+                series.LogoPath = await _fileUploadService.UploadAsync(request.Logo,
+                    MediaStorageLayout.RelativeFolder(_library.Root, series.FolderPath));
 
             await _context.SaveChangesAsync();
             return series.Adapt<SeriesResponse>();
@@ -143,116 +119,22 @@ namespace Infrastructure.Services
             if (string.IsNullOrEmpty(series.FolderPath) || !Directory.Exists(series.FolderPath))
                 throw new BadRequestException("Series folder not found.");
 
-            var episodeTypes = await _context.EpisodeTypes.ToListAsync();
-            var regularType = episodeTypes.First(t => t.Name == "Regular");
-            var specialType = episodeTypes.First(t => t.Name == "Special");
-            var movieType = episodeTypes.First(t => t.Name == "Movie");
+            await _library.ScanSeriesAsync(series, CancellationToken.None);
 
-            var existingEpisodes = await _context.Episodes
-                .Where(e => e.SeriesId == seriesId)
-                .ToListAsync();
-
-            var existingByPath = existingEpisodes
-                .Where(e => e.FilePath != null)
-                .ToDictionary(e => NormalizePath(e.FilePath!), e => e);
-
-            var scannedFiles = new List<(string FilePath, int Season, int EpisodeTypeId)>();
-            var allDirs = Directory.GetDirectories(series.FolderPath);
-
-            foreach (var seasonDir in allDirs.Where(d =>
-                Path.GetFileName(d).StartsWith("season ", StringComparison.OrdinalIgnoreCase)))
-            {
-                var dirName = Path.GetFileName(seasonDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                var numberPart = dirName.Replace("season ", "", StringComparison.OrdinalIgnoreCase).Trim();
-                var seasonNumber = int.TryParse(numberPart, out var n) ? n : 0;
-
-                foreach (var file in GetVideoFiles(seasonDir))
-                    scannedFiles.Add((file, seasonNumber, regularType.Id));
-            }
-
-            var specialsDir = allDirs.FirstOrDefault(d =>
-                Path.GetFileName(d).Equals("specials", StringComparison.OrdinalIgnoreCase))
-                ?? Path.Combine(series.FolderPath, "specials");
-
-            if (Directory.Exists(specialsDir))
-                foreach (var file in GetVideoFiles(specialsDir))
-                    scannedFiles.Add((file, 0, specialType.Id));
-
-            var moviesDir = allDirs.FirstOrDefault(d =>
-                Path.GetFileName(d).Equals("movies", StringComparison.OrdinalIgnoreCase))
-                ?? Path.Combine(series.FolderPath, "movies");
-
-            if (Directory.Exists(moviesDir))
-                foreach (var file in GetVideoFiles(moviesDir))
-                    scannedFiles.Add((file, 0, movieType.Id));
-
-            var scannedPaths = scannedFiles.Select(f => NormalizePath(f.FilePath)).ToHashSet();
-
-            var toRemove = existingEpisodes.Where(e =>
-                e.FilePath == null || !scannedPaths.Contains(NormalizePath(e.FilePath))).ToList();
-
-            if (toRemove.Count > 0)
-            {
-                var toRemoveIds = toRemove.Select(e => e.Id).ToList();
-                var orphanedEntries = await _context.ChannelScheduleEntries
-                    .Where(e => e.EpisodeId.HasValue && toRemoveIds.Contains(e.EpisodeId.Value))
-                    .ToListAsync();
-                _context.ChannelScheduleEntries.RemoveRange(orphanedEntries);
-            }
-
-            _context.Episodes.RemoveRange(toRemove);
-
-            foreach (var (filePath, season, episodeTypeId) in scannedFiles)
-            {
-                var key = NormalizePath(filePath);
-                var fileTitle = FixMojibake(Path.GetFileNameWithoutExtension(filePath));
-                var relativePath = ToRelativePath(filePath);
-
-                if (existingByPath.TryGetValue(key, out var existing))
-                {
-                    var titleMatchesFile = existing.Title == fileTitle;
-                    var wasManuallyEdited = !titleMatchesFile || existing.EpisodeNumber > 0;
-
-                    if (!wasManuallyEdited)
-                    {
-                        var (parsedTitle, parsedNumber) = ParseFileName(fileTitle);
-                        existing.Title = parsedTitle;
-                        if (parsedNumber > 0) existing.EpisodeNumber = parsedNumber;
-                    }
-
-                    existing.FilePath = relativePath;
-                    existing.Season = season;
-                    existing.EpisodeTypeId = episodeTypeId;
-                }
-                else
-                {
-                    var (parsedTitle, parsedNumber) = ParseFileName(fileTitle);
-
-                    _context.Episodes.Add(new Episode
-                    {
-                        Title = parsedTitle,
-                        FilePath = relativePath,
-                        SeriesId = seriesId,
-                        Season = season,
-                        EpisodeNumber = parsedNumber,
-                        EpisodeTypeId = episodeTypeId
-                    });
-                }
-            }
-
-            await _context.SaveChangesAsync();
-
-            return await _context.Episodes
-                .Where(e => e.SeriesId == seriesId)
+            var episodes = await _context.Episodes
+                .Where(e => e.SeriesId == seriesId && e.IsAvailable)
                 .Include(e => e.EpisodeType)
+                .OrderBy(e => e.Season)
+                .ThenBy(e => e.EpisodeNumber)
+                .ThenBy(e => e.Id)
                 .ProjectToType<EpisodeResponse>()
                 .ToListAsync();
+            foreach (var episode in episodes)
+                episode.FileSizeBytes = _library.FileSize(episode.FilePath);
+            return episodes;
         }
 
-        // Guarda archivos de video directamente en la carpeta de la serie (para no
-        // depender de FTP). La validación de extensión/temporales coincide con lo
-        // que ScanFolderAsync acepta después, y se conserva el nombre original para
-        // que ParseFileName extraiga número/título del episodio.
+        // Upload to a temporary file, probe it and publish atomically. Only compatible videos are indexed.
         public async Task<List<SeriesUploadResult>> UploadEpisodeFilesAsync(int seriesId, SeriesUploadRequest request)
         {
             var series = await _context.Series.FindAsync(seriesId)
@@ -274,7 +156,7 @@ namespace Infrastructure.Services
             }
 
             if (string.IsNullOrEmpty(series.FolderPath))
-                series.FolderPath = _folderService.CreateSeriesFolder(series.Name, series.Seasons);
+                series.FolderPath = _folderService.CreateSeriesFolder(series.Name, series.Seasons, series.Id);
 
             var subfolder = target switch
             {
@@ -282,8 +164,8 @@ namespace Infrastructure.Services
                 "movies" => "movies",
                 _ => "specials"
             };
-            var targetDir = Path.GetFullPath(Path.Combine(series.FolderPath, subfolder));
-            Directory.CreateDirectory(targetDir);
+            var targetDir = MediaStorageLayout.CreateDirectory(_library.Root,
+                MediaStorageLayout.RelativeFolder(_library.Root, series.FolderPath) + "/" + subfolder);
 
             var maxBytes = (long)_uploadSettings.MaxFileSizeMB * 1024 * 1024;
             var results = new List<SeriesUploadResult>();
@@ -301,9 +183,9 @@ namespace Infrastructure.Services
                         throw new BadRequestException("Invalid file name.");
 
                     var ext = Path.GetExtension(originalName);
-                    if (!VideoExtensions.Contains(ext))
+                    if (!MediaFilePolicy.IsCandidate(originalName))
                         throw new BadRequestException(
-                            $"Format '{ext}' is not playable in the browser. Allowed: {string.Join(", ", VideoExtensions)}.");
+                            $"Video format '{ext}' is not supported by the media worker.");
 
                     if (IsTranscodeArtifact(originalName))
                         throw new BadRequestException("Temporary or transcoding files are not accepted.");
@@ -315,12 +197,23 @@ namespace Infrastructure.Services
                         throw new BadRequestException($"File exceeds {_uploadSettings.MaxFileSizeMB}MB.");
 
                     var finalName = GetUniqueFileName(targetDir, SanitizeFileName(originalName));
-                    fullPath = Path.GetFullPath(Path.Combine(targetDir, finalName));
-                    if (!fullPath.StartsWith(targetDir, StringComparison.Ordinal))
-                        throw new BadRequestException("Invalid file path.");
-
+                    var destination = Path.GetFullPath(Path.Combine(targetDir, finalName));
+                    MediaFilePolicy.SafePath(_library.Root, targetDir);
+                    fullPath = Path.Combine(targetDir, $".upload-{Guid.NewGuid():N}.part");
                     await using (var stream = new FileStream(fullPath, FileMode.CreateNew))
                         await file.CopyToAsync(stream);
+                    var info = await _probe.ReadAsync(fullPath, CancellationToken.None, ext);
+                    File.Move(fullPath, destination, overwrite: false);
+                    fullPath = destination;
+
+                    // Dashboard uploads are already complete and validated; they need no SFTP settling delay.
+                    if (info.Compatible)
+                    {
+                        var saved = new FileInfo(destination);
+                        await _library.ImportAsync(new LibraryFile(seriesId, destination,
+                            Path.GetRelativePath(_library.Root, destination).Replace('\\', '/'), saved.Length, saved.LastWriteTimeUtc),
+                            CancellationToken.None);
+                    }
 
                     result.Success = true;
                     result.FilePath = ToRelativePath(fullPath);
@@ -335,7 +228,7 @@ namespace Infrastructure.Services
                     // Escritos interrumpidos (disco lleno, permiso): no dejar archivos parciales.
                     if (fullPath is not null)
                         try { File.Delete(fullPath); } catch (IOException) { }
-                    result.Error = $"Error writing file: {ex.Message}";
+                    result.Error = "No se pudo validar o guardar el video. Comprueba formato, espacio y permisos.";
                 }
 
                 results.Add(result);
@@ -361,7 +254,7 @@ namespace Infrastructure.Services
             var invalid = new HashSet<char>(Path.GetInvalidFileNameChars()) { ':', '/', '\\' };
             var ext = Path.GetExtension(fileName);
             var baseName = Path.GetFileNameWithoutExtension(fileName);
-            var safe = new string(baseName.Select(c => invalid.Contains(c) ? '-' : c).ToArray())
+            var safe = new string(baseName.Select(c => invalid.Contains(c) || char.IsControl(c) ? '-' : c).ToArray())
                 .Trim().TrimEnd('.');
             return string.IsNullOrEmpty(safe) ? $"video{ext}" : safe + ext;
         }
@@ -391,31 +284,6 @@ namespace Infrastructure.Services
                 : normalized;
         }
 
-        private static string NormalizePath(string path) =>
-            path.Replace("\\", "/").ToLowerInvariant().Trim();
-
-        private static (string Title, int EpisodeNumber) ParseFileName(string fileName)
-        {
-            // Patrón "1x10", "S01E10", "1E10" en cualquier parte del nombre
-            // (p. ej. "Los Simpsons 1x10 - La correría"): tomamos el nº de episodio.
-            var se = System.Text.RegularExpressions.Regex.Match(
-                fileName, @"[Ss]?\d{1,2}[xXeE](\d{1,3})");
-            if (se.Success && int.TryParse(se.Groups[1].Value, out var epNum))
-            {
-                var title = fileName.Substring(se.Index + se.Length)
-                    .Trim().Trim('-', '–', '—', '.', '_', ' ').Trim();
-                return (string.IsNullOrWhiteSpace(title) ? fileName : title.Replace("_", " "), epNum);
-            }
-
-            // Patrón "10 - Título" (número al inicio del nombre).
-            var lead = System.Text.RegularExpressions.Regex.Match(
-                fileName, @"^(?:[Ss]\d+)?[Ee]?(\d{1,3})[\s\.\-_]+(.+)$");
-            if (lead.Success && int.TryParse(lead.Groups[1].Value, out var num))
-                return (lead.Groups[2].Value.Trim().Replace("_", " "), num);
-
-            return (fileName, 0);
-        }
-
         public async Task<PagedResult<SeriesResponse>> GetPublicAsync(SeriesFilterRequest filter)
         {
             var query = _context.Series.AsQueryable();
@@ -430,7 +298,7 @@ namespace Infrastructure.Services
                 query = query.Where(s => s.Categories.Any(c => c.Id == filter.CategoryId));
 
             if (filter.EpisodeTypeId.HasValue)
-                query = query.Where(s => s.Episodes.Any(e => e.EpisodeTypeId == filter.EpisodeTypeId));
+                query = query.Where(s => s.Episodes.Any(e => e.IsAvailable && e.EpisodeTypeId == filter.EpisodeTypeId));
 
             var totalCount = await query.CountAsync();
 

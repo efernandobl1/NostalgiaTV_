@@ -15,6 +15,7 @@ export interface ChannelBumperDto {
 }
 
 export interface ChannelEraDto {
+    isActive?: boolean;
     id: number;
     channelId: number;
     channelName: string;

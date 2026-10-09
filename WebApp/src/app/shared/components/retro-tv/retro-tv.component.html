@@ -1,564 +1,910 @@
-<!-- Experiencia pública retro TV — Tailwind v4, sin SCSS de componente.
-     UN SOLO <video> persistente dentro de #stage: en modo ilustración se ubica
-     en el tubo (.tube-screen); en cine/fullscreen pasa a fixed full-bleed. Nunca
-     se recrea, así cambiar de modo/fullscreen NO recarga el video. Todo va dentro
-     de #fsRoot (el elemento que entra a fullscreen) para que los overlays se vean. -->
-<div #fsRoot class="retro-surface relative bg-ink" [class.tv-mode]="tv.enabled()">
-
-  @if (needsPlayback() && hasMedia()) {
-    <section class="playback-prompt" role="dialog" aria-modal="true" aria-labelledby="playback-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
-      <div class="playback-card">
-        <span class="material-symbols-outlined" aria-hidden="true">live_tv</span>
-        <h2 id="playback-title">Continuar viendo</h2>
-        <p role="status">{{ playbackError() || 'Pulsa el botón para reproducir con sonido.' }}</p>
-        <button type="button" (click)="resumePlayback()">
-          <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
-          {{ playbackError() ? 'Reintentar reproducción' : 'Reproducir con sonido' }}
+<div #fsRoot class="retro-surface living-room" [class.tv-mode]="tv.enabled()">
+  <a class="skip-link" href="#public-player" [attr.inert]="cinema() || dialogOpen() ? '' : null"
+    >Ir al reproductor</a
+  >
+  <div
+    class="room-page"
+    [class.room-page--cinema]="cinema()"
+    [attr.inert]="dialogOpen() ? '' : null"
+  >
+    <header class="public-header">
+      <a class="public-brand" href="/" aria-label="NostalgiaTV, inicio"
+        ><span class="brand-screen" aria-hidden="true">N</span
+        ><span>NostalgiaTV<small>Tu señal de vuelta a casa</small></span></a
+      >
+      <nav aria-label="Navegación principal">
+        <button class="nav-key" type="button" (click)="showProfile.set(true)"><span class="material-symbols-outlined" aria-hidden="true">devices</span>Mi perfil</button>
+        @if (seasonal.canToggle()) {
+          <button class="nav-key" type="button" (click)="seasonal.toggle()" [attr.aria-pressed]="seasonal.enabled()"><span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>{{ seasonal.enabled() ? 'Tema clásico' : 'Halloween' }}</button>
+        }
+        <button class="nav-key" type="button" (click)="openBrowser()">
+          <span class="material-symbols-outlined" aria-hidden="true">video_library</span>Series
         </button>
-        <button type="button" class="playback-dismiss" (click)="needsPlayback.set(false)">Ahora no</button>
-      </div>
-    </section>
-  }
-
-  <!-- ══════════════════ ILUSTRACIÓN (siempre montada; el cine la cubre) ══════════════════ -->
-  <div class="relative flex h-dvh w-full flex-col overflow-hidden text-text"
-       style="background:linear-gradient(135deg,#1a1a2e 0%,#0f0f1e 50%,#16213e 100%)">
-    <header class="z-20 flex h-16 shrink-0 items-center justify-between px-5 md:px-7" [class.hidden]="cinema()">
-      <span class="flex items-center gap-3 font-pixel text-[11px] text-retro-red">
-        <span class="h-2.5 w-2.5 rounded-full bg-retro-red shadow-[0_0_10px_rgba(255,107,107,.9)]"></span>NOSTALGIA TV
-      </span>
-      <nav class="flex items-center gap-2">
-        <button type="button" (click)="openBrowser()"
-                class="hidden h-10 items-center gap-2 rounded-full border border-retro-green/35 bg-retro-green/[.06] px-3.5 text-sm text-retro-green transition hover:bg-retro-green/15 sm:inline-flex">
-          <span class="material-symbols-outlined text-[19px]">search</span>Buscar
+        <button
+          class="nav-key"
+          type="button"
+          (click)="openGuide()"
+          [disabled]="mode() === 'series'"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span
+          >Programación
         </button>
-        <button type="button" (click)="enterTvMode()"
-                class="inline-flex h-10 items-center gap-2 rounded-full border border-retro-gold/45 bg-retro-gold/[.08] px-3.5 text-sm text-retro-gold transition hover:bg-retro-gold/15">
-          <span class="material-symbols-outlined text-[19px]">tv</span><span class="hidden sm:inline">Modo TV</span>
+        <button class="nav-key nav-key--tv" type="button" (click)="enterTvMode()">
+          <span class="material-symbols-outlined" aria-hidden="true">tv</span>Modo TV
         </button>
-        <button type="button" (click)="goToLogin()"
-                class="inline-flex h-10 items-center gap-2 rounded-full border border-retro-purple bg-retro-purple/[.16] px-4 text-sm text-[#c9c2ff] transition hover:bg-retro-purple/25">
-          <span class="material-symbols-outlined text-[19px]">person</span><span class="hidden sm:inline">Entrar</span>
+        <button class="nav-key nav-key--login" type="button" (click)="goToLogin()">
+          <span class="material-symbols-outlined" aria-hidden="true">person</span>Entrar
         </button>
       </nav>
     </header>
-
-    <div class="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row lg:items-stretch">
-      <!-- escena TV -->
-      <div class="relative flex min-h-0 flex-1 items-start justify-center px-4 pt-2 lg:pr-0">
-        <div class="relative w-[min(1000px,64vw,74vh)] max-w-full" style="aspect-ratio:650/758">
-          <img src="images/tv-setup.png" alt="Televisor retro con VHS y estantería"
-               class="block h-full w-full object-contain" style="filter:drop-shadow(0 20px 40px rgba(0,0,0,.7))">
-
-          <!-- ▼▼ #stage: el VIDEO persistente (tubo ↔ cine) ▼▼ -->
-          <div #stage class="@container overflow-hidden"
-               [ngClass]="cinema() ? 'fixed inset-0 z-50 bg-black' : 'absolute tube-screen'">
-            <video #video playsinline (click)="onVideoClick()"
-                   [class.hidden]="!hasMedia()"
-                   [ngClass]="cinema() ? 'absolute inset-0 h-full w-full bg-black object-contain' : 'h-full w-full bg-black object-cover'"></video>
-
-            @if (!cinema() && !hasMedia()) {
-              <div class="absolute inset-0 flex flex-col items-center justify-center gap-[1.5cqh] px-[6%] text-center">
-                <span class="font-pixel text-[4.5cqw] leading-none text-retro-red [text-shadow:0_0_18px_rgba(255,107,107,.8)]">NOSTALGIA TV</span>
-                <span class="font-crt text-[11cqw] leading-none text-retro-green">Elegí un canal</span>
-                <span class="font-crt text-[6cqw] leading-none text-retro-gold">EN VIVO · {{ clock() }}</span>
-              </div>
-            }
-
-            <!-- filtros CRT (sin curvatura/viñeta en fullscreen) -->
-            <div class="video-filters"
-                 [class.vignette]="settings().alwaysShowFilters && activeFilters().vignette && !fullscreen()"
-                 [class.curvature]="settings().alwaysShowFilters && activeFilters().crtCurvature && !fullscreen()"
-                 [class.animate]="settings().alwaysShowFilters && activeFilters().scanlineAnimation"
-                 [style.--scanline-opacity]="scanlineOpacity()"
-                 [style.--scanline-size]="(activeFilters().scanlineDensity * 2) + 'px'"></div>
-
-            <!-- ══════════ OVERLAY DE CINE (auto-ocultable) ══════════ -->
-            @if (cinema()) {
-              <div class="cinema-overlay pointer-events-none absolute inset-0 z-10 flex flex-col justify-between transition-opacity duration-500"
-                   [class.opacity-0]="!showOverlay()"
-                   [attr.inert]="!showOverlay() ? '' : null"
-                   style="background:linear-gradient(180deg,rgba(6,6,14,.8) 0%,transparent 22%,transparent 55%,rgba(6,6,14,.92) 100%)">
-                <!-- barra superior -->
-                <div class="cinema-toolbar pointer-events-auto flex items-center justify-between gap-4 px-8 pt-7 md:px-14">
-                  <div class="flex items-center gap-5">
-                    <span class="flex items-center gap-3 font-pixel text-sm text-retro-red md:text-base">
-                      <span class="h-3 w-3 rounded-full bg-retro-red shadow-[0_0_16px_rgba(255,107,107,.9)]"></span>NOSTALGIA TV
-                    </span>
-                    @if (mode() === 'channels' && channelNumber()) {
-                      <span class="rounded-lg border-2 border-retro-gold/50 px-3 py-0.5 font-crt text-2xl text-retro-gold md:text-3xl">CH {{ channelNumber() }}</span>
-                    }
-                  </div>
-                  <div class="cinema-actions flex items-center gap-2.5">
-                    <span class="mr-2 font-crt text-2xl text-text-mute md:text-3xl">{{ clock() }}</span>
-                    @if (mode() !== 'series') {
-                      <button type="button" (click)="openGuide()" title="Guía"
-                              class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-gold transition hover:bg-white/10">
-                        <span class="material-symbols-outlined text-3xl">calendar_month</span>
-                      </button>
-                    }
-                    @if (tv.enabled()) {
-                    }
-                    <!-- Episodios (series) / Series (canales) -->
-                    @if (mode() === 'series') {
-                      <button type="button" (click)="toggleEpisodes()" title="Episodios"
-                              class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-cyan transition hover:bg-white/10">
-                        <span class="material-symbols-outlined text-3xl">list</span>
-                      </button>
-                    } @else {
-                      <button type="button" (click)="openBrowser()" title="Series"
-                              class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-cyan transition hover:bg-white/10">
-                        <span class="material-symbols-outlined text-3xl">grid_view</span>
-                      </button>
-                    }
-                    <button type="button" (click)="toggleFilters()" title="Filtros CRT"
-                            class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-green transition hover:bg-white/10">
-                      <span class="material-symbols-outlined text-3xl">tune</span>
-                    </button>
-                    <button type="button" (click)="toggleMute()" aria-label="Silenciar"
-                            class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-green transition hover:bg-white/10">
-                      <span class="material-symbols-outlined text-3xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span>
-                    </button>
-                    <input type="range" min="0" max="1" step="0.05" [value]="muted() ? 0 : volume()" (input)="setVolume(+$any($event.target).value)" aria-label="Volumen"
-                           class="w-24 cursor-pointer accent-[color:var(--color-retro-green)]">
-                    @if (!tv.enabled()) {
-                      <button type="button" (click)="toggleFullscreen()" aria-label="Pantalla completa"
-                              class="grid h-12 w-12 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-retro-green transition hover:bg-white/10">
-                        <span class="material-symbols-outlined text-3xl">{{ fullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</span>
-                      </button>
-                    }
-                    @if (tv.enabled() && !fullscreen()) {
-                      <button type="button" (click)="exitTvMode()"
-                              class="cinema-exit inline-flex h-12 items-center gap-2 rounded-xl border-2 border-retro-gold bg-retro-gold/15 px-5 text-lg font-semibold text-retro-gold transition hover:bg-retro-gold/25">
-                        <span class="material-symbols-outlined text-2xl">tv_off</span>Salir del modo TV
-                      </button>
-                    }
-                  </div>
-                </div>
-
-                <!-- zona inferior -->
-                <div class="cinema-bottom pointer-events-auto flex flex-col gap-6 px-8 pb-8 md:px-14">
-                  @if (!hasMedia()) {
-                    <span class="font-crt text-4xl text-retro-green/80">Elegí un canal para sintonizar</span>
-                  } @else {
-                    <div class="cinema-program flex flex-col items-start gap-2">
-                      @if (overlayLogo()) {
-                        <img [src]="logo(overlayLogo())" [alt]="overlayName()"
-                             class="object-contain drop-shadow-[0_4px_16px_rgba(0,0,0,.6)]"
-                             style="height:6rem;width:auto;max-width:min(40vw,320px)">
-                      }
-                      <span class="font-crt text-4xl leading-none text-retro-green md:text-5xl">{{ mode() === 'series' ? (state()?.seriesName ?? selectedSeries()?.name) : overlayName() }}</span>
-                      <span class="text-xl text-text md:text-2xl">{{ mode() === 'series' ? currentEpisode()?.title : (state()?.isBumper ? state()?.bumperTitle : state()?.episodeTitle) }}</span>
-                    </div>
-                    <!-- transporte: sólo series (canal = EN VIVO) -->
-                    @if (mode() === 'series') {
-                      <div class="flex items-center gap-4">
-                        <div class="relative h-2 flex-1 cursor-pointer rounded-full bg-white/15" (click)="seekBar($event)">
-                          <div class="absolute inset-y-0 left-0 rounded-full bg-[linear-gradient(90deg,#8ee89f,#5be8e0)]" [style.width.%]="progressPct()"></div>
-                        </div>
-                        <span class="shrink-0 font-crt text-xl text-text-mute md:text-2xl">{{ fmtTime(videoTime()) }} / {{ fmtTime(videoDuration()) }}</span>
-                      </div>
-                      <div class="flex flex-wrap items-center gap-3">
-                        <button type="button" (click)="playPrevEpisode()" aria-label="Episodio anterior"
-                                class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/30 bg-transparent text-text transition hover:bg-white/10"><span class="material-symbols-outlined text-3xl">skip_previous</span></button>
-                        <button type="button" (click)="seekRelative(-10)" aria-label="Retroceder 10s"
-                                class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/30 bg-transparent text-text transition hover:bg-white/10"><span class="material-symbols-outlined text-3xl">replay_10</span></button>
-                        <button type="button" (click)="togglePlay()" aria-label="Reproducir/Pausar"
-                                class="grid h-16 w-16 place-items-center rounded-2xl border-2 border-retro-gold bg-retro-gold/15 text-retro-gold transition hover:bg-retro-gold/25"><span class="material-symbols-outlined text-4xl">{{ playing() ? 'pause' : 'play_arrow' }}</span></button>
-                        <button type="button" (click)="seekRelative(10)" aria-label="Adelantar 10s"
-                                class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/30 bg-transparent text-text transition hover:bg-white/10"><span class="material-symbols-outlined text-3xl">forward_10</span></button>
-                        <button type="button" (click)="playNextEpisode()" aria-label="Episodio siguiente"
-                                class="grid h-14 w-14 place-items-center rounded-xl border border-text-mute/30 bg-transparent text-text transition hover:bg-white/10"><span class="material-symbols-outlined text-3xl">skip_next</span></button>
-                      </div>
-                    } @else {
-                      <span class="inline-flex w-fit items-center gap-2 rounded-full border border-retro-red/50 bg-retro-red/10 px-4 py-1.5 text-lg text-retro-red">
-                        <span class="h-2.5 w-2.5 animate-pulse rounded-full bg-retro-red"></span>EN VIVO
-                      </span>
-                    }
-                  }
-
-                  <!-- tira de canales (sólo en modo canales, no en series) -->
-                  @if (mode() !== 'series') {
-                  <div class="cinema-channels flex flex-col gap-3">
-                    <span class="font-pixel text-xs text-retro-gold">CANALES</span>
-                    <div class="flex gap-4 overflow-x-auto pb-2">
-                      @for (ch of channels(); track ch.id) {
-                        <button type="button" (click)="tune(ch); focusedIndex.set($index)"
-                                class="flex h-28 w-56 shrink-0 flex-col justify-between rounded-2xl border-[3px] bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] p-4 text-left transition"
-                                [ngClass]="current()?.id === ch.id ? 'border-retro-green'
-                                  : ($index === focusedIndex() ? 'border-retro-cyan' : 'border-[#2a2a44] hover:border-retro-cyan/55')">
-                          <span class="font-pixel text-xs text-text-dim">{{ ($index + 3).toString().padStart(2,'0') }}</span>
-                          <span class="truncate font-crt text-2xl leading-none text-retro-green">{{ ch.name }}</span>
-                        </button>
-                      } @empty { <span class="text-sm text-text-dim">Cargando canales…</span> }
-                    </div>
-                  </div>
-                  }
-
-                  @if (tv.enabled() && !fullscreen()) {
-                    <!-- leyenda D-pad (control remoto) — sólo en modo TV, no en fullscreen -->
-                    <div class="cinema-hints flex flex-wrap items-center gap-x-7 gap-y-2 text-sm text-text-dim md:text-base">
-                      <span class="flex items-center gap-2"><span class="rounded bg-retro-green px-2 py-0.5 font-crt text-lg text-ink">Enter</span>Sintonizar</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">← →</span>Cambiar canal</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">↑</span>{{ mode() === 'series' ? 'Episodios' : 'Guía' }}</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">↓</span>Imagen</span>
-                      <span class="flex items-center gap-2"><span class="rounded bg-text-mute px-2 py-0.5 font-crt text-lg text-ink">Esc</span>Ocultar tira</span>
-                    </div>
-                  }
-                </div>
-              </div>
-            }
-          </div>
-          <!-- ▲▲ #stage ▲▲ -->
+    <main id="public-player" class="public-main" tabindex="-1">
+      <div class="room-heading" [attr.inert]="cinema() ? '' : null">
+        <div>
+          <h1>Las tardes no se olvidan.</h1>
+          <p>Elige un canal y enciende la tele.</p>
         </div>
-        <img src="images/kid-watching.png" alt="Niño viendo televisión"
-             class="tv-viewer pointer-events-none absolute bottom-0 left-1/2 z-[5] hidden -translate-x-[62%] brightness-90 lg:block"
-             style="filter:drop-shadow(0 -10px 20px rgba(0,0,0,.5))">
+        <div class="room-clock">
+          <span class="clock-dot" aria-hidden="true"></span><time>{{ clock() }}</time>
+        </div>
       </div>
-
-      <!-- CONTROL: panel derecho en desktop, hoja inferior en móvil/tablet -->
-      <aside [attr.inert]="cinema() ? '' : null" class="z-20 flex shrink-0 flex-col gap-3 border-retro-purple/30 bg-[linear-gradient(145deg,#3d3d5c,#2a2a3e)] p-4
-                    max-lg:sticky max-lg:bottom-0 max-lg:rounded-t-3xl max-lg:border-t-[3px]
-                    lg:m-4 lg:min-h-0 lg:w-64 lg:overflow-hidden lg:rounded-3xl lg:border-[3px]">
-        <div class="flex items-center justify-between">
-          <span class="font-pixel text-[9px] text-retro-green">CONTROL</span>
-          <div class="flex items-center gap-1.5">
-            <button type="button" (click)="toggleFilters()" title="Filtros CRT"
-                    class="grid h-8 w-8 place-items-center rounded-lg border border-retro-green/40 bg-transparent text-retro-green transition hover:bg-white/10">
-              <span class="material-symbols-outlined text-lg">tune</span>
-            </button>
-            <button type="button" (click)="togglePanel()"
-                    class="inline-flex items-center gap-1 rounded-full border border-retro-green/40 bg-transparent px-2.5 py-1 text-xs text-retro-green transition hover:bg-white/10 lg:hidden">
-              <span class="material-symbols-outlined text-lg">{{ panelOpen() ? 'expand_more' : 'expand_less' }}</span>{{ panelOpen() ? 'Ocultar' : 'Ver' }}
+      <div class="room-layout">
+        <section class="watching-area" aria-label="Televisor y reproducción">
+          <div class="television-scene">
+            <div class="television">
+              <div class="television-face">
+                <div class="screen-bezel">
+                  <!-- Keep one video mounted across room, TV mode and fullscreen. -->
+                  <div #stage class="crt-screen" [class.crt-screen--cinema]="cinema()">
+                    <video
+                      #video
+                      playsinline
+                      (click)="onVideoClick()"
+                      [hidden]="!hasMedia()"
+                      aria-label="Reproductor de NostalgiaTV"
+                    ></video>
+                    @if (!hasMedia()) {
+                      <div class="standby-screen">
+                        <div class="test-pattern" aria-hidden="true">
+                          <span></span><span></span><span></span><span></span><span></span
+                          ><span></span>
+                        </div>
+                        <div class="standby-message">
+                          <span class="standby-mark" aria-hidden="true">Ntv</span
+                          ><strong>{{ tuning() ? 'Sintonizando…' : 'Estás en casa.' }}</strong
+                          ><span>{{
+                            tuning() ? current()?.name : 'Escoge tu canal favorito.'
+                          }}</span>
+                        </div>
+                      </div>
+                    }
+                    <div
+                      class="video-filters"
+                      [class.vignette]="
+                        settings().alwaysShowFilters && activeFilters().vignette && !cinema()
+                      "
+                      [class.curvature]="
+                        settings().alwaysShowFilters && activeFilters().crtCurvature && !cinema()
+                      "
+                      [class.animate]="
+                        settings().alwaysShowFilters && activeFilters().scanlineAnimation
+                      "
+                      [style.--scanline-opacity]="scanlineOpacity()"
+                      [style.--scanline-size]="activeFilters().scanlineDensity * 2 + 'px'"
+                    ></div>
+                    @if (cinema()) {
+                      <div
+                        class="cinema-overlay"
+                        [class.cinema-overlay--hidden]="!showOverlay()"
+                        [attr.inert]="!showOverlay() ? '' : null"
+                      >
+                        <header class="cinema-toolbar">
+                          <span class="cinema-brand">NostalgiaTV</span>
+                          @if (fullscreenNotice()) { <p role="status">{{ fullscreenNotice() }}</p> }
+                          <div class="cinema-actions">
+                            <button class="control-key" type="button" (click)="showProfile.set(true)"><span class="material-symbols-outlined" aria-hidden="true">devices</span>Sincronizar</button>
+                            @if (mode() === 'channels') {
+                              <button class="control-key" type="button" (click)="openGuide()">
+                                <span class="material-symbols-outlined" aria-hidden="true"
+                                  >calendar_month</span
+                                >Guía
+                              </button>
+                            }
+                            <button
+                              class="control-key"
+                              type="button"
+                              (click)="mode() === 'series' ? toggleEpisodes() : openBrowser()"
+                            >
+                              <span class="material-symbols-outlined" aria-hidden="true"
+                                >video_library</span
+                              >{{ mode() === 'series' ? 'Episodios' : 'Series' }}
+                            </button>
+                            <button class="control-key" type="button" (click)="toggleFilters()">
+                              <span class="material-symbols-outlined" aria-hidden="true">tune</span
+                              >Imagen
+                            </button>
+                            @if (tv.enabled()) {
+                              <button class="control-key" type="button" (click)="leaveCinema()">
+                                <span class="material-symbols-outlined" aria-hidden="true"
+                                  >close_fullscreen</span
+                                >Volver a la sala
+                              </button>
+                            } @else {
+                              <ng-container [ngTemplateOutlet]="soundControls" />
+                              <button
+                                class="control-key cinema-exit"
+                                type="button"
+                                (click)="toggleFullscreen()"
+                                aria-label="Salir de pantalla completa"
+                                title="Salir de pantalla completa"
+                              >
+                                <span class="material-symbols-outlined" aria-hidden="true"
+                                  >fullscreen_exit</span
+                                ><span>Salir de pantalla completa</span>
+                              </button>
+                            }
+                          </div>
+                        </header>
+                        <div class="cinema-bottom">
+                          <div class="cinema-program">
+                            <span class="live-label">{{
+                              mode() === 'series' ? 'A tu ritmo' : 'En vivo'
+                            }}</span>
+                            <h2>{{ overlayName() || 'Elige un canal' }}</h2>
+                            <p>
+                              {{
+                                currentEpisode()?.title ||
+                                  (state()?.isBumper ? state()?.bumperTitle : state()?.episodeTitle)
+                              }}
+                            </p>
+                          </div>
+                          @if (mode() === 'series') {
+                            <ng-container [ngTemplateOutlet]="seriesTransport" />
+                          }
+                          @if (mode() === 'channels') {
+                            <div class="cinema-channels" aria-label="Cambiar canal">
+                              @for (channel of channels(); track channel.id) {
+                                <button
+                                  class="cinema-channel"
+                                  type="button"
+                                  (click)="tune(channel); focusedIndex.set($index)"
+                                  [class.is-active]="current()?.id === channel.id"
+                                  [class.is-focused]="focusedIndex() === $index"
+                                  [attr.aria-pressed]="current()?.id === channel.id"
+                                >
+                                  <ng-container
+                                    [ngTemplateOutlet]="channelLogo"
+                                    [ngTemplateOutletContext]="{ $implicit: channel }"
+                                  />
+                                  <span class="station-name">{{ channel.name }}</span>
+                                </button>
+                              }
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+                <div class="television-hardware" aria-hidden="true">
+                  <div class="speaker"></div>
+                  <div class="dial"><i></i></div>
+                  <span>Color / stereo</span>
+                  <div class="hardware-light" [class.hardware-light--on]="hasMedia()"></div>
+                </div>
+              </div>
+              <div class="television-chin">
+                <span class="tv-manufacturer">Nostalgia</span
+                ><span class="tv-model">Colorvision 96</span
+                ><span class="tv-led" [class.tv-led--on]="hasMedia()"></span
+                ><span>{{ hasMedia() ? 'Señal conectada' : 'En espera' }}</span>
+              </div>
+            </div>
+            <div class="vcr" aria-hidden="true">
+              <span>VHS</span>
+              <div class="vcr-slot"></div>
+              <span class="vcr-display">{{ clock() }}</span
+              ><i></i><i></i>
+            </div>
+            <div class="room-shelf" aria-hidden="true">
+              <span class="tape tape--green">Tardes</span
+              ><span class="tape tape--gold">Clásicos</span
+              ><span class="tape tape--purple">Recuerdos</span><span class="shelf-line"></span>
+            </div>
+            <img class="room-viewer" src="images/kid-watching.png" alt="" aria-hidden="true" />
+          </div>
+          <div class="player-controls" [attr.inert]="cinema() ? '' : null">
+            <div class="player-signal">
+              <span class="clock-dot" aria-hidden="true"></span
+              >{{ mode() === 'series' ? 'A tu ritmo' : 'Televisión en vivo' }}
+            </div>
+            <div class="room-player-actions">
+              <ng-container [ngTemplateOutlet]="soundControls" />
+              <button
+                class="icon-key"
+                type="button"
+                (click)="toggleFilters()"
+                aria-label="Ajustar imagen CRT"
+                title="Ajustar imagen CRT"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+              </button>
+              <button
+                class="icon-key"
+                type="button"
+                (click)="toggleFullscreen()"
+                aria-label="Pantalla completa"
+                title="Pantalla completa"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">fullscreen</span>
+              </button>
+            </div>
+          </div>
+          @if (mode() === 'series') {
+            <div class="room-transport" [attr.inert]="cinema() ? '' : null">
+              <ng-container [ngTemplateOutlet]="seriesTransport" />
+            </div>
+          }
+          @if (tuneError()) {
+            <div class="public-message public-message--error" role="alert">
+              <span>{{ tuneError() }}</span
+              ><button class="text-key" type="button" (click)="retryCurrentChannel()">
+                Reintentar
+              </button>
+            </div>
+          }
+        </section>
+        <aside
+          class="channel-panel"
+          aria-labelledby="channel-panel-title"
+          [attr.inert]="cinema() ? '' : null"
+        >
+          <div class="tuner-heading">
+            <div>
+              <h2 id="channel-panel-title">
+                {{ mode() === 'series' ? selectedSeries()?.name : 'Canales' }}
+              </h2>
+            </div>
+            <button
+              class="icon-key panel-toggle"
+              type="button"
+              (click)="togglePanel()"
+              [attr.aria-expanded]="panelOpen()"
+              aria-controls="tuner-list"
+              [attr.aria-label]="panelOpen() ? 'Ocultar lista' : 'Mostrar lista'"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">{{
+                panelOpen() ? 'expand_less' : 'expand_more'
+              }}</span>
             </button>
           </div>
-        </div>
-
-        <div class="flex-col gap-3 lg:min-h-0 lg:flex-1" [ngClass]="panelOpen() ? 'flex' : 'hidden lg:flex'">
-          @if (mode() === 'series') {
-            <button type="button" (click)="backToChannels()"
-                    class="inline-flex items-center gap-1.5 self-start rounded-full border border-retro-cyan/50 bg-transparent px-3 py-1.5 text-xs text-retro-cyan transition hover:bg-retro-cyan/10">
-              <span class="material-symbols-outlined text-base">arrow_back</span>Volver a canales
-            </button>
-            <div class="flex flex-col gap-0.5">
-              <span class="font-pixel text-[7px] tracking-widest text-retro-red">REPRODUCIENDO</span>
-              <span class="font-crt text-2xl leading-none text-retro-green">{{ selectedSeries()?.name }}</span>
-              @if (currentEpisode(); as ep) { <span class="truncate text-xs text-text-dim">{{ ep.title }}</span> }
-            </div>
-            @if (seasons().length > 1) {
-              <div class="flex flex-wrap gap-1.5">
-                @for (s of seasons(); track s) {
-                  <button type="button" (click)="selectSeason(s)"
-                          class="shrink-0 rounded-lg px-3 py-1 font-crt text-lg transition"
-                          [ngClass]="selectedSeason() === s ? 'bg-retro-green text-ink' : 'border border-text-mute/30 bg-transparent text-text-mute hover:bg-white/10'">T{{ s }}</button>
+          @if (current() || selectedSeries()) { <button class="text-key public-comment-action" type="button" (click)="showComments.set(true)"><span class="material-symbols-outlined" aria-hidden="true">forum</span>Comentarios</button> }
+          @if (panelOpen()) {
+            <div id="tuner-list">
+              @if (mode() === 'channels') {
+                @if (channelsLoading()) {
+                  <p class="public-message" role="status">Buscando la señal…</p>
+                } @else if (channelsError()) {
+                  <div class="public-message public-message--error" role="alert">
+                    <p>No se pudieron cargar los canales.</p>
+                    <button class="text-key" type="button" (click)="loadChannels()">
+                      Reintentar
+                    </button>
+                  </div>
+                } @else {
+                  <div class="channel-list">
+                    @for (channel of channels(); track channel.id) {
+                      <button
+                        class="channel-station"
+                        type="button"
+                        (click)="tune(channel)"
+                        [class.is-active]="current()?.id === channel.id"
+                        [attr.aria-pressed]="current()?.id === channel.id"
+                        [attr.aria-label]="'Ver canal ' + channel.name"
+                      >
+                        <ng-container
+                          [ngTemplateOutlet]="channelLogo"
+                          [ngTemplateOutletContext]="{ $implicit: channel }"
+                        />
+                        <span class="station-name">{{ channel.name }}</span
+                        ><span class="material-symbols-outlined" aria-hidden="true">{{
+                          current()?.id === channel.id ? 'graphic_eq' : 'play_arrow'
+                        }}</span>
+                      </button>
+                    } @empty {
+                      <p class="public-message">Todavía no hay canales disponibles.</p>
+                    }
+                  </div>
                 }
-              </div>
-            }
-            <div class="flex flex-col gap-2 overflow-y-auto max-lg:max-h-72 lg:min-h-0 lg:flex-1">
-              @for (ep of seasonEpisodes(); track ep.id) {
-                <button type="button" (click)="playEpisode(ep)" [disabled]="!ep.filePath"
-                        class="flex items-center gap-2.5 rounded-lg border-2 bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] p-2.5 text-left transition disabled:opacity-40"
-                        [ngClass]="currentEpisode()?.id === ep.id ? 'border-retro-green' : 'border-[#1a1a2e] hover:border-retro-cyan/55'">
-                  <span class="font-pixel text-[8px] text-text-dim">{{ ep.episodeNumber.toString().padStart(2,'0') }}</span>
-                  <span class="flex-1 truncate text-sm" [ngClass]="watchedMap()[ep.id] ? 'text-text-dim' : 'text-text'">{{ ep.title }}</span>
-                  @if (currentEpisode()?.id === ep.id) {
-                    <span class="material-symbols-outlined text-lg text-retro-green">graphic_eq</span>
-                  } @else if (watchedMap()[ep.id]) {
-                    <span class="material-symbols-outlined text-lg text-retro-green" title="Visto">check_circle</span>
-                  } @else {
-                    <span class="material-symbols-outlined text-lg text-retro-cyan">play_arrow</span>
-                  }
+              } @else {
+                <button class="text-key" type="button" (click)="backToChannels()">
+                  <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>Volver
+                  a los canales
                 </button>
-              } @empty { <span class="px-1 py-2 text-xs text-text-dim">Sin episodios en esta temporada.</span> }
+                <div class="season-tabs" aria-label="Temporadas">
+                  @for (season of seasons(); track season) {
+                    <button
+                      class="tab-key"
+                      type="button"
+                      (click)="selectSeason(season)"
+                      [attr.aria-pressed]="!showSpecials() && selectedSeason() === season"
+                    >
+                      Temporada {{ season }}
+                    </button>
+                  }
+                  @if (hasSpecials()) {
+                    <button
+                      class="tab-key"
+                      type="button"
+                      (click)="selectSpecials()"
+                      [attr.aria-pressed]="showSpecials()"
+                    >
+                      Especiales
+                    </button>
+                  }
+                </div>
+                <div class="episode-list">
+                  @for (episode of displayedEpisodes(); track episode.id) {
+                    <button
+                      class="episode-row"
+                      type="button"
+                      (click)="playEpisode(episode)"
+                      [disabled]="!episode.filePath"
+                      [attr.aria-pressed]="currentEpisode()?.id === episode.id"
+                    >
+                      <span class="episode-number">{{
+                        episode.episodeNumber.toString().padStart(2, '0')
+                      }}</span
+                      ><span>{{ episode.title }}</span
+                      ><span class="material-symbols-outlined" aria-hidden="true">{{
+                        watchedMap()[episode.id] ? 'check_circle' : 'play_arrow'
+                      }}</span>
+                    </button>
+                  } @empty {
+                    <p class="public-message" role="status">
+                      {{
+                        episodesLoading()
+                          ? 'Cargando episodios…'
+                          : 'No hay episodios en esta temporada.'
+                      }}
+                    </p>
+                  }
+                </div>
+                @if (episodesError()) {
+                  <p class="public-message public-message--error" role="alert">
+                    {{ episodesError() }}
+                  </p>
+                }
+              }
+            </div>
+          }
+        </aside>
+      </div>
+      @if (state() && mode() === 'channels') {
+        <section
+          class="now-and-next"
+          aria-label="Programa actual y siguiente"
+          [attr.inert]="cinema() ? '' : null"
+        >
+          <div>
+            <span class="program-label"
+              ><i aria-hidden="true"></i>Ahora en {{ current()?.name }}</span
+            >
+            <h2>{{ state()?.isBumper ? state()?.bumperTitle : state()?.seriesName }}</h2>
+            <p>{{ state()?.isBumper ? 'Pausa de la programación' : state()?.episodeTitle }}</p>
+          </div>
+          <div>
+            <span class="program-label">Después · en {{ minutesUntilNext() }} min</span>
+            <h3>{{ state()?.nextEpisodeTitle || 'Por anunciar' }}</h3>
+          </div>
+        </section>
+      }
+    </main>
+    <footer class="public-footer" [attr.inert]="cinema() ? '' : null">
+      <span class="footer-signature">Hecho para volver.</span>
+    </footer>
+  </div>
+  <ng-template #channelLogo let-channel>
+    <span class="station-logo" aria-hidden="true">
+      @if (channel.logoPath && !unavailableChannelLogos().includes(channel.id)) {
+        <img
+          [src]="logo(channel.logoPath)"
+          alt=""
+          (error)="markChannelLogoUnavailable(channel.id)"
+        />
+      } @else {
+        <span class="material-symbols-outlined">live_tv</span>
+      }
+    </span>
+  </ng-template>
+  <ng-template #soundControls
+    ><div class="sound-controls">
+      <button
+        class="icon-key"
+        type="button"
+        (click)="toggleMute()"
+        [attr.aria-label]="muted() ? 'Activar sonido' : 'Silenciar'"
+        [attr.title]="muted() ? 'Activar sonido' : 'Silenciar'"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">{{
+          muted() ? 'volume_off' : 'volume_up'
+        }}</span></button
+      ><input
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        [value]="muted() ? 0 : volume()"
+        (input)="setVolume(+$any($event.target).value)"
+        aria-label="Volumen"
+      /></div
+  ></ng-template>
+  <ng-template #seriesTransport
+    ><div class="series-transport">
+      <button
+        class="icon-key"
+        type="button"
+        (click)="playPrevEpisode()"
+        aria-label="Episodio anterior"
+        title="Episodio anterior"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">skip_previous</span></button
+      ><button
+        class="icon-key"
+        type="button"
+        (click)="seekRelative(-10)"
+        aria-label="Retroceder 10 segundos"
+        title="Retroceder 10 segundos"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">replay_10</span></button
+      ><button
+        class="icon-key icon-key--play"
+        type="button"
+        (click)="togglePlay()"
+        [attr.aria-label]="playing() ? 'Pausar' : 'Reproducir'"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">{{
+          playing() ? 'pause' : 'play_arrow'
+        }}</span></button
+      ><button
+        class="icon-key"
+        type="button"
+        (click)="seekRelative(10)"
+        aria-label="Adelantar 10 segundos"
+        title="Adelantar 10 segundos"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">forward_10</span></button
+      ><button
+        class="icon-key"
+        type="button"
+        (click)="playNextEpisode()"
+        aria-label="Episodio siguiente"
+        title="Episodio siguiente"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">skip_next</span></button
+      ><label class="series-seek"
+        ><span>{{ fmtTime(videoTime()) }} / {{ fmtTime(videoDuration()) }}</span
+        ><input
+          type="range"
+          min="0"
+          [max]="videoDuration() || 1"
+          step="1"
+          [value]="videoTime()"
+          (input)="seekTo(+$any($event.target).value)"
+          [disabled]="!videoDuration()"
+          aria-label="Posición del episodio"
+      /></label></div
+  ></ng-template>
+
+  @if (needsPlayback() && hasMedia()) {
+    <div class="public-modal-backdrop playback-backdrop">
+      <section
+        class="public-dialog playback-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="playback-title"
+        cdkTrapFocus
+        [cdkTrapFocusAutoCapture]="true"
+      >
+        <span class="playback-symbol material-symbols-outlined" aria-hidden="true">live_tv</span
+        ><span class="section-note">La señal está lista</span>
+        <h2 id="playback-title">¿Seguimos viendo?</h2>
+        <p role="status">
+          {{ playbackError() || 'Un clic para volver a tu programa, con sonido.' }}
+        </p>
+        <button class="primary-key" type="button" (click)="resumePlayback()">
+          <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span
+          >{{ playbackError() ? 'Reintentar reproducción' : 'Reproducir con sonido' }}</button
+        ><button class="text-key" type="button" (click)="needsPlayback.set(false)">Ahora no</button>
+      </section>
+    </div>
+  }
+  @if (showFilters()) {
+    <div class="public-modal-backdrop" (click)="toggleFilters()">
+      <section
+        class="public-dialog filter-dialog"
+        (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="filters-title"
+        cdkTrapFocus
+        [cdkTrapFocusAutoCapture]="true"
+      >
+        <header class="dialog-heading">
+          <div>
+            <span class="section-note">A tu gusto</span>
+            <h2 id="filters-title">La imagen de antes.</h2>
+          </div>
+          <button
+            class="icon-key"
+            type="button"
+            (click)="toggleFilters()"
+            aria-label="Cerrar ajustes"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+        </header>
+        <p>La nostalgia en la pantalla, solo si te apetece.</p>
+        <label class="filter-switch"
+          >Efecto CRT<input
+            type="checkbox"
+            [checked]="settings().alwaysShowFilters"
+            (change)="toggleCrt()" /></label
+        ><label class="filter-switch"
+          >Curvatura<input
+            type="checkbox"
+            [checked]="activeFilters().crtCurvature"
+            (change)="setFilter('crtCurvature', $any($event.target).checked)" /></label
+        ><label class="filter-switch"
+          >Oscurecer bordes<input
+            type="checkbox"
+            [checked]="activeFilters().vignette"
+            (change)="setFilter('vignette', $any($event.target).checked)" /></label
+        ><label class="filter-switch"
+          >Animación de líneas<input
+            type="checkbox"
+            [checked]="activeFilters().scanlineAnimation"
+            (change)="setFilter('scanlineAnimation', $any($event.target).checked)" /></label
+        ><label class="filter-slider"
+          >Intensidad de líneas · {{ activeFilters().scanlineIntensity }}%<input
+            type="range"
+            min="0"
+            max="100"
+            [value]="activeFilters().scanlineIntensity"
+            (input)="setFilter('scanlineIntensity', +$any($event.target).value)" /></label
+        ><label class="filter-slider"
+          >Densidad de líneas · {{ activeFilters().scanlineDensity
+          }}<input
+            type="range"
+            min="1"
+            max="10"
+            [value]="activeFilters().scanlineDensity"
+            (input)="setFilter('scanlineDensity', +$any($event.target).value)"
+        /></label>
+      </section>
+    </div>
+  }
+  @if (browserOpen()) {
+    <div class="public-modal-backdrop">
+      <section
+        class="public-dialog library-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="library-title"
+        cdkTrapFocus
+        [cdkTrapFocusAutoCapture]="true"
+      >
+        <header class="dialog-heading">
+          <div>
+            <span class="section-note">La estantería de tus recuerdos</span>
+            <h2 id="library-title">Dale play a tu serie.</h2>
+          </div>
+          <button
+            class="icon-key"
+            type="button"
+            (click)="closeBrowser()"
+            aria-label="Cerrar catálogo"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+        </header>
+        <div class="catalog-tools">
+          <label class="catalog-search"
+            ><span class="material-symbols-outlined" aria-hidden="true">search</span
+            ><input
+              type="search"
+              [ngModel]="seriesQuery()"
+              (ngModelChange)="onSeriesQuery($event)"
+              placeholder="¿Qué serie recuerdas?"
+              aria-label="Buscar serie" /></label
+          ><label class="catalog-channel"
+            >Canal<select [ngModel]="selectedChannel()" (ngModelChange)="setChannelFilter($event)">
+              <option [ngValue]="null">Todos los canales</option>
+              @for (channel of channels(); track channel.id) {
+                <option [ngValue]="channel.id">{{ channel.name }}</option>
+              }
+            </select></label
+          >
+        </div>
+        <div class="catalog-tabs" aria-label="Filtrar series">
+          <button
+            class="tab-key"
+            type="button"
+            (click)="setCategory(null)"
+            [attr.aria-pressed]="catalogTab() === 'todas' && selectedCategory() === null"
+          >
+            Todas
+          </button>
+          @for (category of catalogCategories(); track category.id) {
+            <button
+              class="tab-key"
+              type="button"
+              (click)="setCategory(category.id)"
+              [attr.aria-pressed]="catalogTab() === 'todas' && selectedCategory() === category.id"
+            >
+              {{ category.name }}
+            </button>
+          }
+          <button
+            class="tab-key"
+            type="button"
+            (click)="setCatalogTab('continuar')"
+            [attr.aria-pressed]="catalogTab() === 'continuar'"
+          >
+            Continuar viendo
+          </button>
+        </div>
+        <div class="library-scroll">
+          @if (seriesLoading()) {
+            <p class="public-message" role="status">Preparando la videoteca…</p>
+          } @else if (seriesError()) {
+            <div class="public-message public-message--error" role="alert">
+              <p>{{ seriesError() }}</p>
+              <button class="text-key" type="button" (click)="searchSeries()">Reintentar</button>
             </div>
           } @else {
-            @if (state(); as s) {
-              <div class="flex flex-col gap-2 rounded-xl border-2 border-retro-red/45 bg-[rgba(10,14,26,.75)] p-3">
-                <span class="font-pixel text-[7px] tracking-widest text-retro-red">EN EMISIÓN · CH {{ channelNumber() }}</span>
-                <div class="flex flex-col gap-0.5">
-                  <span class="font-crt text-2xl leading-none text-retro-green">{{ current()?.name }}</span>
-                  <span class="truncate text-sm text-text">{{ s.isBumper ? s.bumperTitle : s.seriesName }}</span>
-                  @if (!s.isBumper && s.episodeTitle) { <span class="truncate text-xs text-text-dim">{{ s.episodeTitle }}</span> }
-                </div>
-              </div>
-            }
-            <div class="flex items-baseline justify-between">
-              <span class="font-pixel text-[7px] tracking-widest text-retro-gold">CANALES</span>
-              <span class="text-[11px] text-text-dim">Un clic sintoniza</span>
-            </div>
-            <div class="flex flex-col gap-2 overflow-y-auto max-lg:max-h-56 lg:min-h-0 lg:flex-1">
-              @for (ch of channels(); track ch.id) {
-                <button type="button" (click)="tune(ch)"
-                        class="flex items-center gap-2.5 rounded-lg border-2 bg-[linear-gradient(145deg,#2d2d44,#1a1a2e)] p-2.5 text-left transition"
-                        [ngClass]="current()?.id === ch.id ? 'border-retro-green' : 'border-[#1a1a2e] hover:border-retro-cyan/55 focus-visible:border-retro-cyan/55 focus-visible:outline-none'">
-                  <span class="font-pixel text-[8px] text-text-dim">{{ ($index + 3).toString().padStart(2,'0') }}</span>
-                  <span class="flex-1 truncate font-crt text-lg text-retro-green">{{ ch.name }}</span>
-                  <span class="material-symbols-outlined text-lg" [ngClass]="current()?.id === ch.id ? 'text-retro-green' : 'text-retro-cyan'">
-                    {{ current()?.id === ch.id ? 'sensors' : 'play_arrow' }}
-                  </span>
+            <div class="cassette-library">
+              @for (series of catalogSeries(); track series.id) {
+                <button class="series-cassette" type="button" (click)="enterSeries(series)">
+                  <div class="cassette-cover">
+                    <span class="cassette-spine" aria-hidden="true">NostalgiaTV / VHS</span>
+                    @if (series.logoPath) {
+                      <img [src]="logo(series.logoPath)" [alt]="series.name" loading="lazy" />
+                    } @else {
+                      <span class="cover-placeholder">{{ series.name }}</span>
+                    }
+                    <span class="cassette-year">{{ series.startDate.slice(0, 4) }}</span>
+                  </div>
+                  <strong>{{ series.name }}</strong
+                  ><span>{{
+                    hasResume(series.id)
+                      ? 'Continuar viendo'
+                      : (series.episodeCount || 0) + ' episodios'
+                  }}</span>
                 </button>
-              } @empty { <span class="px-1 py-2 text-xs text-text-dim">Cargando canales…</span> }
+              } @empty {
+                <p class="public-message">
+                  {{
+                    catalogTab() === 'continuar'
+                      ? 'Todavía no tienes episodios por continuar en esta página.'
+                      : 'No encontramos esa serie. Prueba con otro nombre o filtro.'
+                  }}
+                </p>
+              }
             </div>
-            <button type="button" (click)="openBrowser()"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-retro-gold/55 bg-retro-gold/[.08] py-2.5 text-sm font-medium text-retro-gold transition hover:bg-retro-gold/15">
-              <span class="material-symbols-outlined text-lg">grid_view</span>Explorar series
-            </button>
           }
-
-          <div class="mt-auto flex items-center gap-2 border-t border-retro-green/20 pt-3">
-            <button type="button" (click)="toggleMute()" aria-label="Silenciar"
-                    class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-retro-green/40 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">{{ muted() ? 'volume_off' : 'volume_up' }}</span></button>
-            <input type="range" min="0" max="1" step="0.05" [value]="muted() ? 0 : volume()" (input)="setVolume(+$any($event.target).value)" aria-label="Volumen"
-                   class="h-1.5 min-w-0 flex-1 cursor-pointer accent-[color:var(--color-retro-green)]">
-            <button type="button" (click)="goFullscreenCinema()" aria-label="Pantalla completa"
-                    class="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-retro-green/40 bg-transparent text-retro-green transition hover:bg-white/10"><span class="material-symbols-outlined text-2xl">fullscreen</span></button>
-          </div>
         </div>
-      </aside>
-    </div>
-
-    <div class="pointer-events-none absolute inset-x-0 bottom-0 -z-0 hidden h-[22%] lg:block"
-         style="background:linear-gradient(180deg,transparent,rgba(42,42,62,.85)),repeating-linear-gradient(90deg,#2a2a3e 0 2px,#32325a 2px 4px);box-shadow:inset 0 30px 50px rgba(0,0,0,.5)"></div>
-  </div>
-
-  <!-- ══════════════════ Panel de filtros CRT ══════════════════ -->
-  @if (showFilters()) {
-    <div class="fixed inset-0 z-[70] flex items-end justify-center bg-black/40 p-4 sm:items-center" (click)="toggleFilters()">
-      <div class="w-full max-w-sm rounded-2xl border border-retro-purple/30 bg-panel p-5 text-text shadow-2xl" (click)="$event.stopPropagation()">
-        <div class="mb-4 flex items-center justify-between">
-          <span class="font-crt text-2xl text-retro-green">Imagen CRT</span>
-          <button type="button" (click)="toggleFilters()" aria-label="Cerrar" class="grid h-9 w-9 place-items-center rounded-full border border-retro-green/40 bg-transparent text-text-mute hover:bg-white/10"><span class="material-symbols-outlined">close</span></button>
-        </div>
-        <label class="mb-3 flex items-center justify-between text-sm">Efecto CRT
-          <input type="checkbox" [checked]="settings().alwaysShowFilters" (change)="toggleCrt()" class="h-5 w-5 accent-[color:var(--color-retro-purple)]">
-        </label>
-        <label class="mb-3 flex items-center justify-between text-sm">Curvatura
-          <input type="checkbox" [checked]="activeFilters().crtCurvature" (change)="setFilter('crtCurvature', $any($event.target).checked)" class="h-5 w-5 accent-[color:var(--color-retro-purple)]">
-        </label>
-        <label class="mb-3 flex items-center justify-between text-sm">Viñeta
-          <input type="checkbox" [checked]="activeFilters().vignette" (change)="setFilter('vignette', $any($event.target).checked)" class="h-5 w-5 accent-[color:var(--color-retro-purple)]">
-        </label>
-        <label class="mb-3 flex items-center justify-between text-sm">Scanline animado
-          <input type="checkbox" [checked]="activeFilters().scanlineAnimation" (change)="setFilter('scanlineAnimation', $any($event.target).checked)" class="h-5 w-5 accent-[color:var(--color-retro-purple)]">
-        </label>
-        <label class="mb-3 flex flex-col gap-1 text-sm">Intensidad de líneas: {{ activeFilters().scanlineIntensity }}%
-          <input type="range" min="0" max="100" [value]="activeFilters().scanlineIntensity" (input)="setFilter('scanlineIntensity', +$any($event.target).value)" class="accent-[color:var(--color-retro-purple)]">
-        </label>
-        <label class="mb-1 flex flex-col gap-1 text-sm">Densidad de líneas: {{ activeFilters().scanlineDensity }}
-          <input type="range" min="1" max="10" [value]="activeFilters().scanlineDensity" (input)="setFilter('scanlineDensity', +$any($event.target).value)" class="accent-[color:var(--color-retro-purple)]">
-        </label>
-      </div>
+        @if (catalogTab() === 'todas' && seriesTotalPages() > 1) {
+          <nav class="catalog-pagination" aria-label="Páginas del catálogo">
+            <button
+              class="icon-key"
+              type="button"
+              (click)="goCatalogPage(-1)"
+              [disabled]="seriesPage() <= 1"
+              aria-label="Página anterior"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span></button
+            ><span>{{ seriesPage() }} de {{ seriesTotalPages() }}</span
+            ><button
+              class="icon-key"
+              type="button"
+              (click)="goCatalogPage(1)"
+              [disabled]="seriesPage() >= seriesTotalPages()"
+              aria-label="Página siguiente"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+            </button>
+          </nav>
+        }
+      </section>
     </div>
   }
-
-  <!-- ══════════════════ Serie y episodios (pantalla TV) ══════════════════ -->
   @if (showEpisodes()) {
-    <div class="fixed inset-0 z-[70] flex flex-col overflow-auto bg-[rgba(6,6,14,.97)] p-6 backdrop-blur-md md:p-10" (click)="toggleEpisodes()">
-      <div class="mx-auto flex w-full max-w-[1400px] flex-col gap-8" (click)="$event.stopPropagation()">
-        <!-- cabecera: póster + metadata + acciones -->
-        <div class="flex flex-col gap-8 rounded-3xl border border-retro-purple/25 bg-[linear-gradient(160deg,#241f45,#141629)] p-6 md:flex-row md:p-10">
-          <div class="flex aspect-[2/3] w-48 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-retro-purple/25 bg-surface-deep md:w-56">
-            @if (selectedSeries()?.logoPath) {
-              <img [src]="logo(selectedSeries()!.logoPath)" [alt]="selectedSeries()?.name" class="object-contain" style="max-height:100%;width:auto">
-            } @else {
-              <span class="material-symbols-outlined text-6xl text-retro-green/50">movie</span>
-            }
+    <div class="public-modal-backdrop">
+      <section
+        class="public-dialog episodes-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="episodes-title"
+        cdkTrapFocus
+        [cdkTrapFocusAutoCapture]="true"
+      >
+        <header class="dialog-heading">
+          <div>
+            <span class="section-note">{{ serieYears() }} · {{ regularCount() }} episodios</span>
+            <h2 id="episodes-title">{{ selectedSeries()?.name }}</h2>
           </div>
-          <div class="flex min-w-0 flex-1 flex-col gap-4">
-            <div class="flex items-start gap-3">
-              <div class="flex min-w-0 flex-col gap-2">
-                <span class="font-pixel text-xs text-retro-red">SERIE</span>
-                <span class="font-crt text-5xl leading-none text-retro-green [text-shadow:0_0_18px_rgba(142,232,159,.35)] md:text-6xl">{{ selectedSeries()?.name }}</span>
-              </div>
-              <button type="button" (click)="toggleEpisodes()" aria-label="Cerrar"
-                      class="ml-auto grid h-11 w-11 shrink-0 place-items-center rounded-full border border-retro-green/40 bg-transparent text-text-mute transition hover:bg-white/10"><span class="material-symbols-outlined">close</span></button>
-            </div>
-            <span class="text-lg text-text-dim md:text-xl">
-              {{ serieYears() }}@if (seasons().length) { <span> · {{ seasons().length }} temporadas</span> }@if (regularCount()) { <span> · {{ regularCount() }} episodios</span> }@if (selectedSeries()?.rating) { <span> · ★ {{ selectedSeries()?.rating }}</span> }
-            </span>
-            @if (selectedSeries()?.description) {
-              <p class="max-w-3xl text-base text-text md:text-lg">{{ selectedSeries()?.description }}</p>
-            }
-            <div class="flex flex-wrap items-center gap-3 pt-1">
-              <button type="button" (click)="continueSeries()"
-                      class="inline-flex h-14 items-center gap-3 rounded-2xl border-2 border-retro-gold bg-retro-purple px-7 text-xl font-semibold text-white transition hover:brightness-110">
-                <span class="material-symbols-outlined text-3xl">play_arrow</span>{{ resumeTag() ? 'Continuar ' + resumeTag() : 'Reproducir' }}
-              </button>
-              <button type="button" (click)="playRandom()"
-                      class="inline-flex h-14 items-center gap-3 rounded-2xl border-2 border-retro-green/50 bg-transparent px-7 text-xl text-retro-green transition hover:bg-retro-green/10">
-                <span class="material-symbols-outlined text-3xl">shuffle</span>Aleatorio
-              </button>
-              <button type="button" (click)="resetWatched()"
-                      class="inline-flex h-14 items-center gap-3 rounded-2xl border-2 border-text-mute/35 bg-transparent px-7 text-xl text-text-mute transition hover:bg-white/10">
-                <span class="material-symbols-outlined text-3xl">restart_alt</span>Reiniciar vistos
-              </button>
-            </div>
-          </div>
+          <button
+            class="icon-key"
+            type="button"
+            (click)="toggleEpisodes()"
+            aria-label="Cerrar episodios"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+        </header>
+        <p>{{ selectedSeries()?.description }}</p>
+        <div class="episode-actions">
+          <button class="primary-key" type="button" (click)="continueSeries()">
+            <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span
+            >{{ resumeTag() ? 'Continuar ' + resumeTag() : 'Reproducir' }}</button
+          ><button class="control-key" type="button" (click)="playRandom()">
+            <span class="material-symbols-outlined" aria-hidden="true">shuffle</span
+            >Aleatorio</button
+          ><button class="text-key" type="button" (click)="resetWatched()">Reiniciar vistos</button>
         </div>
-
-        <!-- temporadas -->
-        <div class="flex flex-wrap gap-2">
-          @for (s of seasons(); track s) {
-            <button type="button" (click)="selectSeason(s)" class="rounded-xl px-5 py-2 font-crt text-2xl transition"
-                    [ngClass]="!showSpecials() && selectedSeason() === s ? 'bg-retro-green text-ink' : 'border border-text-mute/30 bg-transparent text-text-mute hover:bg-white/10'">T{{ s }}</button>
+        <div class="season-tabs" aria-label="Temporadas">
+          @for (season of seasons(); track season) {
+            <button
+              class="tab-key"
+              type="button"
+              (click)="selectSeason(season)"
+              [attr.aria-pressed]="!showSpecials() && selectedSeason() === season"
+            >
+              Temporada {{ season }}
+            </button>
           }
           @if (hasSpecials()) {
-            <button type="button" (click)="selectSpecials()" class="rounded-xl px-5 py-2 font-crt text-2xl transition"
-                    [ngClass]="showSpecials() ? 'bg-retro-green text-ink' : 'border border-text-mute/30 bg-transparent text-text-mute hover:bg-white/10'">Especiales</button>
-          }
-        </div>
-
-        <!-- episodios -->
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          @for (ep of displayedEpisodes(); track ep.id) {
-            <button type="button" (click)="playEpisode(ep)" [disabled]="!ep.filePath"
-                    class="relative flex min-h-[128px] flex-col justify-end gap-1 rounded-2xl border-2 bg-[linear-gradient(160deg,#20223a,#141629)] p-5 text-left transition disabled:opacity-40"
-                    [ngClass]="currentEpisode()?.id === ep.id ? 'border-retro-gold' : 'border-retro-purple/20 hover:border-retro-cyan/55'">
-              @if (watchedMap()[ep.id]) { <span class="material-symbols-outlined absolute left-4 top-4 text-2xl text-retro-green">check_circle</span> }
-              <span class="font-pixel text-[10px] text-retro-gold">{{ showSpecials() ? ep.episodeTypeName : ('T' + ep.season + ' · E' + ep.episodeNumber.toString().padStart(2,'0')) }}</span>
-              <span class="text-xl text-text">{{ ep.title }}</span>
+            <button
+              class="tab-key"
+              type="button"
+              (click)="selectSpecials()"
+              [attr.aria-pressed]="showSpecials()"
+            >
+              Especiales
             </button>
-          } @empty { <span class="col-span-full py-6 text-center text-text-dim">Sin episodios.</span> }
-        </div>
-
-        <div class="flex flex-wrap items-center gap-x-8 gap-y-2 text-lg text-text-dim">
-          <span class="flex items-center gap-2"><span class="rounded-lg bg-retro-green px-3 py-0.5 font-crt text-2xl text-ink">OK</span>Reproducir</span>
-          <span class="flex items-center gap-2"><span class="rounded-lg bg-retro-red px-3 py-0.5 font-crt text-2xl text-ink">Esc</span>Volver</span>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- ══════════════════ Catálogo de series ══════════════════ -->
-  @if (browserOpen()) {
-    <div class="fixed inset-0 z-[70] flex flex-col overflow-hidden bg-[rgba(6,6,14,.97)] p-4 backdrop-blur-md md:p-8" role="dialog" aria-label="Catálogo de series">
-      <div class="mx-auto flex min-h-0 w-full max-w-6xl flex-col gap-5 rounded-3xl border border-retro-purple/25 bg-[linear-gradient(160deg,#1b1d31,#12131f)] p-5 md:p-7">
-        <div class="flex flex-wrap items-center gap-3">
-          <button type="button" (click)="closeBrowser()" aria-label="Volver"
-                  class="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-retro-green/40 bg-transparent text-text-mute transition hover:bg-white/10"><span class="material-symbols-outlined">arrow_back</span></button>
-          <span class="font-crt text-3xl text-retro-green">Catálogo de series</span>
-          <div class="relative ml-auto w-full max-w-xs">
-            <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-dim">search</span>
-            <input type="text" [ngModel]="seriesQuery()" (ngModelChange)="onSeriesQuery($event)" placeholder="Buscar serie…"
-                   class="h-11 w-full rounded-full border border-retro-purple/40 bg-surface-deep pl-10 pr-4 text-text placeholder:text-text-dim focus:border-retro-cyan focus:outline-none">
-          </div>
-          <select [ngModel]="selectedChannel()" (ngModelChange)="setChannelFilter($event)"
-                  class="h-11 shrink-0 rounded-full border border-retro-green/40 bg-surface-deep px-4 text-sm text-text focus:border-retro-cyan focus:outline-none">
-            <option [ngValue]="null">Canal: Todos</option>
-            @for (ch of channels(); track ch.id) { <option [ngValue]="ch.id">{{ ch.name }}</option> }
-          </select>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <button type="button" (click)="setCategory(null)" class="rounded-full border px-4 py-1.5 text-sm transition"
-                  [ngClass]="catalogTab() === 'todas' && selectedCategory() === null ? 'border-retro-green bg-retro-green text-ink' : 'border-retro-green/40 bg-transparent text-text-mute hover:bg-white/10'">Todas</button>
-          @for (cat of catalogCategories(); track cat.id) {
-            <button type="button" (click)="setCategory(cat.id)" class="rounded-full border px-4 py-1.5 text-sm transition"
-                    [ngClass]="catalogTab() === 'todas' && selectedCategory() === cat.id ? 'border-retro-green bg-retro-green text-ink' : 'border-retro-green/40 bg-transparent text-text-mute hover:bg-white/10'">{{ cat.name }}</button>
           }
-          <button type="button" (click)="setCatalogTab('continuar')" class="rounded-full border px-4 py-1.5 text-sm transition"
-                  [ngClass]="catalogTab() === 'continuar' ? 'border-retro-green bg-retro-green text-ink' : 'border-retro-green/40 bg-transparent text-text-mute hover:bg-white/10'">Continuar viendo</button>
         </div>
-
-        <div class="grid min-h-0 grid-cols-2 gap-4 overflow-y-auto pb-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          @for (s of catalogSeries(); track s.id) {
-            <button type="button" (click)="enterSeries(s)"
-                    class="flex flex-col gap-2 border-0 bg-transparent p-0 text-left transition focus-visible:outline-none">
-              <div class="flex aspect-[2/3] items-center justify-center overflow-hidden rounded-xl border border-retro-purple/20 bg-surface-deep transition hover:border-retro-cyan/60">
-                @if (s.logoPath) { <img [src]="logo(s.logoPath)" [alt]="s.name" class="object-contain" style="max-height:100%;width:auto"> }
-                @else { <span class="material-symbols-outlined text-5xl text-retro-green/50">movie</span> }
-              </div>
-              <span class="truncate text-sm text-text">{{ s.name }}</span>
-              @if (hasResume(s.id)) {
-                <span class="truncate text-xs text-retro-red">Continuar viendo</span>
-              } @else {
-                <span class="truncate text-xs text-text-dim">
-                  @if (s.episodeCount) { <span>{{ s.episodeCount }} ep</span> }
-                  @if (s.episodeCount && (s.channelName || s.categoryNames?.length)) { <span> · </span> }
-                  <span>{{ s.channelName || s.categoryNames?.[0] || '' }}</span>
-                </span>
-              }
+        <div class="episode-list dialog-episode-list">
+          @for (episode of displayedEpisodes(); track episode.id) {
+            <button
+              class="episode-row"
+              type="button"
+              (click)="playEpisode(episode)"
+              [disabled]="!episode.filePath"
+              [attr.aria-pressed]="currentEpisode()?.id === episode.id"
+            >
+              <span class="episode-number">{{
+                episode.episodeNumber.toString().padStart(2, '0')
+              }}</span
+              ><span>{{ episode.title }}</span
+              ><span class="material-symbols-outlined" aria-hidden="true">{{
+                watchedMap()[episode.id] ? 'check_circle' : 'play_arrow'
+              }}</span>
             </button>
           } @empty {
-            <span class="col-span-full py-10 text-center text-text-dim">{{ seriesLoading() ? 'Cargando…' : 'Sin resultados.' }}</span>
+            <p class="public-message">Sin episodios en esta temporada.</p>
           }
         </div>
-
-        @if (catalogTab() === 'todas' && seriesTotalPages() > 1) {
-          <div class="flex items-center justify-center gap-4">
-            <button type="button" (click)="goCatalogPage(-1)" [disabled]="seriesPage() <= 1" aria-label="Anterior"
-                    class="grid h-10 w-10 place-items-center rounded-xl border border-retro-purple/30 bg-transparent text-text-mute transition hover:bg-white/10 disabled:opacity-30"><span class="material-symbols-outlined">chevron_left</span></button>
-            <span class="text-sm text-text-dim">Página {{ seriesPage() }} de {{ seriesTotalPages() }}</span>
-            <button type="button" (click)="goCatalogPage(1)" [disabled]="seriesPage() >= seriesTotalPages()" aria-label="Siguiente"
-                    class="grid h-10 w-10 place-items-center rounded-xl border border-retro-purple/30 bg-transparent text-text-mute transition hover:bg-white/10 disabled:opacity-30"><span class="material-symbols-outlined">chevron_right</span></button>
-          </div>
-        }
-      </div>
+      </section>
     </div>
   }
-
-  <!-- ══════════════════ Guía de programación (grilla) ══════════════════ -->
+  @if (showProfile()) {
+    <div class="public-modal-backdrop"><section class="public-dialog profile-dialog" role="dialog" aria-modal="true" aria-labelledby="viewer-profile-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+      <header class="dialog-heading"><h2 id="viewer-profile-title">Mi perfil</h2><button class="icon-key" type="button" (click)="showProfile.set(false)" aria-label="Cerrar perfil"><span class="material-symbols-outlined" aria-hidden="true">close</span></button></header>
+      <app-viewer-profile />
+    </section></div>
+  }
+  @if (showComments() && (current() || selectedSeries())) {
+    <div class="public-modal-backdrop"><section class="public-dialog profile-dialog" role="dialog" aria-modal="true" aria-labelledby="public-comments-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+      <header class="dialog-heading"><h2 id="public-comments-title">{{ mode() === 'series' ? selectedSeries()?.name : current()?.name }}</h2><button class="icon-key" type="button" (click)="showComments.set(false)" aria-label="Cerrar comentarios"><span class="material-symbols-outlined" aria-hidden="true">close</span></button></header>
+      <app-public-comments [kind]="mode() === 'series' ? 'series' : 'channels'" [targetId]="(mode() === 'series' ? selectedSeries()?.id : current()?.id) || 0" />
+    </section></div>
+  }
   @if (showGuide()) {
-    <div class="fixed inset-0 z-[70] flex flex-col overflow-hidden bg-[rgba(6,6,14,.97)] p-6 backdrop-blur-md md:p-10" (click)="closeGuide()">
-      <div class="mx-auto flex min-h-0 w-full max-w-[1600px] flex-col gap-6" (click)="$event.stopPropagation()">
-        <div class="flex items-center gap-4">
-          <span class="font-crt text-5xl text-retro-green [text-shadow:0_0_18px_rgba(142,232,159,.4)] md:text-6xl">Guía de programación</span>
-          <div class="ml-auto flex items-center gap-2">
-            <button type="button" (click)="setGuideDay(0)"
-                    class="rounded-xl px-5 py-2 font-crt text-2xl transition"
-                    [ngClass]="guideDay() === 0 ? 'bg-retro-gold text-ink' : 'border border-text-mute/30 bg-transparent text-text-mute hover:bg-white/10'">Hoy</button>
-            <button type="button" (click)="setGuideDay(1)"
-                    class="rounded-xl px-5 py-2 font-crt text-2xl transition"
-                    [ngClass]="guideDay() === 1 ? 'bg-retro-gold text-ink' : 'border border-text-mute/30 bg-transparent text-text-mute hover:bg-white/10'">Mañana</button>
-            <button type="button" (click)="closeGuide()" aria-label="Cerrar"
-                    class="ml-2 grid h-11 w-11 place-items-center rounded-full border border-retro-green/40 bg-transparent text-text-mute transition hover:bg-white/10"><span class="material-symbols-outlined">close</span></button>
+    <div class="public-modal-backdrop">
+      <section
+        class="public-dialog guide-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="guide-title"
+        cdkTrapFocus
+        [cdkTrapFocusAutoCapture]="true"
+      >
+        <header class="dialog-heading">
+          <div>
+            <span class="section-note">No te pierdas lo que viene</span>
+            <h2 id="guide-title">La guía de la tarde.</h2>
           </div>
+          <button
+            class="icon-key"
+            type="button"
+            (click)="closeGuide()"
+            aria-label="Cerrar programación"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+        </header>
+        <div class="guide-tools">
+          <div class="season-tabs">
+            <button
+              class="tab-key"
+              type="button"
+              (click)="setGuideDay(0)"
+              [attr.aria-pressed]="guideDay() === 0"
+            >
+              Hoy</button
+            ><button
+              class="tab-key"
+              type="button"
+              (click)="setGuideDay(1)"
+              [attr.aria-pressed]="guideDay() === 1"
+            >
+              Mañana
+            </button>
+          </div>
+          <span>Horarios en tu hora local</span>
         </div>
-
-        <div class="min-h-0 flex-1 overflow-auto pb-2">
-          <div class="flex flex-col gap-3">
+        <div class="guide-scroll">
+          @if (guideLoading()) {
+            <p class="public-message" role="status">Sintonizando la programación…</p>
+          } @else {
             @for (row of guideDayRows(); track row.channel.id) {
-              <div class="flex items-stretch gap-3 rounded-2xl border border-retro-purple/25 bg-[linear-gradient(145deg,#1b1d31,#141629)] p-3">
-                <button type="button" (click)="tuneFromGuide(row.channel)"
-                        class="flex w-44 shrink-0 flex-col justify-center gap-1 border-0 bg-transparent text-left md:w-56">
-                  <span class="truncate font-crt text-2xl"
-                        [ngClass]="current()?.id === row.channel.id ? 'text-retro-green' : 'text-retro-gold'">CH {{ ($index + 3).toString().padStart(2,'0') }} · {{ row.channel.name }}</span>
-                  @if (current()?.id === row.channel.id) {
-                    <span class="inline-flex items-center gap-1 text-xs text-retro-red"><span class="h-2 w-2 animate-pulse rounded-full bg-retro-red"></span>EN VIVO</span>
-                  }
+              <section class="guide-station">
+                <button class="guide-channel" type="button" (click)="tuneFromGuide(row.channel)">
+                  <ng-container
+                    [ngTemplateOutlet]="channelLogo"
+                    [ngTemplateOutletContext]="{ $implicit: row.channel }"
+                  />
+                  <strong>{{ row.channel.name }}</strong
+                  ><span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
                 </button>
-                <div class="flex min-w-0 flex-1 gap-3 overflow-x-auto pb-1">
-                  @for (e of row.entries; track $index) {
-                    <button type="button" (click)="tuneFromGuide(row.channel)"
-                            [attr.data-guide-now]="guideIsNow(e) ? '' : null"
-                            class="flex w-56 shrink-0 flex-col gap-1 rounded-2xl border-2 px-5 py-3 text-left transition"
-                            [ngClass]="guideIsNow(e) ? 'border-retro-gold bg-[linear-gradient(145deg,#2d2d44,#20223a)] shadow-[0_0_22px_rgba(255,217,61,.2)]'
-                              : (guideIsPast(e) ? 'border-retro-purple/10 bg-[linear-gradient(145deg,#161829,#111220)] opacity-55' : 'border-retro-purple/15 bg-[linear-gradient(145deg,#1b1d31,#141629)] hover:border-retro-cyan/40')">
-                      <span class="font-crt text-xl" [ngClass]="guideIsNow(e) ? 'text-retro-green' : 'text-retro-gold'">
-                        {{ guideTime(e) }}@if (guideIsNow(e)) { <span class="ml-2 rounded bg-retro-red px-1.5 py-0.5 align-middle font-pixel text-[8px] text-ink">AHORA</span> }
-                      </span>
-                      <span class="truncate text-lg text-text">{{ e.isBumper ? (e.bumperTitle || 'Bumper') : (e.seriesName || guideTitle(e)) }}</span>
-                      @if (e.episodeTitle && !e.isBumper) { <span class="line-clamp-2 text-sm text-text-mute">{{ e.episodeTitle }}</span> }
-                      @if (guideEpTag(e)) { <span class="text-xs text-retro-cyan">{{ guideEpTag(e) }}</span> }
+                <div class="guide-timeline">
+                  @for (entry of row.entries; track $index) {
+                    <button
+                      class="guide-program"
+                      type="button"
+                      (click)="tuneFromGuide(row.channel)"
+                      [class.guide-program--now]="guideIsNow(entry)"
+                      [class.guide-program--past]="guideIsPast(entry)"
+                      [attr.data-guide-now]="guideIsNow(entry) ? '' : null"
+                    >
+                      <span class="guide-program-time"
+                        >{{ guideTime(entry) }}
+                        @if (guideIsNow(entry)) {
+                          <span class="live-label">Ahora</span>
+                        }</span
+                      ><strong>{{ guideTitle(entry) }}</strong
+                      ><span>{{
+                        entry.isBumper ? 'Pausa de la programación' : entry.episodeTitle
+                      }}</span>
+                      @if (guideEpTag(entry)) {
+                        <small>{{ guideEpTag(entry) }}</small>
+                      }
                     </button>
-                  } @empty { <span class="px-3 py-4 text-sm text-text-dim">Sin programación.</span> }
+                  } @empty {
+                    <p class="public-message">No hay programación para este día.</p>
+                  }
                 </div>
-              </div>
+              </section>
             } @empty {
-              <span class="py-10 text-center text-text-dim">{{ guideLoading() ? 'Cargando guía…' : 'Sin canales.' }}</span>
+              <p class="public-message">No hay canales disponibles.</p>
             }
-          </div>
+          }
         </div>
-
-        <div class="flex flex-wrap items-center gap-x-8 gap-y-2 text-lg text-text-dim">
-          <span class="flex items-center gap-2"><span class="rounded-lg bg-retro-green px-3 py-0.5 font-crt text-2xl text-ink">OK</span>Ver ahora</span>
-          <span class="flex items-center gap-2"><span class="rounded-lg bg-text-mute px-3 py-0.5 font-crt text-2xl text-ink">◀ ▶</span>Cambiar día</span>
-          <span class="flex items-center gap-2"><span class="rounded-lg bg-retro-red px-3 py-0.5 font-crt text-2xl text-ink">Esc</span>Volver</span>
-        </div>
-      </div>
+        <p class="guide-note">
+          Al elegir un programa sintonizas lo que el canal está transmitiendo ahora.
+        </p>
+      </section>
     </div>
   }
-
-  <!-- ══════════════════ Remapeo de teclas (tipo emulador) ══════════════════ -->
-
 </div>

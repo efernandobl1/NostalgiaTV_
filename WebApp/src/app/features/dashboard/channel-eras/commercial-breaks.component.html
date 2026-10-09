@@ -1,0 +1,210 @@
+<section class="studio-page">
+  <header class="studio-heading">
+    <div>
+      <h2>Pausas publicitarias</h2>
+      <p>La serie se pausa en sus puntos de corte y continúa desde el mismo segundo.</p>
+    </div>
+    <a routerLink="/dashboard/interludes">Abrir archivo publicitario</a>
+  </header>
+  @if (loading()) {
+    <div class="admin-state" role="status">Cargando pausas…</div>
+  } @else if (loaded()) {
+    <form class="break-rules" (ngSubmit)="saveRules()">
+      <label class="studio-check"
+        ><input
+          type="checkbox"
+          [checked]="enabled()"
+          (change)="enabled.set($any($event.target).checked)"
+        />Incluir publicidad en esta era</label
+      >
+      @if (enabled()) {
+        <div class="rule-inputs">
+          <label class="studio-field"
+            >Mínimo de anuncios<input
+              name="min"
+              type="number"
+              [(ngModel)]="rules.minimumAds"
+              min="1"
+              max="12"
+              required /></label
+          ><label class="studio-field"
+            >Máximo de anuncios<input
+              name="max"
+              type="number"
+              [(ngModel)]="rules.maximumAds"
+              min="1"
+              max="12"
+              required /></label
+          ><label class="studio-field"
+            >Duración máxima (segundos)<input
+              name="seconds"
+              type="number"
+              [(ngModel)]="rules.maximumBreakSeconds"
+              min="1"
+              max="1800"
+              required
+          /></label>
+        </div>
+      }
+      <button class="admin-button admin-button--primary" type="submit" [disabled]="busy()">
+        Guardar reglas
+      </button>
+    </form>
+    <div class="break-sequence" aria-label="Orden de una pausa">
+      <span>Serie</span><span aria-hidden="true">›</span><span>Entrada</span
+      ><span aria-hidden="true">›</span><span>Anuncios</span><span aria-hidden="true">›</span
+      ><span>Regreso</span><span aria-hidden="true">›</span><span>Serie</span>
+    </div>
+    @for (role of roles; track role.id) {
+      <section class="break-pool">
+        <header>
+          <h3>{{ role.title }}</h3>
+          <p>{{ role.subtitle }}</p>
+          <button
+            type="button"
+            class="admin-button admin-button--secondary"
+            [disabled]="busy()"
+            [attr.aria-expanded]="uploadRole() === role.id"
+            (click)="uploadRole.set(uploadRole() === role.id ? null : role.id)"
+          >
+            {{ role.id === 1 ? 'Subir anuncios' : 'Subir bumpers' }}
+          </button>
+        </header>
+        @if (uploadRole() === role.id) {
+          <app-interlude-uploader
+            [kind]="role.id === 1 ? 1 : 0"
+            [eraId]="eraId()"
+            [role]="role.id"
+            (busyChange)="busy.set($event)"
+            (completed)="uploaded($event)"
+          />
+        }
+        @for (item of assigned(role.id); track item.interludeId) {
+          <div class="pool-item">
+            <div>
+              <strong>{{ clip(item.interludeId)?.title || 'Archivo #' + item.interludeId }}</strong
+              ><small
+                >{{
+                  clip(item.interludeId)?.approvedForBroadcast
+                    ? 'Aprobado'
+                    : 'Sin aprobar: no se emitirá'
+                }}
+                · {{ seasonLabel(clip(item.interludeId)?.season) }} · Frecuencia {{ item.weight }} ·
+                Separación {{ item.minimumGapSeconds }} s</small
+              >
+            </div>
+            <div class="studio-actions">
+              <button
+                class="admin-button admin-button--secondary"
+                type="button"
+                [disabled]="busy()"
+                (click)="edit(item)"
+                [attr.aria-label]="'Editar frecuencia de ' + clip(item.interludeId)?.title"
+              >
+                Editar</button
+              ><button
+                class="admin-button admin-button--secondary"
+                type="button"
+                [disabled]="busy()"
+                (click)="remove(item)"
+                [attr.aria-label]="'Quitar ' + clip(item.interludeId)?.title"
+              >
+                Quitar
+              </button>
+            </div>
+          </div>
+          @if (editing() === item) {
+            <form class="pool-edit" (ngSubmit)="saveAssignment()">
+              <label class="studio-field"
+                >Frecuencia<input
+                  name="editWeight"
+                  type="number"
+                  min="1"
+                  max="100"
+                  [(ngModel)]="editWeight"
+                  required
+              /></label>
+              <label class="studio-field"
+                >Separación (segundos)<input
+                  name="editGap"
+                  type="number"
+                  min="0"
+                  max="604800"
+                  [(ngModel)]="editGap"
+                  required
+              /></label>
+              <div class="studio-actions">
+                <button class="admin-button" type="submit" [disabled]="busy()">
+                  Guardar frecuencia</button
+                ><button
+                  class="admin-button admin-button--secondary"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="editing.set(null)"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          }
+        } @empty {
+          <p class="studio-muted">Todavía no hay archivos asignados.</p>
+        }
+        <details class="existing-clips">
+          <summary>Añadir desde el archivo existente</summary>
+          <form class="pool-form" (ngSubmit)="assign(role.id)">
+            <label class="studio-field"
+              >Archivo<select
+                [name]="'clip' + role.id"
+                [(ngModel)]="draft[role.id].clipId"
+                required
+              >
+                <option [ngValue]="null">Seleccionar archivo</option>
+                @for (clip of options(role.id); track clip.id) {
+                  <option [ngValue]="clip.id">
+                    {{ clip.title }} · {{ seasonLabel(clip.season)
+                    }}{{ clip.approvedForBroadcast ? '' : ' (sin aprobar)' }}
+                  </option>
+                }
+              </select></label
+            >
+            <label class="studio-field"
+              >Frecuencia<input
+                [name]="'weight' + role.id"
+                type="number"
+                min="1"
+                max="100"
+                [(ngModel)]="draft[role.id].weight"
+                required
+              /><small>Mayor valor: se elige más.</small></label
+            >
+            <label class="studio-field"
+              >Separación (segundos)<input
+                [name]="'gap' + role.id"
+                type="number"
+                min="0"
+                max="604800"
+                [(ngModel)]="draft[role.id].minimumGapSeconds"
+                required
+            /></label>
+            <button
+              class="admin-button"
+              type="submit"
+              [disabled]="busy() || !draft[role.id].clipId"
+            >
+              Añadir
+            </button>
+          </form>
+        </details>
+      </section>
+    }
+  }
+  @if (error()) {
+    <p class="studio-error" role="alert">
+      {{ error() }} <button type="button" class="admin-button" (click)="load()">Reintentar</button>
+    </p>
+  }
+  @if (feedback()) {
+    <p class="studio-feedback" role="status">{{ feedback() }}</p>
+  }
+</section>

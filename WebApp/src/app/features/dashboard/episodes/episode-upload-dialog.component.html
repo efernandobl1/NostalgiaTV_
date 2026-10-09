@@ -1,7 +1,7 @@
 <mat-card class="daxa-card border-none d-block upload-dialog" [class.component-dark-theme]="themeService.isDark()">
   <mat-card-header>
     <mat-card-title>
-      <h5 class="mb-0">Subir archivos a {{ data.seriesName }}</h5>
+      <h2 mat-dialog-title class="mb-0">Subir archivos a {{ data.seriesName }}</h2>
     </mat-card-title>
   </mat-card-header>
 
@@ -33,8 +33,9 @@
     <button type="button" class="upload-dropzone" (click)="openFilePicker()" [disabled]="uploading()">
       <mat-icon>cloud_upload</mat-icon>
       <strong>Seleccionar archivos de video</strong>
-      <span>{{ allowedExtensions.join(' · ') }} — se conservan los nombres para detectar episodio y título</span>
+      <span>MP4, MKV, FLV y otros videos. Conservamos el nombre para detectar episodio y título.</span>
     </button>
+    <p>Los videos incompatibles necesitan el servicio de Transcodificación activo. Solo se incorporan al catálogo después de validarlos.</p>
 
     @if (items().length) {
       <div class="upload-queue">
@@ -54,11 +55,11 @@
                 <span class="upload-item__size">{{ formatSize(item.file.size) }}</span>
               </div>
               @if (item.status === 'uploading') {
-                <mat-progress-bar mode="determinate" [value]="item.progress" />
+                <mat-progress-bar mode="determinate" [value]="item.progress" [attr.aria-label]="'Carga de ' + item.file.name" />
                 <small class="upload-item__pct">{{ item.progress }}%</small>
               }
               @if (item.status === 'error' && item.error) {
-                <small class="upload-item__error">{{ item.error }}</small>
+                <small class="upload-item__error" role="alert">{{ item.error }}</small>
               }
             </div>
             @if (!uploading() && item.status !== 'done') {

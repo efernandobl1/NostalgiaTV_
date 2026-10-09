@@ -1,0 +1,100 @@
+@use '../../../../styles/dashboard-components';
+.studio-page {
+  grid-template-columns: minmax(0, 1fr);
+}
+.season-filter {
+  width: min(100%, 260px);
+}
+.clip-season {
+  color: var(--dashboard-purple);
+  font-size: 14px;
+}
+#season-help {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--dashboard-muted);
+  line-height: 1.5;
+}
+.clip-shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 24px;
+}
+.clip-tape {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  border: 2px solid var(--dashboard-border);
+  border-radius: 7px;
+  text-align: left;
+  color: var(--dashboard-text);
+  background: var(--dashboard-surface);
+  box-shadow: 0 5px 0 var(--dashboard-raised);
+  &:hover {
+    border-color: var(--dashboard-purple);
+  }
+}
+.tape-reels {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 12px;
+  border: 1px solid var(--dashboard-border);
+  border-radius: 26px;
+  background: var(--dashboard-bg);
+  > span {
+    width: 44px;
+    height: 44px;
+    border: 7px double var(--dashboard-purple);
+    border-radius: 50%;
+  }
+  i {
+    width: 35%;
+    height: 10px;
+    border-top: 1px solid var(--dashboard-border);
+    border-bottom: 1px solid var(--dashboard-border);
+  }
+}
+.tape-label {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border-left: 4px solid var(--dashboard-yellow);
+  background: var(--dashboard-raised);
+  small {
+    display: flex;
+    justify-content: space-between;
+    color: var(--dashboard-muted);
+    font-size: 14px;
+  }
+  strong {
+    font-size: 18px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  > span {
+    font-size: 14px;
+    color: var(--dashboard-muted);
+  }
+}
+.clip-status {
+  font-size: 14px;
+  color: var(--dashboard-yellow);
+  &.approved {
+    color: var(--dashboard-green);
+  }
+}
+.clip-editor {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  align-items: start;
+  gap: 24px;
+}
+@media (max-width: 1000px) {
+  .clip-editor {
+    grid-template-columns: 1fr;
+  }
+}

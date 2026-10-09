@@ -1,5 +1,6 @@
 ﻿using ApplicationCore.Exceptions;
 using ApplicationCore.Settings;
+using Infrastructure.Services.Media;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using System;
@@ -30,15 +31,21 @@ namespace Infrastructure.Services.InternalServices
                 throw new BadRequestException($"File type '{ext}' is not allowed.");
 
             var fileName = $"{Guid.NewGuid()}{ext}";
-            var storagePath = Path.Combine(_mediaSettings.BasePath, folder);
+            var storagePath = MediaStorageLayout.CreateDirectory(_mediaSettings.BasePath, folder);
             var fullPath = Path.Combine(storagePath, fileName);
 
-            Directory.CreateDirectory(storagePath);
+            try
+            {
+                await using var stream = new FileStream(fullPath, FileMode.CreateNew);
+                await file.CopyToAsync(stream);
+            }
+            catch
+            {
+                if (File.Exists(fullPath)) File.Delete(fullPath);
+                throw;
+            }
 
-            using var stream = new FileStream(fullPath, FileMode.Create);
-            await file.CopyToAsync(stream);
-
-            return $"/uploads/{folder}/{fileName}";
+            return $"/uploads/{MediaStorageLayout.RelativeFolder(_mediaSettings.BasePath, storagePath)}/{fileName}";
         }
     }
 }

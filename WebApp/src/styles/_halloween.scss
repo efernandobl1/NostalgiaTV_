@@ -1,0 +1,298 @@
+body.halloween-theme {
+  color-scheme: dark;
+  background: #140f19;
+  color: #fff0d7;
+  --retroCursor: url('/images/cursors/halloween-pointer.svg') 5 3, auto;
+  --blackColor: #fff0d7;
+  --bodyColor: #ddc7bf;
+  --whiteColor: #241929;
+  --primaryColor: #ffbe71;
+  --daxaColor: #dcc2ff;
+  --dangerColor: #ffc3b5;
+}
+body.halloween-theme:has(.dashboard-shell) {
+  --dashboard-bg: #140f19;
+  --dashboard-surface: #241929;
+  --dashboard-raised: #37233f;
+  --dashboard-text: #fff0d7;
+  --dashboard-muted: #ddc7bf;
+  --dashboard-border: #745767;
+  --dashboard-control-border: #b791ac;
+  --dashboard-green: #cde79f;
+  --dashboard-yellow: #ffbe71;
+  --dashboard-red: #ffc3b5;
+  --dashboard-purple: #dcc2ff;
+}
+body.halloween-theme .living-room {
+  --room-bg: #140f19;
+  --room-wall: #241929;
+  --room-surface: #37233f;
+  --room-line: #745767;
+  --room-text: #fff0d7;
+  --room-muted: #ddc7bf;
+  --room-green: #cde79f;
+  --room-gold: #ffbe71;
+  --room-purple: #dcc2ff;
+}
+body.halloween-theme .signal-page {
+  --signal-bg: #140f19;
+  --signal-surface: #241929;
+  --signal-text: #fff0d7;
+  --signal-muted: #ddc7bf;
+  --signal-line: #b791ac;
+  --signal-green: #cde79f;
+  --signal-gold: #ffbe71;
+  --signal-purple: #dcc2ff;
+  --signal-red: #ffc3b5;
+}
+body.halloween-theme :is(.public-header, .studio-header) {
+  border-bottom-color: #ffbe71;
+}
+body.halloween-theme .room-page {
+  background: radial-gradient(ellipse at 26% 32%, #402144 0, transparent 55%), #140f19;
+}
+body.halloween-theme .television-face {
+  background: #59435d;
+  border-color: #b491ad;
+}
+body.halloween-theme .television {
+  filter: drop-shadow(0 0 22px #c16a2630);
+}
+
+// A filtered ancestor would confine the fixed cinema screen to the television.
+body.halloween-theme .room-page--cinema .television {
+  filter: none;
+}
+body.halloween-theme .public-brand .brand-screen {
+  border-color: #ffbe71;
+  color: #ffbe71;
+}
+body.halloween-theme :is(.retro-auth, .message-page, .error-page) {
+  background: #140f19;
+  color: #fff0d7;
+}
+.seasonal-atmosphere {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+}
+.seasonal-web {
+  position: absolute;
+  top: 0;
+  width: clamp(50px, 8vw, 125px);
+  fill: none;
+  stroke: #dcc2ff;
+  stroke-width: 1;
+  opacity: 0.24;
+}
+.seasonal-web--left {
+  left: 0;
+}
+.seasonal-web--right {
+  right: 0;
+  transform: scaleX(-1);
+}
+.seasonal-bat {
+  position: absolute;
+  top: 85px;
+  right: 3%;
+  width: 52px;
+  fill: #8b719a;
+  opacity: 0.55;
+}
+.seasonal-bat circle {
+  fill: #ffbe71;
+}
+body.seasonal-effects .seasonal-bat {
+  animation: midnight-drift 18s ease-in-out infinite;
+}
+body.seasonal-effects .seasonal-bat--passing {
+  top: 8px;
+  right: auto;
+  left: 100%;
+  width: 32px;
+  opacity: 0;
+  animation: bat-passage 56s linear infinite;
+}
+.seasonal-ghost {
+  position: absolute;
+  bottom: 0;
+  left: 8px;
+  width: 28px;
+  fill: #ddc7bf;
+  opacity: 0;
+  animation: ghost-peek 44s ease-in-out infinite;
+}
+.seasonal-ghost ellipse {
+  fill: #241929;
+}
+.seasonal-pumpkin {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 32px;
+  fill: #b87339;
+  opacity: 0.7;
+}
+.seasonal-pumpkin__stem {
+  fill: none;
+  stroke: #b791ac;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.seasonal-pumpkin__face {
+  fill: #ffda98;
+}
+@keyframes bat-passage {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  2% {
+    opacity: 0.5;
+  }
+  18% {
+    transform: translateX(-110vw);
+    opacity: 0.5;
+  }
+  20%,
+  100% {
+    transform: translateX(-110vw);
+    opacity: 0;
+  }
+}
+@keyframes ghost-peek {
+  0%,
+  60%,
+  100% {
+    transform: translateY(110%);
+    opacity: 0;
+  }
+  68%,
+  78% {
+    transform: translateY(-6px);
+    opacity: 0.35;
+  }
+  86% {
+    transform: translateY(110%);
+    opacity: 0;
+  }
+}
+@keyframes midnight-drift {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-8deg);
+  }
+  50% {
+    transform: translateY(18px) rotate(6deg);
+  }
+}
+body:has(.crt-screen--cinema, .living-room.tv-mode, .signal-page--tv) .seasonal-atmosphere {
+  display: none;
+}
+.seasonal-spider {
+  position: absolute;
+  top: 0;
+  width: 22px;
+  height: calc(100svh + 32px);
+  color: #b791ac;
+  opacity: 0;
+  transform: translateY(-100%);
+  animation: spider-descent 48s linear infinite;
+}
+.seasonal-spider--1 {
+  left: 1%;
+  animation-delay: -5s;
+}
+.seasonal-spider--2 {
+  right: 1%;
+  animation-delay: -23s;
+  animation-duration: 60s;
+}
+.seasonal-spider--3 {
+  left: 5%;
+  animation-delay: -39s;
+  animation-duration: 72s;
+}
+.seasonal-spider__thread {
+  position: absolute;
+  top: 0;
+  bottom: 26px;
+  left: 50%;
+  width: 1px;
+  background: currentColor;
+  opacity: 0.3;
+}
+.seasonal-spider__body {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  fill: #39213f;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.seasonal-spider__body circle {
+  fill: #ffbe71;
+  stroke: none;
+}
+body.seasonal-effects
+  .seasonal-atmosphere--paused
+  :is(.seasonal-bat, .seasonal-spider, .seasonal-ghost) {
+  animation-play-state: paused;
+}
+@keyframes spider-descent {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  3% {
+    opacity: 0.65;
+  }
+  65% {
+    transform: translateY(0);
+    opacity: 0.65;
+  }
+  68%,
+  100% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seasonal-bat {
+    animation: none !important;
+  }
+  :is(.seasonal-spider, .seasonal-ghost, .seasonal-bat--passing) {
+    display: none;
+    animation: none !important;
+  }
+}
+@media (pointer: fine) {
+  body.halloween-theme :is(a, button, summary, select, [role='button']) {
+    cursor: var(--retroCursor) !important;
+  }
+}
+@media (max-width: 600px) {
+  .seasonal-bat {
+    right: 8px;
+    top: 12px;
+    width: 30px;
+  }
+}
+@media (max-width: 600px) {
+  .seasonal-spider {
+    width: 18px;
+  }
+  .seasonal-spider--3 {
+    display: none;
+  }
+  .seasonal-ghost {
+    display: none;
+  }
+  .seasonal-pumpkin {
+    width: 24px;
+  }
+}

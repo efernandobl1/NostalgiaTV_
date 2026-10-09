@@ -14,14 +14,20 @@ ENV LANG=C.UTF-8 \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 # Copiar sólo los .csproj primero maximiza el uso de la caché de capas en 'restore'.
 COPY ["WebApi/WebApi.csproj", "WebApi/"]
 COPY ["ApplicationCore/ApplicationCore.csproj", "ApplicationCore/"]
 COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
-RUN dotnet restore "WebApi/WebApi.csproj"
+COPY ["Infrastructure.Tests/Infrastructure.Tests.csproj", "Infrastructure.Tests/"]
+RUN dotnet restore "Infrastructure.Tests/Infrastructure.Tests.csproj" \
+    && dotnet restore "WebApi/WebApi.csproj"
 COPY . .
+RUN dotnet test "Infrastructure.Tests/Infrastructure.Tests.csproj" -c $BUILD_CONFIGURATION --no-restore
 WORKDIR "/src/WebApi"
 # 'publish' ya compila; se elimina el paso 'build' redundante para acelerar la imagen.
 RUN dotnet publish "WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false

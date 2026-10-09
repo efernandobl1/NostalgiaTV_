@@ -11,6 +11,7 @@ namespace ApplicationCore.Entities
         public string IpAddress { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public DateTime ExpiresAt { get; set; }
+        public bool IsPersistent { get; set; }
         public DateTime? RevokedAt { get; set; }
         public string? ReplacedByToken { get; set; }
         public int UserId { get; set; }

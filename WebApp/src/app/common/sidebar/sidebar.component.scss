@@ -29,6 +29,12 @@
                 span {
                     margin-left: 10px;
                 }
+                img {
+                    width: 32px;
+                    height: 32px;
+                    flex-shrink: 0;
+                    object-fit: contain;
+                }
             }
         }
         .burger-menu {

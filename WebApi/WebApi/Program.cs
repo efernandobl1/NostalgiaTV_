@@ -18,6 +18,11 @@ namespace WebApi
     {
         public static async Task Main(string[] args)
         {
+            if (args.Contains("--media-worker"))
+            {
+                await MediaWorkerHost.RunAsync(args);
+                return;
+            }
             var builder = WebApplication.CreateBuilder(args);
 
             if (builder.Environment.IsDevelopment())
@@ -53,7 +58,8 @@ namespace WebApi
                     ("Channels", "/dashboard/channels"),
                     ("Categories", "/dashboard/categories"),
                     ("Eras", "/dashboard/channel-eras"),
-                    ("Bumpers", "/dashboard/channel-bumpers")
+                    ("Bumpers", "/dashboard/channel-bumpers"),
+                    ("Transcoding", "/dashboard/transcoding")
                 })
                     options.AddPolicy(policy, policyBuilder =>
                         policyBuilder.RequireAuthenticatedUser().AddRequirements(new MenuAccessRequirement(menuUrl)));
@@ -122,6 +128,15 @@ namespace WebApi
             app.UseAuthorization();
             app.UseMiddleware<Middleware.ActivityLoggingMiddleware>();
             app.UseRateLimiter();
+            app.Use(async (context, next) =>
+            {
+                if (context.Request.Path.StartsWithSegments("/uploads/.packages", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    return;
+                }
+                await next(context);
+            });
             app.UseStaticFiles();
             app.MapControllers();
 
