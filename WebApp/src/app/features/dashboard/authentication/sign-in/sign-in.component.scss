@@ -38,6 +38,8 @@
   margin: 8px 0 28px;
   color: var(--signal-muted);
 }
+.access-server { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 24px; color: var(--signal-muted); overflow-wrap: anywhere; }
+.access-server a { color: var(--signal-green); min-height: 44px; display: inline-flex; align-items: center; }
 form {
   display: grid;
   gap: 22px;
