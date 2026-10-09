@@ -24,7 +24,7 @@ public class RetroBroadcastModelTests
         {
             Title = "Seasonal ad", Kind = InterludeKind.Advertisement, Season = invalid,
             File = new FormFile(stream, 0, 1, "file", "test.mp4")
-        }, CancellationToken.None));
+        }, null!, CancellationToken.None));
     }
 
     private static NostalgiaTVContext CreateContext() => new(new DbContextOptionsBuilder<NostalgiaTVContext>()

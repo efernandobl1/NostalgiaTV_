@@ -47,22 +47,37 @@ jobs:
   # Escaneo de seguridad como gate: si hay CVEs HIGH/CRITICAL, no se publica nada.
   security-scan:
     runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_PID: Express
+          # Ephemeral test credentials; this database is destroyed with the runner.
+          MSSQL_SA_PASSWORD: 'Isolated-CI-Sql-Test-Only!2026'
+        ports:
+          - '127.0.0.1:1433:1433'
+        options: >-
+          --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -C"
+          --health-interval=10s --health-timeout=5s --health-retries=20
     permissions:
       contents: read
       pull-requests: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
 
       # Cachea la base de datos de vulnerabilidades de Trivy entre corridas.
       - name: Cache Trivy DB
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ github.workspace }}/.trivycache
           key: trivy-db-${{ runner.os }}
 
       - name: Scan filesystem for HIGH and CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         env:
           TRIVY_CACHE_DIR: ${{ github.workspace }}/.trivycache
         with:
@@ -72,10 +87,39 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
           format: table
-          # WebApp = toolchain de build de Angular (devDependencies). Sus paquetes
-          # NO llegan a la imagen final (solo nginx + estáticos ya compilados),
-          # así que sus CVEs son de build, no de runtime. El backend .NET sí se escanea.
-          skip-dirs: WebApp
+          skip-dirs: .trivycache
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Audit and test frontend dependencies
+        working-directory: WebApp
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          pnpm install --frozen-lockfile
+          pnpm audit --audit-level high
+          pnpm exec ng test --watch=false
+      - name: Check the production bundle with its security policy
+        working-directory: WebApp
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm exec ng build --configuration production
+          pnpm test:security-browser
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run security and SQL integration tests
+        env:
+          NOSTALGIA_MEDIA_TEST_SQL: 'Server=localhost,1433;Database=master;User Id=sa;Password=Isolated-CI-Sql-Test-Only!2026;Encrypt=True;TrustServerCertificate=True'
+          FFMPEG_BINARY_FOLDER: /usr/bin
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          dotnet restore WebApi/Infrastructure.Tests -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=high -warnaserror:NU1903,NU1904
+          dotnet test WebApi/Infrastructure.Tests -c Release
 
       - name: Reject newly introduced vulnerable dependencies
         if: github.event_name == 'pull_request'
@@ -91,6 +135,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -105,21 +151,42 @@ jobs:
             file: ./WebApp/Dockerfile
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
 
       - name: Login to GitHub Container Registry
         if: github.event_name == 'push'
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      - name: Build and push ${{ matrix.name }}
-        uses: docker/build-push-action@v5
+      - name: Build ${{ matrix.name }} for scanning
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          load: true
+          tags: ${{ matrix.image }}:${{ github.sha }}
+          provenance: false
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+      - name: Scan final runtime image
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          image-ref: ${{ matrix.image }}:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Publish scanned image with provenance and SBOM
+        id: publish
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
@@ -132,6 +199,23 @@ jobs:
           # Caché de capas por imagen (scope) para no pisarse entre api/web.
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+      - name: Sign image provenance with the temporary GitHub OIDC identity
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ${{ matrix.image }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+      - name: Verify the published signature and workflow identity
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIGNED_IMAGE: oci://${{ matrix.image }}@${{ steps.publish.outputs.digest }}
+        run: >-
+          gh attestation verify "$SIGNED_IMAGE" --repo "$GITHUB_REPOSITORY"
+          --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/deploy.yml"
+          --source-ref refs/heads/main
 
   # Despliegue en la VPS por SSH: baja las imágenes nuevas y reinicia el stack.
   deploy:

@@ -47,6 +47,7 @@ services:
       Jwt__Key: ${JWT_SECRET_KEY:?Defina JWT_SECRET_KEY}
       Jwt__Issuer: ${JWT_ISSUER:-nostalgiatv}
       Jwt__Audience: ${JWT_ISSUER:-nostalgiatv}
+      BootstrapAdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:?Set a unique initial administrator password}
       # Permite acceder por nginx (mismo origen) sin bucles de redirect; en dev el
       # puerto sigue publicado para llegar directo a Scalar/OpenAPI en :8080.
       ReverseProxy__TrustForwardedHeaders: "true"
@@ -80,7 +81,7 @@ services:
     command: ["--media-worker"]
     restart: unless-stopped
     environment:
-      DOTNET_ENVIRONMENT: Production
+      DOTNET_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Server=sqlserver;Database=NostalgiaTV;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True;Encrypt=True
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads

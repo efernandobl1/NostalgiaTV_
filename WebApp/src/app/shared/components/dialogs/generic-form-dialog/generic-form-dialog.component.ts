@@ -16,7 +16,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 export interface DialogField {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'checkboxes' | 'date' | 'datepicker' | 'file';
+  type: 'text' | 'password' | 'textarea' | 'number' | 'select' | 'multiselect' | 'checkboxes' | 'date' | 'datepicker' | 'file';
   validators?: ValidatorFn[];
   options?: { value: any; label: string }[];
   // Para multiselect agrupado (p. ej. menús por sección). Si viene, tiene prioridad sobre options.

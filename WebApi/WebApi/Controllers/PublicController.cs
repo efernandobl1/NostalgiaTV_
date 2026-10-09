@@ -6,11 +6,13 @@ using Infrastructure.BackgroundServices;
 using Infrastructure.Contexts;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace WebApi.Controllers
 {
     [ApiController]
+    [AllowAnonymous]
     [ApiVersion("1")]
     [Route("api/v{version:apiVersion}/public")]
     public class PublicController : ControllerBase

@@ -56,7 +56,7 @@ export class UsersComponent implements OnInit, AfterViewInit {
             title: 'usuario',
             fields: [
                 { key: 'username', label: 'Usuario', type: 'text', validators: [Validators.required, Validators.maxLength(50)] },
-                { key: 'password', label: 'Contraseña', type: 'text', validators: user ? [Validators.minLength(8), Validators.maxLength(50)] : [Validators.required, Validators.minLength(8), Validators.maxLength(50)] },
+                { key: 'password', label: 'Contraseña (12 a 128 caracteres)', type: 'password', validators: user ? [Validators.minLength(12), Validators.maxLength(128)] : [Validators.required, Validators.minLength(12), Validators.maxLength(128)] },
                 { key: 'rolId', label: 'Rol', type: 'select', validators: [Validators.required], options: this.roles().map(r => ({ value: r.id, label: r.name })) }
             ],
             data: user ? { username: user.username, rolId: user.rol.id } : null

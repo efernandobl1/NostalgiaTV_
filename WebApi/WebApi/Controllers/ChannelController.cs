@@ -4,6 +4,7 @@ using Asp.Versioning;
 using Infrastructure.BackgroundServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace WebApi.Controllers
 {
@@ -26,10 +27,12 @@ namespace WebApi.Controllers
         public async Task<IActionResult> GetAll() => Ok(await _channelService.GetAllAsync());
 
         [HttpPost]
+        [EnableRateLimiting("UploadPolicy")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Create([FromForm] ChannelRequest request) => Ok(await _channelService.CreateAsync(request));
 
         [HttpPut("{id}")]
+        [EnableRateLimiting("UploadPolicy")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Update(int id, [FromForm] ChannelRequest request) => Ok(await _channelService.UpdateAsync(id, request));
 

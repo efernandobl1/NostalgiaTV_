@@ -11,6 +11,25 @@ namespace Infrastructure.Tests;
 public class ViewerPrivacyTests
 {
     [Theory]
+    [InlineData("/api/v1/auth/token")]
+    [InlineData("/api/v1/users")]
+    public async Task RequestAndResponseCredentialsAreNotReadOrLogged(string path)
+    {
+        const string secret = "private-password-and-token";
+        var context = new DefaultHttpContext();
+        context.Request.Path = path;
+        context.Request.Method = "POST";
+        context.Request.Body = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(secret));
+        context.Response.Body = new MemoryStream();
+        using var logger = new PayloadRecorder();
+        await new RequestResponseLoggingMiddleware(request => request.Response.WriteAsync(secret)).InvokeAsync(context, logger);
+        Assert.Equal(0, context.Request.Body.Position);
+        Assert.Equal(2, logger.Calls);
+        Assert.All(logger.Bodies, body => Assert.DoesNotContain(secret, body));
+        Assert.Equal(secret, System.Text.Encoding.UTF8.GetString(((MemoryStream)context.Response.Body).ToArray()));
+    }
+
+    [Theory]
     [InlineData("/api/v1/viewer/code")]
     [InlineData("/api/v1/viewer/pair")]
     [InlineData("/api/v1/viewer/session")]
@@ -38,8 +57,9 @@ public class ViewerPrivacyTests
     private sealed class PayloadRecorder : IHttpPayloadLogger
     {
         public int Calls { get; private set; }
-        public void Request(string method, string path, long? contentLength, string? contentType, string body) => Calls++;
-        public void Response(string method, string path, int statusCode, long elapsedMs, string? contentType, string body) => Calls++;
+        public List<string> Bodies { get; } = [];
+        public void Request(string method, string path, long? contentLength, string? contentType, string body) { Calls++; Bodies.Add(body); }
+        public void Response(string method, string path, int statusCode, long elapsedMs, string? contentType, string body) { Calls++; Bodies.Add(body); }
         public void Dispose() { }
     }
 }

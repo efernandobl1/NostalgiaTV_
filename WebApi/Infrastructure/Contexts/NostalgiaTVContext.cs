@@ -53,6 +53,10 @@ namespace Infrastructure.Contexts
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<RefreshToken>().Property(token => token.Token).HasMaxLength(64);
+            modelBuilder.Entity<RefreshToken>().Property(token => token.ReplacedByToken).HasMaxLength(64);
+            modelBuilder.Entity<RefreshToken>().HasIndex(token => token.Token).IsUnique();
+            modelBuilder.Entity<RefreshToken>().HasIndex(token => new { token.UserId, token.RevokedAt });
             modelBuilder.Entity<Episode>().Property(episode => episode.IsAvailable).HasDefaultValue(true);
             modelBuilder.ConfigureViewing();
             modelBuilder.Entity<PlatformSettings>(settings =>
@@ -149,7 +153,7 @@ namespace Infrastructure.Contexts
             {
                 Id = 1,
                 Username = "admin",
-                PasswordHash = "kvfEh9DsfvFzJseLEA3QIQ==:WSdzlu6ve0AiOFTunKWVTMgQNnCtxd7F8xkEamSy+4Y=",
+                PasswordHash = "!bootstrap-required",
                 RolId = 1
             });
 

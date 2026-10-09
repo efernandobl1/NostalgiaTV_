@@ -195,6 +195,8 @@ namespace Infrastructure.Services
 
                     if (file.Length > maxBytes)
                         throw new BadRequestException($"File exceeds {_uploadSettings.MaxFileSizeMB}MB.");
+                    if (new DriveInfo(Path.GetPathRoot(targetDir)!).AvailableFreeSpace < file.Length + 512L * 1024 * 1024)
+                        throw new BadRequestException("Insufficient free storage for this upload.");
 
                     var finalName = GetUniqueFileName(targetDir, SanitizeFileName(originalName));
                     var destination = Path.GetFullPath(Path.Combine(targetDir, finalName));

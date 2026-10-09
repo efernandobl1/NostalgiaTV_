@@ -13,6 +13,8 @@ public static class MediaWorkerHost
     public static async Task RunAsync(string[] args)
     {
         var builder = Host.CreateApplicationBuilder(args.Where(argument => argument != "--media-worker").ToArray());
+        if (!builder.Environment.IsDevelopment())
+            await Infrastructure.Services.DatabaseConnectionPolicy.ValidateAsync(builder.Configuration.GetConnectionString("DefaultConnection"));
         if (builder.Environment.IsDevelopment())
             builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true).AddEnvironmentVariables();
         builder.Services.AddSerilog(config => config.ReadFrom.Configuration(builder.Configuration));

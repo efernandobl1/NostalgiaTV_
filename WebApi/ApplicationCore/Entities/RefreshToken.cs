@@ -7,6 +7,7 @@ namespace ApplicationCore.Entities
     public class RefreshToken
     {
         public int Id { get; set; }
+        // SHA-256 digest. The credential itself is only sent in an HttpOnly cookie.
         public string Token { get; set; } = string.Empty;
         public string IpAddress { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }

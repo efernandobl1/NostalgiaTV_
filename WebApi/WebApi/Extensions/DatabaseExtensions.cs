@@ -1,5 +1,6 @@
 ﻿using Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
+using Infrastructure.Services;
 
 namespace WebApi.Extensions
 {
@@ -10,6 +11,7 @@ namespace WebApi.Extensions
             using var scope = app.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<NostalgiaTVContext>();
             await db.Database.MigrateAsync();
+            await AuthBootstrap.InitializeAsync(db, app.Configuration["BootstrapAdminPassword"]);
         }
     }
 }

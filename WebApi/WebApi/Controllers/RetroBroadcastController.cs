@@ -1,13 +1,13 @@
 using ApplicationCore.Entities;
 using ApplicationCore.Settings;
 using Asp.Versioning;
-using FFMpegCore;
 using Infrastructure.BackgroundServices;
 using Infrastructure.Contexts;
 using Infrastructure.Services;
 using Infrastructure.Services.Media;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -120,9 +120,10 @@ public class RetroBroadcastController : ControllerBase
         Ok(await _context.Interludes.AsNoTracking().OrderBy(item => item.Title).ToListAsync());
 
     [HttpPost("interludes")]
+    [EnableRateLimiting("UploadPolicy")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(524_288_000)]
-    public async Task<IActionResult> UploadInterlude([FromForm] InterludeUploadRequest request, CancellationToken ct)
+    public async Task<IActionResult> UploadInterlude([FromForm] InterludeUploadRequest request, [FromServices] MediaProbe probe, CancellationToken ct)
     {
         if (request.File == null || request.File.Length is <= 0 or > 524_288_000
             || !Path.GetExtension(request.File.FileName).Equals(".mp4", StringComparison.OrdinalIgnoreCase))
@@ -144,16 +145,8 @@ public class RetroBroadcastController : ControllerBase
                 FileShare.None, 81920, FileOptions.Asynchronous))
                 await request.File.CopyToAsync(stream, ct);
 
-            var info = await FFProbe.AnalyseAsync(path);
-            if (info.Duration.TotalSeconds <= 0 || info.VideoStreams.Count == 0)
-            {
-                System.IO.File.Delete(path);
-                return BadRequest("The uploaded file has no playable video.");
-            }
-            if (!string.Equals(info.VideoStreams[0].CodecName, "h264", StringComparison.OrdinalIgnoreCase)
-                || !string.Equals(info.VideoStreams[0].PixelFormat, "yuv420p", StringComparison.OrdinalIgnoreCase)
-                || info.AudioStreams.Any(stream =>
-                    !string.Equals(stream.CodecName, "aac", StringComparison.OrdinalIgnoreCase)))
+            var info = await probe.ReadAsync(path, ct);
+            if (!info.Compatible)
             {
                 System.IO.File.Delete(path);
                 return BadRequest("The clip must use H.264/yuv420p video and AAC audio.");
@@ -165,7 +158,7 @@ public class RetroBroadcastController : ControllerBase
                 Season = request.Season,
                 Title = request.Title.Trim(),
                 FilePath = $"/uploads/{folder}/{name}",
-                DurationSeconds = decimal.Round((decimal)info.Duration.TotalSeconds, 3),
+                DurationSeconds = decimal.Round((decimal)info.Duration, 3),
                 OriginalYearFrom = request.OriginalYearFrom,
                 OriginalYearTo = request.OriginalYearTo,
                 RegionCode = request.RegionCode?.Trim(),
@@ -175,7 +168,7 @@ public class RetroBroadcastController : ControllerBase
             await _context.SaveChangesAsync(ct);
             return Ok(interlude);
         }
-        catch (Exception error) when (error is not OperationCanceledException)
+        catch
         {
             if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
             throw;
@@ -183,7 +176,7 @@ public class RetroBroadcastController : ControllerBase
     }
 
     [HttpPost("eras/{eraId}/import-bumpers")]
-    public async Task<IActionResult> ImportBumpers(int eraId, CancellationToken ct)
+    public async Task<IActionResult> ImportBumpers(int eraId, [FromServices] MediaProbe probe, CancellationToken ct)
     {
         var era = await _context.ChannelEras.AsNoTracking().FirstOrDefaultAsync(item => item.Id == eraId, ct);
         if (era == null) return NotFound();
@@ -204,19 +197,17 @@ public class RetroBroadcastController : ControllerBase
             var relative = "/uploads/" + Path.GetRelativePath(_media.BasePath, path).Replace('\\', '/');
             if (await _context.Interludes.AnyAsync(clip => clip.FilePath == relative, ct)) continue;
             if (++inspected > 100) break;
-            IMediaAnalysis info;
+            MediaInfo info;
             try
             {
-                info = await FFProbe.AnalyseAsync(path);
+                info = await probe.ReadAsync(path, ct);
             }
             catch (Exception error) when (error is not OperationCanceledException)
             { skipped.Add(Path.GetFileName(path)); continue; }
-            if (info.Duration.TotalSeconds <= 0 || info.VideoStreams.Count == 0
-                || info.VideoStreams[0].CodecName != "h264" || info.VideoStreams[0].PixelFormat != "yuv420p"
-                || info.AudioStreams.Any(stream => stream.CodecName != "aac"))
+            if (!info.Compatible)
             { skipped.Add(Path.GetFileName(path)); continue; }
             _context.Interludes.Add(new Interlude { Title = Path.GetFileNameWithoutExtension(path), FilePath = relative,
-                Kind = InterludeKind.Bumper, DurationSeconds = decimal.Round((decimal)info.Duration.TotalSeconds, 3), ApprovedForBroadcast = false });
+                Kind = InterludeKind.Bumper, DurationSeconds = decimal.Round((decimal)info.Duration, 3), ApprovedForBroadcast = false });
             await _context.SaveChangesAsync(ct);
             imported++;
         }

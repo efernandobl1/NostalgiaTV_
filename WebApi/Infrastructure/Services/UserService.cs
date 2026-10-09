@@ -26,6 +26,8 @@ namespace Infrastructure.Services
 
         public async Task<UserResponse> CreateAsync(UserRequest request)
         {
+            if (request.Password is null || request.Password.Length is < 12 or > 128)
+                throw new BadRequestException("Password must contain between 12 and 128 characters.");
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
                 throw new ConflictException("Username already exists.");
 
@@ -48,6 +50,8 @@ namespace Infrastructure.Services
 
         public async Task<UserResponse> UpdateAsync(int id, UserRequest request)
         {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await _context.Database.ExecuteSqlInterpolatedAsync($"DECLARE @result int; EXEC @result=sp_getapplock @Resource={"user-" + id}, @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000; IF @result < 0 THROW 50000, 'Authentication lock unavailable', 1;");
             var user = await _context.Users.Include(u => u.Rol).FirstOrDefaultAsync(u => u.Id == id) ?? throw new NotFoundException($"User {id} not found");
 
             if (await _context.Users.AnyAsync(u => u.Username == request.Username && u.Id != id))
@@ -58,13 +62,21 @@ namespace Infrastructure.Services
 
             if (!string.IsNullOrEmpty(request.Password))
             {
+                if (request.Password.Length is < 12 or > 128)
+                    throw new BadRequestException("Password must contain between 12 and 128 characters.");
                 if (AuthService.VerifyPassword(request.Password, user.PasswordHash))
                     throw new BadRequestException("New password must be different from the current one.");
 
                 user.PasswordHash = AuthService.HashPassword(request.Password);
+                user.SessionVersion++;
+                user.FailedLoginAttempts = 0;
+                user.LockedUntilUtc = null;
+                await _context.RefreshTokens.Where(token => token.UserId == id && token.RevokedAt == null)
+                    .ExecuteUpdateAsync(update => update.SetProperty(token => token.RevokedAt, DateTime.UtcNow));
             }
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return user.Adapt<UserResponse>();
         }
 

@@ -11,6 +11,7 @@ export class AuthService {
   private readonly apiUrl = `${environment.apiUrl}/api/v1/auth`;
   isAuthenticated = signal<boolean>(false);
   private sessionRequest?: Observable<MenuResponse[]>;
+  private refreshRequest?: Observable<unknown>;
 
   constructor(
     private http: HttpClient,
@@ -25,9 +26,14 @@ export class AuthService {
   }
 
   refresh() {
-    return this.http
+    this.refreshRequest ??= this.http
       .post(`${this.apiUrl}/refresh`, {}, { withCredentials: true })
-      .pipe(tap(() => this.isAuthenticated.set(true)));
+      .pipe(
+        tap({ next: () => this.isAuthenticated.set(true), error: () => this.isAuthenticated.set(false) }),
+        finalize(() => (this.refreshRequest = undefined)),
+        shareReplay({ bufferSize: 1, refCount: false }),
+      );
+    return this.refreshRequest;
   }
 
   logout() {
@@ -37,8 +43,7 @@ export class AuthService {
   }
 
   checkSession() {
-    this.sessionRequest ??= this.http
-      .post(`${this.apiUrl}/refresh`, {}, { withCredentials: true })
+    this.sessionRequest ??= this.refresh()
       .pipe(
         tap(() => this.isAuthenticated.set(true)),
         switchMap(() => this.menuService.loadCurrentUser()),

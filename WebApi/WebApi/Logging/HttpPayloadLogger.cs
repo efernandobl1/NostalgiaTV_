@@ -2,9 +2,7 @@ using Serilog;
 
 namespace WebApi.Logging
 {
-    /// <summary>Escribe los cuerpos HTTP seguros en archivos independientes al log operativo:
-    /// <c>Logs/requests/request-*.txt</c> y <c>Logs/responses/response-*.txt</c>. Los valores
-    /// llegan previamente redactados desde <see cref="Middleware.RequestResponseLoggingMiddleware"/>.</summary>
+    /// <summary>Records HTTP metadata only. Credentials and payloads must never be supplied.</summary>
     public sealed class HttpPayloadLogger : IHttpPayloadLogger
     {
         private readonly Serilog.ILogger _requests;
@@ -27,12 +25,12 @@ namespace WebApi.Logging
         }
 
         public void Request(string method, string path, long? contentLength, string? contentType, string body) =>
-            _requests.Information("{Method} {Path} | ContentLength={ContentLength} ContentType={ContentType} | Body={Body}",
-                method, path, contentLength, contentType, body);
+            _requests.Information("{Method} {Path} | ContentLength={ContentLength} ContentType={ContentType}",
+                method, path, contentLength, contentType);
 
         public void Response(string method, string path, int statusCode, long elapsedMs, string? contentType, string body) =>
-            _responses.Information("{Method} {Path} | StatusCode={StatusCode} ElapsedMs={ElapsedMs} ContentType={ContentType} | Body={Body}",
-                method, path, statusCode, elapsedMs, contentType, body);
+            _responses.Information("{Method} {Path} | StatusCode={StatusCode} ElapsedMs={ElapsedMs} ContentType={ContentType}",
+                method, path, statusCode, elapsedMs, contentType);
 
         public void Dispose()
         {

@@ -1,0 +1,32 @@
+# Install in the existing Loki ruler and connect its Alertmanager before deployment.
+# Confirm that Alloy uses the container label shown here; no personal data is included in notifications.
+groups:
+  - name: nostalgia-security
+    interval: 1m
+    rules:
+      - alert: NostalgiaAuthenticationAbuse
+        expr: sum(count_over_time({container="nostalgia-api"} |= "SecurityEvent LoginRejected" [5m])) > 20
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Repeated rejected NostalgiaTV logins
+      - alert: NostalgiaRefreshCredentialReuse
+        expr: sum(count_over_time({container="nostalgia-api"} |= "SecurityEvent RefreshTokenReuse" [5m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: A revoked refresh credential was reused; sessions were invalidated
+      - alert: NostalgiaRequestAbuse
+        expr: sum(count_over_time({container="nostalgia-api"} |~ "SecurityEvent (RateLimitRejected|CsrfRejected)" [5m])) > 30
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: NostalgiaTV rejected excessive or cross-site requests
+      - alert: NostalgiaUploadStorageUnavailable
+        expr: sum(count_over_time({container="nostalgia-api"} |= "SecurityEvent UploadStorageUnavailable" [5m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Insufficient storage for NostalgiaTV uploads

@@ -373,6 +373,7 @@ WebApi/WebApi/Logs/
 
 # Certificados TLS generados/montados en la VPS
 /certs/
+/certificates/
 
 # Secretos locales de la API: solo se versionan las plantillas *.example.json
 appsettings.Local.json

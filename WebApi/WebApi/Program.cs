@@ -18,12 +18,19 @@ namespace WebApi
     {
         public static async Task Main(string[] args)
         {
+            if (args.Contains("--migrate"))
+            {
+                await DatabaseMigrationHost.RunAsync(args);
+                return;
+            }
             if (args.Contains("--media-worker"))
             {
                 await MediaWorkerHost.RunAsync(args);
                 return;
             }
             var builder = WebApplication.CreateBuilder(args);
+            if (!builder.Environment.IsDevelopment())
+                await Infrastructure.Services.DatabaseConnectionPolicy.ValidateAsync(builder.Configuration.GetConnectionString("DefaultConnection"));
 
             if (builder.Environment.IsDevelopment())
             {
@@ -39,6 +46,7 @@ namespace WebApi
 
             // Add services to the container.
             builder.Services.AddSignalR();
+            await builder.AddProxySecurityAsync();
             builder.Services.AddControllers();
             builder.Services.AddApplicationCore(builder.Configuration);
             builder.Services.AddInfrastructure(builder.Configuration);
@@ -48,6 +56,7 @@ namespace WebApi
             builder.Services.AddScoped<IAuthorizationHandler, MenuAccessHandler>();
             builder.Services.AddAuthorization(options =>
             {
+                options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
                 options.AddPolicy("Admin", policyBuilder =>
                     policyBuilder.RequireAuthenticatedUser().AddRequirements(new MenuAccessRequirement(null)));
 
@@ -77,36 +86,16 @@ namespace WebApi
                     timeout: TimeSpan.FromSeconds(5));
 
             var app = builder.Build();
+            app.UseMiddleware<Middleware.TrustedProxyMiddleware>();
+            app.UseExceptionHandler();
 
-            await app.ApplyMigrationsAsync();
+            if (app.Configuration.GetValue("Database:ApplyMigrations", app.Environment.IsDevelopment()))
+                await app.ApplyMigrationsAsync();
 
             app.UseRouting();
             app.UseCors("DefaultPolicy");
 
-            var allowedOrigins = app.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
-            app.Use(async (context, next) =>
-            {
-                var method = context.Request.Method;
-                if (context.Request.Path.StartsWithSegments("/api") &&
-                    method is not ("GET" or "HEAD" or "OPTIONS"))
-                {
-                    var origin = context.Request.Headers.Origin.ToString();
-                    var fetchSite = context.Request.Headers["Sec-Fetch-Site"].ToString();
-                    var sameOrigin = $"{context.Request.Scheme}://{context.Request.Host}";
-                    var trustedOrigin = allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
-                    var originAllowed = string.IsNullOrEmpty(origin) ||
-                        origin.Equals(sameOrigin, StringComparison.OrdinalIgnoreCase) ||
-                        trustedOrigin;
-
-                    if (!originAllowed || (fetchSite is "cross-site" or "same-site") && !trustedOrigin)
-                    {
-                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                        return;
-                    }
-                }
-
-                await next(context);
-            });
+            app.UseMiddleware<Middleware.SecurityRequestMiddleware>();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -114,7 +103,6 @@ namespace WebApi
                 app.UseOpenApiConfig();
             }
 
-            app.UseExceptionHandler();
 
             // The public proxy terminates TLS; redirecting internal health checks causes loops.
             var usesTrustedReverseProxy = app.Configuration.GetValue<bool>("ReverseProxy:TrustForwardedHeaders");
@@ -124,11 +112,11 @@ namespace WebApi
             }
 
             app.UseAuthentication();
+            app.UseRateLimiter();
+            app.UseStaticFiles();
             app.UseSecureRequestLogging();
             app.UseAuthorization();
             app.UseMiddleware<Middleware.ActivityLoggingMiddleware>();
-            app.UseRateLimiter();
-            app.UseStaticFiles();
             app.MapControllers();
 
             // Liveness: confirma que el proceso HTTP responde sin depender de SQL.
@@ -143,7 +131,7 @@ namespace WebApi
                 Predicate = healthCheck => healthCheck.Tags.Contains("ready")
             }).AllowAnonymous();
 
-            app.MapHub<ChannelHub>("/hubs/channel");
+            app.MapHub<ChannelHub>("/hubs/channel").AllowAnonymous();
 
             app.Run();
         }
