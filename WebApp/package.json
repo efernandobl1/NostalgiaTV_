@@ -29,7 +29,7 @@
     "@fullcalendar/daygrid": "^6.1.20",
     "@iplab/ngx-file-upload": "^21.0.0",
     "@microsoft/signalr": "^10.0.0",
-    "apexcharts": "^6.10.0",
+    "apexcharts": "^7.1.0",
     "express": "^5.2.1",
     "moment": "^2.31.0",
     "ng-apexcharts": "^3.1.0",

@@ -64,8 +64,8 @@ importers:
         specifier: ^10.0.0
         version: 10.0.11
       apexcharts:
-        specifier: ^6.10.0
-        version: 6.10.0
+        specifier: ^7.1.0
+        version: 7.1.0
       express:
         specifier: ^5.2.1
         version: 5.2.1(supports-color@8.1.1)
@@ -74,7 +74,7 @@ importers:
         version: 2.31.0
       ng-apexcharts:
         specifier: ^3.1.0
-        version: 3.1.0(@angular/common@21.2.25(@angular/core@21.2.25(@angular/compiler@21.2.25)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.25(@angular/compiler@21.2.25)(rxjs@7.8.2)(zone.js@0.16.3))(apexcharts@6.10.0)(rxjs@7.8.2)
+        version: 3.1.0(@angular/common@21.2.25(@angular/core@21.2.25(@angular/compiler@21.2.25)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.25(@angular/compiler@21.2.25)(rxjs@7.8.2)(zone.js@0.16.3))(apexcharts@7.1.0)(rxjs@7.8.2)
       ngx-editor:
         specifier: ^19.0.0-beta.1
         version: 19.0.0-beta.1(afdf939e341b1cc38ad8a6e027e8bd35)
@@ -1892,8 +1892,8 @@ packages:
   apex-commons@0.5.0:
     resolution: {integrity: sha512-xz83SgPREE1wGtoflvxjwJtcjzl5bKTz2/bDxWCZNL6QVjUNE47kMg/1Zqt0bSh6eOnmFCWlTDc3RU8o85N+wg==}
 
-  apexcharts@6.10.0:
-    resolution: {integrity: sha512-XkDW9pb5L5jrjox86Q20gR2w6YnU4hUpv+FjL1eKtYKQGtyTUSsnFeuUE8wVDz8hNNHbOEx7Sl9cjfCmhB3NVw==}
+  apexcharts@7.1.0:
+    resolution: {integrity: sha512-zO43jUhHBNz+riahvkVvlqYw8Zpog5KtpdVSc9PbvOiXAmPBaSSoleUtO83NktObHZ9LnNt3M4MdYx7m+aSDMw==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
 
   assertion-error@2.0.1:
@@ -5080,7 +5080,7 @@ snapshots:
 
   apex-commons@0.5.0: {}
 
-  apexcharts@6.10.0:
+  apexcharts@7.1.0:
     dependencies:
       apex-commons: 0.5.0
 
@@ -5912,11 +5912,11 @@ snapshots:
     dependencies:
       content-type: 2.1.0
 
-  ng-apexcharts@3.1.0(@angular/common@21.2.25(@angular/core@21.2.25(@angular/compiler@21.2.25)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.25(@angular/compiler@21.2.25)(rxjs@7.8.2)(zone.js@0.16.3))(apexcharts@6.10.0)(rxjs@7.8.2):
+  ng-apexcharts@3.1.0(@angular/common@21.2.25(@angular/core@21.2.25(@angular/compiler@21.2.25)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2))(@angular/core@21.2.25(@angular/compiler@21.2.25)(rxjs@7.8.2)(zone.js@0.16.3))(apexcharts@7.1.0)(rxjs@7.8.2):
     dependencies:
       '@angular/common': 21.2.25(@angular/core@21.2.25(@angular/compiler@21.2.25)(rxjs@7.8.2)(zone.js@0.16.3))(rxjs@7.8.2)
       '@angular/core': 21.2.25(@angular/compiler@21.2.25)(rxjs@7.8.2)(zone.js@0.16.3)
-      apexcharts: 6.10.0
+      apexcharts: 7.1.0
       rxjs: 7.8.2
       tslib: 2.8.1
 
