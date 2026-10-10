@@ -17,6 +17,9 @@ export const routes: Routes = [
         ]
     },
     { path: 'dashboard/login', component: SignInComponent },
+    { path: 'login', loadComponent: () => import('./features/accounts/account.component').then(m => m.AccountComponent) },
+    { path: 'tv', canActivate: [authGuard], loadComponent: () => import('./features/accounts/tv-activation.component').then(m => m.TvActivationComponent) },
+    { path: 'mytv', redirectTo: 'tv', pathMatch: 'full' },
     { path: 'connect', loadComponent: () => import('./features/servers/server-connect.component').then(m => m.ServerConnectComponent) },
     { path: 'dashboard/logout', loadComponent: () => import('./features/dashboard/authentication/logout/logout.component').then(m => m.LogoutComponent) },
     {
@@ -27,6 +30,7 @@ export const routes: Routes = [
           { path: '', redirectTo: 'summary', pathMatch: 'full' },
           { path: 'summary', loadComponent: () => import('./features/dashboard/summary/summary.component').then(m => m.SummaryComponent) },
           { path: 'activity', loadComponent: () => import('./features/dashboard/activity/activity.component').then(m => m.ActivityComponent) },
+          { path: 'devices', loadComponent: () => import('./features/dashboard/devices/devices.component').then(m => m.DevicesComponent) },
           { path: 'settings', canActivate: [adminGuard], loadComponent: () => import('./features/dashboard/settings/settings.component').then(m => m.SettingsComponent) },
           { path: 'transcoding', canActivate: [menuGuard], loadComponent: () => import('./features/dashboard/transcoding/transcoding.component').then(m => m.TranscodingComponent) },
           { path: 'interludes', canActivate: [adminGuard], loadComponent: () => import('./features/dashboard/interludes/interludes.component').then(m => m.InterludesComponent) },

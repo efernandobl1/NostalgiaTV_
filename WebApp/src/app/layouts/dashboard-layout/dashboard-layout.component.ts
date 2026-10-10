@@ -41,6 +41,7 @@ export class DashboardLayoutComponent {
   readonly currentUrl = signal(this.router.url);
   readonly destinations: StudioDestination[] = [
     { label: 'Inicio', icon: 'space_dashboard', url: '/dashboard/summary', access: [] },
+    { label: 'Dispositivos', icon: 'devices', url: '/dashboard/devices', access: [], secondary: true },
     {
       label: 'Canales',
       icon: 'live_tv',

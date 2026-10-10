@@ -26,7 +26,8 @@ export class InterludeUploaderComponent {
   readonly kind = input<0 | 1>(0);
   readonly season = input<InterludeSeason>(0);
   readonly eraId = input<number | null>(null);
-  readonly role = input<0 | 1 | 2>(0);
+  readonly role = input<0 | 1 | 2 | 3>(0);
+  readonly seriesId = input<number | null>(null);
   readonly seasons = INTERLUDE_SEASONS;
   readonly seasonOverride = signal<InterludeSeason | null>(null);
   readonly effectiveSeason = computed(() => this.seasonOverride() ?? this.season());
@@ -38,6 +39,13 @@ export class InterludeUploaderComponent {
   readonly hasFailed = computed(() => this.items().some((item) => item.status === 'failed'));
   private readonly service = inject(BroadcastAdminService);
   private readonly destroyRef = inject(DestroyRef);
+  private destination = {
+    eraId: null as number | null,
+    seriesId: null as number | null,
+    kind: 0 as 0 | 1,
+    season: 0 as InterludeSeason,
+    role: 0 as 0 | 1 | 2 | 3,
+  };
 
   choose(event: Event): void {
     if (this.busy()) return;
@@ -54,6 +62,13 @@ export class InterludeUploaderComponent {
       return;
     }
     this.error.set('');
+    this.destination = {
+      eraId: this.eraId(),
+      seriesId: this.seriesId(),
+      kind: this.kind(),
+      season: this.effectiveSeason(),
+      role: this.role(),
+    };
     this.items.set(files.map((file) => ({ file, status: 'queued', progress: 0 })));
     void this.run(this.items());
   }
@@ -76,11 +91,8 @@ export class InterludeUploaderComponent {
     if (!items.length || this.destroyRef.destroyed) return;
     this.busy.set(true);
     this.busyChange.emit(true);
-    // Snapshot the destination so all files in this batch use the same era and season.
-    const eraId = this.eraId();
-    const kind = this.kind();
-    const season = this.effectiveSeason();
-    const role = this.role();
+    // Retries keep the destination selected when the batch was created.
+    const { eraId, kind, season, role, seriesId } = this.destination;
     const completed: Interlude[] = [];
     try {
       for (const item of items) {
@@ -115,7 +127,7 @@ export class InterludeUploaderComponent {
             this.update(item, { status: 'assigning', progress: 100 });
             await firstValueFrom(
               this.service
-                .assign(eraId, item.clip.id, role, 1, role === 1 ? 3600 : 0)
+                .assign(eraId, item.clip.id, role, 1, role === 1 ? 3600 : 0, seriesId)
                 .pipe(takeUntilDestroyed(this.destroyRef)),
             );
           }

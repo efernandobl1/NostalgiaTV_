@@ -14,8 +14,11 @@ data class ChannelState(
     val seriesId: Int = 0,
 )
 data class WatchProgress(val episodeId: Int, val currentSecond: Double, val completed: Boolean, val seriesId: Int = 0)
-data class ViewerSession(val profileId: String, val deviceCount: Int, val progress: List<WatchProgress>)
+data class ViewerSession(val profileId: String, val deviceCount: Int, val progress: List<WatchProgress>,
+    val currentDeviceId: String? = null, val accountLinked: Boolean = false)
 data class PairingCode(val code: String, val expiresAtUtc: String)
+data class AuthorizationCode(val deviceCode: String, val userCode: String, val expiresAtUtc: String, val interval: Int)
+data class ServerFeatures(val registrationEnabled: Boolean, val googleEnabled: Boolean)
 data class Playback(
     val title: String, val subtitle: String, val filePath: String,
     val episodeId: Int, val startSecond: Double = 0.0,

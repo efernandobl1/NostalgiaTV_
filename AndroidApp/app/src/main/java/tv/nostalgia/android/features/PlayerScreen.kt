@@ -67,7 +67,7 @@ fun PlayerScreen(model: AppViewModel, playback: Playback) {
     val settings by model.videoSettings.collectAsStateWithLifecycle()
     val visibleError = error ?: appState.error
     val player = remember {
-        val http = OkHttpDataSource.Factory(SecureHttp.create(context)).setUserAgent("NostalgiaTV-AndroidTV/0.1")
+        val http = OkHttpDataSource.Factory(SecureHttp.create(context, origin = model.api.base)).setUserAgent("NostalgiaTV-AndroidTV/0.1")
         ExoPlayer.Builder(context).setMediaSourceFactory(DefaultMediaSourceFactory(http))
             .setLoadControl(DefaultLoadControl.Builder().setBufferDurationsMs(10000, 30000, 1500, 2500)
                 .setTargetBufferBytes(24 * 1024 * 1024).build()).build().apply {

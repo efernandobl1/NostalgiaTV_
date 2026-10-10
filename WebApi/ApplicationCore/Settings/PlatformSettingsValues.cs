@@ -4,6 +4,7 @@ namespace ApplicationCore.Settings;
 
 public class PlatformSettingsValues : IValidatableObject
 {
+    public bool PublicRegistrationEnabled { get; set; }
     public bool SeasonalThemesEnabled { get; set; } = true;
     public bool SeasonalEffectsEnabled { get; set; } = true;
     public bool SeasonalEpisodesEnabled { get; set; } = true;

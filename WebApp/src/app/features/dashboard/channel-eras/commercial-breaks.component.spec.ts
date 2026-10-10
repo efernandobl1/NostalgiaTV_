@@ -56,13 +56,34 @@ describe('CommercialBreaksComponent', () => {
       .expectOne(`${base}/eras/4/break-rules`)
       .flush({ minimumAds: 1, maximumAds: 3, maximumBreakSeconds: 180 });
     const component = fixture.componentInstance;
-    component.draft[2] = { clipId: 8, weight: 2, minimumGapSeconds: 30 };
+    component.draft[2] = { clipId: 8, weight: 2, minimumGapSeconds: 30, seriesId: null };
     component.assign(2);
     const request = http.expectOne(`${base}/eras/4/interludes/8/2`);
     expect(request.request.method).toBe('PUT');
-    expect(request.request.body).toEqual({ weight: 2, minimumGapSeconds: 30 });
+    expect(request.request.body).toEqual({ weight: 2, minimumGapSeconds: 30, seriesId: null });
     request.flush({ channelEraId: 4, interludeId: 8, role: 2, weight: 2, minimumGapSeconds: 30 });
     expect(component.assignments().length).toBe(1);
     expect(component.busy()).toBe(false);
+  });
+  it('assigns the upcoming-program bumper to a series in this era', () => {
+    http
+      .expectOne(`${base}/eras/4/break-rules`)
+      .flush({}, { status: 404, statusText: 'Not Found' });
+    fixture.componentRef.setInput('series', [{ id: 7, name: 'Dexter' }]);
+    const component = fixture.componentInstance;
+    component.draft[3] = { clipId: 8, weight: 1, minimumGapSeconds: 0, seriesId: 7 };
+    component.assign(3);
+    const request = http.expectOne(`${base}/eras/4/interludes/8/3`);
+    expect(request.request.body).toEqual({ weight: 1, minimumGapSeconds: 0, seriesId: 7 });
+    request.flush({
+      channelEraId: 4,
+      interludeId: 8,
+      role: 3,
+      weight: 1,
+      minimumGapSeconds: 0,
+      seriesId: 7,
+    });
+    expect(component.seriesLabel(component.assignments()[0].seriesId)).toBe('Dexter');
+    expect(component.seriesLabel(null)).toBe('Genérico del canal');
   });
 });

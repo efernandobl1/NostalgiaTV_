@@ -45,6 +45,7 @@ namespace Infrastructure.Contexts
         public DbSet<ViewerProfile> ViewerProfiles { get; set; }
         public DbSet<ViewerDevice> ViewerDevices { get; set; }
         public DbSet<ViewerPairingCode> ViewerPairingCodes { get; set; }
+        public DbSet<DeviceAuthorization> DeviceAuthorizations { get; set; }
         public DbSet<ViewerProgress> ViewerProgress { get; set; }
         public DbSet<ViewerWatchRange> ViewerWatchRanges { get; set; }
         public DbSet<ChannelComment> ChannelComments { get; set; }
@@ -53,6 +54,9 @@ namespace Infrastructure.Contexts
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<User>().Property(user => user.GoogleSubject).HasMaxLength(255);
+            modelBuilder.Entity<User>().HasIndex(user => user.GoogleSubject).IsUnique();
+            modelBuilder.Entity<Rol>().HasIndex(role => role.IsViewerRole).IsUnique().HasFilter("[IsViewerRole] = 1");
             modelBuilder.Entity<RefreshToken>().Property(token => token.Token).HasMaxLength(64);
             modelBuilder.Entity<RefreshToken>().Property(token => token.ReplacedByToken).HasMaxLength(64);
             modelBuilder.Entity<RefreshToken>().HasIndex(token => token.Token).IsUnique();

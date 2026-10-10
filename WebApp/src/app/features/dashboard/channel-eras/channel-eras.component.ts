@@ -299,6 +299,9 @@ export class ChannelErasComponent implements OnInit {
   getSeriesNames(seriesIds: number[]) {
     return seriesIds.map((id) => this.series().find((s) => s.id === id)?.name ?? id).join(', ');
   }
+  eraSeries(seriesIds: number[]): SeriesResponse[] {
+    return this.series().filter((item) => seriesIds.includes(item.id));
+  }
 
   private showSuccess(msg: string) {
     this.snackBar.open(msg, 'Cerrar', { duration: 5000 });

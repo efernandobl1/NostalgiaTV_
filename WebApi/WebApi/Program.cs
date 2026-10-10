@@ -53,6 +53,7 @@ namespace WebApi
             builder.Services.AddApiVersioningConfig();
             builder.Services.AddRateLimitingConfig();
             builder.Services.AddJwtAuthentication(builder.Configuration);
+            builder.Services.AddGoogleLogin(builder.Configuration);
             builder.Services.AddScoped<IAuthorizationHandler, MenuAccessHandler>();
             builder.Services.AddAuthorization(options =>
             {

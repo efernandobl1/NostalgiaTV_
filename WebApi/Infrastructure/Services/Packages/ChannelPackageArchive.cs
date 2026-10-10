@@ -58,7 +58,7 @@ public static class ChannelPackageArchive
 
     public static void Validate(ChannelPackageManifest manifest)
     {
-        Require(manifest.SchemaVersion == 1 && manifest.PackageId != Guid.Empty && manifest.Version == "1.0.0",
+        Require(manifest.SchemaVersion is 1 or 2 && manifest.PackageId != Guid.Empty && manifest.Version == "1.0.0",
             "Esta versión del paquete no es compatible.");
         Require(manifest.SchedulingMode == "Shuffle", "La primera versión admite programación aleatoria, no horarios fijos.");
         Text(manifest.Name, 200);
@@ -129,6 +129,8 @@ public static class ChannelPackageArchive
             foreach (var assignment in era.Clips)
                 Require(assignment != null && clipKeys.TryGetValue(assignment.ClipKey, out var clip) && Enum.IsDefined(assignment.Role)
                     && clip.Kind == (assignment.Role == BreakRole.Advertisement ? InterludeKind.Advertisement : InterludeKind.Bumper)
+                    && (assignment.SeriesKey == null || era.Series.Any(item => item.SeriesKey == assignment.SeriesKey))
+                    && (manifest.SchemaVersion >= 2 || assignment.SeriesKey == null && assignment.Role != BreakRole.ProgramIntro)
                     && assignment.Weight is >= 1 and <= 100 && assignment.MinimumGapSeconds is >= 0 and <= 604800,
                     "La asignación publicitaria no es válida.");
             Require(era.Clips.Select(item => (item.ClipKey, item.Role)).Distinct().Count() == era.Clips.Count, "La era repite una asignación publicitaria.");

@@ -1,0 +1,11 @@
+{
+    admin off
+    auto_https disable_redirects
+}
+
+https://{$LOCAL_HTTPS_HOST:localhost}:8443 {
+    tls internal
+    reverse_proxy webapp:8080 {
+        header_up X-Real-IP {remote_host}
+    }
+}

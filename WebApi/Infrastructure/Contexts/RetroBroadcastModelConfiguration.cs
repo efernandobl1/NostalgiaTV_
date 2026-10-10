@@ -104,12 +104,16 @@ internal static class RetroBroadcastModelConfiguration
                 .OnDelete(DeleteBehavior.Restrict);
             assignment.HasOne<Interlude>().WithMany().HasForeignKey(item => item.InterludeId)
                 .OnDelete(DeleteBehavior.Restrict);
+            assignment.HasOne<ChannelEraSeries>().WithMany()
+                .HasForeignKey(item => new { item.ChannelEraId, item.SeriesId })
+                .HasPrincipalKey(item => new { item.ChannelEraId, item.SeriesId })
+                .OnDelete(DeleteBehavior.Restrict);
             assignment.ToTable(table =>
             {
                 table.HasCheckConstraint("CK_ChannelEraInterludes_Weight", "[Weight] > 0");
                 table.HasCheckConstraint("CK_ChannelEraInterludes_Gap", "[MinimumGapSeconds] >= 0");
                 table.HasCheckConstraint("CK_ChannelEraInterludes_Role",
-                    "[Role] IN ('BreakOpener', 'Advertisement', 'BreakCloser')");
+                    "[Role] IN ('BreakOpener', 'Advertisement', 'BreakCloser', 'ProgramIntro')");
             });
         });
 
@@ -167,7 +171,7 @@ internal static class RetroBroadcastModelConfiguration
                 table.HasCheckConstraint("CK_ScheduledPlaybackSegments_Content",
                     "([InterludeId] IS NULL AND [ScheduledAdBreakId] IS NULL AND [MediaStartSecond] IS NOT NULL " +
                     "AND [MediaEndSecond] IS NOT NULL AND [MediaStartSecond] >= 0 AND [MediaEndSecond] > [MediaStartSecond]) " +
-                    "OR ([InterludeId] IS NOT NULL AND [ScheduledAdBreakId] IS NOT NULL " +
+                    "OR ([InterludeId] IS NOT NULL " +
                     "AND [MediaStartSecond] IS NULL AND [MediaEndSecond] IS NULL)");
             });
         });

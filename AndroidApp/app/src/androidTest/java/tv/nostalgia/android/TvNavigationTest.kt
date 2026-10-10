@@ -62,12 +62,12 @@ class TvNavigationTest {
         compose.onNodeWithText("Mi perfil").performSemanticsAction(SemanticsActions.OnClick) { it() }
         val tv = compose.activity.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
         compose.onNodeWithText(if (tv) "Vincular esta TV" else "Vincular este dispositivo").assertIsDisplayed()
-        compose.waitUntil(15000) {
-            compose.activity.getSharedPreferences("viewer_session", 0).contains("cookie")
-        }
         val origin = BuildConfig.API_BASE_URL.toHttpUrl()
+        val key = java.security.MessageDigest.getInstance("SHA-256").digest(origin.toString().toByteArray()).joinToString("") { "%02x".format(it) }
+        val preferences = compose.activity.getSharedPreferences("viewer_session_$key", 0)
+        compose.waitUntil(15000) { preferences.contains("cookie") }
         val cookie = ViewerCookies(compose.activity, origin).loadForRequest(origin.resolve("api/v1/viewer/session")!!).single()
-        val stored = compose.activity.getSharedPreferences("viewer_session", 0).getString("cookie", "")!!
+        val stored = preferences.getString("cookie", "")!!
         assertFalse(stored.contains(cookie.value))
         assertTrue(cookie.secure)
         assertTrue(cookie.httpOnly)

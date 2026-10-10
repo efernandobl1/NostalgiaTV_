@@ -15,6 +15,37 @@ class NostalgiaApiTest {
     @Before fun setup() { server = MockWebServer(); server.start(); api = NostalgiaApi(server.url("/"), OkHttpClient()) }
     @After fun cleanup() { server.shutdown() }
 
+    @Test fun verifiesServerAndPollsUntilExplicitlyApproved() = runTest {
+        server.enqueue(MockResponse().setBody("""{"product":"NostalgiaTV","deviceAuthorizationVersion":1}"""))
+        api.verifyServer()
+        assertEquals("/api/v1/server", server.takeRequest().path)
+        server.enqueue(MockResponse().setBody("""{"deviceCode":"secret","userCode":"ABC-DEF-GHJ-KLM","expiresAtUtc":"2026-10-10T12:00:00Z","interval":5}"""))
+        assertEquals(5, api.authorizeDevice("TV").interval)
+        assertEquals("/api/v1/viewer/authorization", server.takeRequest().path)
+        server.enqueue(MockResponse().setResponseCode(202).setBody("""{"status":"pending"}"""))
+        assertFalse(api.redeemDevice("secret"))
+        server.enqueue(MockResponse().setBody("""{"status":"connected"}"""))
+        assertTrue(api.redeemDevice("secret"))
+    }
+
+    @Test fun credentialsOnlyCreateViewerSessionAndRevokeAdministrativeLogin() = runTest {
+        server.enqueue(MockResponse().setBody("{}"))
+        server.enqueue(MockResponse().setBody("""{"profileId":"profile","accountLinked":true,"devices":[{"id":"device","current":true}],"progress":[]}"""))
+        server.enqueue(MockResponse().setResponseCode(204))
+        val session = api.loginViewer("viewer", "private-test-password", "Android")
+        assertTrue(session.accountLinked)
+        assertEquals("device", session.currentDeviceId)
+        assertEquals("/api/v1/auth/token", server.takeRequest().path)
+        assertEquals("/api/v1/viewer/session", server.takeRequest().path)
+        assertEquals("/api/v1/auth/revoke", server.takeRequest().path)
+    }
+
+    @Test fun rejectsOtherServerProducts() = runTest {
+        server.enqueue(MockResponse().setBody("""{"product":"Unrelated","deviceAuthorizationVersion":1}"""))
+        try { api.verifyServer(); fail("Expected unsupported server") }
+        catch (_: IllegalArgumentException) { }
+    }
+
     @Test fun loadsChannelLogos() = runTest {
         server.enqueue(MockResponse().setBody("""[{"id":1,"name":"Jetix","logoPath":"/uploads/channels/jetix.png"}]"""))
         assertEquals("/uploads/channels/jetix.png", api.channels().single().logoPath)

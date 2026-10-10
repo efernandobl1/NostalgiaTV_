@@ -1,0 +1,27 @@
+<main class="signal-page">
+  <header class="signal-header"><a class="signal-brand" routerLink="/">NostalgiaTV</a><a class="signal-back" routerLink="/">Volver a TV</a></header>
+  <div class="signal-main access-layout">
+    <section class="access-intro"><div class="access-television" aria-hidden="true"><div class="access-screen"><span>Ntv</span></div><div class="access-hardware"><i></i><span></span></div></div>
+      <h1>Tu historia, en cada pantalla.</h1><p>Guarda lo que ves y continúa desde tu TV, celular o PC.</p></section>
+    <section class="access-panel" aria-labelledby="account-title">
+      <h2 id="account-title">{{ registering() ? 'Crear mi cuenta' : 'Entrar a mi cuenta' }}</h2>
+      <div class="access-server"><span>{{ servers.current }}</span><a routerLink="/connect">Cambiar servidor</a></div>
+      @if (registering() && !features().registrationEnabled) {
+        <p>Este servidor no permite crear cuentas. Pide acceso a su administrador.</p>
+      } @else {
+        <form [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="busy()">
+          <div class="access-field"><label for="account-user">Usuario</label><input id="account-user" formControlName="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="50" required [readOnly]="busy()" /></div>
+          <div class="access-field"><label for="account-password">Contraseña</label><input id="account-password" type="password" formControlName="password" [attr.autocomplete]="registering() ? 'new-password' : 'current-password'" maxlength="128" required [readOnly]="busy()" />
+            @if (registering()) { <p class="access-caption">Al menos 12 caracteres. La cuenta será de espectador.</p> }</div>
+          <label class="access-remember"><input type="checkbox" formControlName="rememberMe" />Recordarme en este dispositivo</label>
+          <button class="signal-button signal-button--primary access-submit" type="submit" [disabled]="busy() || form.invalid">{{ busy() ? 'Conectando…' : registering() ? 'Crear cuenta y entrar' : 'Entrar' }}</button>
+        </form>
+      }
+      @if (features().googleEnabled) { <p><a class="signal-button signal-button--secondary" [href]="googleUrl">Continuar con Google</a></p> }
+      @if (features().registrationEnabled || registering()) {
+        <p><button class="signal-button signal-button--secondary" type="button" (click)="registering.set(!registering()); error.set('')" [disabled]="busy()">{{ registering() ? 'Ya tengo una cuenta' : 'Crear una cuenta' }}</button></p>
+      }
+      @if (error()) { <p class="access-error" role="alert">{{ error() }}</p> }
+    </section>
+  </div>
+</main>

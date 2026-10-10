@@ -35,6 +35,10 @@ import tv.nostalgia.android.shared.*
 fun NostalgiaApp(model: AppViewModel) {
     val state by model.state.collectAsStateWithLifecycle()
     val tv = LocalTvDevice.current
+    if (state.connectionStep != ConnectionStep.Ready) {
+        ConnectionScreen(model, state)
+        return
+    }
     BackHandler(state.playback != null || state.selectedSeries != null || state.section != Section.Channels) { model.back() }
     state.playback?.let { PlayerScreen(model, it); return }
     val navFocus = remember { FocusRequester() }

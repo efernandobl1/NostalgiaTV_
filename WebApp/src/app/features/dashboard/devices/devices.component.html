@@ -1,0 +1,43 @@
+<header class="studio-heading">
+  <div><h1>{{ tvOnly ? 'Conecta tu TV' : 'Tu señal, en todas tus pantallas' }}</h1><p>Conecta la TV o el celular al perfil de este servidor.</p></div>
+</header>
+<div class="device-flow" [class.device-flow--tv]="tvOnly">
+  <section aria-labelledby="tv-title">
+    <h2 id="tv-title">Conectar una TV</h2>
+    <p>Introduce el código que muestra la app. También puedes escanear su QR con la cámara del celular para abrir esta página.</p>
+    <form (ngSubmit)="inspect()">
+      <label for="device-code">Código de tu pantalla</label>
+      <div class="code-entry">
+        <input id="device-code" name="code" [(ngModel)]="code" (ngModelChange)="confirmation.set(null)" [readOnly]="busy()" placeholder="ABC-DEF-GHJ-KLM" maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" required />
+        <button class="admin-button admin-button--primary" type="submit" [disabled]="busy() || !code.trim()">{{ busy() ? 'Comprobando…' : 'Comprobar código' }}</button>
+      </div>
+    </form>
+    @if (confirmation(); as device) {
+      <div class="device-confirmation">
+        <h3>¿Es tu pantalla?</h3><strong>{{ device.name }}</strong>
+        <p>Comprueba que el código coincide con el de tu TV: <span class="pairing-code">{{ code }}</span>.</p>
+        <p>Compartirá tu historial. No podrá administrar el servidor.</p>
+        <div class="device-actions">
+          <button class="admin-button admin-button--primary" type="button" (click)="approve()" [disabled]="busy()">Autorizar esta pantalla</button>
+          <button class="admin-button admin-button--secondary" type="button" (click)="confirmation.set(null)" [disabled]="busy()">Cancelar</button>
+        </div>
+      </div>
+    }
+  </section>
+  @if (!tvOnly) {
+  <section aria-labelledby="mobile-title">
+    <h2 id="mobile-title">Conectar un celular</h2>
+    <p>En la app Android, elige «Escanear QR del dashboard». La dirección del servidor y tu perfil se conectarán juntos.</p>
+    @if (qr(); as image) {
+      <img class="device-qr" [src]="image" alt="QR temporal para vincular la app Android a tu perfil" width="320" height="320" />
+      <p>Caduca a las {{ expires() | date:'shortTime' }}. Un solo uso. No compartas una captura de este QR.</p>
+      <button class="admin-button admin-button--secondary" type="button" (click)="hideQr()">Ocultar QR</button>
+    } @else {
+      <button class="admin-button admin-button--primary" type="button" (click)="generateQr()" [disabled]="busy()">Generar QR para mi celular</button>
+    }
+  </section>
+  }
+</div>
+<p class="device-server">Servidor: {{ server }}</p>
+@if (error()) { <p role="alert" class="studio-alert">{{ error() }}</p> }
+@if (message()) { <p role="status" class="studio-alert">{{ message() }}</p> }

@@ -13,6 +13,18 @@ public static class ViewingModelConfiguration
             policy.HasData(new MediaResourcePolicy());
         });
         model.Entity<ViewerProfile>().HasKey(item => item.Id);
+        model.Entity<ViewerProfile>().HasIndex(item => item.UserId).IsUnique();
+        model.Entity<ViewerProfile>().HasOne<User>().WithMany().HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Restrict);
+        model.Entity<DeviceAuthorization>(authorization =>
+        {
+            authorization.HasKey(item => item.DeviceCodeHash);
+            authorization.Property(item => item.DeviceCodeHash).HasMaxLength(64);
+            authorization.Property(item => item.UserCodeHash).HasMaxLength(64);
+            authorization.Property(item => item.Name).HasMaxLength(80);
+            authorization.HasIndex(item => item.UserCodeHash).IsUnique();
+            authorization.HasIndex(item => item.ExpiresAtUtc);
+            authorization.HasOne<ViewerProfile>().WithMany().HasForeignKey(item => item.ProfileId).OnDelete(DeleteBehavior.Cascade);
+        });
         model.Entity<ViewerDevice>(device =>
         {
             device.Property(item => item.TokenHash).HasMaxLength(64);

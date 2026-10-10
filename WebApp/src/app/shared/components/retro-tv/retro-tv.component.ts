@@ -1094,7 +1094,7 @@ export class RetroTvComponent implements AfterViewInit, OnDestroy {
 
   // ── Navegación ──────────────────────────────────────────────────────────
   goToLogin(): void {
-    this.router.navigate(['dashboard/login']);
+    this.router.navigate(['/login']);
   }
   togglePanel(): void {
     this.panelOpen.update((v) => !v);

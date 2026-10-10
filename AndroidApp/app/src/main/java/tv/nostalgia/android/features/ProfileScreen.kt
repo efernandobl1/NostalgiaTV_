@@ -18,10 +18,14 @@ import tv.nostalgia.android.shared.*
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import androidx.activity.compose.BackHandler
 
 @Composable
 fun ProfileScreen(model: AppViewModel, state: AppState) {
     val tv = LocalTvDevice.current
+    var changingServer by remember { mutableStateOf(false) }
+    var loggingOut by remember { mutableStateOf(false) }
+    BackHandler(changingServer) { changingServer = false }
     var expired by remember(state.pairingCode) { mutableStateOf(false) }
     var pollingError by remember(state.pairingCode) { mutableStateOf(false) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -50,6 +54,9 @@ fun ProfileScreen(model: AppViewModel, state: AppState) {
         state.profileError?.let { Message(it, "Volver a intentar", { model.refreshSession() }) }
         if (state.linked) Message("Dispositivo vinculado. Ya compartes el historial de tu perfil.")
         val code = state.pairingCode
+        if (state.session?.accountLinked == true) {
+            Text("Vinculado a tu cuenta. Entra con esa cuenta o autoriza otra pantalla desde Dashboard → Dispositivos.", color = Retro.Mint, fontSize = 18.sp)
+        } else {
         when {
             state.pairing -> Message("Generando código…")
             code != null && !expired -> {
@@ -64,6 +71,22 @@ fun ProfileScreen(model: AppViewModel, state: AppState) {
                 RetroButton(if (tv) "Vincular esta TV" else "Vincular este dispositivo", { model.createCode() })
             }
         }
+        }
         state.session?.let { Text("${it.deviceCount} dispositivo(s) en este perfil", color = Retro.Lavender, fontSize = 18.sp) }
+        Text("Servidor: ${state.serverAddress}", color = Retro.Lavender, fontSize = 17.sp)
+        if (changingServer) {
+            Text("La reproducción se detendrá. El historial y la sesión de este servidor seguirán guardados por separado.", color = Retro.Cream, fontSize = 17.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                RetroButton("Cancelar", { changingServer = false })
+                RetroButton("Elegir otro servidor", model::chooseServer)
+            }
+        } else RetroButton("Cambiar de servidor", { changingServer = true })
+        if (loggingOut) {
+            Text("Solo se desvinculará esta pantalla. El historial del perfil no se borrará.", color = Retro.Cream, fontSize = 17.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                RetroButton("Cancelar", { loggingOut = false })
+                RetroButton("Confirmar cierre de sesión", { model.logout() }, enabled = !state.connectionBusy)
+            }
+        } else RetroButton("Cerrar sesión en este servidor", { loggingOut = true })
     }
 }

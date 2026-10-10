@@ -253,6 +253,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("MinimumGapSeconds")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SeriesId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Weight")
                         .HasColumnType("int");
 
@@ -260,11 +263,13 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("InterludeId");
 
+                    b.HasIndex("ChannelEraId", "SeriesId");
+
                     b.ToTable("ChannelEraInterludes", t =>
                         {
                             t.HasCheckConstraint("CK_ChannelEraInterludes_Gap", "[MinimumGapSeconds] >= 0");
 
-                            t.HasCheckConstraint("CK_ChannelEraInterludes_Role", "[Role] IN ('BreakOpener', 'Advertisement', 'BreakCloser')");
+                            t.HasCheckConstraint("CK_ChannelEraInterludes_Role", "[Role] IN ('BreakOpener', 'Advertisement', 'BreakCloser', 'ProgramIntro')");
 
                             t.HasCheckConstraint("CK_ChannelEraInterludes_Weight", "[Weight] > 0");
                         });
@@ -392,6 +397,46 @@ namespace Infrastructure.Migrations
                     b.HasIndex("CurrentEpisodeId");
 
                     b.ToTable("ChannelStates");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.DeviceAuthorization", b =>
+                {
+                    b.Property<string>("DeviceCodeHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LastPolledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<Guid?>("ProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("SessionVersion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserCodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("DeviceCodeHash");
+
+                    b.HasIndex("ExpiresAtUtc");
+
+                    b.HasIndex("ProfileId");
+
+                    b.HasIndex("UserCodeHash")
+                        .IsUnique();
+
+                    b.ToTable("DeviceAuthorizations");
                 });
 
             modelBuilder.Entity("ApplicationCore.Entities.Episode", b =>
@@ -983,6 +1028,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("NoRepeatWindowHours")
                         .HasColumnType("int");
 
+                    b.Property<bool>("PublicRegistrationEnabled")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("SeasonalEffectsEnabled")
                         .HasColumnType("bit");
 
@@ -1018,6 +1066,7 @@ namespace Infrastructure.Migrations
                             MaxSpecialsPerDay = 5,
                             MaxSpecialsPerSeriesPerDay = 2,
                             NoRepeatWindowHours = 24,
+                            PublicRegistrationEnabled = false,
                             SeasonalEffectsEnabled = true,
                             SeasonalEpisodesEnabled = true,
                             SeasonalInterludesEnabled = true,
@@ -1084,11 +1133,18 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsViewerRole")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IsViewerRole")
+                        .IsUnique()
+                        .HasFilter("[IsViewerRole] = 1");
 
                     b.ToTable("Roles");
 
@@ -1097,6 +1153,7 @@ namespace Infrastructure.Migrations
                         {
                             Id = 1,
                             Description = "Full access",
+                            IsViewerRole = false,
                             Name = "Administrador"
                         });
                 });
@@ -1179,7 +1236,7 @@ namespace Infrastructure.Migrations
 
                     b.ToTable("ScheduledPlaybackSegments", t =>
                         {
-                            t.HasCheckConstraint("CK_ScheduledPlaybackSegments_Content", "([InterludeId] IS NULL AND [ScheduledAdBreakId] IS NULL AND [MediaStartSecond] IS NOT NULL AND [MediaEndSecond] IS NOT NULL AND [MediaStartSecond] >= 0 AND [MediaEndSecond] > [MediaStartSecond]) OR ([InterludeId] IS NOT NULL AND [ScheduledAdBreakId] IS NOT NULL AND [MediaStartSecond] IS NULL AND [MediaEndSecond] IS NULL)");
+                            t.HasCheckConstraint("CK_ScheduledPlaybackSegments_Content", "([InterludeId] IS NULL AND [ScheduledAdBreakId] IS NULL AND [MediaStartSecond] IS NOT NULL AND [MediaEndSecond] IS NOT NULL AND [MediaStartSecond] >= 0 AND [MediaEndSecond] > [MediaStartSecond]) OR ([InterludeId] IS NOT NULL AND [MediaStartSecond] IS NULL AND [MediaEndSecond] IS NULL)");
 
                             t.HasCheckConstraint("CK_ScheduledPlaybackSegments_Sequence", "[Sequence] > 0");
 
@@ -1340,6 +1397,10 @@ namespace Infrastructure.Migrations
                     b.Property<int>("FailedLoginAttempts")
                         .HasColumnType("int");
 
+                    b.Property<string>("GoogleSubject")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
                     b.Property<DateTime?>("LockedUntilUtc")
                         .HasColumnType("datetime2");
 
@@ -1358,6 +1419,10 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GoogleSubject")
+                        .IsUnique()
+                        .HasFilter("[GoogleSubject] IS NOT NULL");
 
                     b.HasIndex("RolId");
 
@@ -1394,6 +1459,9 @@ namespace Infrastructure.Migrations
 
                     b.Property<Guid>("ProfileId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("SessionVersion")
+                        .HasColumnType("int");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
@@ -1439,7 +1507,14 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL");
 
                     b.ToTable("ViewerProfiles");
                 });
@@ -1661,6 +1736,11 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("InterludeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("ApplicationCore.Entities.ChannelEraSeries", null)
+                        .WithMany()
+                        .HasForeignKey("ChannelEraId", "SeriesId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("ApplicationCore.Entities.ChannelEraSelectedSeason", b =>
@@ -1751,6 +1831,14 @@ namespace Infrastructure.Migrations
                     b.Navigation("Channel");
 
                     b.Navigation("CurrentEpisode");
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.DeviceAuthorization", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.ViewerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("ApplicationCore.Entities.Episode", b =>
@@ -1950,6 +2038,14 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("DeviceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ApplicationCore.Entities.ViewerProfile", b =>
+                {
+                    b.HasOne("ApplicationCore.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("ApplicationCore.Entities.ViewerProgress", b =>

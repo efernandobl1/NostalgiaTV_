@@ -7,13 +7,14 @@
       </div>
     </header>
     <label class="studio-field"
-      >Canal<select
-        [value]="selectedChannelId() ?? ''"
-        (change)="onChannelChange(+$any($event.target).value)"
-      >
-        <option value="" disabled>Seleccionar canal</option>
+      >Canal<select (change)="onChannelChange(+$any($event.target).value)">
+        <option value="" [selected]="selectedChannelId() == null" disabled>
+          Seleccionar canal
+        </option>
         @for (channel of channels(); track channel.id) {
-          <option [value]="channel.id">{{ channel.name }}</option>
+          <option [value]="channel.id" [selected]="selectedChannelId() === channel.id">
+            {{ channel.name }}
+          </option>
         }
       </select></label
     >
@@ -103,12 +104,16 @@
                   [attr.aria-pressed]="eraTab() === 'advertising'"
                   (click)="eraTab.set('advertising')"
                 >
-                  Publicidad
+                  Bumpers y publicidad
                 </button>
               }
             </nav>
             @if (eraTab() === 'advertising') {
-              <app-commercial-breaks [eraId]="era.id" [channelId]="selectedChannelId()" />
+              <app-commercial-breaks
+                [eraId]="era.id"
+                [channelId]="selectedChannelId()"
+                [series]="eraSeries(era.seriesIds)"
+              />
             } @else {
               <div class="lineup-heading">
                 <span>{{ selectedSeriesIds().length }} series seleccionadas</span

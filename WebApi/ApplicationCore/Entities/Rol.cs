@@ -9,6 +9,7 @@ namespace ApplicationCore.Entities
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public bool IsViewerRole { get; set; }
         public ICollection<Menu> Menus { get; set; } = [];
     }
 }

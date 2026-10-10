@@ -64,6 +64,7 @@ describe('InterludeUploaderComponent', () => {
   it('retries era assignment without uploading the same clip twice', async () => {
     fixture.componentRef.setInput('eraId', 4);
     fixture.componentRef.setInput('role', 2);
+    fixture.componentRef.setInput('seriesId', 7);
     choose('city.mp4');
     http.expectOne(`${base}/interludes`).flush(clip);
     await settle();
@@ -72,10 +73,11 @@ describe('InterludeUploaderComponent', () => {
       .flush({}, { status: 500, statusText: 'Server Error' });
     await settle();
     expect(fixture.componentInstance.items()[0].status).toBe('failed');
+    fixture.componentRef.setInput('seriesId', null);
     fixture.componentInstance.retry();
     http.expectNone(`${base}/interludes`);
     const assignment = http.expectOne(`${base}/eras/4/interludes/7/2`);
-    expect(assignment.request.body).toEqual({ weight: 1, minimumGapSeconds: 0 });
+    expect(assignment.request.body).toEqual({ weight: 1, minimumGapSeconds: 0, seriesId: 7 });
     assignment.flush({});
     await settle();
     expect(fixture.componentInstance.items()[0].status).toBe('completed');

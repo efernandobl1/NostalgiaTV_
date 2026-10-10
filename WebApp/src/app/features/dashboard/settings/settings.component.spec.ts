@@ -7,6 +7,7 @@ import { PlatformSettings, PlatformSettingsService } from '../../../core/service
 
 describe('SettingsComponent', () => {
   const settings: PlatformSettings = {
+    publicRegistrationEnabled: false,
     seasonalThemesEnabled: true, seasonalEffectsEnabled: true, seasonalEpisodesEnabled: true,
     seasonalInterludesEnabled: true, timeZoneId: 'America/Guatemala', noRepeatWindowHours: 24,
     maxSpecialsPerDay: 5, maxSpecialsPerSeriesPerDay: 2, maxMoviesPerDay: 2, maxMoviesPerSeriesPerDay: 2,
@@ -26,7 +27,7 @@ describe('SettingsComponent', () => {
     const { fixture, component } = create();
     expect(component.form.getRawValue()).toEqual(settings);
     expect(fixture.nativeElement.querySelector('button[type=submit]').disabled).toBe(true);
-    expect(fixture.nativeElement.querySelectorAll('input[type=checkbox]').length).toBe(4);
+    expect(fixture.nativeElement.querySelectorAll('input[type=checkbox]').length).toBe(5);
   });
   it('saves once, updates the public policy and restores a clean form', () => {
     const { component, http } = create();

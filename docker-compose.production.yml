@@ -30,6 +30,30 @@ x-log-options: &default-log-options
     max-file: "5"
 
 services:
+  local-https:
+    profiles: [local-https]
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    user: "1654:1654"
+    environment:
+      LOCAL_HTTPS_HOST: ${LOCAL_HTTPS_HOST:-localhost}
+    ports:
+      - "${LOCAL_HTTPS_BIND_IP:-127.0.0.1}:${LOCAL_HTTPS_PORT:-443}:8443"
+    volumes:
+      - ./deploy/local-https/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy:/data
+      - ./data/caddy-config:/config
+    networks: [web-net]
+    depends_on:
+      webapp:
+        condition: service_healthy
+    read_only: true
+    tmpfs: [/tmp:size=16m,mode=1777]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 128m
+    logging: *default-log-options
+
   sqlserver:
     image: ${SQLSERVER_IMAGE:-mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04}
     container_name: nostalgia-db
@@ -73,6 +97,8 @@ services:
       # Issuer/Audience fijos (no dependen de la IP/dominio) para que funcione en cualquier host.
       Jwt__Issuer: ${JWT_ISSUER:-nostalgiatv}
       Jwt__Audience: ${JWT_AUDIENCE:-nostalgiatv}
+      Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
       # Only trust the webapp proxy on this project's private network.
       ReverseProxy__TrustForwardedHeaders: "true"
       ReverseProxy__ProxyHost: webapp
