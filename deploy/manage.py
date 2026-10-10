@@ -15,8 +15,11 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
+from urllib.request import ProxyHandler, HTTPSHandler, build_opener
+import ssl
 
 
 def run(*arguments, input=None, capture=False):
@@ -143,6 +146,20 @@ class Installation:
         self.docker("exec", "-T", "webapi", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:8080/health/ready")
         self.docker("exec", "-T", "webapp", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health")
         print("Database readiness and web health: OK")
+
+    def export_ca(self):
+        source = self.path / "data/caddy/caddy/pki/authorities/local/root.crt"
+        if not source.is_file():
+            raise ValueError("Local HTTPS has not generated its public CA yet.")
+        output = self.path / "certificates/local"
+        output.mkdir(mode=0o755, parents=True, exist_ok=True)
+        os.chmod(output, 0o755)
+        destination = output / "nostalgiatv-local-ca.crt"
+        shutil.copyfile(source, destination)
+        os.chmod(destination, 0o644)
+        run("openssl", "x509", "-in", str(destination), "-noout", "-fingerprint", "-sha256")
+        print("Public CA for clients: " + str(destination) + "; verify the fingerprint over SSH. Never copy root.key.")
+        return destination
 
     def provision_logins(self):
         env = settings(self.env)
@@ -394,9 +411,16 @@ def initialize(args):
     installation.health()
     print("Installed at " + str(target) + ". Initial admin password is in the private .env (not printed).")
     if args.local_bind:
-        certificate = target / "data/caddy/caddy/pki/authorities/local/root.crt"
-        print("Install this PUBLIC local CA certificate in each client trust store: " + str(certificate))
-        print("Verify its SHA-256 fingerprint over SSH before installing; never copy root.key.")
+        for attempt in range(10):
+            if (target / "data/caddy/caddy/pki/authorities/local/root.crt").is_file():
+                break
+            time.sleep(1)
+        certificate = installation.export_ca()
+        client = build_opener(ProxyHandler({}), HTTPSHandler(context=ssl.create_default_context(cafile=str(certificate))))
+        with client.open(url + "/api/v1/server", timeout=10) as response:
+            if json.load(response).get("product") != "NostalgiaTV":
+                raise ValueError("Local HTTPS returned an unexpected server.")
+        print("Local HTTPS certificate and server identity: OK. Install the public CA in each client before connecting.")
     else:
         print("Configure the existing host HTTPS reverse proxy for " + url + "; only the web loopback port is exposed.")
 
@@ -411,7 +435,7 @@ def main():
     install.add_argument("--local-bind")
     install.add_argument("--web-port", type=int, default=8090)
     install.add_argument("--time-zone", default="America/Guatemala")
-    for name in ("check", "backup", "update", "restore"):
+    for name in ("check", "backup", "update", "restore", "export-ca"):
         command = commands.add_parser(name)
         command.add_argument("directory")
         if name == "update":
@@ -437,6 +461,8 @@ def main():
             installation.update(args.release)
         elif args.command == "backup":
             installation.backup()
+        elif args.command == "export-ca":
+            installation.export_ca()
         else:
             installation.check()
             installation.health()

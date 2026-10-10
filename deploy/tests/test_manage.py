@@ -1,9 +1,6 @@
-import contextlib
 import importlib.util
-import io
 import json
 from pathlib import Path
-import shutil
 import subprocess
 import tarfile
 import tempfile
@@ -128,6 +125,16 @@ class MaintenanceTests(unittest.TestCase):
 
     def test_sql_passwords_escape_single_quotes(self):
         self.assertEqual("N'a''b'", manage.sql_literal("a'b"))
+
+    def test_exports_only_the_public_local_certificate(self):
+        authority = self.target / "data/caddy/caddy/pki/authorities/local"
+        authority.mkdir(parents=True)
+        (authority / "root.crt").write_text("public certificate")
+        (authority / "root.key").write_text("must not be exported")
+        with patch.object(manage, "run"):
+            certificate = manage.Installation(str(self.target)).export_ca()
+        self.assertEqual("public certificate", certificate.read_text())
+        self.assertFalse((certificate.parent / "root.key").exists())
 
 
 if __name__ == "__main__":
