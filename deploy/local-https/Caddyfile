@@ -1,6 +1,8 @@
 {
     admin off
     auto_https disable_redirects
+    default_sni {$LOCAL_HTTPS_SNI:localhost}
+    skip_install_trust
 }
 
 https://{$LOCAL_HTTPS_HOST:localhost}:8443 {

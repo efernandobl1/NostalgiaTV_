@@ -407,7 +407,7 @@ def initialize(args):
     if args.local_bind:
         tls_host = "[" + host + "]" if ":" in host else host
         bind = "[" + args.local_bind + "]" if ":" in args.local_bind else args.local_bind
-        env += f"COMPOSE_PROFILES=local-https\nLOCAL_HTTPS_HOST={tls_host}\nLOCAL_HTTPS_BIND_IP={bind}\nLOCAL_HTTPS_PORT={port}\n"
+        env += f"COMPOSE_PROFILES=local-https\nLOCAL_HTTPS_HOST={tls_host}\nLOCAL_HTTPS_SNI={host}\nLOCAL_HTTPS_BIND_IP={bind}\nLOCAL_HTTPS_PORT={port}\n"
     write_private(target / ".env", env)
     ensure_network("monitoring-nostalgia")
     installation = Installation(str(target))

@@ -38,6 +38,7 @@ services:
     user: "1654:1654"
     environment:
       LOCAL_HTTPS_HOST: ${LOCAL_HTTPS_HOST:-localhost}
+      LOCAL_HTTPS_SNI: ${LOCAL_HTTPS_SNI:-${LOCAL_HTTPS_HOST:-localhost}}
     ports:
       - "${LOCAL_HTTPS_BIND_IP:-127.0.0.1}:${LOCAL_HTTPS_PORT:-443}:8443"
     volumes:
