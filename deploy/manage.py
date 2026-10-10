@@ -173,7 +173,7 @@ class Installation:
             password = sql_literal(match[1])
             sql.append(f"IF SUSER_ID(N'{user}') IS NULL CREATE LOGIN [{user}] WITH PASSWORD={password}, CHECK_POLICY=ON, CHECK_EXPIRATION=OFF;")
             sql.append(f"USE [NostalgiaTV]; IF USER_ID(N'{user}') IS NULL CREATE USER [{user}] FOR LOGIN [{user}]; ELSE ALTER USER [{user}] WITH LOGIN=[{user}];")
-            sql.extend(f"ALTER ROLE [{role}] ADD MEMBER [{user}];" for role in roles)
+            sql.extend(f"IF IS_ROLEMEMBER(N'{role}',N'{user}') <> 1 ALTER ROLE [{role}] ADD MEMBER [{user}];" for role in roles)
             sql.append("USE [master];")
         self.sql("\n".join(sql))
 
