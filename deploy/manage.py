@@ -87,7 +87,7 @@ class Installation:
         return run("docker", "compose", "--project-directory", str(self.path),
                    "--env-file", str(self.env), "-f", str(self.compose), "exec", "-T", "sqlserver",
                    "/bin/bash", "-lc", 'export SQLCMDPASSWORD="$MSSQL_SA_PASSWORD"; '
-                   'exec /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -Nm -C -b -y 0 -h -1 -w 65535',
+                   'exec /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -Nm -C -b -y 0 -w 65535',
                    input="SET NOCOUNT ON;\n" + query + "\nGO\n", capture=capture)
 
     def check(self):

@@ -126,6 +126,15 @@ class MaintenanceTests(unittest.TestCase):
     def test_sql_passwords_escape_single_quotes(self):
         self.assertEqual("N'a''b'", manage.sql_literal("a'b"))
 
+    def test_sql_uses_compatible_unbounded_output_options(self):
+        with patch.object(manage, "run", return_value="7\n") as command:
+            result = manage.Installation(str(self.target)).sql("SELECT 7;", capture=True)
+        self.assertEqual("7\n", result)
+        options = command.call_args.args[-1]
+        self.assertIn("-y 0", options)
+        self.assertNotIn("-h ", options)
+        self.assertIn("-Nm -C -b", options)
+
     def test_exports_only_the_public_local_certificate(self):
         authority = self.target / "data/caddy/caddy/pki/authorities/local"
         authority.mkdir(parents=True)
