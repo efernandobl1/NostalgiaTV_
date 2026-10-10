@@ -32,7 +32,8 @@ x-log-options: &default-log-options
 services:
   local-https:
     profiles: [local-https]
-    image: caddy:2.11.7-alpine
+    build:
+      context: ./deploy/local-https
     restart: unless-stopped
     user: "1654:1654"
     environment:
@@ -53,6 +54,12 @@ services:
     cap_drop: [ALL]
     mem_limit: 128m
     logging: *default-log-options
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent --show-error --connect-to ::127.0.0.1:8443 --cacert /data/caddy/pki/authorities/local/root.crt https://$$LOCAL_HTTPS_HOST:8443/api/v1/server >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
   sqlserver:
     image: ${SQLSERVER_IMAGE:-mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04}

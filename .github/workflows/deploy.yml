@@ -202,6 +202,7 @@ jobs:
         run: |
           set -euo pipefail
           # The API under test was built above. Use the previously released web solely as the loopback proxy.
+            trap 'docker ps -a; docker logs --tail 60 nostalgiatv-local-https-1 2>&1 || true' ERR
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$OWNER" --password-stdin
           docker pull "ghcr.io/$OWNER/nostalgia-web:$FIXTURE_SHA"
           docker tag "ghcr.io/$OWNER/nostalgia-web:$FIXTURE_SHA" "ghcr.io/$OWNER/nostalgia-web:$RELEASE_SHA"
