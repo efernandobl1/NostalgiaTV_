@@ -4,6 +4,7 @@ using Infrastructure.Services.InternalServices;
 using Infrastructure.Services.Media;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Infrastructure.Tests;
@@ -64,13 +65,24 @@ public class MediaStorageLayoutTests : IDisposable
     [Fact]
     public async Task ArtworkUsesTheSameFolderAsItsSeries()
     {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            { ["FFmpeg:BinaryFolder"] = Environment.GetEnvironmentVariable("FFMPEG_BINARY_FOLDER") ?? "" }).Build();
+        var runner = new MediaProcessRunner();
+        var sample = Path.Combine(directory.FullName, "sample.webp");
+        await runner.RunAsync(new MediaProbe(runner, configuration).Binary("ffmpeg"),
+            ["-v", "error", "-f", "lavfi", "-i", "color=black:s=32x32", "-frames:v", "1", sample],
+            TimeSpan.FromSeconds(10), CancellationToken.None);
         var upload = new FileUploadService(Options.Create(new FileUploadSettings { MaxFileSizeMB = 1, AllowedExtensions = [".webp"] }),
-            Options.Create(new MediaSettings { BasePath = directory.FullName }));
-        using var bytes = new MemoryStream([1, 2, 3]);
+            Options.Create(new MediaSettings { BasePath = directory.FullName }), configuration, runner);
+        using var bytes = new MemoryStream(await File.ReadAllBytesAsync(sample));
         var file = new FormFile(bytes, 0, bytes.Length, "logo", "cover.webp");
         var path = await upload.UploadAsync(file, MediaStorageLayout.SeriesFolder("Retro", 5));
         Assert.StartsWith("/uploads/series/Retro-5/", path);
         Assert.True(File.Exists(Path.Combine(directory.FullName, path["/uploads/".Length..])));
+        using var invalid = new MemoryStream([1, 2, 3]);
+        await Assert.ThrowsAsync<ApplicationCore.Exceptions.BadRequestException>(() => upload.UploadAsync(
+            new FormFile(invalid, 0, invalid.Length, "logo", "fake.webp")));
+        Assert.Empty(Directory.EnumerateFiles(directory.FullName, "*.part", SearchOption.AllDirectories));
     }
 
     public void Dispose() => directory.Delete(recursive: true);

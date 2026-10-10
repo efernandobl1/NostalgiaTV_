@@ -8,7 +8,7 @@ namespace WebApi.Validators
         public LoginRequestValidator()
         {
             RuleFor(x => x.Username).NotEmpty().MaximumLength(50);
-            RuleFor(x => x.Password).NotEmpty().MinimumLength(8);
+            RuleFor(x => x.Password).NotEmpty().MinimumLength(8).MaximumLength(128);
         }
     }
 }

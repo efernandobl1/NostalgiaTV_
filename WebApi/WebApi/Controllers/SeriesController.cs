@@ -3,6 +3,7 @@ using ApplicationCore.Interfaces;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace WebApi.Controllers
 {
@@ -26,9 +27,11 @@ namespace WebApi.Controllers
         public async Task<IActionResult> GetById(int id) => Ok(await _seriesService.GetByIdAsync(id));
 
         [HttpPost]
+        [EnableRateLimiting("UploadPolicy")]
         public async Task<IActionResult> Create(SeriesRequest request) => Ok(await _seriesService.CreateAsync(request));
 
         [HttpPut("{id}")]
+        [EnableRateLimiting("UploadPolicy")]
         public async Task<IActionResult> Update(int id, SeriesRequest request) => Ok(await _seriesService.UpdateAsync(id, request));
 
         [HttpDelete("{id}")]
@@ -45,6 +48,7 @@ namespace WebApi.Controllers
         public async Task<IActionResult> Scan(int id) => Ok(await _seriesService.ScanFolderAsync(id));
 
         [HttpPost("{id}/upload")]
+        [EnableRateLimiting("UploadPolicy")]
         [Consumes("multipart/form-data")]
         [RequestSizeLimit(2147483648)]
         [RequestFormLimits(MultipartBodyLengthLimit = 2147483648)]

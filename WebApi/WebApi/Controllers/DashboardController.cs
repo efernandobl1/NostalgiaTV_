@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace WebApi.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = "Admin")]
 [ApiVersion("1")]
 [Route("api/v{version:apiVersion}/dashboard")]
 public sealed class DashboardController : ControllerBase

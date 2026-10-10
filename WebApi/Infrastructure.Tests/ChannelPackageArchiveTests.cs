@@ -124,7 +124,7 @@ public class ChannelPackageArchiveTests
         Assert.IsType<BadRequestObjectResult>(await controller.UpdateInterlude(1, new("Bumper", null, null, null, RedistributionAllowed: true)));
         using var stream = new MemoryStream([1]);
         Assert.IsType<BadRequestObjectResult>(await controller.UploadInterlude(new() { Title = "Bumper", RedistributionAllowed = true,
-            File = new FormFile(stream, 0, 1, "file", "clip.mp4") }, default));
+            File = new FormFile(stream, 0, 1, "file", "clip.mp4") }, null!, default));
     }
 
     private static MemoryStream Zip(ChannelPackageManifest manifest, string? extraPath = null)

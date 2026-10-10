@@ -9,6 +9,9 @@ namespace ApplicationCore.Entities
         public int Id { get; set; }
         public string Username { get; set; }
         public string PasswordHash { get; set; }
+        public int SessionVersion { get; set; }
+        public int FailedLoginAttempts { get; set; }
+        public DateTime? LockedUntilUtc { get; set; }
 
         public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
         public int RolId { get; set; }

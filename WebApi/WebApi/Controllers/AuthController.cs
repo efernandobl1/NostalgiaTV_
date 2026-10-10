@@ -37,7 +37,8 @@ namespace WebApi.Controllers
         }
 
         [HttpPost("revoke")]
-        [Authorize]
+        [AllowAnonymous]
+        [EnableRateLimiting("AuthPolicy")]
         public async Task<IActionResult> Revoke()
         {
             await _authService.RevokeTokenAsync(Request, Response, IpAddress);

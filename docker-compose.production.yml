@@ -6,11 +6,11 @@ name: nostalgiatv
 # MANUAL (sin Watchtower, para no correr un contenedor con acceso a docker.sock):
 # cuando el CI publique una nueva :latest, hacés 'docker compose pull && up -d'.
 # El monitoreo (Loki/Alloy/Grafana/Uptime Kuma) corre APARTE en su propio stack;
-# aquí sólo se conecta la red externa 'monitoring-net' para que pueda sondear/recolectar.
+# Connect only to NostalgiaTV's monitoring network to avoid cross-project DNS aliases.
 #
 # Preparación (una sola vez) en la VPS:
 #   docker login ghcr.io -u <usuario> --password-stdin   # token classic (read:packages)
-#   docker network create monitoring-net    # si aún no existe (la comparte tu stack de monitoreo)
+#   docker network create monitoring-nostalgia    # if it does not exist
 #   mkdir -p /opt/nostalgiatv/{data/sqlserver,logs/webapi,media,uploads}
 #   chown -R 10001:0     /opt/nostalgiatv/data/sqlserver              # contenedor mssql
 #   chown -R 1654:1654   /opt/nostalgiatv/logs /opt/nostalgiatv/media /opt/nostalgiatv/uploads   # 'app' del contenedor .NET
@@ -31,7 +31,7 @@ x-log-options: &default-log-options
 
 services:
   sqlserver:
-    image: ${SQLSERVER_IMAGE:-mcr.microsoft.com/mssql/server:2022-latest}
+    image: ${SQLSERVER_IMAGE:-mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04}
     container_name: nostalgia-db
     restart: unless-stopped
     environment:
@@ -50,7 +50,8 @@ services:
     cpus: 2.0
     logging: *default-log-options
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -No || exit 1"]
+      # Local process probe only; application connections validate the pinned certificate.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -Nm -C || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 15
@@ -64,15 +65,17 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       TZ: ${TIME_ZONE:-America/Guatemala}
-      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=NostalgiaTV;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True;Encrypt=True
+      ConnectionStrings__DefaultConnection: ${DB_APP_CONNECTION_STRING:?Configure the restricted SQL login and verified TLS}
+      Database__ApplyMigrations: "false"
       # Mismo origen vía Nginx: CORS casi no interviene, pero se deja el origen público por seguridad.
       Cors__AllowedOrigins__0: ${APP_PUBLIC_URL:?Defina APP_PUBLIC_URL}
       Jwt__Key: ${JWT_SECRET_KEY:?Defina JWT_SECRET_KEY}
       # Issuer/Audience fijos (no dependen de la IP/dominio) para que funcione en cualquier host.
       Jwt__Issuer: ${JWT_ISSUER:-nostalgiatv}
-      Jwt__Audience: ${JWT_ISSUER:-nostalgiatv}
-      # Keep the existing proxy flag to skip internal HTTPS redirects. Forwarded headers are not trusted.
+      Jwt__Audience: ${JWT_AUDIENCE:-nostalgiatv}
+      # Only trust the webapp proxy on this project's private network.
       ReverseProxy__TrustForwardedHeaders: "true"
+      ReverseProxy__ProxyHost: webapp
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads
       CommunityCatalog__PublicUrl: ${COMMUNITY_CATALOG_URL:-}
@@ -88,11 +91,14 @@ services:
       - "8080"
     volumes:
       - ./logs/webapi:/app/Logs
+      - ./certificates/sqlserver:/run/sqlserver:ro
       - ./media:/app/wwwroot/uploads/media
       - ./uploads:/app/wwwroot/uploads
     depends_on:
       sqlserver:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - web-net
       - data-net
@@ -102,7 +108,7 @@ services:
     cap_drop:
       - ALL
     mem_limit: 1g
-    cpus: 1.5
+    cpus: ${API_CPUS:-4.0}
     logging: *default-log-options
     healthcheck:
       test: ["CMD-SHELL", "curl --fail --silent --show-error http://127.0.0.1:8080/health || exit 1"]
@@ -119,13 +125,14 @@ services:
     environment:
       DOTNET_ENVIRONMENT: Production
       TZ: ${TIME_ZONE:-America/Guatemala}
-      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=NostalgiaTV;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True;Encrypt=True
+      ConnectionStrings__DefaultConnection: ${DB_APP_CONNECTION_STRING:?Configure the restricted SQL login and verified TLS}
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads
       MediaProcessing__PollSeconds: ${MEDIA_POLL_SECONDS:-60}
       MediaProcessing__StableAgeSeconds: ${MEDIA_STABLE_SECONDS:-120}
     volumes:
       - ./uploads:/app/wwwroot/uploads
+      - ./certificates/sqlserver:/run/sqlserver:ro
       - ./media:/app/wwwroot/uploads/media
       - ./logs/media-worker:/app/Logs
     depends_on:
@@ -148,6 +155,31 @@ services:
     stop_grace_period: 30s
     logging: *default-log-options
 
+  migrate:
+    image: ${API_IMAGE:?Defina API_IMAGE}
+    command: ["--migrate"]
+    restart: "no"
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__MigrationConnection: ${DB_MIGRATION_CONNECTION_STRING:?Configure the separate database migration login}
+      BootstrapAdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+    volumes:
+      - ./certificates/sqlserver:/run/sqlserver:ro
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - data-net
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    logging: *default-log-options
+
   # Sirve la SPA + reverse proxy a la API (oculta). Publica sólo en localhost:
   # el nginx del host termina TLS y enruta el dominio hacia aquí. No expone 80/443
   # al exterior, así no choca con otros proyectos ya publicados en la VPS.
@@ -160,7 +192,12 @@ services:
     ports:
       - "127.0.0.1:${WEB_HTTP_PORT:-8090}:8080"
     volumes:
-      - ${ENV_JS_PATH:-./env.js}:/usr/share/nginx/html/assets/env.js:ro
+      - type: bind
+        source: ${ENV_JS_PATH:-./env.js}
+        target: /usr/share/nginx/html/assets/env.js
+        read_only: true
+        bind:
+          create_host_path: false
     depends_on:
       webapi:
         condition: service_healthy
@@ -190,10 +227,8 @@ networks:
   data-net:
     driver: bridge
     internal: true
-  # Red compartida donde ya corren Loki/Alloy/Grafana/Uptime Kuma (stack de
-  # monitoreo aparte). webapi y webapp se conectan a ella para que ese stack
-  # los sondee (/health) y recolecte sus logs. Debe existir previamente:
-  #   docker network create monitoring-net
+  # Keep this external network separate from other projects' monitoring networks.
+  # Attach Kuma/Alloy to it when monitoring this installation.
   monitoring:
     external: true
-    name: monitoring-net
+    name: ${MONITORING_NETWORK_NAME:-monitoring-nostalgia}

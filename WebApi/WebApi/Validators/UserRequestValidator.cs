@@ -23,8 +23,8 @@ namespace WebApi.Validators
                 .MaximumLength(50);
 
             RuleFor(x => x.Password)
-                .MinimumLength(8)
-                .MaximumLength(50)
+                .MinimumLength(12)
+                .MaximumLength(128)
                 .When(x => !string.IsNullOrEmpty(x.Password));
         }
 

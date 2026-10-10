@@ -1,4 +1,4 @@
-FROM node:24-alpine AS build
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS build
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.17.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -6,7 +6,9 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm exec ng build --configuration production
 
-FROM nginx:1.31-alpine AS final
+FROM nginx:1.31-alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2 AS final
+# Patch runtime libraries without changing the pinned base or disabling image scans.
+RUN apk upgrade --no-cache libexpat pcre2 tiff
 COPY --from=build /app/dist/WebApp/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 

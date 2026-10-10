@@ -28,13 +28,14 @@ public class PersistentSessionIntegrationTests
                 .TakeWhile(migration => !migration.EndsWith("_AddInterludeSeasonsAndPersistentSessions", StringComparison.Ordinal)).Last();
             await context.GetService<IMigrator>().MigrateAsync(previous);
             await context.Database.ExecuteSqlRawAsync("INSERT INTO Interludes (Kind, Title, FilePath, DurationSeconds, ApprovedForBroadcast) VALUES ('Bumper', 'Existing bumper', '/uploads/test.mp4', 5, 1)");
-            var user = new User { Username = "test-operator", PasswordHash = AuthService.HashPassword("test-passphrase"), RolId = 1 };
-            context.Users.Add(user);
-            await context.SaveChangesAsync();
+            var passwordHash = AuthService.HashPassword("test-passphrase");
+            await context.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO Users (Username, PasswordHash, RolId) VALUES ('test-operator', {passwordHash}, 1)");
+            var userId = await context.Database.SqlQuery<int>($"SELECT Id AS Value FROM Users WHERE Username = 'test-operator'").SingleAsync();
             var created = DateTime.UtcNow;
             var expiry = created.AddDays(30);
-            await context.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO RefreshTokens (Token, UserId, IpAddress, CreatedAt, ExpiresAt) VALUES ('legacy-test-token', {user.Id}, '127.0.0.1', {created}, {expiry})");
+            await context.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO RefreshTokens (Token, UserId, IpAddress, CreatedAt, ExpiresAt) VALUES ('legacy-test-token', {userId}, '127.0.0.1', {created}, {expiry})");
             await context.Database.MigrateAsync();
+            var user = await context.Users.SingleAsync(item => item.Id == userId);
             Assert.Equal(InterludeSeason.AllYear, (await context.Interludes.SingleAsync()).Season);
             Assert.True((await context.RefreshTokens.SingleAsync()).IsPersistent);
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
@@ -49,14 +50,17 @@ public class PersistentSessionIntegrationTests
                 await service.LoginAsync(new LoginRequest { Username = user.Username, Password = "test-passphrase", RememberMe = persistent }, http.Response, "127.0.0.1");
                 AssertCookies(http.Response, persistent);
                 var token = await context.RefreshTokens.OrderByDescending(item => item.Id).FirstAsync();
+                var credential = CookieValue(http.Response, "refresh_token");
+                Assert.Equal(AuthService.TokenHash(credential), token.Token);
                 Assert.Equal(persistent, token.IsPersistent);
                 Assert.InRange((token.ExpiresAt - token.CreatedAt).TotalDays, persistent ? 29.99 : 6.99, persistent ? 30.01 : 7.01);
                 for (var rotation = 0; rotation < 2; rotation++)
                 {
                     var reopened = new DefaultHttpContext();
-                    reopened.Request.Headers.Cookie = $"refresh_token={token.Token}";
+                    reopened.Request.Headers.Cookie = $"refresh_token={credential}";
                     await service.RefreshTokenAsync(reopened.Request, reopened.Response, "127.0.0.1");
                     AssertCookies(reopened.Response, persistent);
+                    credential = CookieValue(reopened.Response, "refresh_token");
                     Assert.True(token.IsRevoked);
                     var replacement = await context.RefreshTokens.OrderByDescending(item => item.Id).FirstAsync();
                     Assert.Equal(replacement.Token, token.ReplacedByToken);
@@ -66,7 +70,7 @@ public class PersistentSessionIntegrationTests
                 token.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
                 await context.SaveChangesAsync();
                 var expired = new DefaultHttpContext();
-                expired.Request.Headers.Cookie = $"refresh_token={token.Token}";
+                expired.Request.Headers.Cookie = $"refresh_token={credential}";
                 await Assert.ThrowsAsync<UnauthorizedException>(() => service.RefreshTokenAsync(expired.Request, expired.Response, "127.0.0.1"));
                 Assert.Equal(0, expired.Response.Headers.SetCookie.Count);
             }
@@ -78,6 +82,10 @@ public class PersistentSessionIntegrationTests
             await context.Database.EnsureDeletedAsync();
         }
     }
+
+    internal static string CookieValue(HttpResponse response, string name) =>
+        Uri.UnescapeDataString(SetCookieHeaderValue.ParseList(response.Headers.SetCookie.Select(value => value!).ToList())
+            .Single(cookie => cookie.Name.ToString() == name).Value.ToString());
 
     private static void AssertCookies(HttpResponse response, bool persistent)
     {

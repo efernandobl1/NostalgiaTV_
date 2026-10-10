@@ -33,7 +33,7 @@ public class MediaLayoutIntegrationTests
         {
             ["ConnectionStrings:DefaultConnection"] = connection.ConnectionString,
             ["MediaSettings:BasePath"] = directory.FullName,
-            ["FFmpeg:BinaryFolder"] = "",
+            ["FFmpeg:BinaryFolder"] = Environment.GetEnvironmentVariable("FFMPEG_BINARY_FOLDER") ?? "",
             ["FileUpload:MaxFileSizeMB"] = "1",
             ["FileUpload:AllowedExtensions:0"] = ".webp"
         }).Build();
@@ -46,7 +46,11 @@ public class MediaLayoutIntegrationTests
         try
         {
             await context.Database.MigrateAsync();
-            using var image = new MemoryStream([1, 2, 3]);
+            var imagePath = Path.Combine(directory.FullName, "test-image.webp");
+            await provider.GetRequiredService<MediaProcessRunner>().RunAsync(provider.GetRequiredService<MediaProbe>().Binary("ffmpeg"),
+                ["-v", "error", "-f", "lavfi", "-i", "color=black:s=32x32", "-frames:v", "1", imagePath],
+                TimeSpan.FromSeconds(10), CancellationToken.None);
+            using var image = new MemoryStream(await File.ReadAllBytesAsync(imagePath));
             var upload = new FormFile(image, 0, image.Length, "logo", "cover.webp");
             var seriesService = scope.ServiceProvider.GetRequiredService<ISeriesService>();
             var series = await seriesService.CreateAsync(new SeriesRequest { Name = "Retro", Seasons = 1, Logo = upload });

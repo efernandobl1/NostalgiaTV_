@@ -42,7 +42,7 @@ public class ChannelPackageIntegrationTests
             var response = Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.UploadInterlude(
                 new WebApi.Controllers.InterludeUploadRequest {
                     File = new Microsoft.AspNetCore.Http.FormFile(file, 0, file.Length, "file", "City opener.mp4")
-                }, default));
+                }, probe, default));
             var clip = Assert.IsType<Interlude>(response.Value);
             Assert.Equal("City opener", clip.Title);
             Assert.False(clip.RedistributionAllowed);
