@@ -29,7 +29,8 @@ export function interludeSeasonLabel(season: InterludeSeason = 0): string {
 export interface ClipAssignment {
   channelEraId: number;
   interludeId: number;
-  role: 0 | 1 | 2;
+  role: 0 | 1 | 2 | 3;
+  seriesId?: number | null;
   weight: number;
   minimumGapSeconds: number;
 }
@@ -118,10 +119,17 @@ export class BroadcastAdminService {
       this.options,
     );
   }
-  assign(eraId: number, clipId: number, role: number, weight: number, minimumGapSeconds: number) {
+  assign(
+    eraId: number,
+    clipId: number,
+    role: number,
+    weight: number,
+    minimumGapSeconds: number,
+    seriesId: number | null = null,
+  ) {
     return this.http.put<ClipAssignment>(
       `${this.base}/retro/eras/${eraId}/interludes/${clipId}/${role}`,
-      { weight, minimumGapSeconds },
+      { weight, minimumGapSeconds, seriesId },
       this.options,
     );
   }

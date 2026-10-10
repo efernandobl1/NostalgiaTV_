@@ -43,7 +43,9 @@ public sealed class PackageEra
     public PackageBreakRules? BreakRules { get; set; }
 }
 public sealed record PackageSeriesSelection(string SeriesKey, bool HasSeasonFilter, int[] Seasons);
-public sealed record PackageClipAssignment(string ClipKey, BreakRole Role, int Weight, int MinimumGapSeconds);
+public sealed record PackageClipAssignment(string ClipKey, BreakRole Role, int Weight, int MinimumGapSeconds,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    string? SeriesKey = null);
 public sealed record PackageBreakRules(int MinimumAds, int MaximumAds, int MaximumBreakSeconds);
 public sealed class PackageClip
 {

@@ -57,6 +57,7 @@ namespace Infrastructure.Services
             if (await _context.Users.AnyAsync(u => u.Username == request.Username && u.Id != id))
                 throw new ConflictException("Username already exists.");
 
+            var roleChanged = user.RolId != request.RolId;
             user.Username = request.Username;
             user.RolId = request.RolId;
 
@@ -68,9 +69,13 @@ namespace Infrastructure.Services
                     throw new BadRequestException("New password must be different from the current one.");
 
                 user.PasswordHash = AuthService.HashPassword(request.Password);
-                user.SessionVersion++;
                 user.FailedLoginAttempts = 0;
                 user.LockedUntilUtc = null;
+            }
+
+            if (roleChanged || !string.IsNullOrEmpty(request.Password))
+            {
+                user.SessionVersion++;
                 await _context.RefreshTokens.Where(token => token.UserId == id && token.RevokedAt == null)
                     .ExecuteUpdateAsync(update => update.SetProperty(token => token.RevokedAt, DateTime.UtcNow));
             }

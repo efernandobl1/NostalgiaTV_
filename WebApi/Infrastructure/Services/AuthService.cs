@@ -62,6 +62,17 @@ namespace Infrastructure.Services
             _logger.LogInformation("SecurityEvent LoginSucceeded UserId={UserId} ClientIp={ClientIp}", user.Id, ipAddress);
         }
 
+        public async Task SignInExternalAsync(int userId, HttpResponse response, string ipAddress)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await LockAsync("user-" + userId);
+            var user = await _context.Users.SingleAsync(item => item.Id == userId);
+            if (user.GoogleSubject == null || user.LockedUntilUtc > DateTime.UtcNow)
+                throw new UnauthorizedException("Google login is unavailable for this account.");
+            await GenerateAndSetTokens(user, response, ipAddress, true);
+            await transaction.CommitAsync();
+        }
+
         public async Task RefreshTokenAsync(HttpRequest request, HttpResponse response, string ipAddress)
         {
             var value = request.Cookies["refresh_token"]

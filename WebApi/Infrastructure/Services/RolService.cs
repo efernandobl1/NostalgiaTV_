@@ -57,6 +57,8 @@ namespace Infrastructure.Services
                 ?? throw new NotFoundException($"Rol {id} not found");
 
             rol.Name = request.Name;
+            if (rol.IsViewerRole && request.MenuIds.Count != 0)
+                throw new BadRequestException("The public viewer role cannot receive administrative permissions. Assign another role to the user instead.");
             rol.Description = request.Description;
 
             // Get selected menus and their parents
@@ -84,6 +86,7 @@ namespace Infrastructure.Services
         {
             var rol = await _context.Roles.FindAsync(id)
                 ?? throw new NotFoundException($"Rol {id} not found");
+            if (rol.IsViewerRole) throw new BadRequestException("The public viewer role cannot be deleted.");
             _context.Roles.Remove(rol);
             await _context.SaveChangesAsync();
         }

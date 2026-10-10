@@ -2,7 +2,7 @@ import { Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
-import { RouterLink, Router } from '@angular/router';
+import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../../core/services/auth.service';
 import { TvModeService } from '../../../../core/services/tv-mode.service';
@@ -18,6 +18,7 @@ export class SignInComponent {
   readonly tvMode = inject(TvModeService);
   readonly servers = inject(ServerConnectionsService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
   hide = true;
   authForm: FormGroup;
   errorMessage = '';
@@ -34,7 +35,7 @@ export class SignInComponent {
       rememberMe: [false],
     });
 
-    if (authService.isAuthenticated()) this.router.navigate(['/dashboard']);
+    if (authService.isAuthenticated()) this.openDashboard();
     else if (localStorage.getItem('rememberMe') === 'true') {
       this.submitting = true;
       authService
@@ -44,7 +45,7 @@ export class SignInComponent {
           finalize(() => (this.submitting = false)),
         )
         .subscribe({
-          next: () => this.router.navigate(['/dashboard']),
+          next: () => this.openDashboard(),
           error: (error: HttpErrorResponse) => {
             if (error.status === 401 || error.status === 403) localStorage.removeItem('rememberMe');
             else
@@ -79,7 +80,7 @@ export class SignInComponent {
             sessionStorage.setItem('sessionActive', 'true');
           }
           this.authService.isAuthenticated.set(true);
-          this.router.navigate(['/dashboard']);
+          this.openDashboard();
         },
         error: (error: HttpErrorResponse) => {
           this.errorMessage =
@@ -90,5 +91,12 @@ export class SignInComponent {
                 : 'No pudimos conectar con el panel. Intenta nuevamente en un momento.';
         },
       });
+  }
+
+  private openDashboard(): void {
+    const destination = this.route.snapshot.queryParamMap.get('returnUrl') ?? '';
+    if (destination.length <= 1024 && /^\/dashboard\/devices(?:\?[^#\\]*)?$/.test(destination))
+      void this.router.navigateByUrl(destination);
+    else void this.router.navigate(['/dashboard']);
   }
 }

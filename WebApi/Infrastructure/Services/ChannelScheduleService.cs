@@ -249,11 +249,27 @@ public class ChannelScheduleService
                 var offset = 0m;
                 var ordinal = 0;
                 var startsAt = current;
+                var intro = CommercialBreakPlanner.ProgramIntro(clips, lastClipUse, startsAt,
+                    SeasonalProgrammingPolicy.InterludeSeasonAt(startsAt, rules), episode.SeriesId);
+                if (intro != null)
+                {
+                    var endsAt = startsAt.AddSeconds((double)intro.DurationSeconds);
+                    _context.ScheduledPlaybackSegments.Add(new ScheduledPlaybackSegment
+                    {
+                        ScheduledProgramId = program.Id,
+                        InterludeId = intro.Id,
+                        Sequence = ++sequence,
+                        StartsAtUtc = startsAt,
+                        EndsAtUtc = endsAt
+                    });
+                    startsAt = endsAt;
+                    lastClipUse[intro.Id] = endsAt;
+                }
                 foreach (var point in points)
                 {
                     var breakStart = startsAt.AddSeconds((double)(point.OffsetSeconds - offset));
                     var planned = CommercialBreakPlanner.Plan(clips, breakRule, lastClipUse, breakStart,
-                        SeasonalProgrammingPolicy.InterludeSeasonAt(breakStart, rules));
+                        SeasonalProgrammingPolicy.InterludeSeasonAt(breakStart, rules), episode.SeriesId);
                     if (planned.Count == 0) continue;
 
                     startsAt = AddEpisodeSegment(program.Id, ++sequence, startsAt, offset, point.OffsetSeconds);

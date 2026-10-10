@@ -6,6 +6,7 @@
 }
 .station {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   padding: 18px;
   gap: 18px;
   text-align: left;
@@ -21,6 +22,7 @@
 }
 .station-screen {
   display: flex;
+  min-width: 0;
   gap: 16px;
   padding: 16px;
   border: 1px solid var(--dashboard-border);
@@ -32,6 +34,8 @@
   min-width: 0;
   height: 150px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   place-items: center;
   border: 5px solid var(--dashboard-bg);
   border-radius: 25% / 14%;
@@ -52,6 +56,7 @@
 }
 .station-dial {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 16px;
   justify-content: center;
@@ -65,10 +70,12 @@
 }
 .station-label {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   h2 {
+    overflow-wrap: anywhere;
     font:
       28px/1.15 VT323,
       monospace;
@@ -83,6 +90,7 @@
 }
 .station-air {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 10px;
   padding-top: 14px;
@@ -90,6 +98,7 @@
   font-size: 14px;
   color: var(--dashboard-muted);
   > span:last-child {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -120,6 +129,8 @@
   height: 90px;
   padding: 18px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   place-items: center;
   flex-shrink: 0;
   overflow: hidden;

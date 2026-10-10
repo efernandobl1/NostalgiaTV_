@@ -205,19 +205,27 @@ namespace Infrastructure.Services
             await _context.ChannelEraSelectedSeasons
                 .Where(season => season.ChannelEraId == eraId)
                 .ExecuteDeleteAsync();
+            await _context.ChannelEraInterludes
+                .Where(item => item.ChannelEraId == eraId && item.SeriesId != null && !seriesIds.Contains(item.SeriesId.Value))
+                .ExecuteDeleteAsync();
             await _context.ChannelEraSeries
-                .Where(link => link.ChannelEraId == eraId)
+                .Where(link => link.ChannelEraId == eraId && !seriesIds.Contains(link.SeriesId))
                 .ExecuteDeleteAsync();
 
-            _context.ChannelEraSeries.AddRange(seriesIds.Select(seriesId => new ChannelEraSeries
+            var links = await _context.ChannelEraSeries.Where(link => link.ChannelEraId == eraId).ToListAsync();
+            foreach (var seriesId in seriesIds)
             {
-                ChannelEraId = eraId,
-                SeriesId = seriesId,
-                HasSeasonFilter = selections.ContainsKey(seriesId),
-                SelectedSeasons = selections.GetValueOrDefault(seriesId, [])
+                var link = links.FirstOrDefault(item => item.SeriesId == seriesId);
+                if (link == null)
+                {
+                    link = new ChannelEraSeries { ChannelEraId = eraId, SeriesId = seriesId };
+                    _context.ChannelEraSeries.Add(link);
+                }
+                link.HasSeasonFilter = selections.ContainsKey(seriesId);
+                link.SelectedSeasons = selections.GetValueOrDefault(seriesId, [])
                     .Select(season => new ChannelEraSelectedSeason { SeasonNumber = season })
-                    .ToList()
-            }));
+                    .ToList();
+            }
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();

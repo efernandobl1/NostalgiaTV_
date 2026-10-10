@@ -1,8 +1,10 @@
 <section class="studio-page">
   <header class="studio-heading">
     <div>
-      <h2>Pausas publicitarias</h2>
-      <p>La serie se pausa en sus puntos de corte y continúa desde el mismo segundo.</p>
+      <h2>Bumpers y publicidad de esta era</h2>
+      <p>
+        Se prioriza la serie elegida. Si no hay un clip disponible, se usa uno genérico de esta era.
+      </p>
     </div>
     <a routerLink="/dashboard/interludes">Abrir archivo publicitario</a>
   </header>
@@ -71,10 +73,24 @@
           </button>
         </header>
         @if (uploadRole() === role.id) {
+          <label class="studio-field">
+            Para qué serie
+            <select
+              [name]="'uploadSeries' + role.id"
+              [(ngModel)]="draft[role.id].seriesId"
+              [disabled]="busy()"
+            >
+              <option [ngValue]="null">Genérico del canal · cualquier serie</option>
+              @for (item of series(); track item.id) {
+                <option [ngValue]="item.id">{{ item.name }}</option>
+              }
+            </select>
+          </label>
           <app-interlude-uploader
             [kind]="role.id === 1 ? 1 : 0"
             [eraId]="eraId()"
             [role]="role.id"
+            [seriesId]="draft[role.id].seriesId"
             (busyChange)="busy.set($event)"
             (completed)="uploaded($event)"
           />
@@ -89,7 +105,8 @@
                     ? 'Aprobado'
                     : 'Sin aprobar: no se emitirá'
                 }}
-                · {{ seasonLabel(clip(item.interludeId)?.season) }} · Frecuencia {{ item.weight }} ·
+                · {{ seriesLabel(item.seriesId) }} ·
+                {{ seasonLabel(clip(item.interludeId)?.season) }} · Frecuencia {{ item.weight }} ·
                 Separación {{ item.minimumGapSeconds }} s</small
               >
             </div>
@@ -115,6 +132,15 @@
           </div>
           @if (editing() === item) {
             <form class="pool-edit" (ngSubmit)="saveAssignment()">
+              <label class="studio-field">
+                Para qué serie
+                <select name="editSeries" [(ngModel)]="editSeriesId" [disabled]="busy()">
+                  <option [ngValue]="null">Genérico del canal · cualquier serie</option>
+                  @for (item of series(); track item.id) {
+                    <option [ngValue]="item.id">{{ item.name }}</option>
+                  }
+                </select>
+              </label>
               <label class="studio-field"
                 >Frecuencia<input
                   name="editWeight"
@@ -153,6 +179,19 @@
         <details class="existing-clips">
           <summary>Añadir desde el archivo existente</summary>
           <form class="pool-form" (ngSubmit)="assign(role.id)">
+            <label class="studio-field">
+              Para qué serie
+              <select
+                [name]="'series' + role.id"
+                [(ngModel)]="draft[role.id].seriesId"
+                [disabled]="busy()"
+              >
+                <option [ngValue]="null">Genérico del canal · cualquier serie</option>
+                @for (item of series(); track item.id) {
+                  <option [ngValue]="item.id">{{ item.name }}</option>
+                }
+              </select>
+            </label>
             <label class="studio-field"
               >Archivo<select
                 [name]="'clip' + role.id"

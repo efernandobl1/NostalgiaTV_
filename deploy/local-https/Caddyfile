@@ -1,0 +1,13 @@
+{
+    admin off
+    auto_https disable_redirects
+    default_sni {$LOCAL_HTTPS_SNI:localhost}
+    skip_install_trust
+}
+
+https://{$LOCAL_HTTPS_HOST:localhost}:8443 {
+    tls internal
+    reverse_proxy webapp:8080 {
+        header_up X-Real-IP {remote_host}
+    }
+}

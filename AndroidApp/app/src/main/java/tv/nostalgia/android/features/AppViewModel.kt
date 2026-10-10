@@ -1,6 +1,7 @@
 package tv.nostalgia.android.features
 
 import android.app.Application
+import android.app.UiModeManager
 import android.os.Build
 import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
@@ -20,10 +21,20 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import tv.nostalgia.android.BuildConfig
 import tv.nostalgia.android.core.*
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.cancelChildren
+
+enum class ConnectionStep { Server, Login, Ready }
 
 enum class Section { Channels, Series, Profile }
 
 data class AppState(
+    val connectionStep: ConnectionStep = ConnectionStep.Server,
+    val serverAddress: String = BuildConfig.API_BASE_URL,
+    val connectionBusy: Boolean = false,
+    val connectionError: String? = null,
+    val authorization: AuthorizationCode? = null,
+    val serverFeatures: ServerFeatures = ServerFeatures(false, false),
+    val browserLogin: String? = null,
     val section: Section = Section.Channels,
     val channels: List<Channel> = emptyList(),
     val series: List<Series> = emptyList(),
@@ -45,27 +56,136 @@ data class AppState(
     val linked: Boolean = false,
 )
 
-class AppViewModel(application: Application) : AndroidViewModel(application) {
+class AppViewModel @JvmOverloads constructor(application: Application,
+    private val clientFactory: ((okhttp3.HttpUrl, ViewerCookies) -> NostalgiaApi)? = null) : AndroidViewModel(application) {
+    private val serverPreferences = ServerPreferences(application)
     private val videoPreferences = VideoPreferences(application)
     private val mutableVideoSettings = MutableStateFlow(videoPreferences.load())
     val videoSettings = mutableVideoSettings.asStateFlow()
-    private val origin = BuildConfig.API_BASE_URL.toHttpUrl()
-    val api = NostalgiaApi(origin, SecureHttp.create(application, ViewerCookies(application, origin))
-        .newBuilder().callTimeout(20, TimeUnit.SECONDS).build())
+    private var cookies = ViewerCookies(application, serverPreferences.load() ?: BuildConfig.API_BASE_URL.toHttpUrl())
+    var api = createApi(serverPreferences.load() ?: BuildConfig.API_BASE_URL.toHttpUrl())
+        private set
+
+    private fun createApi(origin: okhttp3.HttpUrl): NostalgiaApi {
+        cookies = ViewerCookies(getApplication(), origin)
+        clientFactory?.let { return it(origin, cookies) }
+        return NostalgiaApi(origin, SecureHttp.create(getApplication(), cookies, origin)
+            .newBuilder().callTimeout(20, TimeUnit.SECONDS).build(), cookies)
+    }
     private val mutableState = MutableStateFlow(AppState())
     val state = mutableState.asStateFlow()
     private var request: Job? = null
     private val sessionMutex = Mutex()
 
     init {
-        loadCatalog()
+        serverPreferences.load()?.let { connectServer(it.toString()) }
+    }
+
+    fun chooseServer() {
+        viewModelScope.coroutineContext.cancelChildren()
+        serverPreferences.clear()
+        mutableState.value = AppState(serverAddress = api.base.toString(), loading = false)
+    }
+
+    fun connectServer(address: String, qrCode: String? = null) {
+        if (state.value.connectionBusy) return
+        viewModelScope.coroutineContext.cancelChildren()
+        mutableState.value = AppState(serverAddress = address, connectionBusy = true, loading = false)
         viewModelScope.launch {
-            try { ensureSession() }
-            catch (exception: Exception) {
+            try {
+                val origin = ServerAddress.parse(address)
+                api = createApi(origin)
+                val features = api.verifyServer()
+                serverPreferences.save(origin)
+                mutableState.update { it.copy(serverAddress = origin.toString(), connectionStep = ConnectionStep.Login, serverFeatures = features) }
+                val session = if (qrCode != null) {
+                    check(api.redeemDevice(qrCode)) { "QR not approved" }
+                    api.viewerSession()
+                } else try { api.viewerSession() } catch (exception: ApiException) {
+                    if (exception.status == 401) null else throw exception
+                }
+                if (session != null) enterCatalog(session)
+                else if (isTv()) {
+                    val authorization = api.authorizeDevice(deviceName())
+                    mutableState.update { it.copy(authorization = authorization) }
+                }
+            } catch (exception: Exception) {
                 if (exception is CancellationException) throw exception
-                mutableState.update { it.copy(profileError = "No se pudo conectar el historial. Puedes seguir viendo la TV.") }
-            }
+                mutableState.update { it.copy(connectionError = when {
+                    exception is ApiException && exception.status == 410 -> "El QR expiró o ya se usó. Genera otro en el dashboard."
+                    exception is ApiException && exception.status == 409 -> "Tu perfil ya tiene diez dispositivos. Desvincula uno desde la web."
+                    exception is IllegalArgumentException -> "Usa un servidor HTTPS válido, sin rutas ni contraseñas."
+                    else -> "No se pudo conectar. Revisa la dirección, el certificado y que el servidor esté actualizado."
+                }) }
+            } finally { if (isActive) mutableState.update { it.copy(connectionBusy = false) } }
         }
+    }
+
+    private fun deviceName(): String {
+        val platform = if (isTv()) "Android TV" else "Android"
+        return "$platform · ${Build.MODEL}".take(80)
+    }
+
+    private fun isTv(): Boolean = DeviceMode.isTv(
+        getApplication<Application>().packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK),
+        getApplication<Application>().getSystemService(UiModeManager::class.java)?.currentModeType ?: 0)
+
+    private fun enterCatalog(session: ViewerSession) {
+        mutableState.update { it.copy(connectionStep = ConnectionStep.Ready, session = session, authorization = null, connectionError = null, loading = true) }
+        loadCatalog()
+    }
+
+    fun login(username: String, password: String) = connectAction {
+        enterCatalog(api.loginViewer(username.trim(), password, deviceName()))
+    }
+
+    fun continueAsGuest() = connectAction { enterCatalog(api.startViewer(deviceName())) }
+
+    fun logout() = connectAction {
+        state.value.session?.currentDeviceId?.let { api.logoutViewer(it) }
+        cookies.clear()
+        mutableState.value = AppState(connectionStep = ConnectionStep.Login, serverAddress = api.base.toString(), serverFeatures = state.value.serverFeatures, loading = false)
+    }
+
+    fun createAuthorization() = connectAction {
+        mutableState.update { it.copy(authorization = api.authorizeDevice(deviceName())) }
+    }
+
+    fun browserLogin(register: Boolean = false) = connectAction {
+        val code = api.authorizeDevice(deviceName())
+        val destination = "/tv?code=${code.userCode}"
+        val url = requireNotNull(api.base.resolve("login")).newBuilder().addQueryParameter("returnUrl", destination)
+        if (register) url.addQueryParameter("mode", "register")
+        mutableState.update { it.copy(authorization = code, browserLogin = url.build().toString()) }
+    }
+    fun browserOpened() { mutableState.update { it.copy(browserLogin = null) } }
+
+    fun cancelAuthorization() { mutableState.update { it.copy(authorization = null, connectionError = null) } }
+
+    suspend fun pollAuthorization(code: String): Boolean {
+        val connected = api.redeemDevice(code)
+        if (connected) enterCatalog(api.viewerSession())
+        return connected
+    }
+
+    fun authorizationError(expired: Boolean) {
+        mutableState.update { it.copy(connectionError = if (expired) "El código expiró o ya se usó. Genera uno nuevo."
+            else "Esperando conexión. Comprueba la red o genera otro código.") }
+    }
+
+    private fun connectAction(block: suspend () -> Unit): Job = viewModelScope.launch {
+        if (state.value.connectionBusy) return@launch
+        mutableState.update { it.copy(connectionBusy = true, connectionError = null) }
+        try { block() }
+        catch (exception: Exception) {
+            if (exception is CancellationException) throw exception
+            mutableState.update { it.copy(connectionError = when {
+                exception is ApiException && exception.status == 401 -> "Usuario o contraseña incorrectos. Revisa tus datos."
+                exception is ApiException && exception.status == 409 -> "El perfil ya tiene diez dispositivos. Desvincula uno desde la web."
+                exception is ApiException && exception.status == 429 -> "Espera un minuto antes de volver a intentarlo."
+                else -> "No se pudo completar la conexión. Vuelve a intentarlo."
+            }) }
+        } finally { if (isActive) mutableState.update { it.copy(connectionBusy = false) } }
     }
 
     fun loadCatalog() = load {

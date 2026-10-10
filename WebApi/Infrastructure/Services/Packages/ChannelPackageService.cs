@@ -51,6 +51,8 @@ public sealed class ChannelPackageService(NostalgiaTVContext context, IOptions<M
         var clipKeys = shared.Select((item, index) => (item.Id, Key: $"clip-{index + 1}")).ToDictionary(item => item.Id, item => item.Key);
         var eraKeys = channel.Eras.OrderBy(item => item.Id).Select((item, index) => (item.Id, Key: $"era-{index + 1}")).ToDictionary(item => item.Id, item => item.Key);
         var manifest = new ChannelPackageManifest { PackageId = channel.ShareId, Name = channel.Name, History = channel.History,
+            SchemaVersion = assignments.Any(item => clipKeys.ContainsKey(item.InterludeId)
+                && (item.SeriesId != null || item.Role == BreakRole.ProgramIntro)) ? 2 : 1,
             StartDate = channel.StartDate, EndDate = channel.EndDate, SelectedEra = selected == null ? null : eraKeys.GetValueOrDefault(selected.ChannelEraId),
             ExcludedClips = clips.Count - shared.Count + await context.ChannelBumpers.CountAsync(item => eraIds.Contains(item.ChannelEraId), token),
             Series = series.Select(item => new PackageSeries { Key = seriesKeys[item.Id], Name = item.Name, Description = item.Description,
@@ -61,7 +63,8 @@ public sealed class ChannelPackageService(NostalgiaTVContext context, IOptions<M
                 Series = item.SeriesLinks.Select(link => new PackageSeriesSelection(seriesKeys[link.SeriesId], link.HasSeasonFilter,
                     link.SelectedSeasons.Select(season => season.SeasonNumber).Order().ToArray())).ToList(),
                 Clips = assignments.Where(link => link.ChannelEraId == item.Id && clipKeys.ContainsKey(link.InterludeId))
-                    .Select(link => new PackageClipAssignment(clipKeys[link.InterludeId], link.Role, link.Weight, link.MinimumGapSeconds)).ToList(),
+                    .Select(link => new PackageClipAssignment(clipKeys[link.InterludeId], link.Role, link.Weight, link.MinimumGapSeconds,
+                        link.SeriesId is int seriesId ? seriesKeys[seriesId] : null)).ToList(),
                 BreakRules = rules.Where(rule => rule.ChannelEraId == item.Id)
                     .Select(rule => new PackageBreakRules(rule.MinimumAds, rule.MaximumAds, rule.MaximumBreakSeconds)).SingleOrDefault() }).ToList() };
         var folder = StagingFolder();
@@ -181,7 +184,8 @@ public sealed class ChannelPackageService(NostalgiaTVContext context, IOptions<M
                             ? selection.Seasons.Select(number => new ChannelEraSelectedSeason { SeasonNumber = number }).ToList() : [] });
                 foreach (var assignment in item.Clips)
                     context.ChannelEraInterludes.Add(new ChannelEraInterlude { ChannelEraId = era.Id, InterludeId = localClips[assignment.ClipKey].Id,
-                        Role = assignment.Role, Weight = assignment.Weight, MinimumGapSeconds = assignment.MinimumGapSeconds });
+                        Role = assignment.Role, Weight = assignment.Weight, MinimumGapSeconds = assignment.MinimumGapSeconds,
+                        SeriesId = assignment.SeriesKey == null ? null : localSeries[assignment.SeriesKey].Id });
                 if (item.BreakRules is { } rule)
                     context.ChannelEraBreakRules.Add(new ChannelEraBreakRule { ChannelEraId = era.Id, MinimumAds = rule.MinimumAds,
                         MaximumAds = rule.MaximumAds, MaximumBreakSeconds = rule.MaximumBreakSeconds });

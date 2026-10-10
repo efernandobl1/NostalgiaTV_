@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Security.Claims;
 using ApplicationCore.Entities;
 using Asp.Versioning;
 using Infrastructure.Contexts;
@@ -21,13 +22,31 @@ public class ViewerController(NostalgiaTVContext context) : ControllerBase
     private string CookiePath => Development ? "/api/v1/viewer" : "/";
     private const string Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
-    private Task<ViewerDevice?> Device() => context.ViewerDevices.SingleOrDefaultAsync(item =>
-        item.TokenHash == Hash(Request.Cookies[Cookie] ?? "") && item.ExpiresAtUtc > DateTime.UtcNow);
+    private ViewerSessions Sessions => new(context, Development);
+    private Task<ViewerDevice?> Device() => Sessions.DeviceAsync(Request);
 
     [HttpPost("session"), EnableRateLimiting("ViewerCreationPolicy")]
     public async Task<IActionResult> Start(DeviceRequest request)
     {
         var device = await Device();
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            await using var transaction = await context.Database.BeginTransactionAsync();
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var profile = await Sessions.AccountProfileAsync(userId, device?.ProfileId);
+            await Lock("viewer-profile-" + profile.Id);
+            var version = await context.Users.Where(user => user.Id == userId).Select(user => user.SessionVersion).SingleAsync();
+            if (device == null || device.ProfileId != profile.Id)
+            {
+                if (await context.ViewerDevices.CountAsync(item => item.ProfileId == profile.Id && item.ExpiresAtUtc > DateTime.UtcNow) >= 10)
+                    return Conflict();
+                device = await Sessions.CreateAsync(Response, profile.Id, request.Name, version);
+            }
+            else device.SessionVersion = version;
+            await context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return await Session(device);
+        }
         if (device == null)
         {
             var now = DateTime.UtcNow;
@@ -63,7 +82,8 @@ public class ViewerController(NostalgiaTVContext context) : ControllerBase
                                   watched.CurrentSecond, watched.Completed, watched.UpdatedAtUtc }).Take(10000).ToListAsync();
         var devices = await context.ViewerDevices.AsNoTracking().Where(item => item.ProfileId == device.ProfileId && item.ExpiresAtUtc > DateTime.UtcNow)
             .Select(item => new { item.Id, item.Name, item.LastSeenUtc, Current = item.Id == device.Id }).ToListAsync();
-        return Ok(new { device.ProfileId, Devices = devices.Select(item => new { item.Id, item.Name, LastSeenUtc = DateTime.SpecifyKind(item.LastSeenUtc, DateTimeKind.Utc), item.Current }), Progress = progress.Select(item => new { item.SeriesId, item.EpisodeId,
+        var accountLinked = await context.ViewerProfiles.AnyAsync(item => item.Id == device.ProfileId && item.UserId != null);
+        return Ok(new { device.ProfileId, AccountLinked = accountLinked, Devices = devices.Select(item => new { item.Id, item.Name, LastSeenUtc = DateTime.SpecifyKind(item.LastSeenUtc, DateTimeKind.Utc), item.Current }), Progress = progress.Select(item => new { item.SeriesId, item.EpisodeId,
             item.Season, item.EpisodeNumber, item.CurrentSecond, item.Completed, UpdatedAtUtc = DateTime.SpecifyKind(item.UpdatedAtUtc, DateTimeKind.Utc) }) });
     }
 
@@ -108,10 +128,15 @@ public class ViewerController(NostalgiaTVContext context) : ControllerBase
         if (source.ProfileId != target.ProfileId)
         {
             foreach (var profile in new[] { source.ProfileId, target.ProfileId }.Order()) await Lock("viewer-profile-" + profile);
+            // Check ownership under the same profile lock used when attaching an account.
+            if (await context.ViewerProfiles.AnyAsync(item => item.Id == source.ProfileId && item.UserId != null))
+                return Conflict(new { message = "Usa el inicio de sesión para vincular un perfil con cuenta." });
             if (await context.ViewerDevices.CountAsync(item => item.ProfileId == target.ProfileId && item.ExpiresAtUtc > DateTime.UtcNow) >= 10)
                 return Conflict(new { message = "Este perfil ya tiene diez dispositivos. Desvincula uno primero." });
             await MergeProfiles(source.ProfileId, target.ProfileId);
             source.ProfileId = target.ProfileId;
+            var owner = await context.ViewerProfiles.Where(item => item.Id == target.ProfileId).Select(item => item.UserId).SingleAsync();
+            source.SessionVersion = owner == null ? null : await context.Users.Where(item => item.Id == owner).Select(item => item.SessionVersion).SingleAsync();
         }
         context.ViewerPairingCodes.Remove(pairing);
         await context.SaveChangesAsync();

@@ -19,6 +19,11 @@
   } @else if (loaded()) {
     <form id="platform-settings" [formGroup]="form" (ngSubmit)="save()">
       <fieldset class="settings-section">
+        <legend><span class="material-symbols-outlined" aria-hidden="true">person_add</span>Usuarios</legend>
+        <label class="setting-switch"><span><strong>Permitir crear cuentas</strong><small>Los usuarios nuevos serán espectadores, sin permisos de administración. Puedes cambiar su rol en Accesos.</small></span>
+          <input type="checkbox" formControlName="publicRegistrationEnabled" aria-label="Permitir crear cuentas" /></label>
+      </fieldset>
+      <fieldset class="settings-section">
         <legend><span class="material-symbols-outlined" aria-hidden="true">palette</span>Apariencia</legend>
         @for (option of appearance; track option.key) {
           <label class="setting-switch">

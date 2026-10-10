@@ -117,6 +117,30 @@ public class ChannelPackageArchiveTests
     public void UnsafeSourceUrlsAreRejected(string url) => Assert.Throws<InvalidDataException>(() => ChannelPackageArchive.ValidateSource(url));
 
     [Fact]
+    public void SeriesSpecificPromosRequireVersionTwoAndAnEraSeries()
+    {
+        var manifest = Sample();
+        var path = "assets/" + new string('a', 32) + ".mp4";
+        manifest.Assets.Add(new(path, 1, new string('a', 64)));
+        manifest.Clips.Add(new() { Key = "promo", Title = "Up next", Kind = InterludeKind.Bumper, Asset = path, License = "CC0" });
+        manifest.Eras[0].Clips.Add(new("promo", BreakRole.ProgramIntro, 1, 60, "retro"));
+        Assert.Throws<InvalidDataException>(() => ChannelPackageArchive.Validate(manifest));
+        manifest.SchemaVersion = 2;
+        ChannelPackageArchive.Validate(manifest);
+        var json = JsonSerializer.Serialize(manifest, ChannelPackageArchive.Json);
+        Assert.Equal("retro", JsonSerializer.Deserialize<ChannelPackageManifest>(json, ChannelPackageArchive.Json)!.Eras[0].Clips[0].SeriesKey);
+        manifest.Eras[0].Series.Clear();
+        Assert.Throws<InvalidDataException>(() => ChannelPackageArchive.Validate(manifest));
+    }
+
+    [Fact]
+    public void GenericAssignmentsKeepTheVersionOneContract()
+    {
+        var json = JsonSerializer.Serialize(new PackageClipAssignment("clip", BreakRole.BreakOpener, 1, 0), ChannelPackageArchive.Json);
+        Assert.DoesNotContain("seriesKey", json);
+    }
+
+    [Fact]
     public async Task UploadAndEditRejectSharingWithoutLicenseBeforeAccessingDatabase()
     {
         using var context = new NostalgiaTVContext(new DbContextOptionsBuilder<NostalgiaTVContext>().UseSqlServer("Server=(local);Database=Unused;Integrated Security=True").Options);

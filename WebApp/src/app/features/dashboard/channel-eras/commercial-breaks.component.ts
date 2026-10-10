@@ -21,6 +21,7 @@ export class CommercialBreaksComponent {
   readonly seasonLabel = interludeSeasonLabel;
   readonly eraId = input.required<number>();
   readonly channelId = input<number | null>(null);
+  readonly series = input<{ id: number; name: string }[]>([]);
   private readonly service = inject(BroadcastAdminService);
   readonly clips = signal<Interlude[]>([]);
   readonly assignments = signal<ClipAssignment[]>([]);
@@ -42,16 +43,34 @@ export class CommercialBreaksComponent {
   }
   editWeight = 1;
   editGap = 0;
-  readonly roles: { id: 0 | 1 | 2; title: string; subtitle: string }[] = [
-    { id: 0, title: 'Entrada a publicidad', subtitle: 'Bumper antes de los anuncios' },
+  editSeriesId: number | null = null;
+  readonly roles: { id: 0 | 1 | 2 | 3; title: string; subtitle: string }[] = [
+    {
+      id: 3,
+      title: 'Ya viene · Próximo programa',
+      subtitle: 'Anuncia la serie del episodio que comienza',
+    },
+    {
+      id: 0,
+      title: 'Ya regresamos · Salida a publicidad',
+      subtitle: 'Se refiere a la serie que se pausa',
+    },
     { id: 1, title: 'Anuncios', subtitle: 'Piezas publicitarias de esta era' },
-    { id: 2, title: 'Regreso a la serie', subtitle: 'Bumper al terminar los anuncios' },
+    {
+      id: 2,
+      title: 'Continuamos · Regreso a la serie',
+      subtitle: 'Vuelve a la misma serie después de los anuncios',
+    },
   ];
   rules: BreakRules = { minimumAds: 1, maximumAds: 3, maximumBreakSeconds: 180 };
-  draft: Record<number, { clipId: number | null; weight: number; minimumGapSeconds: number }> = {
-    0: { clipId: null, weight: 1, minimumGapSeconds: 0 },
-    1: { clipId: null, weight: 1, minimumGapSeconds: 3600 },
-    2: { clipId: null, weight: 1, minimumGapSeconds: 0 },
+  draft: Record<
+    number,
+    { clipId: number | null; weight: number; minimumGapSeconds: number; seriesId: number | null }
+  > = {
+    0: { clipId: null, weight: 1, minimumGapSeconds: 0, seriesId: null },
+    1: { clipId: null, weight: 1, minimumGapSeconds: 3600, seriesId: null },
+    2: { clipId: null, weight: 1, minimumGapSeconds: 0, seriesId: null },
+    3: { clipId: null, weight: 1, minimumGapSeconds: 0, seriesId: null },
   };
   constructor() {
     effect(() => {
@@ -99,6 +118,11 @@ export class CommercialBreaksComponent {
   clip(id: number): Interlude | undefined {
     return this.clips().find((clip) => clip.id === id);
   }
+  seriesLabel(seriesId: number | null | undefined): string {
+    return seriesId == null
+      ? 'Genérico del canal'
+      : (this.series().find((item) => item.id === seriesId)?.name ?? 'Serie no disponible');
+  }
   saveRules(): void {
     if (this.busy()) return;
     if (
@@ -136,7 +160,14 @@ export class CommercialBreaksComponent {
     this.busy.set(true);
     this.error.set('');
     this.service
-      .assign(this.eraId(), draft.clipId, role, draft.weight, draft.minimumGapSeconds)
+      .assign(
+        this.eraId(),
+        draft.clipId,
+        role,
+        draft.weight,
+        draft.minimumGapSeconds,
+        draft.seriesId,
+      )
       .subscribe({
         next: (item) => {
           this.assignments.update((items) => [...items, item]);
@@ -155,6 +186,7 @@ export class CommercialBreaksComponent {
     this.editing.set(item);
     this.editWeight = item.weight;
     this.editGap = item.minimumGapSeconds;
+    this.editSeriesId = item.seriesId ?? null;
   }
   saveAssignment(): void {
     const item = this.editing();
@@ -162,7 +194,14 @@ export class CommercialBreaksComponent {
     this.busy.set(true);
     this.error.set('');
     this.service
-      .assign(this.eraId(), item.interludeId, item.role, this.editWeight, this.editGap)
+      .assign(
+        this.eraId(),
+        item.interludeId,
+        item.role,
+        this.editWeight,
+        this.editGap,
+        this.editSeriesId,
+      )
       .subscribe({
         next: (updated) => {
           this.assignments.update((items) =>

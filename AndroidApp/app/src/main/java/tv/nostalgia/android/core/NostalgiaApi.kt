@@ -22,7 +22,35 @@ import kotlin.coroutines.resumeWithException
 
 class ApiException(val status: Int) : IOException("HTTP $status")
 
-class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient) {
+class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient, private val cookies: ViewerCookies? = null) {
+    suspend fun verifyServer(): ServerFeatures {
+        val info = json("server")
+        require(info.optString("product") == "NostalgiaTV" && info.optInt("deviceAuthorizationVersion") == 1) { "Unsupported server" }
+        return ServerFeatures(info.optBoolean("registrationEnabled"), info.optBoolean("googleEnabled"))
+    }
+
+    suspend fun loginViewer(username: String, password: String, name: String): ViewerSession {
+        var authenticated = false
+        try {
+            request("auth/token", JSONObject().put("username", username).put("password", password).put("rememberMe", false))
+            authenticated = true
+            return startViewer(name)
+        } finally {
+            try { if (authenticated) request("auth/revoke", JSONObject()) }
+            catch (_: IOException) { /* Administrative cookies are never retained by the player. */ }
+            finally { cookies?.clearAuthentication() }
+        }
+    }
+
+    suspend fun authorizeDevice(name: String): AuthorizationCode {
+        val result = json("viewer/authorization", JSONObject().put("name", name))
+        return AuthorizationCode(result.getString("deviceCode"), result.getString("userCode"),
+            result.getString("expiresAtUtc"), result.getInt("interval"))
+    }
+
+    suspend fun redeemDevice(code: String): Boolean =
+        json("viewer/authorization/redeem", JSONObject().put("deviceCode", code)).getString("status") == "connected"
+
     suspend fun channels(): List<Channel> = array("public/channels").objects().map {
         Channel(it.getInt("id"), it.getString("name"), it.nullableString("logoPath"))
     }
@@ -60,6 +88,7 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient) {
 
     suspend fun viewerSession(): ViewerSession = parseSession(json("viewer/session"))
     suspend fun startViewer(name: String): ViewerSession = parseSession(json("viewer/session", JSONObject().put("name", name)))
+    suspend fun logoutViewer(id: String) { request("viewer/devices/$id", delete = true) }
     suspend fun pairingCode(): PairingCode {
         val result = json("viewer/code", JSONObject())
         return PairingCode(result.getString("code"), result.getString("expiresAtUtc"))
@@ -72,17 +101,18 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient) {
     private fun parseSession(result: JSONObject) = ViewerSession(result.getString("profileId"),
         result.getJSONArray("devices").length(), result.getJSONArray("progress").objects().map {
             WatchProgress(it.getInt("episodeId"), it.getDouble("currentSecond"), it.getBoolean("completed"), it.optInt("seriesId"))
-        })
+        }, result.getJSONArray("devices").objects().firstOrNull { it.optBoolean("current") }?.getString("id"), result.optBoolean("accountLinked"))
 
     private suspend fun array(path: String) = withContext(Dispatchers.Default) { JSONArray(request(path)) }
     private suspend fun json(path: String, body: JSONObject? = null) =
         withContext(Dispatchers.Default) { JSONObject(request(path, body)) }
 
-    private suspend fun request(path: String, body: JSONObject? = null): String = suspendCancellableCoroutine { continuation ->
+    private suspend fun request(path: String, body: JSONObject? = null, delete: Boolean = false): String = suspendCancellableCoroutine { continuation ->
         val url = requireNotNull(base.resolve("api/v1/$path"))
         val request = Request.Builder().url(url).header("Accept", "application/json")
             .header("User-Agent", "NostalgiaTV-AndroidTV/0.1")
         if (body != null) request.post(body.toString().toRequestBody("application/json".toMediaType()))
+        if (delete) request.delete()
         val call = client.newCall(request.build())
         continuation.invokeOnCancellation { call.cancel() }
         call.enqueue(object : Callback {

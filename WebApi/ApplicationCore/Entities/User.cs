@@ -9,6 +9,7 @@ namespace ApplicationCore.Entities
         public int Id { get; set; }
         public string Username { get; set; }
         public string PasswordHash { get; set; }
+        public string? GoogleSubject { get; set; }
         public int SessionVersion { get; set; }
         public int FailedLoginAttempts { get; set; }
         public DateTime? LockedUntilUtc { get; set; }

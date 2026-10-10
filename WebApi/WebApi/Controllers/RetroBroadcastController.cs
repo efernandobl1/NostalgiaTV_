@@ -297,9 +297,13 @@ public class RetroBroadcastController : ControllerBase
         if (!Enum.IsDefined(role)) return BadRequest("Invalid break role.");
         if (request.Weight is < 1 or > 100 || request.MinimumGapSeconds is < 0 or > 604800)
             return BadRequest("Invalid clip scheduling limits.");
+        if (request.SeriesId is <= 0) return BadRequest("Invalid series.");
         var era = await _context.ChannelEras.FindAsync(eraId);
         var clip = await _context.Interludes.FindAsync(interludeId);
         if (era == null || clip == null) return NotFound();
+        if (request.SeriesId is int seriesId && !await _context.ChannelEraSeries
+            .AnyAsync(item => item.ChannelEraId == eraId && item.SeriesId == seriesId))
+            return BadRequest("The series must belong to this era.");
         if (clip.Kind != (role == BreakRole.Advertisement ? InterludeKind.Advertisement : InterludeKind.Bumper))
             return BadRequest("The clip kind does not match its role.");
 
@@ -315,6 +319,7 @@ public class RetroBroadcastController : ControllerBase
             _context.ChannelEraInterludes.Add(assignment);
         }
         assignment.Weight = request.Weight;
+        assignment.SeriesId = request.SeriesId;
         assignment.MinimumGapSeconds = request.MinimumGapSeconds;
         await _context.SaveChangesAsync();
         await _broadcast.ReloadChannelAsync(era.ChannelId);
@@ -346,7 +351,7 @@ public sealed record BreakRulesRequest(int MinimumAds, int MaximumAds, int Maxim
 public sealed record ApprovalRequest(bool Approved);
 public sealed record InterludeDetailsRequest(string Title, int? OriginalYearFrom, int? OriginalYearTo, string? RegionCode,
     InterludeSeason Season = InterludeSeason.AllYear, string? SourceUrl = null, string? License = null, bool RedistributionAllowed = false);
-public sealed record ClipAssignmentRequest(int Weight, int MinimumGapSeconds);
+public sealed record ClipAssignmentRequest(int Weight, int MinimumGapSeconds, int? SeriesId = null);
 public sealed class InterludeUploadRequest
 {
     public string? Title { get; set; }

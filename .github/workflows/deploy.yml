@@ -103,6 +103,8 @@ jobs:
           pnpm exec ng test --watch=false
       - name: Test dependency cleanup safeguards
         run: node --test .github/scripts/dependabot-cleanup.test.mjs
+      - name: Test installation and backup safeguards
+        run: python3 -m unittest discover -s deploy/tests -v
       - name: Check the production bundle with its security policy
         working-directory: WebApp
         run: |
@@ -190,6 +192,43 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: '1'
+      - name: Exercise fresh installation and backup restore on Linux
+        if: matrix.name == 'api'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FIXTURE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          RELEASE_SHA: ${{ github.sha }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          # The API under test was built above. Use the previously released web solely as the loopback proxy.
+            trap 'docker ps -a; docker logs --tail 60 nostalgiatv-local-https-1 2>&1 || true' ERR
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$OWNER" --password-stdin
+          docker pull "ghcr.io/$OWNER/nostalgia-web:$FIXTURE_SHA"
+          docker tag "ghcr.io/$OWNER/nostalgia-web:$FIXTURE_SHA" "ghcr.io/$OWNER/nostalgia-web:$RELEASE_SHA"
+          sudo python3 deploy/manage.py init /opt/nostalgiatv-smoke \
+            --server-url https://127.0.0.1 --local-bind 127.0.0.1 --release "$RELEASE_SHA" --web-port 18090
+          root=/opt/nostalgiatv-smoke/data/caddy/caddy/pki/authorities/local/root.crt
+          sudo curl --fail --silent --show-error --cacert "$root" https://127.0.0.1/api/v1/server
+          sudo python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          spec = importlib.util.spec_from_file_location('manage', 'deploy/manage.py')
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          installation = module.Installation('/opt/nostalgiatv-smoke')
+          installation.sql('CREATE TABLE NostalgiaTV.dbo.MaintenanceSmoke(Id int NOT NULL); INSERT INTO NostalgiaTV.dbo.MaintenanceSmoke VALUES(7);')
+          Path('/opt/nostalgiatv-smoke/uploads/restore-probe.txt').write_text('media retained')
+          backup = installation.backup()
+          installation.docker('down')
+          module.restore('/opt/nostalgiatv-restored', backup)
+          restored = module.Installation('/opt/nostalgiatv-restored')
+          restored.docker('up', '-d', '--wait', '--wait-timeout', '180')
+          restored.health()
+          assert restored.sql('SELECT Id FROM NostalgiaTV.dbo.MaintenanceSmoke;', capture=True).strip() == '7'
+          assert Path('/opt/nostalgiatv-restored/uploads/restore-probe.txt').read_text() == 'media retained'
+          restored.docker('down')
+          PY
       - name: Publish scanned image with provenance and SBOM
         id: publish
         if: github.event_name == 'push'
@@ -223,6 +262,36 @@ jobs:
           gh attestation verify "$SIGNED_IMAGE" --repo "$GITHUB_REPOSITORY"
           --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/deploy.yml"
           --source-ref refs/heads/main
+
+  server-release:
+    name: Publish self-host installation bundle
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Package verified server release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          bundle="nostalgiatv-server-${GITHUB_SHA}"
+          mkdir -p "$bundle/WebApp/public/assets"
+          cp docker-compose.production.yml .env.production.example "$bundle/"
+          cp -R deploy "$bundle/deploy"
+          cp WebApp/public/assets/env.js "$bundle/WebApp/public/assets/"
+          tar -czf "$bundle.tar.gz" -C "$bundle" .
+          sha256sum "$bundle.tar.gz" > "$bundle.tar.gz.sha256"
+          tag="server-${GITHUB_SHA}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target "$GITHUB_SHA" --title "Self-host server ${GITHUB_SHA:0:7}" \
+              --notes "Verified API and web image tag: ${GITHUB_SHA}. Linux x86-64 with Docker Compose, Python 3.12+ and OpenSSL. Install only in a new directory using deploy/manage.py init; existing installations use backup/update. Backups include private configuration and media. Local HTTPS requires trusting the exported public CA on each client. Never distribute CA private keys."
+          fi
+          gh release upload "$tag" "$bundle.tar.gz" "$bundle.tar.gz.sha256" --clobber
 
   # Despliegue en la VPS por SSH: baja las imágenes nuevas y reinicia el stack.
   deploy:

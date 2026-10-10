@@ -13,6 +13,23 @@ namespace Infrastructure.Tests;
 public class RetroBroadcastModelTests
 {
     [Fact]
+    public void SeriesSpecificClipsMustBelongToTheirEra()
+    {
+        using var context = CreateContext();
+        var assignment = context.Model.FindEntityType(typeof(ChannelEraInterlude))!;
+        var series = assignment.GetForeignKeys().Single(key => key.PrincipalEntityType.ClrType == typeof(ChannelEraSeries));
+        Assert.Equal(new[] { "ChannelEraId", "SeriesId" }, series.Properties.Select(property => property.Name));
+        Assert.Equal(DeleteBehavior.Restrict, series.DeleteBehavior);
+    }
+
+    [Fact]
+    public async Task InvalidSeriesScopesAreRejectedBeforeQueryingTheDatabase()
+    {
+        using var context = CreateContext();
+        var controller = new RetroBroadcastController(context, null!, null!, Options.Create(new MediaSettings()));
+        Assert.IsType<BadRequestObjectResult>(await controller.AssignInterlude(1, 1, BreakRole.ProgramIntro, new(1, 0, -1)));
+    }
+    [Fact]
     public async Task InvalidAdvertisingSeasonsAreRejectedBeforeWritingFilesOrQueryingTheDatabase()
     {
         using var context = CreateContext();

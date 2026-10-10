@@ -125,7 +125,8 @@ public class ChannelPackageIntegrationTests
                     FilePath = "/uploads/broadcast/advertisements/test.mp4", DurationSeconds = 1, ApprovedForBroadcast = true,
                     RedistributionAllowed = true, License = "CC0" };
                 context.Interludes.Add(clip); await context.SaveChangesAsync();
-                context.ChannelEraInterludes.Add(new() { ChannelEraId = era.Id, InterludeId = clip.Id, Role = BreakRole.Advertisement, Weight = 2, MinimumGapSeconds = 3600 });
+                context.ChannelEraInterludes.Add(new() { ChannelEraId = era.Id, InterludeId = clip.Id, Role = BreakRole.Advertisement,
+                    SeriesId = series.Id, Weight = 2, MinimumGapSeconds = 3600 });
             }
             await context.SaveChangesAsync();
             var metadataPath = await service.ExportAsync(channel.Id, false, default);
@@ -144,6 +145,8 @@ public class ChannelPackageIntegrationTests
             var importPath = Environment.GetEnvironmentVariable("NOSTALGIA_PACKAGE_CONTRACT_IMPORT") ?? path;
             await using var input = File.OpenRead(importPath);
             var info = await service.PreviewAsync(input, default);
+            Assert.Equal(2, info.Manifest.SchemaVersion);
+            Assert.All(info.Manifest.Eras.Single().Clips, assignment => Assert.Equal(info.Manifest.Series.Single().Key, assignment.SeriesKey));
             Assert.False(info.AlreadyInstalled);
             Assert.Equal(series.Id, info.Series.Single().ExistingId);
             Assert.Equal(2, info.Manifest.Clips.Count);
@@ -177,6 +180,8 @@ public class ChannelPackageIntegrationTests
             Assert.Equal(2, rules.MaximumAds); Assert.Equal(120, rules.MaximumBreakSeconds);
             Assert.Equal(importedEra.Id, (await context.ChannelEraSelections.SingleAsync(value => value.ChannelId == result.ChannelId)).ChannelEraId);
             var importedClips = await (from link in context.ChannelEraInterludes join clip in context.Interludes on link.InterludeId equals clip.Id where link.ChannelEraId == importedEra.Id select clip).ToListAsync();
+            Assert.All(await context.ChannelEraInterludes.Where(item => item.ChannelEraId == importedEra.Id).ToListAsync(),
+                assignment => Assert.Equal(series.Id, assignment.SeriesId));
             Assert.Equal([InterludeSeason.Halloween, InterludeSeason.Christmas], importedClips.OrderBy(value => value.Season).Select(value => value.Season));
             Assert.All(importedClips, clip => { Assert.False(clip.ApprovedForBroadcast); Assert.Equal("CC0", clip.License); Assert.True(File.Exists(Path.Combine(directory.FullName, clip.FilePath[9..]))); });
             input.Position = 0;

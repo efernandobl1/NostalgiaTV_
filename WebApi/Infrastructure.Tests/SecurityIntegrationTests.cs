@@ -66,7 +66,9 @@ public class SecurityIntegrationTests
     {
         await WithDatabase(async context =>
         {
-            await context.GetService<IMigrator>().MigrateAsync(context.Database.GetMigrations().Reverse().Skip(1).First());
+            var previous = context.Database.GetMigrations()
+                .TakeWhile(value => !value.EndsWith("_HardenAuthenticationSessions", StringComparison.Ordinal)).Last();
+            await context.GetService<IMigrator>().MigrateAsync(previous);
             var password = AuthService.HashPassword("Already-changed-admin-password");
             await context.Database.ExecuteSqlInterpolatedAsync($"UPDATE Users SET PasswordHash={password} WHERE Id=1");
             var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(64));

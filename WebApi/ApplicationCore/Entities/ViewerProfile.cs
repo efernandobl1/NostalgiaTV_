@@ -4,6 +4,7 @@ public class ViewerProfile
 {
     public Guid Id { get; set; }
     public DateTime CreatedAtUtc { get; set; }
+    public int? UserId { get; set; }
 }
 
 public class ViewerDevice
@@ -14,6 +15,18 @@ public class ViewerDevice
     public string Name { get; set; } = "";
     public DateTime ExpiresAtUtc { get; set; }
     public DateTime LastSeenUtc { get; set; }
+    public int? SessionVersion { get; set; }
+}
+
+public class DeviceAuthorization
+{
+    public string DeviceCodeHash { get; set; } = "";
+    public string UserCodeHash { get; set; } = "";
+    public string Name { get; set; } = "";
+    public DateTime ExpiresAtUtc { get; set; }
+    public DateTime? LastPolledAtUtc { get; set; }
+    public Guid? ProfileId { get; set; }
+    public int? SessionVersion { get; set; }
 }
 
 public class ViewerPairingCode

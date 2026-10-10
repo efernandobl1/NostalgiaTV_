@@ -31,6 +31,7 @@ export class SettingsComponent {
     { key: 'seasonalInterludesEnabled', title: 'Bumpers y publicidad de temporada', description: 'Incluye las piezas aprobadas de la época junto a las de todo el año, dentro de las eras asignadas.' },
   ];
   readonly form = this.builder.nonNullable.group({
+    publicRegistrationEnabled: false,
     seasonalThemesEnabled: true,
     seasonalEffectsEnabled: true,
     seasonalEpisodesEnabled: true,
