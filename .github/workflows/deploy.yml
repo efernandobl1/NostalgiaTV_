@@ -217,7 +217,7 @@ jobs:
           module = importlib.util.module_from_spec(spec)
           spec.loader.exec_module(module)
           installation = module.Installation('/opt/nostalgiatv-smoke')
-          installation.sql('CREATE TABLE dbo.MaintenanceSmoke(Id int NOT NULL); INSERT INTO dbo.MaintenanceSmoke VALUES(7);')
+            installation.sql('CREATE TABLE NostalgiaTV.dbo.MaintenanceSmoke(Id int NOT NULL); INSERT INTO NostalgiaTV.dbo.MaintenanceSmoke VALUES(7);')
           Path('/opt/nostalgiatv-smoke/uploads/restore-probe.txt').write_text('media retained')
           backup = installation.backup()
           installation.docker('down')
@@ -225,7 +225,7 @@ jobs:
           restored = module.Installation('/opt/nostalgiatv-restored')
           restored.docker('up', '-d', '--wait', '--wait-timeout', '180')
           restored.health()
-          assert restored.sql('SELECT Id FROM dbo.MaintenanceSmoke;', capture=True).strip() == '7'
+            assert restored.sql('SELECT Id FROM NostalgiaTV.dbo.MaintenanceSmoke;', capture=True).strip() == '7'
           assert Path('/opt/nostalgiatv-restored/uploads/restore-probe.txt').read_text() == 'media retained'
           restored.docker('down')
           PY
