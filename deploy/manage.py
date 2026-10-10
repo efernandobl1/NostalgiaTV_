@@ -118,6 +118,8 @@ class Installation:
                     "/var/opt/mssql": self.path / "data/sqlserver", "/run/sqlserver": self.path / "certificates/sqlserver",
                     "/usr/share/nginx/html/assets/env.js": self.path / "env.js"}
         for service in services.values():
+            if any(not mount.startswith("/") for mount in service.get("tmpfs", [])):
+                raise ValueError("Temporary filesystem mounts must use absolute paths.")
             for volume in service.get("volumes", []):
                 if volume["target"] in expected and (volume.get("type") != "bind" or
                         Path(volume["source"]).resolve() != expected[volume["target"]].resolve()):
