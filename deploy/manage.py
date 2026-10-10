@@ -73,6 +73,12 @@ def sql_literal(value):
     return "N'" + value.replace("'", "''") + "'"
 
 
+def expose_sql_certificate(path):
+    # Tar's data filter intentionally strips directory permissions during restore.
+    os.chmod(path, 0o755)
+    os.chmod(path / "server.cer", 0o644)
+
+
 class Installation:
     def __init__(self, path):
         self.path = directory(path)
@@ -292,6 +298,7 @@ def restore(path, backup):
     os.chmod(target / ".env", 0o600)
     env = target / ".env"
     env.write_text(re.sub(r"^ENV_JS_PATH=.*$", "ENV_JS_PATH=./env.js", env.read_text(), flags=re.M))
+    expose_sql_certificate(target / "certificates/sqlserver")
     for name in ("uploads", "media", "logs/webapi", "logs/media-worker", "data/caddy", "data/caddy-config"):
         folder = target / name
         folder.mkdir(mode=0o770, parents=True, exist_ok=True)
@@ -385,9 +392,8 @@ def initialize(args):
         os.chown(tls / name, 10001, 0)
     public = target / "certificates/sqlserver"
     public.mkdir(parents=True)
-    os.chmod(public, 0o755)
     shutil.copyfile(tls / "server.pem", public / "server.cer")
-    os.chmod(public / "server.cer", 0o644)
+    expose_sql_certificate(public)
     conf = target / "data/sqlserver/mssql.conf"
     write_private(conf, "[network]\ntlscert = /var/opt/mssql/tls/server.pem\ntlskey = /var/opt/mssql/tls/server.key\ntlsprotocols = 1.2\nforceencryption = 1\n")
     os.chown(conf, 10001, 0)

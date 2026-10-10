@@ -135,6 +135,13 @@ class MaintenanceTests(unittest.TestCase):
         self.assertNotIn("-h ", options)
         self.assertIn("-Nm -C -b", options)
 
+    def test_restored_public_certificate_is_readable_by_nonroot_services(self):
+        directory = self.target / "certificates/sqlserver"
+        with patch.object(manage.os, "chmod") as permissions:
+            manage.expose_sql_certificate(directory)
+        self.assertEqual((directory, 0o755), permissions.call_args_list[0].args)
+        self.assertEqual((directory / "server.cer", 0o644), permissions.call_args_list[1].args)
+
     def test_exports_only_the_public_local_certificate(self):
         authority = self.target / "data/caddy/caddy/pki/authorities/local"
         authority.mkdir(parents=True)
