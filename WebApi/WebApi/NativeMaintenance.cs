@@ -56,6 +56,7 @@ public static class NativeMaintenance
 
     private static async Task<SqlConnection> OpenMaintenanceAsync(IConfiguration configuration)
     {
+        ValidateBackupTargets(configuration);
         var connection = configuration.GetConnectionString("MaintenanceConnection")
             ?? throw new InvalidOperationException("Configure a separate backup/verification SQL login; do not elevate the runtime or migration login.");
         var user = new SqlConnectionStringBuilder(connection).UserID;
@@ -78,5 +79,15 @@ public static class NativeMaintenance
             await database.DisposeAsync();
             throw;
         }
+    }
+
+    public static void ValidateBackupTargets(IConfiguration configuration)
+    {
+        var connections = new[] { "DefaultConnection", "MigrationConnection", "MaintenanceConnection" }
+            .Select(name => new SqlConnectionStringBuilder(configuration.GetConnectionString(name)
+                ?? throw new InvalidOperationException("Missing native SQL connection: " + name))).ToArray();
+        if (connections.Any(connection => !connection.InitialCatalog.Equals("NostalgiaTV", StringComparison.OrdinalIgnoreCase) ||
+            !connection.DataSource.Equals(connections[0].DataSource, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Runtime, migration and backup accounts must use the same SQL server and NostalgiaTV database. A backup of another target cannot protect this update.");
     }
 }

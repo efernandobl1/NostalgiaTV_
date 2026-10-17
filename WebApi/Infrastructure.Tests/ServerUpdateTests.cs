@@ -7,6 +7,7 @@ using WebApi.Controllers;
 using WebApi.Services;
 using Xunit;
 using Microsoft.Extensions.Configuration;
+using WebApi;
 
 namespace Infrastructure.Tests;
 
@@ -64,5 +65,22 @@ public class ServerUpdateTests
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) =>
             throw new TaskCanceledException("Simulated registry timeout.");
+    }
+
+    [Theory]
+    [InlineData("sqlserver", "NostalgiaTV", true)]
+    [InlineData("another-server", "NostalgiaTV", false)]
+    [InlineData("sqlserver", "AnotherDatabase", false)]
+    public void NativeBackupsMustProtectTheSameDatabaseThatWillBeMigrated(string server, string database, bool valid)
+    {
+        var values = new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:DefaultConnection"] = "Server=sqlserver;Database=NostalgiaTV;User Id=app",
+            ["ConnectionStrings:MigrationConnection"] = "Server=sqlserver;Database=NostalgiaTV;User Id=migrator",
+            ["ConnectionStrings:MaintenanceConnection"] = $"Server={server};Database={database};User Id=backup"
+        };
+        var settings = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+        if (valid) NativeMaintenance.ValidateBackupTargets(settings);
+        else Assert.Throws<InvalidOperationException>(() => NativeMaintenance.ValidateBackupTargets(settings));
     }
 }
