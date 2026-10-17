@@ -116,6 +116,7 @@
       </div>
     </header>
     <main #studioContent id="studio-content" class="dashboard-content" tabindex="-1">
+      @if (menuService.currentUser()?.rol?.id === 1 && !currentUrl().startsWith('/dashboard/settings')) { <app-server-update [compact]="true" /> }
       <router-outlet />
     </main>
     <footer class="studio-footer">NostalgiaTV <span>Tu archivo. Tu programación.</span></footer>

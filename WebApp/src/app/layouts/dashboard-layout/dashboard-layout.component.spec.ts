@@ -5,6 +5,7 @@ import { MenuService } from '../../core/services/menu.service';
 import { SeasonalThemeService } from '../../core/services/seasonal-theme.service';
 import { UserResponse } from '../../shared/models/user.model';
 import { DashboardLayoutComponent } from './dashboard-layout.component';
+import { ServerUpdatesService } from '../../core/services/server-updates.service';
 
 describe('DashboardLayoutComponent Halloween archive access', () => {
   const user = signal<UserResponse | null>(null);
@@ -16,6 +17,7 @@ describe('DashboardLayoutComponent Halloween archive access', () => {
       imports: [DashboardLayoutComponent],
       providers: [
         provideRouter([]),
+        { provide: ServerUpdatesService, useValue: { status: signal(null), refresh() {} } },
         { provide: MenuService, useValue: { currentUser: user, menus: signal([]) } },
         { provide: SeasonalThemeService, useValue: seasonal },
       ],

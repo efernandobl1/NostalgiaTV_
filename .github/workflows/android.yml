@@ -4,9 +4,16 @@ on:
   pull_request:
     branches: [main]
     paths: ['AndroidApp/**', '.github/workflows/android.yml']
-  push:
-    branches: [main]
-    paths: ['AndroidApp/**', '.github/workflows/android.yml']
+  workflow_call:
+    secrets:
+      ANDROID_KEYSTORE_BASE64:
+        required: true
+      ANDROID_KEYSTORE_PASSWORD:
+        required: true
+      ANDROID_KEY_ALIAS:
+        required: true
+      ANDROID_KEY_PASSWORD:
+        required: true
   workflow_dispatch:
 
 permissions:
@@ -39,8 +46,8 @@ jobs:
         env:
           RUN_NUMBER: ${{ github.run_number }}
         run: |
-          echo "name=0.2.0.$RUN_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "code=$((100 + RUN_NUMBER))" >> "$GITHUB_OUTPUT"
+          echo "name=0.3.$RUN_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "code=$((100000 + RUN_NUMBER))" >> "$GITHUB_OUTPUT"
       - name: Test, lint and compile optimized APKs
         env:
           VERSION: ${{ steps.version.outputs.name }}
@@ -70,7 +77,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -107,14 +114,9 @@ jobs:
             --out "release/nostalgiatv-android-$VERSION.apk" unsigned/app-release-unsigned.apk
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --min-sdk-version 23 "release/nostalgiatv-android-$VERSION.apk"
           (cd release && sha256sum *.apk > SHA256SUMS.txt)
-      - name: Publish installable Android release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          VERSION: ${{ needs.build.outputs.version }}
-          COMMIT: ${{ github.sha }}
-        run: |
-          gh release create "android-v$VERSION" release/*.apk release/SHA256SUMS.txt \
-            --target "$COMMIT" --title "NostalgiaTV Android $VERSION" --latest=false \
-            --notes 'Universal Android 6.0+ APK for Android TV and mobile. Signed with the permanent release key. Tested and linted before publication.'
-          echo "Download the signed APK: https://github.com/$GH_REPO/releases/tag/android-v$VERSION" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload signed APK for the complete release
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: nostalgia-android-signed
+          path: release/*.apk
+          if-no-files-found: error

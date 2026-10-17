@@ -1013,6 +1013,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("Id")
                         .HasColumnType("int");
 
+                    b.Property<bool>("AutomaticUpdatesEnabled")
+                        .HasColumnType("bit");
+
                     b.Property<int>("MaxMoviesPerDay")
                         .HasColumnType("int");
 
@@ -1048,6 +1051,9 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("UpdateHour")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.ToTable("PlatformSettings", null, t =>
@@ -1061,6 +1067,7 @@ namespace Infrastructure.Migrations
                         new
                         {
                             Id = 1,
+                            AutomaticUpdatesEnabled = false,
                             MaxMoviesPerDay = 2,
                             MaxMoviesPerSeriesPerDay = 2,
                             MaxSpecialsPerDay = 5,
@@ -1071,7 +1078,8 @@ namespace Infrastructure.Migrations
                             SeasonalEpisodesEnabled = true,
                             SeasonalInterludesEnabled = true,
                             SeasonalThemesEnabled = true,
-                            TimeZoneId = "America/Guatemala"
+                            TimeZoneId = "America/Guatemala",
+                            UpdateHour = 3
                         });
                 });
 

@@ -79,6 +79,28 @@ def expose_sql_certificate(path):
     os.chmod(path / "server.cer", 0o644)
 
 
+def prepare_update_bridge(target):
+    for name, mode, gid in (("requests", 0o770, 1654), ("status", 0o755, 0)):
+        folder = target / "data/updates" / name
+        folder.mkdir(parents=True, exist_ok=True)
+        if folder.is_symlink():
+            raise ValueError("Update bridge folders cannot be symbolic links.")
+        folder.chmod(mode)
+        os.chown(folder, 0, gid)
+
+
+@contextlib.contextmanager
+def maintenance_lock(path):
+    import fcntl
+    descriptor = os.open(path / ".maintenance.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, "w") as lease:
+        try:
+            fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ValueError("Another backup or update is already running.") from None
+        yield
+
+
 class Installation:
     def __init__(self, path):
         self.path = directory(path)
@@ -228,15 +250,22 @@ class Installation:
         print("Backup (includes secrets; keep private): " + str(destination))
         return destination
 
-    def update(self, version):
+    def update(self, version, images=None):
         version = release(version)
         original = self.env.read_text(encoding="utf-8")
         candidate = original
         for name, image in (("API_IMAGE", "nostalgia-api"), ("WEB_IMAGE", "nostalgia-web")):
-            candidate, count = re.subn(r"^" + name + r"=.*$", name + "=ghcr.io/efernandobl1/" + image + ":" + version,
+            reference = images["api" if name == "API_IMAGE" else "web"] if images is not None else "ghcr.io/efernandobl1/" + image + ":" + version
+            if images is not None and not re.fullmatch(r"ghcr\.io/efernandobl1/" + image + r"@sha256:[a-f0-9]{64}", reference):
+                raise ValueError("The signed release must pin the expected image digest.")
+            candidate, count = re.subn(r"^" + name + r"=.*$", name + "=" + reference,
                                       candidate, flags=re.M)
             if count != 1:
                 raise ValueError("Expected exactly one " + name + " entry.")
+        if re.search(r"^SERVER_COMMIT=", candidate, re.M):
+            candidate = re.sub(r"^SERVER_COMMIT=.*$", "SERVER_COMMIT=" + version, candidate, flags=re.M)
+        else:
+            candidate += "\nSERVER_COMMIT=" + version + "\n"
         self.backup()
         pending = self.path / (".env.update-" + stamp())
         write_private(pending, candidate)
@@ -299,6 +328,7 @@ def restore(path, backup):
     env = target / ".env"
     env.write_text(re.sub(r"^ENV_JS_PATH=.*$", "ENV_JS_PATH=./env.js", env.read_text(), flags=re.M))
     expose_sql_certificate(target / "certificates/sqlserver")
+    prepare_update_bridge(target)
     for name in ("uploads", "media", "logs/webapi", "logs/media-worker", "data/caddy", "data/caddy-config"):
         folder = target / name
         folder.mkdir(mode=0o770, parents=True, exist_ok=True)
@@ -409,6 +439,11 @@ def initialize(args):
         bind = "[" + args.local_bind + "]" if ":" in args.local_bind else args.local_bind
         env += f"COMPOSE_PROFILES=local-https\nLOCAL_HTTPS_HOST={tls_host}\nLOCAL_HTTPS_SNI={host}\nLOCAL_HTTPS_BIND_IP={bind}\nLOCAL_HTTPS_PORT={port}\n"
     write_private(target / ".env", env)
+    for name, mode in (("requests", 0o770), ("status", 0o755)):
+        folder = target / "data/updates" / name
+        folder.mkdir(parents=True, exist_ok=True)
+        folder.chmod(mode)
+        os.chown(folder, 0, 1654 if name == "requests" else 0)
     ensure_network("monitoring-nostalgia")
     installation = Installation(str(target))
     installation.check()
@@ -443,7 +478,7 @@ def main():
     install.add_argument("--local-bind")
     install.add_argument("--web-port", type=int, default=8090)
     install.add_argument("--time-zone", default="America/Guatemala")
-    for name in ("check", "backup", "update", "restore", "export-ca"):
+    for name in ("check", "backup", "update", "restore", "export-ca", "enable-updater"):
         command = commands.add_parser(name)
         command.add_argument("directory")
         if name == "update":
@@ -463,12 +498,17 @@ def main():
         initialize(args)
     elif args.command == "restore":
         restore(args.directory, args.backup)
+    elif args.command == "enable-updater":
+        import updater
+        updater.install(args.directory)
     else:
         installation = Installation(args.directory)
         if args.command == "update":
-            installation.update(args.release)
+            with maintenance_lock(installation.path):
+                installation.update(args.release)
         elif args.command == "backup":
-            installation.backup()
+            with maintenance_lock(installation.path):
+                installation.backup()
         elif args.command == "export-ca":
             installation.export_ca()
         else:

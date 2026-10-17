@@ -4,10 +4,11 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { PlatformSettings, PlatformSettingsService } from '../../../core/services/platform-settings.service';
+import { ServerUpdateComponent } from '../../../shared/components/server-update/server-update.component';
 
 @Component({
   selector: 'app-settings',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, ServerUpdateComponent],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
 })
@@ -32,6 +33,8 @@ export class SettingsComponent {
   ];
   readonly form = this.builder.nonNullable.group({
     publicRegistrationEnabled: false,
+    automaticUpdatesEnabled: false,
+    updateHour: [3, [Validators.required, Validators.min(0), Validators.max(23), Validators.pattern(/^\d+$/)]],
     seasonalThemesEnabled: true,
     seasonalEffectsEnabled: true,
     seasonalEpisodesEnabled: true,

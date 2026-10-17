@@ -99,6 +99,9 @@ services:
       TZ: ${TIME_ZONE:-America/Guatemala}
       ConnectionStrings__DefaultConnection: ${DB_APP_CONNECTION_STRING:?Configure the restricted SQL login and verified TLS}
       Database__ApplyMigrations: "false"
+      ServerUpdates__CurrentCommit: ${SERVER_COMMIT:-}
+      ServerUpdates__RequestsPath: /run/nostalgia-updates/requests
+      ServerUpdates__StatusPath: /run/nostalgia-updates/status
       # Mismo origen vía Nginx: CORS casi no interviene, pero se deja el origen público por seguridad.
       Cors__AllowedOrigins__0: ${APP_PUBLIC_URL:?Defina APP_PUBLIC_URL}
       Jwt__Key: ${JWT_SECRET_KEY:?Defina JWT_SECRET_KEY}
@@ -125,6 +128,8 @@ services:
       - "8080"
     volumes:
       - ./logs/webapi:/app/Logs
+      - ./data/updates/requests:/run/nostalgia-updates/requests
+      - ./data/updates/status:/run/nostalgia-updates/status:ro
       - ./certificates/sqlserver:/run/sqlserver:ro
       - ./media:/app/wwwroot/uploads/media
       - ./uploads:/app/wwwroot/uploads

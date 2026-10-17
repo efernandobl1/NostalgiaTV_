@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Authorization;
 using WebApi.Authorization;
 using WebApi.Extensions;
 using WebApi.HealthChecks;
+using WebApi.Services;
+using Microsoft.Extensions.FileProviders;
 
 namespace WebApi
 {
@@ -18,6 +20,11 @@ namespace WebApi
     {
         public static async Task Main(string[] args)
         {
+            if (args.Contains("--native-backup") || args.Contains("--native-health") || args.Contains("--native-check-database"))
+            {
+                await NativeMaintenance.RunAsync(args);
+                return;
+            }
             if (args.Contains("--migrate"))
             {
                 await DatabaseMigrationHost.RunAsync(args);
@@ -29,6 +36,17 @@ namespace WebApi
                 return;
             }
             var builder = WebApplication.CreateBuilder(args);
+            builder.Services.AddWindowsService(options => options.ServiceName = "NostalgiaTV");
+            builder.Services.AddSingleton(TimeProvider.System);
+            builder.Services.AddHttpClient("ServerReleases", client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(10);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("NostalgiaTV/1.0");
+            });
+            builder.Services.AddSingleton(services => new ServerUpdates(
+                services.GetRequiredService<IHttpClientFactory>().CreateClient("ServerReleases"),
+                services.GetRequiredService<IConfiguration>(), services.GetRequiredService<TimeProvider>()));
+            builder.Services.AddHostedService<UpdatePolicyPublisher>();
             if (!builder.Environment.IsDevelopment())
                 await Infrastructure.Services.DatabaseConnectionPolicy.ValidateAsync(builder.Configuration.GetConnectionString("DefaultConnection"));
 
@@ -87,6 +105,16 @@ namespace WebApi
                     timeout: TimeSpan.FromSeconds(5));
 
             var app = builder.Build();
+            if (app.Configuration.GetValue<bool>("NativeHosting:Enabled"))
+                app.Use(async (context, next) =>
+                {
+                    context.Response.Headers.XContentTypeOptions = "nosniff";
+                    context.Response.Headers.XFrameOptions = "DENY";
+                    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+                    context.Response.Headers.ContentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'";
+                    if (context.Request.IsHttps) context.Response.Headers.StrictTransportSecurity = "max-age=31536000";
+                    await next(context);
+                });
             app.UseMiddleware<Middleware.TrustedProxyMiddleware>();
             app.UseExceptionHandler();
 
@@ -124,6 +152,8 @@ namespace WebApi
                 await next(context);
             });
             app.UseStaticFiles();
+            if (app.Configuration.GetValue<bool>("NativeHosting:Enabled"))
+                app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(Path.Combine(AppContext.BaseDirectory, "wwwroot")) });
             app.UseSecureRequestLogging();
             app.UseAuthorization();
             app.UseMiddleware<Middleware.ActivityLoggingMiddleware>();
@@ -142,6 +172,14 @@ namespace WebApi
             }).AllowAnonymous();
 
             app.MapHub<ChannelHub>("/hubs/channel").AllowAnonymous();
+            if (app.Configuration.GetValue<bool>("NativeHosting:Enabled"))
+                app.MapFallback("{*path:nonfile}", async context =>
+                {
+                    if (new[] { "/api", "/uploads", "/hubs" }.Any(path => context.Request.Path.StartsWithSegments(path)))
+                    { context.Response.StatusCode = 404; return; }
+                    context.Response.ContentType = "text/html; charset=utf-8";
+                    await context.Response.SendFileAsync(Path.Combine(AppContext.BaseDirectory, "wwwroot/index.html"));
+                }).AllowAnonymous();
 
             app.Run();
         }

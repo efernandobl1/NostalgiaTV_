@@ -123,6 +123,25 @@ class MaintenanceTests(unittest.TestCase):
         with patch.object(manage, "run", return_value="existing-container\n"), self.assertRaises(ValueError):
             manage.require_empty_project()
 
+    def test_signed_update_pulls_only_expected_immutable_image_digests(self):
+        installation = manage.Installation(str(self.target))
+        images = {kind: "ghcr.io/efernandobl1/nostalgia-" + kind + "@sha256:" + "b" * 64 for kind in ("api", "web")}
+        with patch.object(installation, "backup"), patch.object(installation, "docker"), \
+                patch.object(installation, "health"), patch.object(manage, "run"):
+            installation.update("a" * 40, images=images)
+        configuration = installation.env.read_text()
+        self.assertIn("API_IMAGE=" + images["api"], configuration)
+        self.assertIn("SERVER_COMMIT=" + "a" * 40, configuration)
+        with patch.object(installation, "backup") as backup, self.assertRaises(ValueError):
+            installation.update("a" * 40, images={**images, "api": "ghcr.io/attacker/api@sha256:" + "b" * 64})
+        backup.assert_not_called()
+
+    def test_restored_update_bridge_has_separate_writable_requests_and_readonly_status(self):
+        with patch.object(manage.os, "chown", create=True) as ownership:
+            manage.prepare_update_bridge(self.target)
+        self.assertEqual([(self.target / "data/updates/requests", 0, 1654),
+                          (self.target / "data/updates/status", 0, 0)], [call.args for call in ownership.call_args_list])
+
     def test_sql_passwords_escape_single_quotes(self):
         self.assertEqual("N'a''b'", manage.sql_literal("a'b"))
 

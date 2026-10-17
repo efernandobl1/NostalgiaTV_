@@ -111,6 +111,12 @@ jobs:
           pnpm exec playwright install --with-deps chromium
           pnpm exec ng build --configuration production
           pnpm test:security-browser
+      - name: Preserve the verified web interface for native Windows
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: nostalgia-native-web
+          path: WebApp/dist/WebApp/browser
+          if-no-files-found: error
       - name: Set up .NET
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
@@ -134,7 +140,7 @@ jobs:
   # Build both images in parallel; the API Docker build also runs its tests.
   build-and-push:
     needs: [changes, security-scan]
-    if: needs.changes.outputs.web == 'true'
+    if: github.event_name == 'push' || needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -177,6 +183,7 @@ jobs:
           file: ${{ matrix.file }}
           load: true
           tags: ${{ matrix.image }}:${{ github.sha }}
+          build-args: SOURCE_REVISION=${{ github.sha }}
           provenance: false
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
@@ -237,6 +244,7 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
           push: ${{ github.event_name == 'push' }}
+          build-args: SOURCE_REVISION=${{ github.sha }}
           tags: |
             ${{ matrix.image }}:latest
             ${{ matrix.image }}:${{ github.sha }}
@@ -262,42 +270,129 @@ jobs:
           gh attestation verify "$SIGNED_IMAGE" --repo "$GITHUB_REPOSITORY"
           --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/deploy.yml"
           --source-ref refs/heads/main
+      - name: Preserve immutable image identity for the signed release
+        if: github.event_name == 'push'
+        env:
+          IMAGE_KIND: ${{ matrix.name }}
+          IMAGE_NAME: ${{ matrix.image }}
+          IMAGE_DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path('image-' + os.environ['IMAGE_KIND'] + '.json').write_text(json.dumps({'image': os.environ['IMAGE_NAME'] + '@' + os.environ['IMAGE_DIGEST']}))
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: github.event_name == 'push'
+        with:
+          name: nostalgia-image-${{ matrix.name }}
+          path: image-${{ matrix.name }}.json
+          if-no-files-found: error
+
+  android-release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/android.yml
+    secrets: inherit
+
+  native-windows:
+    name: Build native Windows installer
+    needs: security-scan
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: nostalgia-native-web
+          path: native-publish/wwwroot
+      - name: Publish native server and verify installer scripts
+        shell: pwsh
+        run: |
+          dotnet publish WebApi/WebApi/WebApi.csproj -c Release -r win-x64 --self-contained true -p:RepositoryCommit=$env:GITHUB_SHA -o native-publish
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Get-ChildItem deploy/windows/*.ps1 | ForEach-Object {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$errors) | Out-Null
+            if ($errors) { throw ($errors | Out-String) }
+          }
+          if (!(Test-Path native-publish/wwwroot/index.html)) { throw 'The native web interface is missing.' }
+          ./deploy/windows/smoke.ps1 -PublishDirectory native-publish
+          New-Item -ItemType Directory release -Force | Out-Null
+          Compress-Archive -Path native-publish/* -DestinationPath release/nostalgiatv-server-windows-x64.zip
+          $compiler = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+          $compilerPath = if ($compiler) { $compiler.Source } else { 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' }
+          if (!(Test-Path $compilerPath)) { throw 'Inno Setup 6 is required on this runner.' }
+          & $compilerPath "/DCommit=$env:GITHUB_SHA" "/DVersion=0.3.$env:GITHUB_RUN_NUMBER" deploy/windows/setup.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: nostalgia-native-windows
+          path: release/*
+          if-no-files-found: error
 
   server-release:
-    name: Publish self-host installation bundle
+    name: Publish complete verified release
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build-and-push
+    needs: [build-and-push, native-windows, android-release]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Package verified server release
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: nostalgia-native-windows
+          path: release
+          merge-multiple: true
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: nostalgia-android-signed
+          path: release
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: nostalgia-image-*
+          path: release
+          merge-multiple: true
+      - name: Package complete release
+        # Image manifests are part of the signed update contract, never mutable tags.
+        run: python3 deploy/package-release.py --commit "$GITHUB_SHA" --version "v0.3.$GITHUB_RUN_NUMBER"
+      - name: Attest every release asset using the temporary OIDC identity
+        id: attest
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
+        with:
+          subject-path: release/*
+      - name: Publish only the complete release
         env:
           GH_TOKEN: ${{ github.token }}
+          ATTESTATION_BUNDLE: ${{ steps.attest.outputs.bundle-path }}
         run: |
           set -euo pipefail
-          bundle="nostalgiatv-server-${GITHUB_SHA}"
-          mkdir -p "$bundle/WebApp/public/assets"
-          cp docker-compose.production.yml .env.production.example "$bundle/"
-          cp -R deploy "$bundle/deploy"
-          cp WebApp/public/assets/env.js "$bundle/WebApp/public/assets/"
-          tar -czf "$bundle.tar.gz" -C "$bundle" .
-          sha256sum "$bundle.tar.gz" > "$bundle.tar.gz.sha256"
-          tag="server-${GITHUB_SHA}"
+          cp "$ATTESTATION_BUNDLE" release/release.intoto.jsonl
+          tag="v0.3.$GITHUB_RUN_NUMBER"
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --target "$GITHUB_SHA" --title "Self-host server ${GITHUB_SHA:0:7}" \
-              --notes "Verified API and web image tag: ${GITHUB_SHA}. Linux x86-64 with Docker Compose, Python 3.12+ and OpenSSL. Install only in a new directory using deploy/manage.py init; existing installations use backup/update. Backups include private configuration and media. Local HTTPS requires trusting the exported public CA on each client. Never distribute CA private keys."
+            gh release create "$tag" --draft --target "$GITHUB_SHA" --title "NostalgiaTV $tag" \
+              --notes 'Complete release: signed Android TV/mobile APK, native Windows x64 server installer and portable payload, Linux x64 installer and server bundle. Windows requires a local SQL Server with dedicated users and verified TLS, plus FFmpeg; .NET is included. Linux requires Docker Compose, Python 3.12+ and OpenSSL. GitHub CLI verifies OIDC provenance before server updates. Windows installers are not Authenticode-signed. Preserve backups and never share private keys.'
+          elif [ "$(gh release view "$tag" --json isDraft --jq .isDraft)" != true ]; then
+            echo 'This release is already published and immutable. Nothing was overwritten.'
+            exit 0
           fi
-          gh release upload "$tag" "$bundle.tar.gz" "$bundle.tar.gz.sha256" --clobber
+          gh release upload "$tag" release/* --clobber
+          gh release edit "$tag" --draft=false --latest
 
   # Despliegue en la VPS por SSH: baja las imágenes nuevas y reinicia el stack.
   deploy:
     name: Deploy to production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build-and-push
+    needs: [build-and-push, server-release]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

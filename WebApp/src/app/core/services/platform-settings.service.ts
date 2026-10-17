@@ -12,6 +12,8 @@ export interface PublicSettings {
 
 export interface PlatformSettings extends PublicSettings {
   publicRegistrationEnabled: boolean;
+  automaticUpdatesEnabled?: boolean;
+  updateHour?: number;
   seasonalEpisodesEnabled: boolean;
   seasonalInterludesEnabled: boolean;
   noRepeatWindowHours: number;

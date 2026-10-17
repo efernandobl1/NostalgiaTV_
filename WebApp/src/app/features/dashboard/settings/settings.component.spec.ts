@@ -4,16 +4,20 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { SettingsComponent } from './settings.component';
 import { PlatformSettings, PlatformSettingsService } from '../../../core/services/platform-settings.service';
+import { signal } from '@angular/core';
+import { ServerUpdatesService } from '../../../core/services/server-updates.service';
 
 describe('SettingsComponent', () => {
   const settings: PlatformSettings = {
     publicRegistrationEnabled: false,
+    automaticUpdatesEnabled: false, updateHour: 3,
     seasonalThemesEnabled: true, seasonalEffectsEnabled: true, seasonalEpisodesEnabled: true,
     seasonalInterludesEnabled: true, timeZoneId: 'America/Guatemala', noRepeatWindowHours: 24,
     maxSpecialsPerDay: 5, maxSpecialsPerSeriesPerDay: 2, maxMoviesPerDay: 2, maxMoviesPerSeriesPerDay: 2,
   };
   beforeEach(() => TestBed.configureTestingModule({
-    imports: [SettingsComponent], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+    imports: [SettingsComponent], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+      { provide: ServerUpdatesService, useValue: { status: signal(null), loading: signal(false), error: signal(''), requested: signal(false), refresh() {} } }],
   }));
   afterEach(() => TestBed.inject(HttpTestingController).verify());
   function create() {
@@ -27,7 +31,7 @@ describe('SettingsComponent', () => {
     const { fixture, component } = create();
     expect(component.form.getRawValue()).toEqual(settings);
     expect(fixture.nativeElement.querySelector('button[type=submit]').disabled).toBe(true);
-    expect(fixture.nativeElement.querySelectorAll('input[type=checkbox]').length).toBe(5);
+    expect(fixture.nativeElement.querySelectorAll('form input[type=checkbox]').length).toBe(6);
   });
   it('saves once, updates the public policy and restores a clean form', () => {
     const { component, http } = create();

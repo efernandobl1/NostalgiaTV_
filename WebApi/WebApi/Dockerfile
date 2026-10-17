@@ -18,6 +18,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 ARG BUILD_CONFIGURATION=Release
+ARG SOURCE_REVISION=development
 WORKDIR /src
 # Copiar sólo los .csproj primero maximiza el uso de la caché de capas en 'restore'.
 COPY ["WebApi/WebApi.csproj", "WebApi/"]
@@ -30,7 +31,7 @@ COPY . .
 RUN dotnet test "Infrastructure.Tests/Infrastructure.Tests.csproj" -c $BUILD_CONFIGURATION --no-restore
 WORKDIR "/src/WebApi"
 # 'publish' ya compila; se elimina el paso 'build' redundante para acelerar la imagen.
-RUN dotnet publish "WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false /p:RepositoryCommit=$SOURCE_REVISION
 
 FROM base AS final
 WORKDIR /app

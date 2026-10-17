@@ -13,6 +13,7 @@ public static class MediaWorkerHost
     public static async Task RunAsync(string[] args)
     {
         var builder = Host.CreateApplicationBuilder(args.Where(argument => argument != "--media-worker").ToArray());
+        builder.Services.AddWindowsService(options => options.ServiceName = "NostalgiaTV-Media");
         if (!builder.Environment.IsDevelopment())
             await Infrastructure.Services.DatabaseConnectionPolicy.ValidateAsync(builder.Configuration.GetConnectionString("DefaultConnection"));
         if (builder.Environment.IsDevelopment())

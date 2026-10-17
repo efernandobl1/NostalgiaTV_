@@ -14,6 +14,7 @@ import { filter } from 'rxjs';
 import { MenuService } from '../../core/services/menu.service';
 import { SeasonalThemeService } from '../../core/services/seasonal-theme.service';
 import { CustomizerSettingsService } from '../../shared/components/customizer-settings/customizer-settings.service';
+import { ServerUpdateComponent } from '../../shared/components/server-update/server-update.component';
 
 interface StudioDestination {
   label: string;
@@ -26,7 +27,7 @@ interface StudioDestination {
 
 @Component({
   selector: 'app-dashboard-layout',
-  imports: [RouterOutlet, RouterLink, A11yModule],
+  imports: [RouterOutlet, RouterLink, A11yModule, ServerUpdateComponent],
   templateUrl: './dashboard-layout.component.html',
   styleUrl: './dashboard-layout.component.scss',
 })

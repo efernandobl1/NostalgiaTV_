@@ -17,7 +17,15 @@
   @if (loading()) {
     <div class="admin-state" role="status">Cargando configuración…</div>
   } @else if (loaded()) {
+    <app-server-update />
     <form id="platform-settings" [formGroup]="form" (ngSubmit)="save()">
+      <fieldset class="settings-section">
+        <legend><span class="material-symbols-outlined" aria-hidden="true">system_update</span>Actualizaciones</legend>
+        <label class="setting-switch"><span><strong>Actualizar automáticamente</strong><small>Solo versiones estables y verificadas. El respaldo se crea antes de actualizar; la emisión se interrumpirá.</small></span>
+          <input type="checkbox" formControlName="automaticUpdatesEnabled" aria-label="Actualizar automáticamente" /></label>
+        <label>Hora de actualización (0–23)<input type="number" formControlName="updateHour" min="0" max="23" step="1" aria-describedby="update-timezone" /></label>
+        <small id="update-timezone">Se usa la zona horaria seleccionada abajo. El agente comprueba las solicitudes cada cinco minutos. Esta opción no instala ni habilita el agente.</small>
+      </fieldset>
       <fieldset class="settings-section">
         <legend><span class="material-symbols-outlined" aria-hidden="true">person_add</span>Usuarios</legend>
         <label class="setting-switch"><span><strong>Permitir crear cuentas</strong><small>Los usuarios nuevos serán espectadores, sin permisos de administración. Puedes cambiar su rol en Accesos.</small></span>
