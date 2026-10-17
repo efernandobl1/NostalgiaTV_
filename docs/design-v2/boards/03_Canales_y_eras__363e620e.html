@@ -1,0 +1,167 @@
+<!-- NostalgiaTV · Canales y eras -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+table{border-collapse:collapse;width:100%}
+th{text-align:left;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#A29E91;padding:8px 10px;border-bottom:1px solid #2C2C27}
+td{padding:12px 10px;border-bottom:1px solid #24241F;font-size:14px;vertical-align:middle}
+-->
+<div class="min-h-screen flex flex-wrap bg-ink text-fg font-sans">
+  <div class="flex-[1_1_248px] border-r border-raised-2">
+    <!-- DC-IMPORT name="Sidebar" active="channels" hint-size="248px,960px" -->
+  </div>
+  <main class="flex-[999_1_560px] min-w-0 pt-8 px-10 pb-14 flex flex-col gap-6 max-w-310">
+
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div class="flex flex-col gap-1.5">
+        <span class="font-mono text-[12px] tracking-[0.14em] text-muted">CH 03 · OPERACIÓN</span>
+        <h1 class="m-0 font-display font-bold text-[36px]">Canales y eras</h1>
+      </div>
+      <button class="min-h-11 py-0 px-4.5 border-0 rounded-md bg-amber text-on-amber [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.newChannel()">Nuevo canal</button>
+    </header>
+
+    <div class="flex flex-wrap gap-4 items-start">
+      <section class="flex-[1_1_240px] flex flex-col gap-2" aria-label="Canales">
+        @for (c of channels; track $index) {
+          <button type="button" (click)="c.pick()" [attr.aria-pressed]="c.pressed">
+            <span class="w-11 h-11 flex-none rounded-lg flex items-center justify-center font-display font-bold text-[14px] text-amber [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#24241F]" aria-hidden="true">{{c.num}}</span>
+            <span class="flex-1 min-w-0 flex flex-col gap-0.5 text-left">
+              <span class="font-semibold text-[14px] text-fg">{{c.name}}</span>
+              <span class="text-[12px] text-muted">{{c.era}}</span>
+            </span>
+          </button>
+        }
+      </section>
+
+      <div class="flex-[999_1_560px] min-w-0 flex flex-col gap-4">
+        <section class="flex flex-wrap gap-5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="ch">
+          <div class="w-24 h-24 rounded-[10px] flex items-center justify-center font-display font-bold text-[28px] text-amber [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#24241F] border border-dashed border-edge" aria-hidden="true">LOGO</div>
+          <div class="flex-[1_1_320px] flex flex-col gap-2">
+            <h2 class="m-0 font-display text-[26px] font-bold" id="ch">Canal 5 Retro</h2>
+            <div class="flex flex-wrap gap-y-2 gap-x-4.5 text-[13px] text-muted">
+              <span>Desde 01 mar 2024</span>
+              <span>Sin fecha de cierre</span>
+              <span class="font-mono">ShareId 7f3c2e10-…-a91e</span>
+            </div>
+            <p class="m-0 text-[14px] leading-[1.55] text-fg-2 max-w-160">Canal de caricaturas y anime de la televisión abierta, con bloques de tarde y cortes comerciales de época.</p>
+          </div>
+          <div class="flex flex-col gap-2 items-start">
+            <button class="min-h-11 py-0 px-4 border border-edge rounded-md bg-transparent text-fg [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Copiar enlace público</button>
+            <button class="min-h-11 py-0 px-4 border border-edge rounded-md bg-transparent text-fg [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.editChannel()">Editar canal</button>
+          </div>
+        </section>
+
+        <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="eras">
+          <div class="flex flex-wrap justify-between items-center gap-3">
+            <h2 class="m-0 font-display text-[18px] font-semibold" id="eras">Línea de tiempo de eras</h2>
+            <button class="min-h-10 py-0 px-3.5 border border-edge rounded-md bg-transparent text-fg [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.newEra()">Agregar era</button>
+          </div>
+          <div class="flex gap-1">
+            @for (e of eras; track $index) {
+              <button type="button" (click)="e.pick()" [attr.aria-pressed]="e.pressed">
+                <span class="font-mono text-[11px] opacity-[0.85]">{{e.years}}</span>
+                <span class="font-semibold text-[14px]">{{e.name}}</span>
+                @if (e.onAir) {
+                  <span class="font-mono text-[10px] tracking-[0.1em]">● EN EMISIÓN</span>
+                }
+              </button>
+            }
+          </div>
+          <div class="flex flex-wrap items-center gap-3 text-[13px] text-muted">
+            <span>{{era.desc}}</span>
+            <span class="flex-1"></span>
+            <span class="font-mono">carpeta: /eras/{{era.slug}}</span>
+            <button class="min-h-10 py-0 px-3.5 border border-edge rounded-md bg-transparent text-fg [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.editEra()">Editar era</button>
+            <button class="min-h-10 py-0 px-3.5 border-0 rounded-md bg-amber text-on-amber [font:600_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.broadcast()">Emitir esta era</button>
+          </div>
+        </section>
+
+        <div class="flex flex-wrap gap-4 items-start">
+          <section class="flex-[3_1_460px] min-w-0 flex flex-col gap-3 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="eraseries">
+            <div class="flex justify-between items-center gap-3">
+              <h2 class="m-0 font-display text-[18px] font-semibold" id="eraseries">Series de la era</h2>
+              <button class="min-h-10 py-0 px-3.5 border border-edge rounded-md bg-transparent text-fg [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.eraSeries()">Editar series</button>
+            </div>
+            <div class="overflow-x-auto">
+              <table>
+                <thead><tr><th>SERIE</th><th>TEMPORADAS</th><th>INTERLUDIOS PROPIOS</th></tr></thead>
+                <tbody>
+                  @for (s of eraSeries; track $index) {
+                    <tr>
+                      <td class="font-medium">{{s.name}}</td>
+                      <td>
+                        <span class="flex flex-wrap gap-1">
+                          @for (t of s.seasons; track $index) {
+                            <span class="py-[3px] px-2 rounded-sm font-mono text-[11px]" [style.color]="t.ink" [style.background]="t.bg">{{t.label}}</span>
+                          }
+                        </span>
+                      </td>
+                      <td class="font-mono text-muted">{{s.interludes}}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="flex-[2_1_300px] min-w-0 flex flex-col gap-4">
+            <section class="flex flex-col gap-3 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="breaks">
+              <h2 class="m-0 font-display text-[18px] font-semibold" id="breaks">Reglas de corte</h2>
+              <div class="grid grid-cols-[repeat(3,_minmax(0,_1fr))] gap-2.5">
+                <label class="flex flex-col gap-1.5 text-[12px] text-muted">Mín. anuncios
+                  <input class="min-h-11 py-0 px-2.5 w-full border border-edge rounded-md bg-ink text-fg [font:15px_'IBM_Plex_Mono',_monospace]" type="number" value="2" min="1">
+                </label>
+                <label class="flex flex-col gap-1.5 text-[12px] text-muted">Máx. anuncios
+                  <input class="min-h-11 py-0 px-2.5 w-full border border-edge rounded-md bg-ink text-fg [font:15px_'IBM_Plex_Mono',_monospace]" type="number" value="4" min="1">
+                </label>
+                <label class="flex flex-col gap-1.5 text-[12px] text-muted">Máx. segundos
+                  <input class="min-h-11 py-0 px-2.5 w-full border border-edge rounded-md bg-ink text-fg [font:15px_'IBM_Plex_Mono',_monospace]" type="number" value="180" min="1">
+                </label>
+              </div>
+            </section>
+
+            <section class="flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="eraint">
+              <div class="flex justify-between items-center gap-3">
+                <h2 class="m-0 font-display text-[18px] font-semibold" id="eraint">Interludios de la era</h2>
+                <button class="min-h-10 py-0 px-3.5 border border-edge rounded-md bg-transparent text-fg [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.eraInterlude()">Asignar</button>
+              </div>
+              @for (i of eraInterludes; track $index) {
+                <div class="flex items-center gap-2.5 py-2 px-0 border-t border-raised-2">
+                  <span class="w-18.5 flex-none font-mono text-[10px] tracking-[0.08em]" [style.color]="i.color">{{i.kind}}</span>
+                  <span class="flex-1 min-w-0 text-[13px]">{{i.title}}</span>
+                  <span class="font-mono text-[12px] text-muted">×{{i.weight}} · {{i.gap}}</span>
+                </div>
+              }
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  @if (dlg.channel) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start py-12 px-4 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-150"><!-- DC-IMPORT name="DlgChannel" mode="{{mode}}" on-close="{{close}}" hint-size="100%,640px" --></div>
+    </div>
+  }
+  @if (dlg.era) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start py-12 px-4 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-150"><!-- DC-IMPORT name="DlgEra" mode="{{mode}}" on-close="{{close}}" hint-size="100%,740px" --></div>
+    </div>
+  }
+  @if (dlg.eraSeries) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start py-12 px-4 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-150"><!-- DC-IMPORT name="DlgEraSeries" on-close="{{close}}" hint-size="100%,700px" --></div>
+    </div>
+  }
+  @if (dlg.eraInterlude) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start py-12 px-4 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-150"><!-- DC-IMPORT name="DlgEraInterlude" on-close="{{close}}" hint-size="100%,580px" --></div>
+    </div>
+  }
+  @if (dlg.broadcast) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start pt-30 px-4 pb-12 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-130"><!-- DC-IMPORT name="DlgConfirm" heading="¿Emitir la era {{era.name}}?" message="Se reemplaza la era actual del canal y se regenera la programación desde ahora. Los espectadores conectados verán el cambio en el siguiente bloque." confirm-label="Emitir era" tone="warning" on-close="{{close}}" hint-size="100%,300px" --></div>
+    </div>
+  }
+</div>

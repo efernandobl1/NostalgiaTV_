@@ -1,0 +1,79 @@
+<!-- NostalgiaTV · Series -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+-->
+<div class="min-h-screen bg-ink text-fg font-sans">
+  <!-- DC-IMPORT name="PubHeader" active="series" hint-size="100%,80px" -->
+
+  <main class="max-w-340 my-0 mx-auto pt-8 px-10 pb-18 flex flex-wrap gap-7 items-start">
+    <div class="flex-[1_1_100%] flex flex-wrap items-end justify-between gap-4">
+      <div class="flex flex-col gap-1.5">
+        <h1 class="m-0 font-display font-bold text-[44px] leading-[1]">Series</h1>
+        <span class="text-[15px] text-muted">{{count}} series en el catálogo</span>
+      </div>
+      <label class="flex-[0_1_460px] flex items-center gap-2 min-h-12 py-0 px-4 border border-edge rounded-3xl bg-panel">
+        <svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <input class="flex-1 min-w-0 border-0 outline-none bg-transparent text-fg [font:15px_'IBM_Plex_Sans',_sans-serif]" type="search" aria-label="Buscar series" [attr.value]="q" [attr.sc-camel-on-change]="setQ" placeholder="Buscar por nombre…">
+      </label>
+    </div>
+
+    <aside class="flex-[1_1_240px] max-w-75 flex flex-col gap-5.5 p-5 border border-line rounded-2xl bg-panel" aria-label="Filtros">
+      <fieldset class="m-0 p-0 border-0 flex flex-col gap-1">
+        <legend class="pt-0 px-0 pb-2 font-mono text-[11px] tracking-[0.12em] text-muted">CATEGORÍAS</legend>
+        @for (c of cats; track $index) {
+          <label class="flex items-center gap-2.5 min-h-10 text-[14px] cursor-pointer">
+            <input class="w-4.5 h-4.5 accent-amber" type="checkbox" [attr.checked]="c.on" [attr.sc-camel-on-change]="c.toggle">
+            <span class="flex-1">{{c.name}}</span>
+            <span class="font-mono text-[12px] text-dim">{{c.n}}</span>
+          </label>
+        }
+      </fieldset>
+      <fieldset class="m-0 p-0 border-0 flex flex-col gap-2">
+        <legend class="pt-0 px-0 pb-2 font-mono text-[11px] tracking-[0.12em] text-muted">DÉCADA DE ESTRENO</legend>
+        <div class="flex flex-wrap gap-1.5">
+          @for (d of decades; track $index) {
+            <button type="button" (click)="d.pick()" [attr.aria-pressed]="d.pressed">{{d.label}}</button>
+          }
+        </div>
+      </fieldset>
+      <fieldset class="m-0 p-0 border-0 flex flex-col gap-1">
+        <legend class="pt-0 px-0 pb-2 font-mono text-[11px] tracking-[0.12em] text-muted">MOSTRAR</legend>
+        <label class="flex items-center gap-2.5 min-h-10 text-[14px] cursor-pointer"><input class="w-4.5 h-4.5 accent-amber" type="checkbox" [attr.checked]="onAir" [attr.sc-camel-on-change]="toggleAir">Al aire hoy</label>
+        <label class="flex items-center gap-2.5 min-h-10 text-[14px] cursor-pointer"><input class="w-4.5 h-4.5 accent-amber" type="checkbox" [attr.checked]="inProgress" [attr.sc-camel-on-change]="toggleProg">Que estoy viendo</label>
+      </fieldset>
+      <button class="min-h-11 border border-edge rounded-[22px] bg-transparent text-fg [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="clear()">Limpiar filtros</button>
+    </aside>
+
+    <section class="flex-[999_1_600px] min-w-0 flex flex-col gap-4.5" aria-label="Resultados">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <span class="text-[14px] text-muted">{{resultLabel}}</span>
+        @for (a of activeChips; track $index) {
+          <button class="inline-flex items-center gap-1.5 min-h-9 py-0 px-3 border border-[#5A4A2A] rounded-[18px] bg-[#221D12] text-amber-hi [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="a.remove()">{{a.label}} <span aria-hidden="true">✕</span></button>
+        }
+        <span class="flex-1"></span>
+        <label class="flex items-center gap-2 text-[13px] text-muted">Ordenar por
+          <select class="min-h-11 py-0 px-2.5 border border-edge rounded-[22px] bg-panel text-fg [font:14px_'IBM_Plex_Sans',_sans-serif] [color-scheme:dark]"><option>Nombre (A–Z)</option><option>Mejor calificadas</option><option>Más antiguas</option><option>Más recientes</option></select>
+        </label>
+      </div>
+      <div class="grid grid-cols-[repeat(auto-fill,_minmax(180px,_1fr))] gap-5">
+        @for (s of series; track $index) {
+          <a class="flex flex-col gap-2 text-fg no-underline" routerLink="/series/1">
+            <span class="relative flex items-end aspect-[2_/_3] p-3 rounded-xl overflow-hidden border border-line [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#1F1F1B]">
+              @if (s.onAir) {
+                <span class="absolute top-2.5 left-2.5 py-[3px] px-[7px] rounded-sm font-mono text-[10px] tracking-[0.08em] text-on-live bg-live">AL AIRE · CH {{s.ch}}</span>
+              }
+              <span class="font-display font-bold text-[18px] leading-[1.1]">{{s.name}}</span>
+              <span class="absolute left-0 right-0 bottom-0 h-1 bg-[rgba(255,255,255,0.08)]"><span class="block h-1 bg-amber" [style.width.%]="s.pct"></span></span>
+            </span>
+            <span class="font-mono text-[12px] text-muted">{{s.years}} · ★ {{s.rating}}</span>
+          </a>
+        }
+      </div>
+      @if (none) {
+        <div class="p-10 border border-dashed border-edge rounded-2xl text-center text-muted">Ninguna serie coincide con los filtros.</div>
+      }
+      <button class="self-center min-h-12 py-0 px-7 border border-edge rounded-3xl bg-transparent text-fg [font:500_15px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Cargar más series</button>
+    </section>
+  </main>
+</div>

@@ -1,0 +1,125 @@
+<!-- NostalgiaTV · Pantalla completa -->
+<!-- CSS:
+body{margin:0;background:#000}
+-->
+<div class="relative w-480 h-270 overflow-hidden [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_radial-gradient(ellipse_at_center,_#2A2920_0%,_#050504_80%)] text-fg font-sans">
+  <span class="absolute inset-0 flex items-center justify-center font-mono text-[22px] tracking-[0.16em] text-[#4E4C44]">[ VIDEO EN VIVO ]</span>
+
+  @if (seasonFx) {
+    <span class="absolute inset-0 shadow-[inset_0_0_220px_40px_rgba(255,120,30,0.22)] pointer-events-none" aria-hidden="true"></span>
+  }
+
+  <span class="absolute right-14 bottom-11 flex items-center gap-2 opacity-[0.45] font-display font-bold text-[20px] tracking-[0.08em]" aria-hidden="true">
+    <svg width="28" height="28" sc-camel-view-box="0 0 36 36" fill="none" stroke="#ECE8DC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path></svg>NTV
+  </span>
+
+  @if (s.idle) {
+    <span class="absolute top-12 right-16 font-display font-bold text-[56px] text-[rgba(139,224,143,0.35)]">{{ch.num}}</span>
+  }
+
+  @if (s.zapping) {
+    <span class="absolute top-10 right-16 font-display font-bold text-[150px] leading-[1] text-ok [text-shadow:0_0_22px_rgba(139,224,143,0.6)]">{{ch.num}}</span>
+    <div class="absolute left-16 bottom-16 w-190 flex gap-6 items-center py-6 px-7 rounded-2xl bg-[rgba(11,11,9,0.88)] border border-edge">
+      <span class="font-display font-bold text-[56px] text-amber">{{ch.num}}</span>
+      <span class="flex flex-col gap-1.5">
+        <span class="font-mono text-[16px] tracking-[0.12em] text-muted">{{ch.name}}</span>
+        <span class="font-display font-bold text-[34px]">{{ch.now}}</span>
+        <span class="text-[18px] text-fg-2">Sigue: {{ch.next}}</span>
+      </span>
+    </div>
+  }
+
+  @if (s.brk) {
+    <div class="absolute top-12 left-16 flex items-center gap-3.5 py-3.5 px-5 rounded-xl bg-[rgba(11,11,9,0.8)] border border-edge">
+      <span class="py-1 px-2 rounded-sm font-mono text-[14px] tracking-[0.1em] text-[#0A1A1F] bg-info">CORTE COMERCIAL</span>
+      <span class="text-[20px]">Volvemos con <strong class="font-semibold">{{ch.now}}</strong> en <span class="font-mono text-amber">1:12</span></span>
+    </div>
+    <div class="absolute left-16 right-16 bottom-12 flex gap-1 h-2">
+      <span class="flex-[30_0_0] rounded-sm bg-amber"></span>
+      <span class="flex-[2_0_0] rounded-sm bg-violet"></span>
+      <span class="flex-[4_0_0] rounded-sm bg-info"></span>
+      <span class="flex-[4_0_0] rounded-sm bg-[rgba(111,208,234,0.35)]"></span>
+      <span class="flex-[2_0_0] rounded-sm bg-[rgba(184,166,255,0.35)]"></span>
+      <span class="flex-[30_0_0] rounded-sm bg-[rgba(255,181,71,0.25)]"></span>
+    </div>
+  }
+
+  @if (s.controls) {
+    <div class="absolute left-0 right-0 top-0 pt-9 px-14 pb-25 flex items-center gap-5 [background:linear-gradient(180deg,_rgba(5,5,4,0.88),_rgba(5,5,4,0))]">
+      <button class="w-14 h-14 flex items-center justify-center border-0 rounded-[28px] bg-[rgba(236,232,220,0.12)] text-fg cursor-pointer" type="button" (click)="show.idle()" aria-label="Salir de pantalla completa">
+        <svg width="24" height="24" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+      </button>
+      <span class="flex flex-col gap-1">
+        <span class="flex items-center gap-2.5 font-mono text-[16px] tracking-[0.1em] text-amber"><span class="py-[3px] px-2 rounded-sm text-on-live bg-live">● EN VIVO</span>{{ch.name}}</span>
+        <span class="text-[16px] text-muted">Era: {{ch.era}}</span>
+      </span>
+      <span class="flex-1"></span>
+      <span class="font-display font-bold text-[64px] text-ok [text-shadow:0_0_14px_rgba(139,224,143,0.5)]">{{ch.num}}</span>
+    </div>
+
+    <div class="absolute left-0 right-0 bottom-0 pt-30 px-14 pb-10 flex flex-col gap-5.5 [background:linear-gradient(0deg,_rgba(5,5,4,0.94)_45%,_rgba(5,5,4,0))]">
+      <div class="flex items-end gap-8">
+        <div class="flex-1 flex flex-col gap-1.5">
+          <span class="font-mono text-[18px] text-amber">{{ch.code}}</span>
+          <span class="font-display font-bold text-[56px] leading-[1]">{{ch.now}}</span>
+          <span class="text-[20px] text-fg-2">{{ch.title}}</span>
+        </div>
+        <div class="w-95 py-4 px-5 rounded-[14px] bg-[rgba(236,232,220,0.08)]">
+          <span class="font-mono text-[14px] tracking-[0.12em] text-muted">A CONTINUACIÓN · 14:39</span>
+          <div class="mt-1 font-semibold text-[22px]">{{ch.next}}</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-4.5">
+        <span class="font-mono text-[18px] text-muted">14:15</span>
+        <span class="relative flex-1 h-2 rounded-sm bg-[rgba(255,255,255,0.15)]">
+          <span class="block h-2 w-[34%] rounded-sm bg-amber"></span>
+          <span class="absolute top-[-3px] left-[33%] w-[3px] h-3.5 bg-info" aria-hidden="true"></span>
+          <span class="absolute top-[-3px] left-[66%] w-[3px] h-3.5 bg-info" aria-hidden="true"></span>
+        </span>
+        <span class="font-mono text-[18px] text-muted">14:39</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button class="min-w-18 h-14 border border-edge-2 rounded-[28px] bg-[rgba(11,11,9,0.6)] text-fg [font:600_18px_'IBM_Plex_Mono',_monospace] cursor-pointer" type="button" (click)="prev()" aria-label="Canal anterior">CH−</button>
+        <button class="min-w-18 h-14 border border-edge-2 rounded-[28px] bg-[rgba(11,11,9,0.6)] text-fg [font:600_18px_'IBM_Plex_Mono',_monospace] cursor-pointer" type="button" (click)="next()" aria-label="Canal siguiente">CH+</button>
+        <button class="w-14 h-14 flex items-center justify-center border border-edge-2 rounded-[28px] bg-[rgba(11,11,9,0.6)] text-fg cursor-pointer" type="button" (click)="toggleMute()" [attr.aria-label]="muteLabel">
+          <svg width="22" height="22" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path [attr.d]="muteD"></path></svg>
+        </button>
+        <input class="w-40 accent-amber" type="range" aria-label="Volumen" min="0" max="100" value="70">
+        <span class="flex-1"></span>
+        <button class="min-w-14 h-14 border border-edge-2 rounded-[28px] bg-[rgba(11,11,9,0.6)] text-fg [font:600_15px_'IBM_Plex_Mono',_monospace] cursor-pointer" type="button" aria-label="Subtítulos">CC</button>
+        <button class="inline-flex items-center gap-2.5 h-14 py-0 px-5.5 border border-edge-2 rounded-[28px] bg-[rgba(11,11,9,0.6)] text-fg [font:600_16px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="show.guide()">
+          <svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>Guía
+        </button>
+        <a class="inline-flex items-center h-14 py-0 px-5.5 border border-edge-2 rounded-[28px] bg-[rgba(11,11,9,0.6)] text-fg font-semibold text-[16px] no-underline" routerLink="/series/1">Ficha de la serie</a>
+        <a class="w-14 h-14 flex items-center justify-center border border-edge-2 rounded-[28px] bg-[rgba(11,11,9,0.6)] text-fg" routerLink="/ver/5" aria-label="Salir de pantalla completa">
+          <svg width="22" height="22" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"></path></svg>
+        </a>
+      </div>
+    </div>
+  }
+
+  @if (s.guide) {
+    <span class="absolute inset-0 bg-[rgba(5,5,4,0.45)]" aria-hidden="true"></span>
+    <aside class="absolute top-0 right-0 bottom-0 w-150 py-10 px-8 flex flex-col gap-3.5 bg-[rgba(14,14,12,0.96)] border-l border-edge" aria-label="Guía rápida">
+      <div class="flex items-center justify-between">
+        <span class="font-display font-bold text-[32px]">Canales</span>
+        <button class="w-13 h-13 border-0 rounded-[26px] bg-[rgba(236,232,220,0.1)] text-fg text-[22px] cursor-pointer" type="button" (click)="show.controls()" aria-label="Cerrar guía">✕</button>
+      </div>
+      @for (r of rail; track $index) {
+        <button type="button" (click)="r.pick()">
+          <span class="w-16 font-display font-bold text-[32px] text-amber text-left">{{r.num}}</span>
+          <span class="flex-1 flex flex-col gap-1 text-left">
+            <span class="font-semibold text-[20px]">{{r.name}}</span>
+            <span class="text-[16px] opacity-[0.8]">{{r.now}} · sigue {{r.next}}</span>
+          </span>
+        </button>
+      }
+    </aside>
+  }
+
+  <div class="absolute left-[50%] top-6 [transform:translateX(-50%)] flex gap-1.5 p-1.5 rounded-3xl bg-[rgba(11,11,9,0.7)] border border-dashed border-edge-2" role="group" aria-label="Estados del overlay (demo)">
+    @for (o of states; track $index) {
+      <button type="button" (click)="o.pick()" [attr.aria-pressed]="o.pressed">{{o.label}}</button>
+    }
+  </div>
+</div>

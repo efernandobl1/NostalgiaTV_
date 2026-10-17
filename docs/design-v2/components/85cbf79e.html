@@ -1,0 +1,25 @@
+<!-- Diálogo · Temporada -->
+<!-- CSS:
+body{margin:0}
+-->
+<section class="w-full flex flex-col bg-panel border border-edge rounded-xl shadow-[0_24px_64px_rgba(0,0,0,0.55)] text-fg font-sans" role="dialog" aria-modal="true" aria-labelledby="dlg-season-title">
+  <header class="flex items-center gap-3 py-4 pr-4 pl-6 border-b border-line">
+    <div class="flex-1 flex flex-col gap-0.5">
+      <span class="font-mono text-[11px] tracking-[0.12em] text-muted">DRAGON BALL Z</span>
+      <h2 class="m-0 font-display text-[22px] font-semibold" id="dlg-season-title">Agregar temporada</h2>
+    </div>
+    <button class="w-11 h-11 flex items-center justify-center border-0 rounded-md bg-transparent text-muted cursor-pointer" type="button" aria-label="Cerrar" [attr.onClick]="close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+    </button>
+  </header>
+  <div class="flex flex-col gap-2.5 py-5 px-6">
+    <label class="flex flex-col gap-1.5 text-[12px] text-muted">Número de temporada
+      <input class="min-h-11 py-0 px-3 w-full border border-edge rounded-md bg-ink text-fg [font:16px_'IBM_Plex_Mono',_monospace]" type="number" min="0" value="5">
+    </label>
+    <span class="text-[12px] text-muted">Usa 0 para especiales. Existentes: T0, T1, T2, T3, T4.</span>
+  </div>
+  <footer class="flex flex-wrap justify-end gap-2.5 py-4 px-6 border-t border-line">
+    <button class="min-h-11 py-0 px-4 border border-edge rounded-md bg-transparent text-fg [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" [attr.onClick]="close">Cancelar</button>
+    <button class="min-h-11 py-0 px-4.5 border-0 rounded-md bg-amber text-on-amber [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" [attr.onClick]="close">Agregar</button>
+  </footer>
+</section>

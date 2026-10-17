@@ -1,0 +1,109 @@
+<!-- NostalgiaTV · En vivo -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+-->
+<div class="min-h-screen bg-ink text-fg font-sans">
+  <!-- DC-IMPORT name="PubHeader" active="channels" hint-size="100%,80px" -->
+
+  <main class="max-w-360 my-0 mx-auto pt-6 px-10 pb-16 flex flex-wrap gap-6 items-start">
+    <div class="flex-[999_1_640px] min-w-0 flex flex-col gap-4.5">
+      <div class="p-3.5 rounded-[22px] bg-panel-2 border border-line">
+        <div class="relative aspect-[4_/_3] max-h-160 w-full rounded-[28px_/_22px] overflow-hidden [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_radial-gradient(ellipse_at_center,_#2A2920_0%,_#0B0B09_80%)]">
+          <span class="absolute top-5 right-7 font-display font-bold text-[52px] text-ok [text-shadow:0_0_10px_rgba(139,224,143,0.5)]">{{ch.num}}</span>
+          <span class="absolute top-6 left-6 py-1.5 px-2.5 rounded-sm font-mono text-[12px] tracking-[0.12em] text-on-live bg-live">● EN VIVO</span>
+          <span class="absolute inset-0 flex items-center justify-center font-mono text-[14px] tracking-[0.12em] text-dim">[ REPRODUCTOR ]</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 pt-3.5 px-1 pb-0.5">
+          <button class="w-11 h-11 border border-edge rounded-[22px] bg-transparent text-fg cursor-pointer [font:600_14px_'IBM_Plex_Mono',_monospace]" type="button" (click)="prev()" aria-label="Canal anterior">CH−</button>
+          <button class="w-11 h-11 border border-edge rounded-[22px] bg-transparent text-fg cursor-pointer [font:600_14px_'IBM_Plex_Mono',_monospace]" type="button" (click)="next()" aria-label="Canal siguiente">CH+</button>
+          <a class="inline-flex items-center min-h-11 py-0 px-3.5 border border-edge rounded-[22px] text-fg text-[13px] no-underline" routerLink="/">Todos los canales</a>
+          <span class="flex-1"></span>
+          <button class="w-11 h-11 flex items-center justify-center border border-edge rounded-[22px] bg-transparent text-fg cursor-pointer" type="button" aria-label="Silenciar">
+            <svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M17 8a5 5 0 0 1 0 8"></path></svg>
+          </button>
+          <label class="flex items-center gap-2 text-[13px] text-muted">Volumen
+            <input class="w-30 accent-amber" type="range" min="0" max="100" value="70">
+          </label>
+          <button class="min-h-11 py-0 px-3 border border-edge rounded-[22px] bg-transparent text-fg cursor-pointer [font:600_12px_'IBM_Plex_Mono',_monospace]" type="button" aria-label="Subtítulos">CC</button>
+          <a class="w-11 h-11 flex items-center justify-center border border-edge rounded-[22px] text-fg" routerLink="/ver/5/pantalla-completa" aria-label="Pantalla completa">
+            <svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg>
+          </a>
+        </div>
+      </div>
+
+      <section class="flex flex-wrap gap-5 items-start" aria-labelledby="nowtitle">
+        <div class="flex-[1_1_360px] flex flex-col gap-1.5">
+          <span class="font-mono text-[13px] text-amber">{{ch.name}} · {{ch.era}}</span>
+          <h1 class="m-0 font-display font-bold text-[34px]" id="nowtitle">{{ch.now}}</h1>
+          <span class="text-[15px] text-muted">{{ch.detail}}</span>
+          <div class="flex items-center gap-2.5 mt-1.5">
+            <span class="font-mono text-[12px] text-muted">14:15</span>
+            <span class="flex-1 h-1 rounded-xs bg-line"><span class="block h-1 rounded-xs bg-amber" [style.width.%]="ch.pct"></span></span>
+            <span class="font-mono text-[12px] text-muted">14:39</span>
+          </div>
+        </div>
+        <div class="flex-[0_1_300px] flex flex-col gap-2.5">
+          <div class="py-3.5 px-4 border border-line rounded-xl bg-panel">
+            <span class="font-mono text-[11px] tracking-[0.12em] text-muted">SIGUE · 14:39</span>
+            <div class="font-semibold text-[16px] mt-1">{{ch.nextUp}}</div>
+          </div>
+          <div class="flex gap-2">
+            <a class="flex-1 inline-flex items-center justify-center min-h-11 border border-edge rounded-[22px] text-fg text-[14px] no-underline" routerLink="/series/1">Ficha de la serie</a>
+            <button class="flex-1 min-h-11 border border-edge rounded-[22px] bg-transparent text-fg [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Compartir canal</button>
+          </div>
+        </div>
+      </section>
+
+      <nav class="flex gap-2.5 overflow-x-auto pb-1" aria-label="Cambiar de canal">
+        @for (c of chips; track $index) {
+          <button type="button" (click)="c.pick()" [attr.aria-pressed]="c.pressed">
+            <span class="font-display font-bold text-[18px]">{{c.num}}</span>
+            <span class="text-[13px] whitespace-nowrap">{{c.name}}</span>
+          </button>
+        }
+      </nav>
+    </div>
+
+    <aside class="flex-[1_1_340px] min-w-0 flex flex-col bg-panel border border-line rounded-[18px] overflow-hidden">
+      <div class="flex border-b border-line" role="tablist" aria-label="Panel">
+        @for (t of tabs; track $index) {
+          <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick()">{{t.label}}</button>
+        }
+      </div>
+      @if (showGuide) {
+        <div class="flex flex-col pt-2 px-4.5 pb-4.5">
+          @for (g of guide; track $index) {
+            <div>
+              <span class="w-13 flex-none font-mono text-[14px]" [style.color]="g.timeColor">{{g.time}}</span>
+              <span class="flex flex-col gap-0.5">
+                <span class="font-semibold text-[14px]">{{g.title}}</span>
+                <span class="text-[12px] text-muted">{{g.sub}}</span>
+              </span>
+            </div>
+          }
+        </div>
+      }
+      @if (showChat) {
+        <div class="flex flex-col gap-3.5 py-4 px-4.5">
+          @for (m of comments; track $index) {
+            <div class="flex gap-2.5">
+              <span class="w-8 h-8 flex-none rounded-full flex items-center justify-center font-display font-bold text-[12px] bg-line" aria-hidden="true">{{m.ini}}</span>
+              <span class="flex flex-col gap-0.5">
+                <span class="text-[13px]"><strong class="font-semibold">{{m.user}}</strong> <span class="text-dim">{{m.time}}</span></span>
+                <span class="text-[14px] leading-[1.45] text-fg-2">{{m.body}}</span>
+              </span>
+            </div>
+          }
+          <label class="flex flex-col gap-1.5 text-[12px] text-muted">Comentar sobre este canal
+            <textarea class="py-2.5 px-3 w-full border border-edge rounded-lg bg-ink text-fg [font:14px/1.5_'IBM_Plex_Sans',_sans-serif] resize-y" rows="3" placeholder="Escribe un comentario…"></textarea>
+          </label>
+          <div class="flex justify-between items-center gap-2.5">
+            <span class="text-[12px] text-dim">Los comentarios se publican tras moderación.</span>
+            <button class="min-h-10 py-0 px-4 border-0 rounded-[20px] bg-amber text-on-amber [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Enviar</button>
+          </div>
+        </div>
+      }
+    </aside>
+  </main>
+</div>

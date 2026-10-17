@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/* NostalgiaTV v2 design tokens (from the "NostalgiaTV v2" design canvas). */
+@theme {
+  --font-display: "Chakra Petch", sans-serif;
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  --color-ink: #0E0E0C;
+  --color-ink-2: #0B0B09;
+  --color-ink-3: #050504;
+  --color-rail: #121210;
+  --color-panel: #171714;
+  --color-panel-2: #1A1A16;
+  --color-raised: #1F1F1B;
+  --color-raised-2: #24241F;
+  --color-line: #2C2C27;
+  --color-edge: #3A3A33;
+  --color-edge-2: #4A4A42;
+  --color-fg: #ECE8DC;
+  --color-fg-2: #D6D2C6;
+  --color-muted: #A29E91;
+  --color-dim: #8C887D;
+  --color-faint: #5E5B52;
+  --color-amber: #FFB547;
+  --color-amber-hi: #FFD08A;
+  --color-on-amber: #1A1206;
+  --color-amber-wash: #24231C;
+  --color-cream: #FFF3DA;
+  --color-danger: #FF8A80;
+  --color-live: #FF6B5E;
+  --color-on-live: #1A0906;
+  --color-ok: #8BE08F;
+  --color-info: #6FD0EA;
+  --color-violet: #B8A6FF;
+}
+
+@layer base {
+  html, body { background: var(--color-ink); color: var(--color-fg); font-family: var(--font-sans); }
+  a { color: var(--color-amber); }
+  a:hover { color: var(--color-amber-hi); }
+  button { cursor: pointer; }
+}

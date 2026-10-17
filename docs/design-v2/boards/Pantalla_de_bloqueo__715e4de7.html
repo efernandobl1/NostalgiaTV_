@@ -1,0 +1,23 @@
+<!-- NostalgiaTV · Pantalla de bloqueo -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+-->
+<main class="min-h-screen py-12 px-6 flex flex-col items-center justify-center gap-8 [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.025)_0_1px,_transparent_1px_3px),_#0E0E0C] text-fg font-sans">
+  <div class="flex flex-col items-center gap-1">
+    <span class="font-display font-semibold text-[72px] leading-[1] tracking-[0.04em]">14:32</span>
+    <span class="font-mono text-[13px] tracking-[0.12em] text-muted">SÁBADO 17 DE OCTUBRE</span>
+  </div>
+  <form class="w-full max-w-95 flex flex-col items-center gap-4 p-8 bg-panel border border-line rounded-xl">
+    <span class="w-18 h-18 rounded-2xl flex items-center justify-center font-display font-bold text-[26px] text-on-amber bg-amber" aria-hidden="true">AD</span>
+    <div class="flex flex-col items-center gap-0.5">
+      <h1 class="m-0 font-display font-bold text-[24px]">admin</h1>
+      <span class="text-[13px] text-muted">Sesión bloqueada por inactividad</span>
+    </div>
+    <label class="self-stretch flex flex-col gap-1.5 text-[13px] text-muted">Contraseña
+      <input class="min-h-12 py-0 px-3.5 w-full border border-edge rounded-lg bg-ink text-fg [font:15px_'IBM_Plex_Sans',_sans-serif]" type="password" autocomplete="current-password">
+    </label>
+    <a class="self-stretch flex items-center justify-center min-h-12 rounded-lg bg-amber text-on-amber font-semibold text-[15px] no-underline" routerLink="/admin">Desbloquear</a>
+    <span class="text-[14px] text-muted">¿No eres tú? <a routerLink="/sesion-cerrada">Cerrar sesión</a></span>
+  </form>
+</main>

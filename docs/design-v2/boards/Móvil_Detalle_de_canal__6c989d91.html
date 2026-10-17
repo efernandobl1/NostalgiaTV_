@@ -1,0 +1,78 @@
+<!-- NostalgiaTV · Móvil · Canal -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+-->
+<div class="w-97.5 h-211 flex flex-col overflow-hidden bg-ink text-fg font-sans">
+  <main class="flex-1 overflow-y-auto flex flex-col">
+    <div class="relative pt-13 px-4 pb-4.5 flex flex-col gap-3 [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.03)_0_1px,_transparent_1px_3px),_#121210] border-b border-raised-2">
+      <a class="absolute top-1.5 left-1.5 w-11 h-11 flex items-center justify-center text-fg" routerLink="/MobHome" aria-label="Volver">
+        <svg width="22" height="22" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+      </a>
+      <button class="absolute top-1.5 right-1.5 w-11 h-11 flex items-center justify-center border-0 bg-transparent text-fg" type="button" aria-label="Compartir canal">
+        <svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+      </button>
+      <div class="flex items-center gap-3.5">
+        <span class="w-18 h-18 flex-none rounded-[14px] flex items-center justify-center font-display font-bold text-[32px] text-ok bg-raised border border-edge" aria-hidden="true">05</span>
+        <div class="flex flex-col gap-1">
+          <span class="flex items-center gap-1.5 font-mono text-[10px] text-amber"><span class="py-[1px] px-[5px] rounded-[3px] text-on-live bg-live">EN VIVO</span>ÉPOCA DORADA</span>
+          <h1 class="m-0 font-display font-bold text-[26px] leading-[1.05]">Canal 5 Retro</h1>
+        </div>
+      </div>
+      <p class="m-0 text-[14px] leading-[1.5] text-fg-2">Caricaturas y anime de la televisión abierta, con cortes comerciales de época.</p>
+      <div class="flex gap-2">
+        <a class="flex-1 flex items-center justify-center gap-2 min-h-12 rounded-3xl bg-amber text-on-amber font-semibold text-[15px] no-underline" routerLink="/MobPlayer">
+          <svg width="14" height="14" sc-camel-view-box="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>Ver en vivo
+        </a>
+        <a class="flex items-center min-h-12 py-0 px-4.5 border border-edge rounded-3xl text-fg text-[14px] no-underline" routerLink="/MobGuide">Guía</a>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4.5 p-4">
+      <section class="flex flex-col gap-2.5">
+        <h2 class="m-0 font-display text-[18px] font-bold">Eras</h2>
+        <div class="flex gap-2 overflow-x-auto pb-0.5">
+          @for (e of eras; track $index) {
+            <button type="button" (click)="e.pick()" [attr.aria-pressed]="e.pressed">
+              <span class="font-mono text-[10px] opacity-[0.85]">{{e.years}}</span>
+              <span class="font-semibold text-[14px]">{{e.name}}</span>
+            </button>
+          }
+        </div>
+        <span class="text-[13px] leading-[1.5] text-muted">{{era.desc}}</span>
+      </section>
+
+      <section class="flex flex-col gap-2.5">
+        <h2 class="m-0 font-display text-[18px] font-bold">Series de esta era</h2>
+        <div class="flex gap-2.5 overflow-x-auto pb-0.5">
+          @for (s of series; track $index) {
+            <a class="w-27.5 flex-none flex flex-col gap-1.5 text-fg no-underline" routerLink="/MobSeries">
+              <span class="flex items-end aspect-[2_/_3] p-2 rounded-[10px] border border-line [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#1F1F1B]">
+                <span class="font-display font-bold text-[13px] leading-[1.1]">{{s}}</span>
+              </span>
+            </a>
+          }
+        </div>
+      </section>
+
+      <section class="flex flex-col">
+        <h2 class="mt-0 mx-0 mb-1.5 font-display text-[18px] font-bold">Comentarios</h2>
+        @for (m of comments; track $index) {
+          <div class="flex flex-col gap-0.5 py-2.5 px-0 border-b border-raised-2">
+            <span class="text-[12px]"><strong class="font-semibold">{{m.user}}</strong> <span class="text-dim">· {{m.time}}</span></span>
+            <span class="text-[14px] leading-[1.45] text-fg-2">{{m.body}}</span>
+          </div>
+        }
+        <a class="flex items-center min-h-11 text-amber text-[14px] no-underline" routerLink="/MobPlayer">Ver todos y comentar</a>
+      </section>
+    </div>
+  </main>
+
+  <nav class="flex-none flex border-t border-raised-2 bg-rail pb-2" aria-label="Principal">
+    @for (t of nav; track $index) {
+      <a [routerLink]="t.href" [attr.aria-current]="t.current">
+        <span class="w-6 h-1 rounded-xs" aria-hidden="true" [style.background]="t.bar"></span>
+        {{t.label}}
+      </a>
+    }
+  </nav>
+</div>

@@ -1,0 +1,42 @@
+<!-- NostalgiaTV · Android TV · Guía -->
+<!-- CSS:
+body{margin:0;background:#0B0B09}
+-->
+<div class="w-480 h-270 overflow-hidden py-12 px-24 flex flex-col gap-8 bg-ink-2 text-fg font-sans">
+  <div class="flex gap-10 h-75">
+    <div class="flex-1 flex flex-col justify-end gap-3">
+      <span class="font-mono text-[22px] tracking-[0.1em] text-amber">{{sel.ch}} · {{sel.time}}</span>
+      <h1 class="m-0 font-display font-bold text-[64px] leading-[1]">{{sel.title}}</h1>
+      <span class="text-[26px] text-fg-2">{{sel.sub}}</span>
+      <span class="text-[22px] text-muted">OK para sintonizar · mantén OK para ver la serie</span>
+    </div>
+    <div class="w-133.5 h-75 flex-none rounded-[18px] border-[2px] border-line flex items-center justify-center font-mono text-[18px] text-faint [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#1A1A16]" aria-hidden="true">[ VISTA PREVIA ]</div>
+  </div>
+
+  <div class="flex-1 flex flex-col gap-2.5">
+    <div class="flex">
+      <span class="w-65 flex-none font-display font-semibold text-[26px]">Hoy</span>
+      <div class="flex-1 flex">
+        @for (h of hours; track $index) {
+          <span class="flex-1 font-mono text-[22px] text-muted">{{h}}</span>
+        }
+      </div>
+    </div>
+    @for (r of rows; track $index) {
+      <div class="flex h-26">
+        <span class="w-65 flex-none flex items-center gap-4 pr-4">
+          <span class="font-display font-bold text-[40px] text-amber">{{r.num}}</span>
+          <span class="text-[22px] font-semibold leading-[1.15]">{{r.name}}</span>
+        </span>
+        <div class="flex-1 flex gap-2">
+          @for (s of r.slots; track $index) {
+            <button type="button" (click)="s.pick()">
+              <span class="text-[24px] font-semibold truncate">{{s.title}}</span>
+              <span class="font-mono text-[18px] opacity-[0.8] whitespace-nowrap overflow-hidden">{{s.sub}}</span>
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

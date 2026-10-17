@@ -1,0 +1,95 @@
+<!-- NostalgiaTV · Mi perfil -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+-->
+<div class="min-h-screen bg-ink text-fg font-sans">
+  <!-- DC-IMPORT name="PubHeader" active="pair" hint-size="100%,80px" -->
+
+  <main class="max-w-275 my-0 mx-auto pt-10 px-10 pb-18 flex flex-col gap-7">
+    <div class="flex flex-wrap items-center gap-5">
+      <span class="w-21 h-21 rounded-full flex items-center justify-center font-display font-bold text-[32px] text-on-amber bg-amber" aria-hidden="true">FE</span>
+      <div class="flex-1 flex flex-col gap-1">
+        <h1 class="m-0 font-display font-bold text-[36px]">fernando</h1>
+        <span class="text-[14px] text-muted">Espectador desde sep 2026 · 3 dispositivos · 128 episodios vistos</span>
+      </div>
+      <a class="inline-flex items-center min-h-11 py-0 px-4.5 border border-edge rounded-[22px] text-fg text-[14px] no-underline" routerLink="/vincular">Mis dispositivos</a>
+    </div>
+
+    <div class="flex gap-1 border-b border-line" role="tablist" aria-label="Secciones del perfil">
+      @for (t of tabs; track $index) {
+        <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick()">{{t.label}}</button>
+      }
+    </div>
+
+    @if (showHistory) {
+      <div class="flex flex-wrap items-center gap-2.5">
+        @for (f of hFilters; track $index) {
+          <button type="button" (click)="f.pick()" [attr.aria-pressed]="f.pressed">{{f.label}}</button>
+        }
+        <span class="flex-1"></span>
+        <button class="min-h-11 py-0 px-4 border border-edge rounded-[22px] bg-transparent text-danger [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Borrar historial</button>
+      </div>
+      <div class="flex flex-col gap-2.5">
+        @for (h of history; track $index) {
+          <div class="flex items-center gap-4 p-3 border border-line rounded-[14px] bg-panel">
+            <a class="relative w-36 aspect-[16_/_9] flex-none rounded-lg overflow-hidden [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#24241F]" routerLink="/series/1" aria-label="Abrir {{h.series}}">
+              <span class="absolute left-0 right-0 bottom-0 h-1 bg-[rgba(255,255,255,0.1)]"><span class="block h-1 bg-amber" [style.width.%]="h.pct"></span></span>
+            </a>
+            <span class="flex-1 min-w-0 flex flex-col gap-[3px]">
+              <span class="font-semibold text-[16px]">{{h.series}}</span>
+              <span class="text-[13px] text-muted">{{h.code}} · {{h.title}}</span>
+              <span class="font-mono text-[12px]" [style.color]="h.color">{{h.state}} · {{h.when}}</span>
+            </span>
+            <a class="inline-flex items-center min-h-11 py-0 px-4 rounded-[22px] bg-raised-2 text-fg text-[14px] no-underline" routerLink="/series/1">{{h.cta}}</a>
+            <button class="w-11 h-11 border-0 rounded-[22px] bg-transparent text-muted cursor-pointer" type="button" aria-label="Quitar del historial">✕</button>
+          </div>
+        }
+      </div>
+    }
+
+    @if (showComments) {
+      <div class="flex flex-col gap-2.5">
+        @for (c of myComments; track $index) {
+          <div class="flex flex-col gap-2 py-4 px-4.5 border border-line rounded-[14px] bg-panel">
+            <div class="flex flex-wrap items-center gap-2.5 text-[13px]">
+              <a class="font-semibold" [routerLink]="c.href">{{c.target}}</a>
+              <span class="text-dim">{{c.time}}</span>
+              <span class="flex-1"></span>
+              <span class="font-mono text-[11px] tracking-[0.08em]" [style.color]="c.color">{{c.status}}</span>
+            </div>
+            <p class="m-0 text-[15px] leading-[1.5] text-fg-2">{{c.body}}</p>
+            <div class="flex gap-2">
+              <button class="min-h-10 py-0 px-3.5 border border-edge rounded-[20px] bg-transparent text-fg [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Editar</button>
+              <button class="min-h-10 py-0 px-3.5 border-0 rounded-[20px] bg-transparent text-danger [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Eliminar</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (showAccount) {
+      <div class="grid grid-cols-[repeat(auto-fit,_minmax(320px,_1fr))] gap-4">
+        <section class="flex flex-col gap-3.5 p-5 border border-line rounded-2xl bg-panel">
+          <h2 class="m-0 font-display text-[20px] font-semibold">Cambiar contraseña</h2>
+          <label class="flex flex-col gap-1.5 text-[13px] text-muted">Contraseña actual
+            <input class="min-h-11.5 py-0 px-3.5 w-full border border-edge rounded-[10px] bg-ink text-fg [font:15px_'IBM_Plex_Sans',_sans-serif]" type="password" autocomplete="current-password">
+          </label>
+          <label class="flex flex-col gap-1.5 text-[13px] text-muted">Nueva contraseña
+            <input class="min-h-11.5 py-0 px-3.5 w-full border border-edge rounded-[10px] bg-ink text-fg [font:15px_'IBM_Plex_Sans',_sans-serif]" type="password" autocomplete="new-password">
+          </label>
+          <button class="self-start min-h-11 py-0 px-5 border-0 rounded-[22px] bg-amber text-on-amber [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Guardar</button>
+        </section>
+        <section class="flex flex-col gap-3 p-5 border border-line rounded-2xl bg-panel">
+          <h2 class="m-0 font-display text-[20px] font-semibold">Inicio de sesión y seguridad</h2>
+          <div class="flex items-center gap-2.5 min-h-13 py-0 px-3.5 border border-line rounded-[10px]">
+            <span class="flex-1 text-[14px]">Google · vinculado</span>
+            <button class="min-h-10 py-0 px-3 border-0 bg-transparent text-danger [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Desvincular</button>
+          </div>
+          <button class="min-h-11 border border-edge rounded-[22px] bg-transparent text-fg [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Cerrar sesión en todos los dispositivos</button>
+          <a class="inline-flex items-center justify-center min-h-11 border border-[#5A3A33] rounded-[22px] text-danger text-[14px] no-underline" routerLink="/sesion-cerrada">Cerrar sesión</a>
+        </section>
+      </div>
+    }
+  </main>
+</div>

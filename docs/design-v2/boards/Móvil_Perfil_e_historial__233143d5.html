@@ -1,0 +1,73 @@
+<!-- NostalgiaTV · Móvil · Perfil -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+-->
+<div class="w-97.5 h-211 flex flex-col overflow-hidden bg-ink text-fg font-sans">
+  <header class="flex-none flex flex-col gap-3.5 pt-4 px-4 pb-0">
+    <div class="flex items-center gap-3.5">
+      <span class="w-14 h-14 rounded-full flex items-center justify-center font-display font-bold text-[22px] text-on-amber bg-amber" aria-hidden="true">FE</span>
+      <span class="flex-1 flex flex-col gap-0.5">
+        <span class="font-display font-bold text-[22px]">fernando</span>
+        <span class="text-[12px] text-muted">128 episodios vistos · 3 dispositivos</span>
+      </span>
+    </div>
+    <div class="flex border-b border-line" role="tablist" aria-label="Perfil">
+      @for (t of tabs; track $index) {
+        <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick()">{{t.label}}</button>
+      }
+    </div>
+  </header>
+
+  <main class="flex-1 overflow-y-auto pt-3 px-4 pb-5">
+    @if (showHistory) {
+      <div class="flex flex-col gap-2">
+        @for (h of history; track $index) {
+          <a class="flex items-center gap-3 p-2 rounded-xl bg-panel text-fg no-underline" routerLink="/MobSeries">
+            <span class="relative w-24 aspect-[16_/_9] flex-none rounded-md overflow-hidden [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#24241F]">
+              <span class="absolute left-0 right-0 bottom-0 h-[3px] bg-[rgba(255,255,255,0.1)]"><span class="block h-[3px] bg-amber" [style.width.%]="h.pct"></span></span>
+            </span>
+            <span class="flex-1 min-w-0 flex flex-col gap-0.5">
+              <span class="font-semibold text-[14px]">{{h.series}}</span>
+              <span class="text-[12px] text-muted">{{h.code}} · {{h.when}}</span>
+              <span class="font-mono text-[10px]" [style.color]="h.color">{{h.state}}</span>
+            </span>
+          </a>
+        }
+        <button class="min-h-11 mt-1.5 border border-edge rounded-[22px] bg-transparent text-danger [font:500_14px_'IBM_Plex_Sans',_sans-serif]" type="button">Borrar historial</button>
+      </div>
+    }
+
+    @if (showComments) {
+      <div class="flex flex-col gap-2">
+        @for (c of myComments; track $index) {
+          <div class="flex flex-col gap-1.5 p-3 rounded-xl bg-panel">
+            <span class="flex justify-between gap-2 text-[12px]"><strong class="font-semibold">{{c.target}}</strong><span class="font-mono text-[10px]" [style.color]="c.color">{{c.status}}</span></span>
+            <span class="text-[14px] leading-[1.45] text-fg-2">{{c.body}}</span>
+          </div>
+        }
+      </div>
+    }
+
+    @if (showSettings) {
+      <div class="flex flex-col">
+        @for (s of settings; track $index) {
+          <label class="flex items-center gap-3 min-h-15 border-b border-raised-2 text-[15px]">
+            <span class="flex-1 flex flex-col gap-0.5"><span>{{s.label}}</span><span class="text-[12px] text-muted">{{s.hint}}</span></span>
+            <input class="w-5 h-5 accent-amber" type="checkbox" [attr.checked]="s.on">
+          </label>
+        }
+        <a class="flex items-center min-h-14 border-b border-raised-2 text-fg text-[15px] no-underline" routerLink="/MobPair">Mis dispositivos <span class="ml-auto text-muted">›</span></a>
+        <a class="flex items-center justify-center min-h-12 mt-4 border border-[#5A3A33] rounded-3xl text-danger text-[15px] no-underline" routerLink="/sesion-cerrada">Cerrar sesión</a>
+      </div>
+    }
+  </main>
+
+  <nav class="flex-none flex border-t border-raised-2 bg-rail pb-2" aria-label="Principal">
+    @for (t of nav; track $index) {
+      <a [routerLink]="t.href" [attr.aria-current]="t.current">
+        <span class="w-6 h-1 rounded-xs" aria-hidden="true" [style.background]="t.bar"></span>
+        {{t.label}}
+      </a>
+    }
+  </nav>
+</div>

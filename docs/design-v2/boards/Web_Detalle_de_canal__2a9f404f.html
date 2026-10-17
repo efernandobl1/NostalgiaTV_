@@ -1,0 +1,83 @@
+<!-- NostalgiaTV · Canal 5 Retro -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+-->
+<div class="min-h-screen bg-ink text-fg font-sans">
+  <!-- DC-IMPORT name="PubHeader" active="channels" hint-size="100%,80px" -->
+
+  <section class="border-b border-raised-2 [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.025)_0_1px,_transparent_1px_3px),_#121210]">
+    <div class="max-w-340 my-0 mx-auto pt-5 px-10 pb-10 flex flex-col gap-5">
+      <a class="self-start inline-flex items-center min-h-11 text-[14px] no-underline" routerLink="/">← Todos los canales</a>
+      <div class="flex flex-wrap gap-8 items-center">
+        <div class="w-33 h-33 flex-none rounded-[20px] flex items-center justify-center font-display font-bold text-[56px] text-ok [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.05)_0_1px,_transparent_1px_3px),_#1F1F1B] border border-edge" aria-hidden="true">05</div>
+        <div class="flex-[1_1_420px] flex flex-col gap-2.5">
+          <span class="flex items-center gap-2.5 font-mono text-[13px] tracking-[0.1em] text-amber"><span class="py-[3px] px-2 rounded-sm text-on-live bg-live">● EN VIVO</span>DESDE MARZO 2024</span>
+          <h1 class="m-0 font-display font-bold text-[52px] leading-[1]">Canal 5 Retro</h1>
+          <p class="m-0 max-w-170 text-[16px] leading-[1.6] text-fg-2">Canal de caricaturas y anime de la televisión abierta, con bloques de tarde y cortes comerciales de época.</p>
+        </div>
+        <div class="flex flex-wrap gap-2.5">
+          <a class="inline-flex items-center gap-2.5 min-h-13 py-0 px-6 rounded-[26px] bg-amber text-on-amber font-semibold text-[16px] no-underline" routerLink="/ver/5">
+            <svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>Ver en vivo
+          </a>
+          <a class="inline-flex items-center min-h-13 py-0 px-5 border border-edge rounded-[26px] text-fg text-[15px] no-underline" routerLink="/guia">Guía del canal</a>
+          <button class="min-h-13 py-0 px-5 border border-edge rounded-[26px] bg-transparent text-fg [font:500_15px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Compartir</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="max-w-340 my-0 mx-auto pt-8 px-10 pb-18 flex flex-col gap-10">
+    <section class="flex flex-col gap-3.5" aria-labelledby="eras">
+      <h2 class="m-0 font-display text-[26px] font-bold" id="eras">Historia del canal</h2>
+      <div class="flex gap-1.5">
+        @for (e of eras; track $index) {
+          <button type="button" (click)="e.pick()" [attr.aria-pressed]="e.pressed">
+            <span class="font-mono text-[12px] opacity-[0.85]">{{e.years}}</span>
+            <span class="font-semibold text-[16px]">{{e.name}}</span>
+            @if (e.onAir) {<span class="font-mono text-[11px] tracking-[0.1em]">● AL AIRE AHORA</span>}
+          </button>
+        }
+      </div>
+      <p class="m-0 text-[15px] leading-[1.6] text-fg-2 max-w-205">{{era.desc}}</p>
+    </section>
+
+    <div class="flex flex-wrap gap-8 items-start">
+      <section class="flex-[999_1_560px] min-w-0 flex flex-col gap-3.5" aria-labelledby="ser">
+        <h2 class="m-0 font-display text-[24px] font-bold" id="ser">Series de la era {{era.name}}</h2>
+        <div class="grid grid-cols-[repeat(auto-fill,_minmax(150px,_1fr))] gap-4">
+          @for (s of series; track $index) {
+            <a class="flex flex-col gap-1.5 text-fg no-underline" routerLink="/series/1">
+              <span class="flex items-end aspect-[2_/_3] p-2.5 rounded-[10px] border border-line [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#1F1F1B]">
+                <span class="font-display font-bold text-[16px] leading-[1.1]">{{s.name}}</span>
+              </span>
+              <span class="text-[12px] text-muted">{{s.seasons}}</span>
+            </a>
+          }
+        </div>
+      </section>
+
+      <aside class="flex-[1_1_340px] min-w-0 flex flex-col gap-6">
+        <section class="flex flex-col gap-1 p-4.5 border border-line rounded-2xl bg-panel" aria-labelledby="up">
+          <h2 class="mt-0 mx-0 mb-2 font-display text-[20px] font-semibold" id="up">Próximos programas</h2>
+          @for (n of next; track $index) {
+            <div class="flex gap-3 py-2.5 px-0 border-t border-raised-2">
+              <span class="w-12 font-mono text-[14px]" [style.color]="n.color">{{n.time}}</span>
+              <span class="flex flex-col gap-0.5"><span class="font-semibold text-[14px]">{{n.title}}</span><span class="text-[12px] text-muted">{{n.sub}}</span></span>
+            </div>
+          }
+        </section>
+        <section class="flex flex-col gap-3 p-4.5 border border-line rounded-2xl bg-panel" aria-labelledby="cc">
+          <h2 class="m-0 font-display text-[20px] font-semibold" id="cc">Comentarios del canal <span class="font-mono text-[14px] text-muted">23</span></h2>
+          @for (m of comments; track $index) {
+            <div class="flex flex-col gap-0.5 py-2 px-0 border-t border-raised-2">
+              <span class="text-[13px]"><strong class="font-semibold">{{m.user}}</strong> <span class="text-dim">· {{m.time}}</span></span>
+              <span class="text-[14px] leading-[1.45] text-fg-2">{{m.body}}</span>
+            </div>
+          }
+          <a class="text-[14px]" routerLink="/ver/5">Ver todos y comentar</a>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>

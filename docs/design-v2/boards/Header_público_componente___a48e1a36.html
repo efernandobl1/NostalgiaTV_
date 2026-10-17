@@ -1,0 +1,35 @@
+<!-- NostalgiaTV · Header público -->
+<!-- CSS:
+body{margin:0}
+-->
+<header class="relative w-full min-h-20 py-3 px-10 flex flex-wrap items-center gap-y-3 gap-x-7 bg-ink border-b border-raised-2 text-fg font-sans">
+  <a class="flex items-center gap-2.5 text-fg no-underline" routerLink="/">
+    <svg width="32" height="32" sc-camel-view-box="0 0 36 36" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path><rect x="8" y="14" width="16" height="12" rx="2"></rect></svg>
+    <span class="font-display font-bold text-[18px] tracking-[0.08em]">NOSTALGIA TV</span>
+  </a>
+  <nav class="flex-[1_1_auto] flex flex-wrap gap-1" aria-label="Principal">
+    @for (l of links; track $index) {
+      <a [routerLink]="l.href" [attr.aria-current]="l.current">{{l.label}}</a>
+    }
+  </nav>
+  <div class="flex items-center gap-2">
+    <a class="w-11 h-11 flex items-center justify-center rounded-[22px] text-fg" routerLink="/series" aria-label="Buscar series">
+      <svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+    </a>
+    @if (signedIn) {
+      <button class="w-11 h-11 flex items-center justify-center border-0 rounded-full bg-amber text-on-amber [font:700_14px_'Chakra_Petch',_sans-serif] cursor-pointer" type="button" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen" aria-label="Menú de perfil">FE</button>
+    }
+    @if (signedOut) {
+      <a class="inline-flex items-center min-h-11 py-0 px-4.5 border border-edge rounded-[22px] text-fg text-[14px] font-medium no-underline" routerLink="/login">Iniciar sesión</a>
+      <a class="inline-flex items-center min-h-11 py-0 px-4.5 rounded-[22px] bg-amber text-on-amber text-[14px] font-semibold no-underline" routerLink="/registro">Crear cuenta</a>
+    }
+  </div>
+  @if (menuOpen) {
+    <div class="absolute top-18 right-10 z-[20] w-60 flex flex-col p-2 border border-edge rounded-xl bg-panel shadow-[0_16px_40px_rgba(0,0,0,0.5)]" role="menu">
+      <span class="py-2.5 px-3 text-[13px] text-muted">Sesión iniciada como <strong class="text-fg">fernando</strong></span>
+      <a class="flex items-center min-h-11 py-0 px-3 rounded-lg text-fg text-[14px] no-underline" role="menuitem" routerLink="/vincular">Mis dispositivos</a>
+      <a class="flex items-center min-h-11 py-0 px-3 rounded-lg text-fg text-[14px] no-underline" role="menuitem" routerLink="/perfil">Historial de visualización</a>
+      <a class="flex items-center min-h-11 py-0 px-3 rounded-lg text-danger text-[14px] no-underline" role="menuitem" routerLink="/sesion-cerrada">Cerrar sesión</a>
+    </div>
+  }
+</header>

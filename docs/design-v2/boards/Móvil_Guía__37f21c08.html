@@ -1,0 +1,50 @@
+<!-- NostalgiaTV · Móvil · Guía -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+-->
+<div class="w-97.5 h-211 flex flex-col overflow-hidden bg-ink text-fg font-sans">
+  <header class="flex-none flex flex-col gap-3 pt-4 px-4 pb-3 border-b border-raised-2">
+    <div class="flex items-center justify-between">
+      <h1 class="m-0 font-display font-bold text-[26px]">Guía</h1>
+      <button class="min-h-10 py-0 px-3.5 border border-live rounded-[20px] bg-transparent text-danger [font:600_13px_'IBM_Plex_Sans',_sans-serif]" type="button" (click)="jumpNow()">● Ir a ahora</button>
+    </div>
+    <div class="flex gap-1.5" role="group" aria-label="Día">
+      @for (d of days; track $index) {
+        <button type="button" (click)="d.pick()" [attr.aria-pressed]="d.pressed">{{d.label}}</button>
+      }
+    </div>
+    <div class="flex gap-2 overflow-x-auto pb-0.5" role="group" aria-label="Canal">
+      @for (c of chans; track $index) {
+        <button type="button" (click)="c.pick()" [attr.aria-pressed]="c.pressed"><span class="font-display font-bold">{{c.num}}</span> {{c.name}}</button>
+      }
+    </div>
+  </header>
+
+  <main class="flex-1 overflow-y-auto pt-1 px-4 pb-4">
+    @for (s of slots; track $index) {
+      <a [routerLink]="s.href">
+        <span class="w-13 flex-none flex flex-col gap-0.5">
+          <span class="font-mono text-[14px]" [style.color]="s.timeColor">{{s.time}}</span>
+          <span class="font-mono text-[10px] text-dim">{{s.dur}}</span>
+        </span>
+        <span class="flex-1 min-w-0 flex flex-col gap-[3px]">
+          <span class="font-semibold text-[15px]">{{s.title}}</span>
+          <span class="text-[12px] text-muted">{{s.sub}}</span>
+          @if (s.now) {
+            <span class="block h-[3px] mt-1 rounded-xs bg-line"><span class="block h-[3px] w-[34%] rounded-xs bg-amber"></span></span>
+          }
+        </span>
+        <span class="font-mono text-[10px] tracking-[0.08em]" [style.color]="s.tagColor">{{s.tag}}</span>
+      </a>
+    }
+  </main>
+
+  <nav class="flex-none flex border-t border-raised-2 bg-rail pb-2" aria-label="Principal">
+    @for (t of nav; track $index) {
+      <a [routerLink]="t.href" [attr.aria-current]="t.current">
+        <span class="w-6 h-1 rounded-xs" aria-hidden="true" [style.background]="t.bar"></span>
+        {{t.label}}
+      </a>
+    }
+  </nav>
+</div>

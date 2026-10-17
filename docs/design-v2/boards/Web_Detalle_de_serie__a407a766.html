@@ -1,0 +1,80 @@
+<!-- NostalgiaTV · Dragon Ball Z -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+-->
+<div class="min-h-screen bg-ink text-fg font-sans">
+  <!-- DC-IMPORT name="PubHeader" active="series" hint-size="100%,80px" -->
+
+  <section class="border-b border-raised-2 [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.025)_0_1px,_transparent_1px_3px),_#121210]">
+    <div class="max-w-340 my-0 mx-auto pt-5 px-10 pb-0">
+      <a class="inline-flex items-center gap-1.5 min-h-11 text-[14px] no-underline" routerLink="/series">← Volver a Series</a>
+    </div>
+    <div class="max-w-340 my-0 mx-auto pt-3 px-10 pb-10 flex flex-wrap gap-9 items-end">
+      <div class="w-55 aspect-[2_/_3] flex-none rounded-[14px] border border-edge flex items-center justify-center font-mono text-[12px] text-dim [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.05)_0_1px,_transparent_1px_3px),_#24241F]" aria-hidden="true">PÓSTER</div>
+      <div class="flex-[1_1_420px] flex flex-col gap-3.5">
+        <span class="font-mono text-[13px] tracking-[0.12em] text-amber">1989 – 1996 · 9 TEMPORADAS · ★ 8.8</span>
+        <h1 class="m-0 font-display font-bold text-[56px] leading-[1]">Dragon Ball Z</h1>
+        <div class="flex flex-wrap gap-1.5">
+          <span class="py-[5px] px-3 rounded-[14px] text-[13px] bg-line">Anime</span>
+          <span class="py-[5px] px-3 rounded-[14px] text-[13px] bg-line">Acción</span>
+          <span class="py-[5px] px-3 rounded-[14px] text-[13px] bg-line">Aventura</span>
+        </div>
+        <p class="m-0 max-w-170 text-[16px] leading-[1.6] text-fg-2">Goku y sus amigos defienden la Tierra de enemigos cada vez más poderosos, desde los Saiyajin hasta Majin Buu.</p>
+        <div class="flex flex-wrap gap-2.5 mt-1">
+          <a class="inline-flex items-center gap-2.5 min-h-13 py-0 px-6 rounded-[26px] bg-amber text-on-amber font-semibold text-[16px] no-underline" routerLink="/ver/5">
+            <svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>
+            Continuar T2 · E14
+          </a>
+          <a class="inline-flex items-center min-h-13 py-0 px-4.5 border border-edge rounded-[26px] text-[14px] text-fg-2 no-underline" routerLink="/ver/5">Se emite en <strong class="ml-1.5 font-semibold text-fg">CH 05 · Canal 5 Retro</strong></a>
+          <a class="inline-flex items-center min-h-13 py-0 px-4.5 border border-edge rounded-[26px] text-[14px] text-fg no-underline" routerLink="/guia">Próximas emisiones</a>
+          <button class="min-h-13 py-0 px-4.5 border border-edge rounded-[26px] bg-transparent text-fg [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Compartir</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="max-w-340 my-0 mx-auto pt-8 px-10 pb-18 flex flex-wrap gap-8 items-start">
+    <section class="flex-[999_1_600px] min-w-0 flex flex-col gap-4" aria-labelledby="eps">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="my-0 mr-3 ml-0 font-display text-[26px] font-bold" id="eps">Episodios</h2>
+        <div class="flex flex-wrap gap-1.5" role="group" aria-label="Temporadas">
+          @for (t of seasons; track $index) {
+            <button type="button" (click)="t.pick()" [attr.aria-pressed]="t.pressed">{{t.label}}</button>
+          }
+        </div>
+      </div>
+      @for (e of episodes; track $index) {
+        <a class="flex gap-4 items-center p-3 border border-line rounded-[14px] bg-panel text-fg no-underline" routerLink="/ver/5">
+          <span class="relative w-42 aspect-[16_/_9] flex-none rounded-lg overflow-hidden [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#24241F]">
+            <span class="absolute left-2 top-1.5 font-mono text-[12px] text-amber">{{e.num}}</span>
+            <span class="absolute left-0 right-0 bottom-0 h-1 bg-[rgba(255,255,255,0.1)]"><span class="block h-1 bg-amber" [style.width.%]="e.pct"></span></span>
+          </span>
+          <span class="flex-1 min-w-0 flex flex-col gap-1">
+            <span class="font-semibold text-[16px]">{{e.title}}</span>
+            <span class="text-[13px] text-muted">{{e.meta}}</span>
+          </span>
+          <span class="font-mono text-[12px] whitespace-nowrap" [style.color]="e.stateColor">{{e.state}}</span>
+        </a>
+      }
+    </section>
+
+    <section class="flex-[1_1_360px] min-w-0 flex flex-col gap-4" aria-labelledby="com">
+      <h2 class="m-0 font-display text-[26px] font-bold" id="com">Comentarios <span class="font-mono text-[15px] text-muted">48</span></h2>
+      <label class="flex flex-col gap-2 text-[13px] text-muted">Tu comentario
+        <textarea class="p-3 w-full border border-edge rounded-[10px] bg-panel text-fg [font:15px/1.5_'IBM_Plex_Sans',_sans-serif] resize-y" rows="3" placeholder="¿Qué recuerdas de esta serie?"></textarea>
+      </label>
+      <button class="self-end min-h-11 py-0 px-5 border-0 rounded-[22px] bg-amber text-on-amber [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Publicar</button>
+      @for (c of comments; track $index) {
+        <article>
+          <span class="w-9 h-9 flex-none rounded-full flex items-center justify-center font-display font-bold text-[13px] bg-line" aria-hidden="true">{{c.ini}}</span>
+          <div class="flex-1 min-w-0 flex flex-col gap-1">
+            <span class="text-[14px]"><strong class="font-semibold">{{c.user}}</strong> <span class="text-dim">· {{c.time}}</span></span>
+            <p class="m-0 text-[15px] leading-[1.5] text-fg-2">{{c.body}}</p>
+            <button class="self-start min-h-9 p-0 border-0 [background:none] text-amber [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Responder</button>
+          </div>
+        </article>
+      }
+    </section>
+  </main>
+</div>

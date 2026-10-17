@@ -1,0 +1,117 @@
+<!-- NostalgiaTV · Resumen -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+-->
+<div class="min-h-screen flex flex-wrap bg-ink text-fg font-sans">
+  <div class="flex-[1_1_248px] border-r border-raised-2">
+    <!-- DC-IMPORT name="Sidebar" active="summary" hint-size="248px,960px" -->
+  </div>
+  <main class="flex-[999_1_560px] min-w-0 pt-8 px-10 pb-14 flex flex-col gap-7 max-w-310">
+
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div class="flex flex-col gap-1.5">
+        <span class="font-mono text-[12px] tracking-[0.14em] text-muted">CH 01 · OPERACIÓN</span>
+        <h1 class="m-0 font-display font-bold text-[36px] tracking-[0.02em]">Resumen</h1>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="font-mono text-[13px] text-muted">SÁB 17 OCT · 14:32 · America/Guatemala</span>
+        <a class="inline-flex items-center min-h-11 py-0 px-4.5 rounded-md bg-amber text-on-amber font-semibold text-[14px] no-underline" routerLink="/admin/programacion">Ver programación</a>
+      </div>
+    </header>
+
+    <section class="grid grid-cols-[repeat(auto-fit,_minmax(220px,_1fr))] gap-4" aria-label="Indicadores">
+      @for (k of kpis; track $index) {
+        <a class="flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px] no-underline text-fg" [routerLink]="k.href">
+          <span class="font-mono text-[12px] tracking-[0.1em] text-muted">{{k.label}}</span>
+          <span class="flex items-baseline gap-2">
+            <span class="font-display font-semibold text-[40px] leading-[1]" [style.color]="k.color">{{k.value}}</span>
+            <span class="font-mono text-[14px] text-muted">{{k.unit}}</span>
+          </span>
+          <span class="text-[13px] text-muted">{{k.note}}</span>
+        </a>
+      }
+    </section>
+
+    <section class="flex flex-col gap-3.5" aria-labelledby="onair">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="m-0 flex items-center gap-2.5 font-display text-[20px] font-semibold" id="onair">
+          <span class="w-2.5 h-2.5 rounded-full bg-live shadow-[0_0_0_4px_rgba(255,107,94,0.18)]" aria-hidden="true"></span>
+          Al aire ahora
+        </h2>
+        <a class="text-[14px]" routerLink="/admin/canales">Gestionar canales</a>
+      </div>
+      <div class="grid grid-cols-[repeat(auto-fit,_minmax(280px,_1fr))] gap-4">
+        @for (c of channels; track $index) {
+          <article class="flex flex-col bg-panel border border-line rounded-[10px] overflow-hidden">
+            <div class="relative h-32 flex items-end p-3.5 [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.035)_0_1px,_transparent_1px_3px),_#1F1F1B]">
+              <span class="absolute top-3 left-3 py-[3px] px-2 rounded-sm font-mono text-[11px] tracking-[0.1em]" [style.color]="c.statusInk" [style.background]="c.statusBg">{{c.status}}</span>
+              <span class="absolute top-3 right-3 font-mono text-[12px] text-muted">{{c.code}}</span>
+              <div class="flex flex-col gap-0.5">
+                <span class="font-mono text-[12px] text-amber">{{c.nowCode}}</span>
+                <span class="font-semibold text-[15px]">{{c.nowTitle}}</span>
+              </div>
+            </div>
+            <div class="h-1 bg-line"><div class="h-1 bg-amber" [style.width.%]="c.pct"></div></div>
+            <div class="flex flex-col gap-1.5 p-3.5">
+              <span class="font-display font-semibold text-[17px]">{{c.name}}</span>
+              <span class="text-[13px] text-muted">Era: {{c.era}}</span>
+              <span class="font-mono text-[12px] text-info">{{c.next}}</span>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+
+    <div class="grid grid-cols-[repeat(auto-fit,_minmax(420px,_1fr))] gap-4">
+      <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="queue">
+        <div class="flex items-center justify-between">
+          <h2 class="m-0 font-display text-[18px] font-semibold" id="queue">Cola de procesamiento</h2>
+          <a class="text-[14px]" routerLink="/admin/media">Ver todo</a>
+        </div>
+        @for (j of jobs; track $index) {
+          <div class="flex flex-col gap-1.5 py-2.5 px-0 border-t border-line">
+            <div class="flex justify-between gap-3 text-[14px]">
+              <span class="font-medium">{{j.series}}</span>
+              <span class="font-mono text-[12px]" [style.color]="j.color">{{j.status}}</span>
+            </div>
+            <span class="font-mono text-[12px] text-muted truncate">{{j.worker}} · {{j.file}}</span>
+            <div class="h-1 rounded-xs bg-line"><div class="h-1 rounded-xs" [style.width.%]="j.progress" [style.background]="j.color"></div></div>
+          </div>
+        }
+      </section>
+
+      <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="activity">
+        <div class="flex items-center justify-between">
+          <h2 class="m-0 font-display text-[18px] font-semibold" id="activity">Actividad reciente</h2>
+          <a class="text-[14px]" routerLink="/admin/acceso">Registro completo</a>
+        </div>
+        @for (a of activity; track $index) {
+          <div class="grid grid-cols-[56px_minmax(0,_1fr)] gap-3 py-2.5 px-0 border-t border-line">
+            <span class="font-mono text-[12px] text-muted">{{a.time}}</span>
+            <div class="flex flex-col gap-0.5 text-[14px]">
+              <span><strong class="font-semibold">{{a.user}}</strong> · {{a.action}}</span>
+              <span class="font-mono text-[12px] text-muted">{{a.resource}}</span>
+            </div>
+          </div>
+        }
+      </section>
+    </div>
+
+    <section class="flex flex-wrap gap-3 items-stretch" aria-label="Estado de workers">
+      @for (w of workers; track $index) {
+        <div class="flex-[1_1_200px] flex items-center gap-3 py-3.5 px-4 bg-panel border border-line rounded-[10px]">
+          <span class="w-2 h-2 rounded-full" aria-hidden="true" [style.background]="w.color"></span>
+          <div class="flex flex-col gap-0.5">
+            <span class="font-mono text-[13px]">{{w.id}}</span>
+            <span class="text-[12px] text-muted">{{w.state}}</span>
+          </div>
+        </div>
+      }
+      <div class="flex-[2_1_320px] flex flex-col justify-center gap-1 py-3.5 px-4 bg-panel border border-line rounded-[10px]">
+        <span class="font-mono text-[12px] tracking-[0.1em] text-muted">POLÍTICA DE RECURSOS</span>
+        <span class="text-[14px]">Ahora: modo diurno · 4 núcleos — nocturno 23:00–06:00 · 12 núcleos</span>
+      </div>
+    </section>
+  </main>
+</div>
