@@ -24,7 +24,7 @@ select,input[type=text],input[type=number],input[type=url]{min-height:44px;paddi
     <div class="flex flex-wrap items-center gap-2.5">
       <div class="flex gap-1.5" role="group" aria-label="Tipo">
         @for (k of kinds; track $index) {
-          <button type="button" (click)="k.pick()" [attr.aria-pressed]="k.pressed">{{k.label}} <span class="font-mono text-[11px] opacity-[0.8]">{{k.count}}</span></button>
+          <button type="button" (click)="k.pick($event)" [attr.aria-pressed]="k.pressed" [style]="k.style">{{k.label}} <span class="font-mono text-[11px] opacity-[0.8]">{{k.count}}</span></button>
         }
       </div>
       <span class="flex-1"></span>
@@ -51,11 +51,11 @@ select,input[type=text],input[type=number],input[type=url]{min-height:44px;paddi
                 <td><span class="text-[12px] whitespace-nowrap" [style.color]="r.apColor">{{r.approved}}</span></td>
                 <td class="text-[12px] text-muted">{{r.license}}</td>
                 <td class="text-right whitespace-nowrap">
-                  <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-fg cursor-pointer" type="button" (click)="r.edit()" aria-label="Editar interludio">
-                    <svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+                  <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-fg cursor-pointer" type="button" (click)="r.edit($event)" aria-label="Editar interludio">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
                   </button>
-                  <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-danger cursor-pointer" type="button" (click)="r.remove()" aria-label="Eliminar interludio">
-                    <svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
+                  <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-danger cursor-pointer" type="button" (click)="r.remove($event)" aria-label="Eliminar interludio">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
                   </button>
                 </td>
               </tr>
@@ -67,7 +67,7 @@ select,input[type=text],input[type=number],input[type=url]{min-height:44px;paddi
       <section class="flex-[2_1_320px] min-w-0 flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="up">
         <h2 class="m-0 font-display text-[18px] font-semibold" id="up">Subir interludio</h2>
         <label class="relative flex flex-col items-center justify-center gap-1.5 min-h-30 border border-dashed border-edge-2 rounded-lg cursor-pointer text-center text-[13px] text-muted">
-          <svg width="24" height="24" sc-camel-view-box="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M4 20h16"></path></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M4 20h16"></path></svg>
           <span class="text-fg">Arrastra un video o haz clic para elegir</span>
           <span>MP4 / MKV · la duración se detecta con FFmpeg</span>
           <input class="absolute w-[1px] h-[1px] opacity-[0]" type="file" accept="video/*">
@@ -98,13 +98,13 @@ select,input[type=text],input[type=number],input[type=url]{min-height:44px;paddi
         <label class="flex flex-col gap-1.5 text-[12px] text-muted">URL de origen
           <input type="url" placeholder="https://…">
         </label>
-        <label class="flex items-center gap-2.5 min-h-11 text-[14px]"><input class="w-4.5 h-4.5 accent-amber" type="checkbox" checked="">Aprobado para emisión</label>
-        <label class="flex items-center gap-2.5 min-h-11 text-[14px]"><input class="w-4.5 h-4.5 accent-amber" type="checkbox">Permite redistribución</label>
+        <label class="flex items-center gap-2.5 min-h-11 text-[14px]"><input class="check" type="checkbox" checked="">Aprobado para emisión</label>
+        <label class="flex items-center gap-2.5 min-h-11 text-[14px]"><input class="check" type="checkbox">Permite redistribución</label>
         <span class="text-[12px] text-muted">Si permites redistribución, la licencia es obligatoria.</span>
         <label class="flex flex-col gap-1.5 text-[12px] text-muted">Licencia
           <input type="text" placeholder="Ej. CC BY 4.0">
         </label>
-        <button class="min-h-11 py-0 px-4.5 border-0 rounded-md bg-amber text-on-amber [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Guardar interludio</button>
+        <button class="btn btn-primary" type="button">Guardar interludio</button>
       </section>
     </div>
   </main>

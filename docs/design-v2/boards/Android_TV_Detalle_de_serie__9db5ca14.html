@@ -16,7 +16,7 @@ body{margin:0;background:#0B0B09}
     <p class="m-0 text-[26px] leading-[1.5] text-fg-2">Goku y sus amigos defienden la Tierra de enemigos cada vez más poderosos.</p>
     <div class="flex gap-5 mt-2.5">
       @for (a of actions; track $index) {
-        <button type="button" (click)="a.pick()">{{a.label}}</button>
+        <button type="button" (click)="a.pick($event)" [style]="a.style">{{a.label}}</button>
       }
     </div>
   </section>
@@ -24,12 +24,12 @@ body{margin:0;background:#0B0B09}
   <section class="relative mt-auto flex flex-col gap-5">
     <div class="flex gap-3">
       @for (t of seasons; track $index) {
-        <button type="button" (click)="t.pick()">{{t.label}}</button>
+        <button type="button" (click)="t.pick($event)" [style]="t.style">{{t.label}}</button>
       }
     </div>
     <div class="flex gap-7">
       @for (e of episodes; track $index) {
-        <button type="button" (click)="e.pick()">
+        <button type="button" (click)="e.pick($event)" [style]="e.style">
           <span class="relative block aspect-[16_/_9] rounded-xl overflow-hidden [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#24241F]">
             <span class="absolute left-3 top-2.5 font-mono text-[18px] text-amber">{{e.num}}</span>
             <span class="absolute left-0 right-0 bottom-0 h-1.5 bg-[rgba(255,255,255,0.1)]"><span class="block h-1.5 bg-amber" [style.width.%]="e.pct"></span></span>

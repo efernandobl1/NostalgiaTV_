@@ -4,13 +4,13 @@ body{margin:0;background:#0E0E0C}
 -->
 <div class="w-97.5 h-211 flex flex-col overflow-hidden bg-ink text-fg font-sans">
   <header class="flex-none flex items-center gap-2.5 pt-4 px-4 pb-3">
-    <svg width="28" height="28" sc-camel-view-box="0 0 36 36" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path><rect x="8" y="14" width="16" height="12" rx="2"></rect></svg>
+    <svg width="28" height="28" viewBox="0 0 36 36" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path><rect x="8" y="14" width="16" height="12" rx="2"></rect></svg>
     <span class="flex-1 font-display font-bold text-[17px] tracking-[0.08em]">NOSTALGIA TV</span>
     <a class="w-11 h-11 flex items-center justify-center text-fg" routerLink="/MobCatalog" aria-label="Buscar">
-      <svg width="22" height="22" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
     </a>
     <a class="w-11 h-11 flex items-center justify-center text-fg" routerLink="/MobPair" aria-label="Vincular TV">
-      <svg width="22" height="22" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="13" rx="2"></rect><path d="M8 21h8"></path></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="13" rx="2"></rect><path d="M8 21h8"></path></svg>
     </a>
   </header>
 
@@ -37,7 +37,7 @@ body{margin:0;background:#0E0E0C}
       <h1 class="m-0 font-display text-[24px] font-bold">Canales</h1>
       <div class="flex gap-2 overflow-x-auto pb-0.5" role="group" aria-label="Filtrar canales">
         @for (f of filters; track $index) {
-          <button type="button" (click)="f.pick()" [attr.aria-pressed]="f.pressed">{{f.label}}</button>
+          <button type="button" (click)="f.pick($event)" [attr.aria-pressed]="f.pressed" [style]="f.style">{{f.label}}</button>
         }
       </div>
       @for (c of channels; track $index) {
@@ -70,7 +70,7 @@ body{margin:0;background:#0E0E0C}
 
   <nav class="flex-none flex border-t border-raised-2 bg-rail pb-2" aria-label="Principal">
     @for (t of tabs; track $index) {
-      <a [routerLink]="t.href" [attr.aria-current]="t.current">
+      <a [routerLink]="t.href" [attr.aria-current]="t.current" [style]="t.style">
         <span class="w-6 h-1 rounded-xs" aria-hidden="true" [style.background]="t.bar"></span>
         {{t.label}}
       </a>

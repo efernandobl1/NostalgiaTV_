@@ -9,14 +9,14 @@ body{margin:0;background:#0B0B09}
       <span class="flex flex-col gap-1"><span class="font-display font-bold text-[40px]">fernando</span><span class="text-[20px] text-muted">Smart TV sala</span></span>
     </div>
     @for (s of sections; track $index) {
-      <button type="button" (click)="s.pick()">{{s.label}} <span class="ml-auto opacity-[0.6]" aria-hidden="true">›</span></button>
+      <button type="button" (click)="s.pick($event)" [style]="s.style">{{s.label}} <span class="ml-auto opacity-[0.6]" aria-hidden="true">›</span></button>
     }
   </nav>
 
   <section class="flex-1 flex flex-col gap-3.5 py-10 px-12 rounded-[28px] bg-panel-2">
     <h1 class="mt-0 mx-0 mb-4 font-display font-bold text-[48px]">{{title}}</h1>
     @for (r of rows; track $index) {
-      <div>
+      <div [style]="r.style">
         <span class="flex-1 flex flex-col gap-1.5">
           <span class="text-[26px] font-semibold" [style.color]="r.ink">{{r.label}}</span>
           <span class="text-[19px] text-muted">{{r.hint}}</span>

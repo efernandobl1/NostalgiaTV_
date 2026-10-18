@@ -41,3 +41,49 @@
   a:hover { color: var(--color-amber-hi); }
   button { cursor: pointer; }
 }
+
+/* ── Reusable control styles (repeated across the whole design) ── */
+@utility btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 16px; border-radius: 6px; border: 0;
+  font: 500 14px var(--font-sans); cursor: pointer; text-decoration: none;
+  &:disabled { opacity: .5; cursor: not-allowed; }
+}
+@utility btn-primary { background: var(--color-amber); color: var(--color-on-amber); font-weight: 600; padding: 0 18px;
+  &:hover { background: var(--color-amber-hi); color: var(--color-on-amber); } }
+@utility btn-ghost { background: transparent; color: var(--color-fg); border: 1px solid var(--color-edge);
+  &:hover { background: var(--color-raised); color: var(--color-fg); } }
+@utility btn-danger { background: var(--color-live); color: var(--color-on-live); font-weight: 600; padding: 0 18px; }
+@utility btn-danger-text { background: transparent; color: var(--color-danger); padding: 0 14px; }
+@utility btn-sm { min-height: 40px; padding: 0 14px; font-size: 13px; }
+@utility btn-xs { min-height: 36px; padding: 0 12px; font-size: 13px; }
+@utility btn-icon {
+  display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--color-muted); cursor: pointer;
+  &:hover { background: var(--color-raised); color: var(--color-fg); }
+}
+@utility field {
+  min-height: 44px; padding: 0 12px; width: 100%; border: 1px solid var(--color-edge); border-radius: 6px;
+  background: var(--color-ink); color: var(--color-fg); font: 14px var(--font-sans); color-scheme: dark;
+  &:focus { outline: 2px solid var(--color-amber); outline-offset: -1px; }
+}
+@utility field-mono { font: 14px var(--font-mono); padding: 0 10px; }
+@utility field-date { font: 13px var(--font-mono); padding: 0 8px; }
+@utility field-select { padding: 0 10px; }
+@utility field-area { min-height: 0; padding: 10px 12px; font: 14px/1.5 var(--font-sans); resize: vertical; }
+@utility check { width: 18px; height: 18px; accent-color: var(--color-amber); }
+@utility card { background: var(--color-panel); border: 1px solid var(--color-line); border-radius: 10px; }
+@utility scanlines { background: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 3px), var(--color-raised); }
+@utility chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 20px;
+  border: 1px solid var(--color-edge); background: transparent; color: var(--color-fg);
+  font: 500 13px var(--font-sans); cursor: pointer; white-space: nowrap;
+  &[aria-pressed="true"], &.on { border-color: var(--color-amber); background: var(--color-amber); color: var(--color-on-amber); }
+}
+
+/* Data tables (design: th mono 11px muted, td 13px with soft row rules). */
+@layer components {
+  .dtable { border-collapse: collapse; width: 100%; }
+  .dtable th { text-align: left; font: 500 11px var(--font-mono); letter-spacing: .1em; color: var(--color-muted); padding: 8px 10px; border-bottom: 1px solid var(--color-line); }
+  .dtable td { padding: 10px; border-bottom: 1px solid var(--color-raised-2); font-size: 13px; vertical-align: top; }
+}

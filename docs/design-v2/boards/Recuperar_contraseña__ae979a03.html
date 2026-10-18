@@ -5,7 +5,7 @@ a{color:#FFB547}a:hover{color:#FFD08A}
 -->
 <main class="min-h-screen py-12 px-6 flex flex-col items-center justify-center gap-7 [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.025)_0_1px,_transparent_1px_3px),_#0E0E0C] text-fg font-sans">
   <a class="flex items-center gap-2.5 text-fg no-underline" routerLink="/login">
-    <svg width="32" height="32" sc-camel-view-box="0 0 36 36" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path><rect x="8" y="14" width="16" height="12" rx="2"></rect></svg>
+    <svg width="32" height="32" viewBox="0 0 36 36" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path><rect x="8" y="14" width="16" height="12" rx="2"></rect></svg>
     <span class="font-display font-bold text-[18px] tracking-[0.08em]">NOSTALGIA TV</span>
   </a>
   <section class="w-full max-w-110 flex flex-col gap-4.5 p-8 bg-panel border border-line rounded-xl">
@@ -18,17 +18,17 @@ a{color:#FFB547}a:hover{color:#FFD08A}
       <label class="flex flex-col gap-1.5 text-[13px] text-muted">Correo electrónico
         <input class="min-h-12 py-0 px-3.5 w-full border border-edge rounded-lg bg-ink text-fg [font:15px_'IBM_Plex_Sans',_sans-serif]" type="email" autocomplete="email" placeholder="tu@correo.com">
       </label>
-      <button class="min-h-12 border-0 rounded-lg bg-amber text-on-amber [font:600_15px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="send()">Enviar enlace</button>
+      <button class="min-h-12 border-0 rounded-lg bg-amber text-on-amber [font:600_15px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="send($event)">Enviar enlace</button>
     }
     @if (sent) {
       <span class="w-13 h-13 rounded-full flex items-center justify-center bg-[#1E2A1E]" aria-hidden="true">
-        <svg width="24" height="24" sc-camel-view-box="0 0 24 24" fill="none" stroke="#8BE08F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8BE08F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>
       </span>
       <div class="flex flex-col gap-1.5">
         <h1 class="m-0 font-display font-bold text-[28px]">Revisa tu correo</h1>
         <span class="text-[14px] leading-[1.5] text-muted">Si el correo está registrado, recibirás un enlace válido por 30 minutos.</span>
       </div>
-      <button class="min-h-12 border border-edge rounded-lg bg-transparent text-fg [font:500_15px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="reset()">Reenviar enlace</button>
+      <button class="min-h-12 border border-edge rounded-lg bg-transparent text-fg [font:500_15px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="reset($event)">Reenviar enlace</button>
       <a class="text-[13px] text-center" routerLink="/nueva-contrasena">Simular: abrir el enlace del correo</a>
     }
     <a class="text-[14px] text-center" routerLink="/login">← Volver a iniciar sesión</a>

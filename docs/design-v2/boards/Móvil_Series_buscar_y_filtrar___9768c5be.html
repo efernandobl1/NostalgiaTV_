@@ -7,16 +7,16 @@ body{margin:0;background:#0E0E0C}
     <h1 class="m-0 font-display font-bold text-[26px]">Series</h1>
     <div class="flex gap-2">
       <label class="flex-1 flex items-center gap-2 min-h-11 py-0 px-3.5 border border-edge rounded-[22px] bg-panel">
-        <svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
-        <input class="flex-1 min-w-0 border-0 outline-none bg-transparent text-fg [font:15px_'IBM_Plex_Sans',_sans-serif]" type="search" aria-label="Buscar series" [attr.value]="q" [attr.sc-camel-on-change]="setQ" placeholder="Buscar series…">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <input class="flex-1 min-w-0 border-0 outline-none bg-transparent text-fg [font:15px_'IBM_Plex_Sans',_sans-serif]" type="search" aria-label="Buscar series" [attr.value]="q" (change)="setQ($event)" placeholder="Buscar series…">
       </label>
-      <button class="w-11 h-11 flex items-center justify-center border border-edge rounded-[22px] bg-transparent text-fg" type="button" (click)="toggleSort()" aria-label="Ordenar">
-        <svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"></path></svg>
+      <button class="w-11 h-11 flex items-center justify-center border border-edge rounded-[22px] bg-transparent text-fg" type="button" (click)="toggleSort($event)" aria-label="Ordenar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"></path></svg>
       </button>
     </div>
     <div class="flex gap-2 overflow-x-auto pb-0.5" role="group" aria-label="Filtros">
       @for (c of chips; track $index) {
-        <button type="button" (click)="c.pick()" [attr.aria-pressed]="c.pressed">{{c.label}}</button>
+        <button type="button" (click)="c.pick($event)" [attr.aria-pressed]="c.pressed" [style]="c.style">{{c.label}}</button>
       }
     </div>
     <span class="text-[12px] text-muted">{{count}} resultados · {{sortLabel}}</span>
@@ -44,7 +44,7 @@ body{margin:0;background:#0E0E0C}
 
   <nav class="flex-none flex border-t border-raised-2 bg-rail pb-2" aria-label="Principal">
     @for (t of nav; track $index) {
-      <a [routerLink]="t.href" [attr.aria-current]="t.current">
+      <a [routerLink]="t.href" [attr.aria-current]="t.current" [style]="t.style">
         <span class="w-6 h-1 rounded-xs" aria-hidden="true" [style.background]="t.bar"></span>
         {{t.label}}
       </a>

@@ -5,16 +5,16 @@ a{color:#FFB547}a:hover{color:#FFD08A}
 -->
 <main class="min-h-screen py-12 px-6 flex flex-col items-center justify-center gap-7 [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.025)_0_1px,_transparent_1px_3px),_#0E0E0C] text-fg font-sans">
   <a class="flex items-center gap-2.5 text-fg no-underline" routerLink="/login">
-    <svg width="32" height="32" sc-camel-view-box="0 0 36 36" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path><rect x="8" y="14" width="16" height="12" rx="2"></rect></svg>
+    <svg width="32" height="32" viewBox="0 0 36 36" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path><rect x="8" y="14" width="16" height="12" rx="2"></rect></svg>
     <span class="font-display font-bold text-[18px] tracking-[0.08em]">NOSTALGIA TV</span>
   </a>
   <section class="w-full max-w-110 flex flex-col items-center gap-4.5 py-9 px-8 text-center bg-panel border border-line rounded-xl">
     <span class="w-16 h-16 rounded-full flex items-center justify-center" aria-hidden="true" [style.background]="iconBg">
       @if (ok) {
-        <svg width="28" height="28" sc-camel-view-box="0 0 24 24" fill="none" stroke="#8BE08F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8BE08F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>
       }
       @if (expired) {
-        <svg width="28" height="28" sc-camel-view-box="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
       }
     </span>
     @if (ok) {

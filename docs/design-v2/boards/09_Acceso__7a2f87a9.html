@@ -18,14 +18,14 @@ td{padding:12px 10px;border-bottom:1px solid #24241F;font-size:14px;vertical-ali
         <h1 class="m-0 font-display font-bold text-[36px]">Acceso</h1>
       </div>
       <div class="flex flex-wrap gap-2.5">
-        <button class="min-h-11 py-0 px-4 border border-edge rounded-md bg-transparent text-fg [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.newRole()">Nuevo rol</button>
-        <button class="min-h-11 py-0 px-4.5 border-0 rounded-md bg-amber text-on-amber [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.newUser()">Nuevo usuario</button>
+        <button class="btn btn-ghost" type="button" (click)="open.newRole($event)">Nuevo rol</button>
+        <button class="btn btn-primary" type="button" (click)="open.newUser($event)">Nuevo usuario</button>
       </div>
     </header>
 
     <div class="flex gap-1 border-b border-line" role="tablist" aria-label="Secciones">
       @for (t of tabs; track $index) {
-        <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick()">{{t.label}}</button>
+        <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick($event)" [style]="t.style">{{t.label}}</button>
       }
     </div>
 
@@ -42,9 +42,9 @@ td{padding:12px 10px;border-bottom:1px solid #24241F;font-size:14px;vertical-ali
                 <td><span class="text-[13px]" [style.color]="u.stColor">{{u.status}}</span></td>
                 <td class="font-mono text-[12px] text-muted">{{u.sessions}}</td>
                 <td class="text-right whitespace-nowrap">
-                  <button class="min-h-9 py-0 px-3 border border-edge rounded-md bg-transparent text-fg [font:500_12px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="u.revoke()">Cerrar sesiones</button>
-                  <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-fg cursor-pointer align-middle" type="button" (click)="u.edit()" aria-label="Editar usuario">
-                    <svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+                  <button class="min-h-9 py-0 px-3 border border-edge rounded-md bg-transparent text-fg [font:500_12px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="u.revoke($event)">Cerrar sesiones</button>
+                  <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-fg cursor-pointer align-middle" type="button" (click)="u.edit($event)" aria-label="Editar usuario">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
                   </button>
                 </td>
               </tr>
@@ -58,7 +58,7 @@ td{padding:12px 10px;border-bottom:1px solid #24241F;font-size:14px;vertical-ali
       <div class="flex flex-wrap gap-4 items-start">
         <section class="flex-[1_1_260px] flex flex-col gap-2" aria-label="Roles">
           @for (r of roles; track $index) {
-            <button type="button" (click)="r.pick()" [attr.aria-pressed]="r.pressed">
+            <button type="button" (click)="r.pick($event)" [attr.aria-pressed]="r.pressed" [style]="r.style">
               <span class="flex items-center justify-between gap-2 w-full">
                 <span class="font-semibold text-[14px] text-fg">{{r.name}}</span>
                 @if (r.viewer) {
@@ -73,13 +73,13 @@ td{padding:12px 10px;border-bottom:1px solid #24241F;font-size:14px;vertical-ali
           <div class="flex flex-wrap justify-between items-center gap-3">
             <h2 class="m-0 font-display text-[18px] font-semibold" id="menus">Menús de {{role.name}}</h2>
             <span class="flex gap-2">
-              <button class="min-h-10 py-0 px-3.5 border border-edge rounded-md bg-transparent text-fg [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.editRole()">Editar rol</button>
-              <button class="min-h-10 py-0 px-3.5 border-0 rounded-md bg-amber text-on-amber [font:600_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Guardar permisos</button>
+              <button class="btn btn-ghost btn-sm" type="button" (click)="open.editRole($event)">Editar rol</button>
+              <button class="btn btn-primary btn-sm" type="button">Guardar permisos</button>
             </span>
           </div>
           @for (m of menus; track $index) {
-            <label>
-              <input class="w-4.5 h-4.5 accent-amber" type="checkbox" [attr.checked]="m.on">
+            <label [style]="m.style">
+              <input class="check" type="checkbox" [attr.checked]="m.on">
               <span class="flex-1">{{m.caption}}</span>
               <span class="font-mono text-[11px] text-dim">{{m.url}}</span>
             </label>

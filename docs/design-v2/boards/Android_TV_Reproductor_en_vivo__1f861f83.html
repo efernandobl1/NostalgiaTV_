@@ -31,8 +31,8 @@ body{margin:0;background:#000}
         <span><strong class="font-mono text-fg">OK</strong> Guía</span>
         <span><strong class="font-mono text-fg">◀</strong> Volver</span>
         <span class="flex-1"></span>
-        <button class="min-w-22 h-16 border-[2px] border-edge rounded-[32px] bg-transparent text-fg [font:600_22px_'IBM_Plex_Mono',_monospace] cursor-pointer" type="button" (click)="prev()">CH−</button>
-        <button class="min-w-22 h-16 border-[2px] border-edge rounded-[32px] bg-transparent text-fg [font:600_22px_'IBM_Plex_Mono',_monospace] cursor-pointer" type="button" (click)="next()">CH+</button>
+        <button class="min-w-22 h-16 border-[2px] border-edge rounded-[32px] bg-transparent text-fg [font:600_22px_'IBM_Plex_Mono',_monospace] cursor-pointer" type="button" (click)="prev($event)">CH−</button>
+        <button class="min-w-22 h-16 border-[2px] border-edge rounded-[32px] bg-transparent text-fg [font:600_22px_'IBM_Plex_Mono',_monospace] cursor-pointer" type="button" (click)="next($event)">CH+</button>
       </div>
     </div>
   }

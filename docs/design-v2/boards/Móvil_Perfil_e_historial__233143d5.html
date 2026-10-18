@@ -13,7 +13,7 @@ body{margin:0;background:#0E0E0C}
     </div>
     <div class="flex border-b border-line" role="tablist" aria-label="Perfil">
       @for (t of tabs; track $index) {
-        <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick()">{{t.label}}</button>
+        <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick($event)" [style]="t.style">{{t.label}}</button>
       }
     </div>
   </header>
@@ -64,7 +64,7 @@ body{margin:0;background:#0E0E0C}
 
   <nav class="flex-none flex border-t border-raised-2 bg-rail pb-2" aria-label="Principal">
     @for (t of nav; track $index) {
-      <a [routerLink]="t.href" [attr.aria-current]="t.current">
+      <a [routerLink]="t.href" [attr.aria-current]="t.current" [style]="t.style">
         <span class="w-6 h-1 rounded-xs" aria-hidden="true" [style.background]="t.bar"></span>
         {{t.label}}
       </a>

@@ -17,13 +17,13 @@ td{padding:12px 10px;border-bottom:1px solid #24241F;font-size:14px;vertical-ali
         <span class="font-mono text-[12px] tracking-[0.14em] text-muted">CH 03 · OPERACIÓN</span>
         <h1 class="m-0 font-display font-bold text-[36px]">Canales y eras</h1>
       </div>
-      <button class="min-h-11 py-0 px-4.5 border-0 rounded-md bg-amber text-on-amber [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.newChannel()">Nuevo canal</button>
+      <button class="btn btn-primary" type="button" (click)="open.newChannel($event)">Nuevo canal</button>
     </header>
 
     <div class="flex flex-wrap gap-4 items-start">
       <section class="flex-[1_1_240px] flex flex-col gap-2" aria-label="Canales">
         @for (c of channels; track $index) {
-          <button type="button" (click)="c.pick()" [attr.aria-pressed]="c.pressed">
+          <button type="button" (click)="c.pick($event)" [attr.aria-pressed]="c.pressed" [style]="c.style">
             <span class="w-11 h-11 flex-none rounded-lg flex items-center justify-center font-display font-bold text-[14px] text-amber [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#24241F]" aria-hidden="true">{{c.num}}</span>
             <span class="flex-1 min-w-0 flex flex-col gap-0.5 text-left">
               <span class="font-semibold text-[14px] text-fg">{{c.name}}</span>
@@ -46,19 +46,19 @@ td{padding:12px 10px;border-bottom:1px solid #24241F;font-size:14px;vertical-ali
             <p class="m-0 text-[14px] leading-[1.55] text-fg-2 max-w-160">Canal de caricaturas y anime de la televisión abierta, con bloques de tarde y cortes comerciales de época.</p>
           </div>
           <div class="flex flex-col gap-2 items-start">
-            <button class="min-h-11 py-0 px-4 border border-edge rounded-md bg-transparent text-fg [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Copiar enlace público</button>
-            <button class="min-h-11 py-0 px-4 border border-edge rounded-md bg-transparent text-fg [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.editChannel()">Editar canal</button>
+            <button class="btn btn-ghost" type="button">Copiar enlace público</button>
+            <button class="btn btn-ghost" type="button" (click)="open.editChannel($event)">Editar canal</button>
           </div>
         </section>
 
         <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="eras">
           <div class="flex flex-wrap justify-between items-center gap-3">
             <h2 class="m-0 font-display text-[18px] font-semibold" id="eras">Línea de tiempo de eras</h2>
-            <button class="min-h-10 py-0 px-3.5 border border-edge rounded-md bg-transparent text-fg [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.newEra()">Agregar era</button>
+            <button class="btn btn-ghost btn-sm" type="button" (click)="open.newEra($event)">Agregar era</button>
           </div>
           <div class="flex gap-1">
             @for (e of eras; track $index) {
-              <button type="button" (click)="e.pick()" [attr.aria-pressed]="e.pressed">
+              <button type="button" (click)="e.pick($event)" [attr.aria-pressed]="e.pressed" [style]="e.style">
                 <span class="font-mono text-[11px] opacity-[0.85]">{{e.years}}</span>
                 <span class="font-semibold text-[14px]">{{e.name}}</span>
                 @if (e.onAir) {
@@ -71,8 +71,8 @@ td{padding:12px 10px;border-bottom:1px solid #24241F;font-size:14px;vertical-ali
             <span>{{era.desc}}</span>
             <span class="flex-1"></span>
             <span class="font-mono">carpeta: /eras/{{era.slug}}</span>
-            <button class="min-h-10 py-0 px-3.5 border border-edge rounded-md bg-transparent text-fg [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.editEra()">Editar era</button>
-            <button class="min-h-10 py-0 px-3.5 border-0 rounded-md bg-amber text-on-amber [font:600_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.broadcast()">Emitir esta era</button>
+            <button class="btn btn-ghost btn-sm" type="button" (click)="open.editEra($event)">Editar era</button>
+            <button class="btn btn-primary btn-sm" type="button" (click)="open.broadcast($event)">Emitir esta era</button>
           </div>
         </section>
 
@@ -80,7 +80,7 @@ td{padding:12px 10px;border-bottom:1px solid #24241F;font-size:14px;vertical-ali
           <section class="flex-[3_1_460px] min-w-0 flex flex-col gap-3 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="eraseries">
             <div class="flex justify-between items-center gap-3">
               <h2 class="m-0 font-display text-[18px] font-semibold" id="eraseries">Series de la era</h2>
-              <button class="min-h-10 py-0 px-3.5 border border-edge rounded-md bg-transparent text-fg [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.eraSeries()">Editar series</button>
+              <button class="btn btn-ghost btn-sm" type="button" (click)="open.eraSeries($event)">Editar series</button>
             </div>
             <div class="overflow-x-auto">
               <table>
@@ -123,7 +123,7 @@ td{padding:12px 10px;border-bottom:1px solid #24241F;font-size:14px;vertical-ali
             <section class="flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="eraint">
               <div class="flex justify-between items-center gap-3">
                 <h2 class="m-0 font-display text-[18px] font-semibold" id="eraint">Interludios de la era</h2>
-                <button class="min-h-10 py-0 px-3.5 border border-edge rounded-md bg-transparent text-fg [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="open.eraInterlude()">Asignar</button>
+                <button class="btn btn-ghost btn-sm" type="button" (click)="open.eraInterlude($event)">Asignar</button>
               </div>
               @for (i of eraInterludes; track $index) {
                 <div class="flex items-center gap-2.5 py-2 px-0 border-t border-raised-2">

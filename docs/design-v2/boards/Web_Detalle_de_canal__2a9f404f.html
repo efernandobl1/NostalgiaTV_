@@ -18,7 +18,7 @@ a{color:#FFB547}a:hover{color:#FFD08A}
         </div>
         <div class="flex flex-wrap gap-2.5">
           <a class="inline-flex items-center gap-2.5 min-h-13 py-0 px-6 rounded-[26px] bg-amber text-on-amber font-semibold text-[16px] no-underline" routerLink="/ver/5">
-            <svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>Ver en vivo
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>Ver en vivo
           </a>
           <a class="inline-flex items-center min-h-13 py-0 px-5 border border-edge rounded-[26px] text-fg text-[15px] no-underline" routerLink="/guia">Guía del canal</a>
           <button class="min-h-13 py-0 px-5 border border-edge rounded-[26px] bg-transparent text-fg [font:500_15px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Compartir</button>
@@ -32,7 +32,7 @@ a{color:#FFB547}a:hover{color:#FFD08A}
       <h2 class="m-0 font-display text-[26px] font-bold" id="eras">Historia del canal</h2>
       <div class="flex gap-1.5">
         @for (e of eras; track $index) {
-          <button type="button" (click)="e.pick()" [attr.aria-pressed]="e.pressed">
+          <button type="button" (click)="e.pick($event)" [attr.aria-pressed]="e.pressed" [style]="e.style">
             <span class="font-mono text-[12px] opacity-[0.85]">{{e.years}}</span>
             <span class="font-semibold text-[16px]">{{e.name}}</span>
             @if (e.onAir) {<span class="font-mono text-[11px] tracking-[0.1em]">● AL AIRE AHORA</span>}

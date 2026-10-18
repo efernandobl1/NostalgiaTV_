@@ -9,7 +9,7 @@ body{margin:0}
   </a>
   <nav class="flex-[1_1_auto] flex flex-wrap gap-1" aria-label="Principal">
     @for (l of links; track $index) {
-      <a [routerLink]="l.href" [attr.aria-current]="l.current">{{l.label}}</a>
+      <a [routerLink]="l.href" [attr.aria-current]="l.current" [style]="l.style">{{l.label}}</a>
     }
   </nav>
   <div class="flex items-center gap-2">
@@ -17,7 +17,7 @@ body{margin:0}
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
     </a>
     @if (signedIn) {
-      <button class="w-11 h-11 flex items-center justify-center border-0 rounded-full bg-amber text-on-amber [font:700_14px_'Chakra_Petch',_sans-serif] cursor-pointer" type="button" [attr.onClick]="toggleMenu" [attr.aria-expanded]="menuOpen" aria-label="Menú de perfil">FE</button>
+      <button class="w-11 h-11 flex items-center justify-center border-0 rounded-full bg-amber text-on-amber [font:700_14px_'Chakra_Petch',_sans-serif] cursor-pointer" type="button" (click)="toggleMenu($event)" [attr.aria-expanded]="menuOpen" aria-label="Menú de perfil">FE</button>
     }
     @if (signedOut) {
       <a class="inline-flex items-center min-h-11 py-0 px-4.5 border border-edge rounded-[22px] text-fg text-[14px] font-medium no-underline" routerLink="/login">Iniciar sesión</a>

@@ -28,26 +28,26 @@ a{color:#FFB547}a:hover{color:#FFD08A}
 
     <div class="flex flex-wrap items-center gap-2.5 p-3 border border-line rounded-2xl bg-panel" role="search">
       <label class="flex-[2_1_260px] flex items-center gap-2 min-h-11 py-0 px-3.5 border border-edge rounded-[22px] bg-ink">
-        <svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
-        <input class="flex-1 min-w-0 border-0 outline-none bg-transparent text-fg [font:14px_'IBM_Plex_Sans',_sans-serif]" type="search" aria-label="Buscar canal o serie al aire" [attr.value]="q" [attr.sc-camel-on-change]="setQ" placeholder="Buscar canal o serie al aire…">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <input class="flex-1 min-w-0 border-0 outline-none bg-transparent text-fg [font:14px_'IBM_Plex_Sans',_sans-serif]" type="search" aria-label="Buscar canal o serie al aire" [attr.value]="q" (change)="setQ($event)" placeholder="Buscar canal o serie al aire…">
       </label>
       <div class="flex flex-wrap gap-1.5" role="group" aria-label="Categoría">
         @for (k of cats; track $index) {
-          <button type="button" (click)="k.pick()" [attr.aria-pressed]="k.pressed">{{k.name}}</button>
+          <button type="button" (click)="k.pick($event)" [attr.aria-pressed]="k.pressed" [style]="k.style">{{k.name}}</button>
         }
       </div>
       <label class="flex items-center gap-2 min-h-11 py-0 px-1.5 text-[14px] cursor-pointer">
-        <input class="w-4.5 h-4.5 accent-amber" type="checkbox" [attr.checked]="onlyLive" [attr.sc-camel-on-change]="toggleLive">Solo al aire
+        <input class="check" type="checkbox" [attr.checked]="onlyLive" (change)="toggleLive($event)">Solo al aire
       </label>
       <label class="flex items-center gap-2 text-[13px] text-muted">Ordenar
         <select class="min-h-11 py-0 px-2.5 border border-edge rounded-[22px] bg-ink text-fg [font:14px_'IBM_Plex_Sans',_sans-serif] [color-scheme:dark]"><option>Número de canal</option><option>Nombre</option><option>Era más antigua</option></select>
       </label>
       <div class="flex border border-edge rounded-[22px] overflow-hidden" role="group" aria-label="Vista">
-        <button type="button" (click)="gridView()" [attr.aria-pressed]="isGrid" aria-label="Vista en cuadrícula">
-          <svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="7" height="7"></rect><rect x="13" y="4" width="7" height="7"></rect><rect x="4" y="13" width="7" height="7"></rect><rect x="13" y="13" width="7" height="7"></rect></svg>
+        <button type="button" (click)="gridView($event)" [attr.aria-pressed]="isGrid" aria-label="Vista en cuadrícula" [style]="gridBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="7" height="7"></rect><rect x="13" y="4" width="7" height="7"></rect><rect x="4" y="13" width="7" height="7"></rect><rect x="13" y="13" width="7" height="7"></rect></svg>
         </button>
-        <button type="button" (click)="listView()" [attr.aria-pressed]="isList" aria-label="Vista en lista">
-          <svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        <button type="button" (click)="listView($event)" [attr.aria-pressed]="isList" aria-label="Vista en lista" [style]="listBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
         </button>
       </div>
     </div>
@@ -55,7 +55,7 @@ a{color:#FFB547}a:hover{color:#FFD08A}
     @if (empty) {
       <div class="p-12 border border-dashed border-edge rounded-2xl text-center text-muted">
         <div class="font-display text-[22px] text-fg">Sin señal con esos filtros</div>
-        <button class="mt-3 min-h-11 py-0 px-4.5 border border-edge rounded-[22px] bg-transparent text-amber [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="clearFilters()">Quitar filtros</button>
+        <button class="mt-3 min-h-11 py-0 px-4.5 border border-edge rounded-[22px] bg-transparent text-amber [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="clearFilters($event)">Quitar filtros</button>
       </div>
     }
 
@@ -76,11 +76,11 @@ a{color:#FFB547}a:hover{color:#FFD08A}
             </div>
             <div class="flex gap-2 pt-3 px-4 pb-4">
               <a class="flex-1 inline-flex items-center justify-center gap-2 min-h-11 rounded-[22px] bg-amber text-on-amber font-semibold text-[14px] no-underline" routerLink="/ver/5">
-                <svg width="14" height="14" sc-camel-view-box="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>Ver
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>Ver
               </a>
               <a class="inline-flex items-center min-h-11 py-0 px-4 border border-edge rounded-[22px] text-fg text-[14px] no-underline" routerLink="/canal/5">Info</a>
               <button class="w-11 h-11 inline-flex items-center justify-center border border-edge rounded-[22px] bg-transparent text-fg cursor-pointer" type="button" aria-label="Copiar enlace del canal" title="Compartir">
-                <svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
               </button>
             </div>
           </article>

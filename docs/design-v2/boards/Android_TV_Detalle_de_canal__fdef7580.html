@@ -17,7 +17,7 @@ body{margin:0;background:#0B0B09}
       <p class="m-0 max-w-245 text-[26px] leading-[1.5] text-fg-2">Caricaturas y anime de la televisión abierta, con bloques de tarde y cortes comerciales de época.</p>
       <div class="flex gap-5 mt-2">
         @for (a of actions; track $index) {
-          <button type="button" (click)="a.pick()">{{a.label}}</button>
+          <button type="button" (click)="a.pick($event)" [style]="a.style">{{a.label}}</button>
         }
       </div>
     </section>
@@ -37,7 +37,7 @@ body{margin:0;background:#0B0B09}
     <span class="font-display font-semibold text-[30px]">Eras del canal</span>
     <div class="flex gap-5">
       @for (e of eras; track $index) {
-        <button type="button" (click)="e.pick()">
+        <button type="button" (click)="e.pick($event)" [style]="e.style">
           <span class="font-mono text-[18px] opacity-[0.85]">{{e.years}}</span>
           <span class="font-bold text-[26px]">{{e.name}}</span>
           <span class="text-[18px] opacity-[0.85]">{{e.info}}</span>

@@ -14,22 +14,22 @@ a{color:#FFB547}a:hover{color:#FFD08A}
       </div>
       <div class="flex gap-1.5" role="group" aria-label="Día">
         @for (d of days; track $index) {
-          <button type="button" (click)="d.pick()" [attr.aria-pressed]="d.pressed">{{d.label}}</button>
+          <button type="button" (click)="d.pick($event)" [attr.aria-pressed]="d.pressed" [style]="d.style">{{d.label}}</button>
         }
       </div>
     </div>
 
     <div class="flex flex-wrap items-center gap-2.5">
       <label class="flex-[1_1_240px] flex items-center gap-2 min-h-11 py-0 px-3.5 border border-edge rounded-[22px] bg-panel">
-        <svg width="16" height="16" sc-camel-view-box="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
         <input class="flex-1 min-w-0 border-0 outline-none bg-transparent text-fg [font:14px_'IBM_Plex_Sans',_sans-serif]" type="search" aria-label="Buscar en la guía" placeholder="Buscar serie en la guía…">
       </label>
       <div class="flex flex-wrap gap-1.5" role="group" aria-label="Categoría">
         @for (k of cats; track $index) {
-          <button type="button" (click)="k.pick()" [attr.aria-pressed]="k.pressed">{{k.name}}</button>
+          <button type="button" (click)="k.pick($event)" [attr.aria-pressed]="k.pressed" [style]="k.style">{{k.name}}</button>
         }
       </div>
-      <label class="flex items-center gap-2 min-h-11 text-[14px] cursor-pointer"><input class="w-4.5 h-4.5 accent-amber" type="checkbox">Solo especiales y películas</label>
+      <label class="flex items-center gap-2 min-h-11 text-[14px] cursor-pointer"><input class="check" type="checkbox">Solo especiales y películas</label>
       <span class="flex-1"></span>
       <button class="min-h-11 py-0 px-4 border border-live rounded-[22px] bg-transparent text-danger [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">● Ir a ahora</button>
     </div>
@@ -52,7 +52,7 @@ a{color:#FFB547}a:hover{color:#FFD08A}
             </a>
             <div class="flex-1 flex gap-1 py-1.5 px-0">
               @for (s of r.slots; track $index) {
-                <a routerLink="/series/1">
+                <a routerLink="/series/1" [style]="s.style">
                   <span class="text-[14px] font-semibold truncate">{{s.title}}</span>
                   <span class="font-mono text-[11px] opacity-[0.8] overflow-hidden whitespace-nowrap">{{s.sub}}</span>
                 </a>

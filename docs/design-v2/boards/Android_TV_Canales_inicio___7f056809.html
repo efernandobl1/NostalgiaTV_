@@ -9,7 +9,7 @@ body{margin:0;background:#0B0B09}
 
   <header class="relative flex items-center gap-12">
     <span class="flex items-center gap-3.5">
-      <svg width="44" height="44" sc-camel-view-box="0 0 36 36" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path><rect x="8" y="14" width="16" height="12" rx="2"></rect></svg>
+      <svg width="44" height="44" viewBox="0 0 36 36" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path><rect x="8" y="14" width="16" height="12" rx="2"></rect></svg>
       <span class="font-display font-bold text-[28px] tracking-[0.08em]">NOSTALGIA TV</span>
     </span>
     <nav class="flex gap-3">
@@ -19,7 +19,7 @@ body{margin:0;background:#0B0B09}
       <span class="py-3 px-7 text-[24px] text-muted">Vincular</span>
     </nav>
     <span class="flex-1"></span>
-    <span class="w-14 h-14 flex items-center justify-center rounded-[28px] bg-[rgba(236,232,220,0.1)]" aria-label="Buscar"><svg width="26" height="26" sc-camel-view-box="0 0 24 24" fill="none" stroke="#ECE8DC" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></span>
+    <span class="w-14 h-14 flex items-center justify-center rounded-[28px] bg-[rgba(236,232,220,0.1)]" aria-label="Buscar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ECE8DC" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></span>
     <span class="font-display font-semibold text-[32px]">14:32</span>
     <span class="w-14 h-14 rounded-full flex items-center justify-center font-display font-bold text-[22px] text-on-amber bg-amber" aria-hidden="true">FE</span>
   </header>
@@ -33,7 +33,7 @@ body{margin:0;background:#0B0B09}
     <span class="text-[28px] text-fg-2">T2 · E14 · El poder oculto de Gohan · termina 14:39</span>
     <div class="flex gap-5 mt-4">
       <span class="inline-flex items-center gap-3.5 h-19 py-0 px-10 rounded-[38px] bg-amber text-on-amber font-bold text-[28px] shadow-[0_0_0_4px_#0B0B09,_0_0_0_8px_#FFF3DA] [transform:scale(1.04)]">
-        <svg width="26" height="26" sc-camel-view-box="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>
         Ver en vivo
       </span>
       <span class="inline-flex items-center h-19 py-0 px-10 rounded-[38px] bg-[rgba(236,232,220,0.12)] font-semibold text-[28px]">Guía</span>
@@ -50,7 +50,7 @@ body{margin:0;background:#0B0B09}
     </div>
     <div class="flex gap-7">
       @for (c of channels; track $index) {
-        <div>
+        <div [style]="c.style">
           <span class="flex items-center gap-4">
             <span class="font-display font-bold text-[44px] text-amber">{{c.num}}</span>
             <span class="font-semibold text-[24px]">{{c.name}}</span>

@@ -5,15 +5,15 @@ body{margin:0;background:#0E0E0C}
 <div class="w-97.5 h-211 flex flex-col overflow-hidden bg-ink text-fg font-sans">
   <div class="flex-none relative aspect-[16_/_9] [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_radial-gradient(ellipse_at_center,_#2A2920_0%,_#050504_80%)]">
     <a class="absolute top-1.5 left-1.5 w-11 h-11 flex items-center justify-center text-fg" routerLink="/MobHome" aria-label="Volver">
-      <svg width="22" height="22" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
     </a>
     <span class="absolute top-2 right-3.5 font-display font-bold text-[32px] text-ok [text-shadow:0_0_8px_rgba(139,224,143,0.5)]">{{ch.num}}</span>
     <span class="absolute inset-0 flex items-center justify-center font-mono text-[11px] tracking-[0.12em] text-faint">[ VIDEO ]</span>
     <a class="absolute right-1.5 bottom-2 w-11 h-11 flex items-center justify-center text-fg" routerLink="/MobFullscreen" aria-label="Pantalla completa">
-      <svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg>
     </a>
     <button class="absolute right-13 bottom-2 w-11 h-11 flex items-center justify-center border-0 bg-transparent text-fg" type="button" aria-label="Silenciar">
-      <svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M17 8a5 5 0 0 1 0 8"></path></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M17 8a5 5 0 0 1 0 8"></path></svg>
     </button>
     <span class="absolute left-0 right-0 bottom-0 h-[3px] bg-[rgba(255,255,255,0.15)]"><span class="block h-[3px] bg-amber" [style.width.%]="ch.pct"></span></span>
   </div>
@@ -29,20 +29,20 @@ body{margin:0;background:#0E0E0C}
 
     <div class="flex gap-2 overflow-x-auto pb-0.5">
       @for (c of chips; track $index) {
-        <button type="button" (click)="c.pick()" [attr.aria-pressed]="c.pressed">{{c.num}} · {{c.short}}</button>
+        <button type="button" (click)="c.pick($event)" [attr.aria-pressed]="c.pressed" [style]="c.style">{{c.num}} · {{c.short}}</button>
       }
     </div>
 
     <div class="flex border-b border-line" role="tablist" aria-label="Panel">
       @for (t of tabs; track $index) {
-        <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick()">{{t.label}}</button>
+        <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick($event)" [style]="t.style">{{t.label}}</button>
       }
     </div>
 
     @if (showGuide) {
       <div class="flex flex-col">
         @for (g of guide; track $index) {
-          <div>
+          <div [style]="g.style">
             <span class="w-12 flex-none font-mono text-[13px]" [style.color]="g.timeColor">{{g.time}}</span>
             <span class="flex flex-col gap-0.5">
               <span class="font-semibold text-[14px]">{{g.title}}</span>
@@ -73,7 +73,7 @@ body{margin:0;background:#0E0E0C}
 
   <nav class="flex-none flex border-t border-raised-2 bg-rail pb-2" aria-label="Principal">
     @for (t of nav; track $index) {
-      <a [routerLink]="t.href" [attr.aria-current]="t.current">
+      <a [routerLink]="t.href" [attr.aria-current]="t.current" [style]="t.style">
         <span class="w-6 h-1 rounded-xs" aria-hidden="true" [style.background]="t.bar"></span>
         {{t.label}}
       </a>

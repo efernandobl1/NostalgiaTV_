@@ -18,14 +18,14 @@ a{color:#FFB547}a:hover{color:#FFD08A}
 
     <div class="flex gap-1 border-b border-line" role="tablist" aria-label="Secciones del perfil">
       @for (t of tabs; track $index) {
-        <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick()">{{t.label}}</button>
+        <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick($event)" [style]="t.style">{{t.label}}</button>
       }
     </div>
 
     @if (showHistory) {
       <div class="flex flex-wrap items-center gap-2.5">
         @for (f of hFilters; track $index) {
-          <button type="button" (click)="f.pick()" [attr.aria-pressed]="f.pressed">{{f.label}}</button>
+          <button type="button" (click)="f.pick($event)" [attr.aria-pressed]="f.pressed" [style]="f.style">{{f.label}}</button>
         }
         <span class="flex-1"></span>
         <button class="min-h-11 py-0 px-4 border border-edge rounded-[22px] bg-transparent text-danger [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Borrar historial</button>

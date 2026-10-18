@@ -30,7 +30,7 @@ body{margin:0;background:#0B0B09}
         </span>
         <div class="flex-1 flex gap-2">
           @for (s of r.slots; track $index) {
-            <button type="button" (click)="s.pick()">
+            <button type="button" (click)="s.pick($event)" [style]="s.style">
               <span class="text-[24px] font-semibold truncate">{{s.title}}</span>
               <span class="font-mono text-[18px] opacity-[0.8] whitespace-nowrap overflow-hidden">{{s.sub}}</span>
             </button>

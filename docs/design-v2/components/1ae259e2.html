@@ -21,7 +21,7 @@ body{margin:0}
     <div class="flex flex-col gap-0.5">
       <span class="pt-0 px-2.5 pb-1.5 font-mono text-[11px] tracking-[0.14em] text-dim">{{g.label}}</span>
       @for (it of g.items; track $index) {
-        <a [routerLink]="it.href" [attr.aria-current]="it.current">
+        <a [routerLink]="it.href" [attr.aria-current]="it.current" [style]="it.style">
           <span class="w-7.5 font-mono text-[11px]" [style.color]="it.chColor">{{it.ch}}</span>
           <span class="flex-1">{{it.label}}</span>
           @if (it.hasBadge) {

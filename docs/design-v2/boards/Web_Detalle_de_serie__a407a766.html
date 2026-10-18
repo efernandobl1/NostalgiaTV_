@@ -23,7 +23,7 @@ a{color:#FFB547}a:hover{color:#FFD08A}
         <p class="m-0 max-w-170 text-[16px] leading-[1.6] text-fg-2">Goku y sus amigos defienden la Tierra de enemigos cada vez más poderosos, desde los Saiyajin hasta Majin Buu.</p>
         <div class="flex flex-wrap gap-2.5 mt-1">
           <a class="inline-flex items-center gap-2.5 min-h-13 py-0 px-6 rounded-[26px] bg-amber text-on-amber font-semibold text-[16px] no-underline" routerLink="/ver/5">
-            <svg width="18" height="18" sc-camel-view-box="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>
             Continuar T2 · E14
           </a>
           <a class="inline-flex items-center min-h-13 py-0 px-4.5 border border-edge rounded-[26px] text-[14px] text-fg-2 no-underline" routerLink="/ver/5">Se emite en <strong class="ml-1.5 font-semibold text-fg">CH 05 · Canal 5 Retro</strong></a>
@@ -40,7 +40,7 @@ a{color:#FFB547}a:hover{color:#FFD08A}
         <h2 class="my-0 mr-3 ml-0 font-display text-[26px] font-bold" id="eps">Episodios</h2>
         <div class="flex flex-wrap gap-1.5" role="group" aria-label="Temporadas">
           @for (t of seasons; track $index) {
-            <button type="button" (click)="t.pick()" [attr.aria-pressed]="t.pressed">{{t.label}}</button>
+            <button type="button" (click)="t.pick($event)" [attr.aria-pressed]="t.pressed" [style]="t.style">{{t.label}}</button>
           }
         </div>
       </div>
@@ -66,7 +66,7 @@ a{color:#FFB547}a:hover{color:#FFD08A}
       </label>
       <button class="self-end min-h-11 py-0 px-5 border-0 rounded-[22px] bg-amber text-on-amber [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Publicar</button>
       @for (c of comments; track $index) {
-        <article>
+        <article [style]="c.style">
           <span class="w-9 h-9 flex-none rounded-full flex items-center justify-center font-display font-bold text-[13px] bg-line" aria-hidden="true">{{c.ini}}</span>
           <div class="flex-1 min-w-0 flex flex-col gap-1">
             <span class="text-[14px]"><strong class="font-semibold">{{c.user}}</strong> <span class="text-dim">· {{c.time}}</span></span>

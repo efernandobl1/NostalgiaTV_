@@ -27,7 +27,7 @@ a{color:#FFB547}a:hover{color:#FFD08A}
     <div class="flex flex-wrap gap-4 items-start">
       <section class="flex-[1_1_300px] min-w-0 flex flex-col gap-2" aria-label="Perfiles">
         @for (p of profiles; track $index) {
-          <button type="button" (click)="p.pick()" [attr.aria-pressed]="p.pressed">
+          <button type="button" (click)="p.pick($event)" [attr.aria-pressed]="p.pressed" [style]="p.style">
             <span class="w-10 h-10 flex-none rounded-full flex items-center justify-center font-display font-bold text-fg bg-line" aria-hidden="true">{{p.initials}}</span>
             <span class="flex-1 min-w-0 flex flex-col gap-0.5 text-left">
               <span class="font-semibold text-[14px] text-fg">{{p.name}}</span>
@@ -42,7 +42,7 @@ a{color:#FFB547}a:hover{color:#FFD08A}
         <section class="flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="dev">
           <div class="flex flex-wrap justify-between items-center gap-3">
             <h2 class="m-0 font-display text-[18px] font-semibold" id="dev">Dispositivos de {{sel.name}}</h2>
-            <button class="min-h-10 py-0 px-3.5 border border-edge rounded-md bg-transparent text-fg [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="revokeAll()">Revocar todos</button>
+            <button class="btn btn-ghost btn-sm" type="button" (click)="revokeAll($event)">Revocar todos</button>
           </div>
           @for (d of devices; track $index) {
             <div class="flex flex-wrap items-center gap-3 py-2.5 px-0 border-t border-raised-2">
@@ -51,7 +51,7 @@ a{color:#FFB547}a:hover{color:#FFD08A}
                 <span class="text-[14px] font-medium">{{d.name}}</span>
                 <span class="text-[12px] text-muted">Visto {{d.seen}} · expira {{d.expires}}</span>
               </span>
-              <button class="min-h-10 py-0 px-3 border border-edge rounded-md bg-transparent text-danger [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="d.revoke()">Revocar</button>
+              <button class="min-h-10 py-0 px-3 border border-edge rounded-md bg-transparent text-danger [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="d.revoke($event)">Revocar</button>
             </div>
           }
         </section>

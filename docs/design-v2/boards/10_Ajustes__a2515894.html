@@ -15,7 +15,7 @@ select,input[type=number],input[type=time],input[type=text]{min-height:44px;padd
         <span class="font-mono text-[12px] tracking-[0.14em] text-muted">CH 10 · SISTEMA</span>
         <h1 class="m-0 font-display font-bold text-[36px]">Ajustes</h1>
       </div>
-      <button class="min-h-11 py-0 px-4.5 border-0 rounded-md bg-amber text-on-amber [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Guardar cambios</button>
+      <button class="btn btn-primary" type="button">Guardar cambios</button>
     </header>
 
     <div class="grid grid-cols-[repeat(auto-fit,_minmax(420px,_1fr))] gap-4 items-start">
@@ -29,7 +29,7 @@ select,input[type=number],input[type=time],input[type=text]{min-height:44px;padd
           <select><option>Espectador</option><option>Editor</option></select>
         </label>
         <label class="flex items-center justify-between gap-3 min-h-11 text-[14px]">Registro público habilitado
-          <input class="w-4.5 h-4.5 accent-amber" type="checkbox" checked="">
+          <input class="check" type="checkbox" checked="">
         </label>
       </section>
 
@@ -37,7 +37,7 @@ select,input[type=number],input[type=time],input[type=text]{min-height:44px;padd
         <h2 class="m-0 font-display text-[18px] font-semibold" id="sch">Reglas de programación</h2>
         <label class="flex flex-col gap-2 text-[12px] text-muted">
           <span class="flex justify-between">Ventana sin repetir episodios <span class="font-mono text-fg">{{hours}} h</span></span>
-          <input class="w-full accent-amber" type="range" min="0" max="72" [attr.value]="hours" [attr.sc-camel-on-change]="setHours">
+          <input class="w-full accent-amber" type="range" min="0" max="72" [attr.value]="hours" (change)="setHours($event)">
         </label>
         <div class="grid grid-cols-[repeat(2,_minmax(0,_1fr))] gap-2.5">
           <label class="flex flex-col gap-1.5 text-[12px] text-muted">Especiales por día (0–50)
@@ -63,7 +63,7 @@ select,input[type=number],input[type=time],input[type=text]{min-height:44px;padd
               <span class="text-[14px]">{{s.label}}</span>
               <span class="text-[12px] text-muted">{{s.hint}}</span>
             </span>
-            <input class="w-4.5 h-4.5 accent-amber" type="checkbox" [attr.checked]="s.on">
+            <input class="check" type="checkbox" [attr.checked]="s.on">
           </label>
         }
       </section>
@@ -85,7 +85,7 @@ select,input[type=number],input[type=time],input[type=text]{min-height:44px;padd
           </label>
         </div>
         <label class="flex items-center justify-between gap-3 min-h-11 text-[14px]">Modo nocturno habilitado
-          <input class="w-4.5 h-4.5 accent-amber" type="checkbox" checked="">
+          <input class="check" type="checkbox" checked="">
         </label>
       </section>
     </div>

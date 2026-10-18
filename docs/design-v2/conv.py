@@ -260,6 +260,16 @@ def conv_tag_attrs(attrs):
     out_cls, out = [], []
     for m in re.finditer(r'([a-zA-Z_:@\-]+)(?:="([^"]*)")?', attrs):
         name, val = m.group(1), m.group(2)
+        if name.startswith('sc-camel-'):
+            parts = name[9:].split('-')
+            name = parts[0] + ''.join(p.capitalize() for p in parts[1:])
+        if name.lower().startswith('on') and name.lower() != 'on' and val and '{{' in val:
+            expr = re.sub(r'^\{\{\s*|\s*\}\}$', '', val)
+            out.append(f'({name[2:].lower()})="{expr}($event)"')
+            continue
+        if name == 'style' and val and re.fullmatch(r'\s*\{\{[^}]+\}\}\s*', val):
+            out.append(f'[style]="{re.sub(r"^\s*\{\{\s*|\s*\}\}\s*$", "", val)}"')
+            continue
         if name == 'style':
             c, b = conv_style(val or '')
             out_cls += c

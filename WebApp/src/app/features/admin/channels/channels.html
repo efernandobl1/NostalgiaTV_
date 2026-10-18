@@ -1,0 +1,135 @@
+<app-page-header eyebrow="CH 03 · OPERACIÓN" title="Canales y eras">
+  <button class="btn btn-primary" type="button" (click)="open('channel', 'create')">Nuevo canal</button>
+</app-page-header>
+
+<div class="flex flex-wrap gap-4 items-start">
+  <section class="flex-[1_1_240px] flex flex-col gap-2" aria-label="Canales">
+    @for (c of channels; track c.id; let i = $index) {
+      <button type="button" [attr.aria-pressed]="i === channel()" (click)="channel.set(i)"
+              class="flex items-center gap-3 w-full p-2.5 rounded-[10px] cursor-pointer border border-line bg-panel hover:not-aria-pressed:bg-raised aria-pressed:border-amber aria-pressed:bg-amber-wash">
+        <span class="w-11 h-11 flex-none rounded-lg flex items-center justify-center font-display font-bold text-[14px] text-amber [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#24241F]" aria-hidden="true">{{ c.num }}</span>
+        <span class="flex-1 min-w-0 flex flex-col gap-0.5 text-left">
+          <span class="font-semibold text-[14px] text-fg">{{ c.name }}</span>
+          <span class="text-[12px] text-muted">{{ c.era }}</span>
+        </span>
+      </button>
+    }
+  </section>
+
+  <div class="flex-[999_1_560px] min-w-0 flex flex-col gap-4">
+    <section class="flex flex-wrap gap-5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="ch">
+      <div class="w-24 h-24 rounded-[10px] flex items-center justify-center font-display font-bold text-[28px] text-amber [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#24241F] border border-dashed border-edge" aria-hidden="true">LOGO</div>
+      <div class="flex-[1_1_320px] flex flex-col gap-2">
+        <h2 class="m-0 font-display text-[26px] font-bold" id="ch">{{ channels[channel()].name }}</h2>
+        <div class="flex flex-wrap gap-y-2 gap-x-4.5 text-[13px] text-muted">
+          <span>Desde 01 mar 2024</span>
+          <span>Sin fecha de cierre</span>
+          <span class="font-mono">ShareId 7f3c2e10-…-a91e</span>
+        </div>
+        <p class="m-0 text-[14px] leading-[1.55] text-fg-2 max-w-160">Canal de caricaturas y anime de la televisión abierta, con bloques de tarde y cortes comerciales de época.</p>
+      </div>
+      <div class="flex flex-col gap-2 items-start">
+        <button class="btn btn-ghost" type="button">Copiar enlace público</button>
+        <button class="btn btn-ghost" type="button" (click)="open('channel')">Editar canal</button>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="eras">
+      <div class="flex flex-wrap justify-between items-center gap-3">
+        <h2 class="m-0 font-display text-[18px] font-semibold" id="eras">Línea de tiempo de eras</h2>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="open('era', 'create')">Agregar era</button>
+      </div>
+      <div class="flex gap-1">
+        @for (e of eras; track e.slug; let i = $index) {
+          <button type="button" [attr.aria-pressed]="i === eraIndex()" (click)="eraIndex.set(i)" [style.flex]="e.w + ' 1 0'"
+                  class="min-w-0 flex flex-col items-start gap-1 p-3 rounded-md cursor-pointer text-left border border-edge bg-raised text-fg aria-pressed:border-amber aria-pressed:bg-amber aria-pressed:text-on-amber">
+            <span class="font-mono text-[11px] opacity-[0.85]">{{ e.years }}</span>
+            <span class="font-semibold text-[14px]">{{ e.name }}</span>
+            @if (e.onAir) {
+              <span class="font-mono text-[10px] tracking-[0.1em]">● EN EMISIÓN</span>
+            }
+          </button>
+        }
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-[13px] text-muted">
+        <span>{{ era().desc }}</span>
+        <span class="flex-1"></span>
+        <span class="font-mono">carpeta: /eras/{{ era().slug }}</span>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="open('era')">Editar era</button>
+        <button class="btn btn-primary btn-sm" type="button" (click)="open('broadcast')">Emitir esta era</button>
+      </div>
+    </section>
+
+    <div class="flex flex-wrap gap-4 items-start">
+      <section class="flex-[3_1_460px] min-w-0 flex flex-col gap-3 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="eraseries">
+        <div class="flex justify-between items-center gap-3">
+          <h2 class="m-0 font-display text-[18px] font-semibold" id="eraseries">Series de la era</h2>
+          <button class="btn btn-ghost btn-sm" type="button" (click)="open('eraSeries')">Editar series</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="dtable">
+            <thead><tr><th>SERIE</th><th>TEMPORADAS</th><th>INTERLUDIOS PROPIOS</th></tr></thead>
+            <tbody>
+              @for (s of eraSeries; track s.name) {
+                <tr>
+                  <td class="font-medium">{{ s.name }}</td>
+                  <td>
+                    <span class="flex flex-wrap gap-1">
+                      @for (t of s.seasons; track t.label) {
+                        <span class="py-[3px] px-2 rounded-sm font-mono text-[11px]" [style.color]="t.ink" [style.background]="t.bg">{{ t.label }}</span>
+                      }
+                    </span>
+                  </td>
+                  <td class="font-mono text-muted">{{ s.interludes }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="flex-[2_1_300px] min-w-0 flex flex-col gap-4">
+        <section class="flex flex-col gap-3 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="breaks">
+          <h2 class="m-0 font-display text-[18px] font-semibold" id="breaks">Reglas de corte</h2>
+          <div class="grid grid-cols-3 gap-2.5">
+            <label class="flex flex-col gap-1.5 text-[12px] text-muted">Mín. anuncios
+              <input class="field field-mono text-[15px]" type="number" value="2" min="1">
+            </label>
+            <label class="flex flex-col gap-1.5 text-[12px] text-muted">Máx. anuncios
+              <input class="field field-mono text-[15px]" type="number" value="4" min="1">
+            </label>
+            <label class="flex flex-col gap-1.5 text-[12px] text-muted">Máx. segundos
+              <input class="field field-mono text-[15px]" type="number" value="180" min="1">
+            </label>
+          </div>
+        </section>
+
+        <section class="flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="eraint">
+          <div class="flex justify-between items-center gap-3">
+            <h2 class="m-0 font-display text-[18px] font-semibold" id="eraint">Interludios de la era</h2>
+            <button class="btn btn-ghost btn-sm" type="button" (click)="open('eraInterlude')">Asignar</button>
+          </div>
+          @for (i of eraInterludes; track i.title) {
+            <div class="flex items-center gap-2.5 py-2 border-t border-raised-2">
+              <span class="w-18.5 flex-none font-mono text-[10px] tracking-[0.08em]" [style.color]="i.color">{{ i.kind }}</span>
+              <span class="flex-1 min-w-0 text-[13px]">{{ i.title }}</span>
+              <span class="font-mono text-[12px] text-muted">×{{ i.weight }} · {{ i.gap }}</span>
+            </div>
+          }
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+@switch (dlg()) {
+  @case ('channel') { <app-channel-dialog [mode]="mode()" (closed)="dlg.set(null)" /> }
+  @case ('era') { <app-era-dialog [mode]="mode()" (closed)="dlg.set(null)" /> }
+  @case ('eraSeries') { <app-era-series-dialog (closed)="dlg.set(null)" /> }
+  @case ('eraInterlude') { <app-era-interlude-dialog (closed)="dlg.set(null)" /> }
+  @case ('broadcast') {
+    <app-confirm-dialog [heading]="'¿Emitir la era ' + era().name + '?'" tone="warning" confirmLabel="Emitir era"
+      message="Se reemplaza la era actual del canal y se regenera la programación desde ahora. Los espectadores conectados verán el cambio en el siguiente bloque."
+      (closed)="dlg.set(null)" />
+  }
+}

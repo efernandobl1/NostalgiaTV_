@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
 
-// Feature routes (admin, public, auth, tv) are added as each redesigned screen lands.
-export const routes: Routes = [];
+export const routes: Routes = [
+  { path: 'admin', loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES) },
+  { path: '', pathMatch: 'full', redirectTo: 'admin' },
+];

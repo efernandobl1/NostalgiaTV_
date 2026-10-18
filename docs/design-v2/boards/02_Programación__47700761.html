@@ -18,14 +18,14 @@ td{padding:10px;border-bottom:1px solid #24241F;font-size:13px;vertical-align:to
         <h1 class="m-0 font-display font-bold text-[36px]">Programación</h1>
       </div>
       <div class="flex flex-wrap gap-2.5">
-        <button class="min-h-11 py-0 px-4 border border-edge rounded-md bg-transparent text-fg [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Exportar guía</button>
-        <button class="min-h-11 py-0 px-4.5 border-0 rounded-md bg-amber text-on-amber [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="openRegen()">Regenerar programación</button>
+        <button class="btn btn-ghost" type="button">Exportar guía</button>
+        <button class="btn btn-primary" type="button" (click)="openRegen($event)">Regenerar programación</button>
       </div>
     </header>
 
     <div class="flex flex-wrap items-center gap-2.5">
       @for (c of channels; track $index) {
-        <button type="button" (click)="c.pick()" [attr.aria-pressed]="c.pressed">
+        <button type="button" (click)="c.pick($event)" [attr.aria-pressed]="c.pressed" [style]="c.style">
           <span class="font-mono text-[11px] opacity-[0.8]">{{c.code}}</span>
           {{c.name}}
         </button>
@@ -50,7 +50,7 @@ td{padding:10px;border-bottom:1px solid #24241F;font-size:13px;vertical-align:to
     <div class="flex flex-wrap gap-4 items-start">
       <section class="flex-[3_1_520px] min-w-0 flex flex-col bg-panel border border-line rounded-[10px] overflow-hidden" aria-label="Guía del día">
         @for (p of programs; track $index) {
-          <button type="button" (click)="p.pick()" [attr.aria-pressed]="p.pressed">
+          <button type="button" (click)="p.pick($event)" [attr.aria-pressed]="p.pressed" [style]="p.rowStyle">
             <span class="flex flex-col gap-0.5 w-18 flex-none">
               <span class="font-mono text-[15px] text-fg">{{p.start}}</span>
               <span class="font-mono text-[11px] text-muted">{{p.end}}</span>
