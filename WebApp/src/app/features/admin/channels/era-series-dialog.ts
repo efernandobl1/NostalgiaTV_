@@ -15,7 +15,7 @@ const LIST: [string, string, number][] = [
   selector: 'app-era-series-dialog',
   imports: [Dialog],
   template: `
-    <app-dialog eyebrow="ÉPOCA DORADA 1996–2001" heading="Series de la era" [tight]="true" (closed)="closed.emit()">
+    <app-dialog eyebrow="ÉPOCA DORADA 1996–2001" heading="Series de la era" gap="gap-3" (closed)="closed.emit()">
       <label class="flex items-center gap-2 min-h-11 px-3 border border-edge rounded-md bg-ink">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
         <input class="flex-1 min-w-0 border-0 outline-none bg-transparent text-fg text-[14px]" type="search" aria-label="Buscar series" placeholder="Buscar series…"

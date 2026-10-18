@@ -1,0 +1,98 @@
+<app-page-header eyebrow="CH 09 · SISTEMA" title="Acceso">
+  <button class="btn btn-ghost" type="button" (click)="open('role', 'create')">Nuevo rol</button>
+  <button class="btn btn-primary" type="button" (click)="open('user', 'create')">Nuevo usuario</button>
+</app-page-header>
+
+<div class="flex gap-1 border-b border-line" role="tablist" aria-label="Secciones">
+  @for (t of tabs; track t; let i = $index) {
+    <button type="button" role="tab" class="tab" [attr.aria-selected]="i === tab()" (click)="tab.set(i)">{{ t }}</button>
+  }
+</div>
+
+@switch (tab()) {
+  @case (0) {
+    <section class="py-2 px-3 bg-panel border border-line rounded-[10px] overflow-x-auto" aria-label="Usuarios">
+      <table class="dtable">
+        <thead><tr><th>USUARIO</th><th>ROL</th><th>INICIO EXTERNO</th><th>ESTADO</th><th>SESIONES</th><th></th></tr></thead>
+        <tbody>
+          @for (u of users; track u.name) {
+            <tr>
+              <td class="font-semibold">{{ u.name }}</td>
+              <td class="text-fg-2">{{ u.role }}</td>
+              <td><span class="font-mono text-[12px] text-muted">{{ u.ext }}</span></td>
+              <td><span class="text-[13px]" [style.color]="u.stColor">{{ u.status }}</span></td>
+              <td class="font-mono text-[12px] text-muted">{{ u.sessions }}</td>
+              <td class="text-right whitespace-nowrap">
+                <button class="btn btn-ghost btn-xs text-[12px]" type="button" (click)="revoke(u.name)">Cerrar sesiones</button>
+                <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-fg cursor-pointer align-middle hover:bg-raised" type="button" (click)="open('user', 'edit')" aria-label="Editar usuario">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+  @case (1) {
+    <div class="flex flex-wrap gap-4 items-start">
+      <section class="flex-[1_1_260px] flex flex-col gap-2" aria-label="Roles">
+        @for (r of roles; track r.name; let i = $index) {
+          <button type="button" class="pick-card flex-col items-start gap-1 py-3 px-3.5" [attr.aria-pressed]="i === roleIndex()" (click)="roleIndex.set(i)">
+            <span class="flex items-center justify-between gap-2 w-full">
+              <span class="font-semibold text-[14px] text-fg">{{ r.name }}</span>
+              @if (r.viewer) {
+                <span class="py-0.5 px-2 rounded-sm font-mono text-[10px] tracking-[0.08em] text-[#0A1A1F] bg-info">ROL ESPECTADOR</span>
+              }
+            </span>
+            <span class="text-[12px] text-muted text-left">{{ r.desc }}</span>
+          </button>
+        }
+      </section>
+      <section class="flex-[999_1_480px] min-w-0 flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="menus">
+        <div class="flex flex-wrap justify-between items-center gap-3">
+          <h2 class="m-0 font-display text-[18px] font-semibold" id="menus">Menús de {{ role().name }}</h2>
+          <span class="flex gap-2">
+            <button class="btn btn-ghost btn-sm" type="button" (click)="open('role', 'edit')">Editar rol</button>
+            <button class="btn btn-primary btn-sm" type="button">Guardar permisos</button>
+          </span>
+        </div>
+        @for (m of menus(); track m.caption) {
+          <label class="flex items-center gap-2.5 min-h-11 pr-2.5 border-t border-raised-2 text-[14px] cursor-pointer" [class.font-semibold]="!m.depth" [style.padding-left.px]="10 + m.depth * 28">
+            <input class="check" type="checkbox" [checked]="m.on">
+            <span class="flex-1">{{ m.caption }}</span>
+            <span class="font-mono text-[11px] text-dim">{{ m.url }}</span>
+          </label>
+        }
+      </section>
+    </div>
+  }
+  @case (2) {
+    <section class="py-2 px-3 bg-panel border border-line rounded-[10px] overflow-x-auto" aria-label="Registro de actividad">
+      <table class="dtable">
+        <thead><tr><th>FECHA (UTC)</th><th>USUARIO</th><th>ACCIÓN</th><th>RECURSO</th><th>DESCRIPCIÓN</th></tr></thead>
+        <tbody>
+          @for (l of log; track l.at) {
+            <tr>
+              <td class="font-mono text-[12px] text-muted whitespace-nowrap">{{ l.at }}</td>
+              <td class="font-medium">{{ l.user }}</td>
+              <td><span class="font-mono text-[12px] text-amber">{{ l.action }}</span></td>
+              <td class="font-mono text-[12px] text-muted">{{ l.resource }}</td>
+              <td class="text-[13px] text-fg-2">{{ l.desc }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+}
+
+@switch (dlg()) {
+  @case ('user') { <app-user-dialog [mode]="mode()" (closed)="dlg.set(null)" /> }
+  @case ('role') { <app-role-dialog [mode]="mode()" (closed)="dlg.set(null)" /> }
+  @case ('revoke') {
+    <app-confirm-dialog [heading]="'¿Cerrar todas las sesiones de ' + target() + '?'" confirmLabel="Cerrar sesiones" tone="warning"
+      message="Se revocan sus tokens de actualización y se incrementa su versión de sesión. Tendrá que iniciar sesión de nuevo en todos sus dispositivos."
+      (closed)="dlg.set(null)" />
+  }
+}

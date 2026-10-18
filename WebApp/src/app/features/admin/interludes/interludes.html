@@ -1,0 +1,91 @@
+<app-page-header eyebrow="CH 05 · CATÁLOGO" title="Interludios" subtitle="Bumpers y anuncios de época que llenan los cortes." />
+
+<div class="flex flex-wrap items-center gap-2.5">
+  <div class="flex gap-1.5" role="group" aria-label="Tipo">
+    @for (k of kinds; track k[0]; let i = $index) {
+      <button type="button" class="chip" [attr.aria-pressed]="i === kind()" (click)="kind.set(i)">{{ k[0] }} <span class="font-mono text-[11px] opacity-[0.8]">{{ k[1] }}</span></button>
+    }
+  </div>
+  <span class="flex-1"></span>
+  <label class="flex items-center gap-2 text-[13px] text-muted">Bumper
+    <select class="field field-select w-42.5"><option>Todos</option><option>Ya viene</option><option>Continuamos con</option><option>Genérico</option></select>
+  </label>
+  <label class="flex items-center gap-2 text-[13px] text-muted">Temporada
+    <select class="field field-select w-37.5"><option>Todo el año</option><option>Halloween</option><option>Navidad</option></select>
+  </label>
+</div>
+
+<div class="flex flex-wrap gap-4 items-start">
+  <section class="flex-[3_1_560px] min-w-0 py-2 px-3 bg-panel border border-line rounded-[10px] overflow-x-auto" aria-label="Biblioteca">
+    <table class="dtable">
+      <thead><tr><th>TÍTULO</th><th>TIPO</th><th>TEMPORADA</th><th>DURACIÓN</th><th>ÉPOCA</th><th>EMISIÓN</th><th>LICENCIA</th><th></th></tr></thead>
+      <tbody>
+        @for (r of rows(); track r.title) {
+          <tr>
+            <td class="font-medium">{{ r.title }}</td>
+            <td><span class="font-mono text-[11px] tracking-[0.06em] whitespace-nowrap" [style.color]="r.color">{{ r.kind }}</span></td>
+            <td class="text-[13px] text-muted">{{ r.season }}</td>
+            <td class="font-mono text-[13px]">{{ r.dur }}</td>
+            <td class="font-mono text-[12px] text-muted whitespace-nowrap">{{ r.years }}</td>
+            <td><span class="text-[12px] whitespace-nowrap" [style.color]="r.apColor">{{ r.approved }}</span></td>
+            <td class="text-[12px] text-muted">{{ r.license }}</td>
+            <td class="text-right whitespace-nowrap">
+              <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-fg cursor-pointer hover:bg-raised" type="button" (click)="dlg.set('edit')" aria-label="Editar interludio">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+              </button>
+              <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-danger cursor-pointer hover:bg-raised" type="button" (click)="dlg.set('delete')" aria-label="Eliminar interludio">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <section class="flex-[2_1_320px] min-w-0 flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="up">
+    <h2 class="m-0 font-display text-[18px] font-semibold" id="up">Subir interludio</h2>
+    <label class="relative flex flex-col items-center justify-center gap-1.5 min-h-30 border border-dashed border-edge-2 rounded-lg cursor-pointer text-center text-[13px] text-muted hover:border-amber">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M4 20h16"></path></svg>
+      <span class="text-fg">Arrastra un video o haz clic para elegir</span>
+      <span>MP4 / MKV · la duración se detecta con FFmpeg</span>
+      <input class="absolute w-px h-px opacity-0" type="file" accept="video/*">
+    </label>
+    <label class="flex flex-col gap-1.5 text-[12px] text-muted">Título
+      <input class="field field-select" type="text" value="Ya viene · Canal 5 (1997)">
+    </label>
+    <div class="grid grid-cols-2 gap-2.5">
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Tipo
+        <select class="field field-select"><option>Bumper</option><option>Anuncio</option></select>
+      </label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Tipo de bumper
+        <select class="field field-select"><option>Ya viene</option><option>Continuamos con</option><option>Genérico</option></select>
+      </label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Temporada
+        <select class="field field-select"><option>Todo el año</option><option>Halloween</option><option>Navidad</option></select>
+      </label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Región <input class="field field-select" type="text" value="GT"></label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Año desde <input class="field field-select" type="number" value="1996"></label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Año hasta <input class="field field-select" type="number" value="1999"></label>
+    </div>
+    <label class="flex flex-col gap-1.5 text-[12px] text-muted">URL de origen
+      <input class="field field-select" type="url" placeholder="https://…">
+    </label>
+    <label class="flex items-center gap-2.5 min-h-11 text-[14px]"><input class="check" type="checkbox" checked>Aprobado para emisión</label>
+    <label class="flex items-center gap-2.5 min-h-11 text-[14px]"><input class="check" type="checkbox">Permite redistribución</label>
+    <span class="text-[12px] text-muted">Si permites redistribución, la licencia es obligatoria.</span>
+    <label class="flex flex-col gap-1.5 text-[12px] text-muted">Licencia
+      <input class="field field-select" type="text" placeholder="Ej. CC BY 4.0">
+    </label>
+    <button class="btn btn-primary" type="button">Guardar interludio</button>
+  </section>
+</div>
+
+@switch (dlg()) {
+  @case ('edit') { <app-interlude-dialog (closed)="dlg.set(null)" /> }
+  @case ('delete') {
+    <app-confirm-dialog heading="¿Eliminar este interludio?" confirmLabel="Eliminar interludio" tone="danger"
+      message="Se quitará de todas las eras donde está asignado. Los cortes ya programados lo conservan hasta regenerarse."
+      (closed)="dlg.set(null)" />
+  }
+}

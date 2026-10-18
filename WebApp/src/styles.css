@@ -87,3 +87,17 @@
   .dtable th { text-align: left; font: 500 11px var(--font-mono); letter-spacing: .1em; color: var(--color-muted); padding: 8px 10px; border-bottom: 1px solid var(--color-line); }
   .dtable td { padding: 10px; border-bottom: 1px solid var(--color-raised-2); font-size: 13px; vertical-align: top; }
 }
+/* Selectable list card (channels, series, profiles...). */
+@utility pick-card {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--color-line); background: var(--color-panel); color: inherit; font: inherit; text-align: left;
+  &:hover { background: var(--color-raised); }
+  &[aria-pressed="true"] { border-color: var(--color-amber); background: var(--color-amber-wash); }
+}
+/* Underlined section tabs (role="tab" + aria-selected). */
+@utility tab {
+  min-height: 44px; padding: 0 16px; border: 0; margin-bottom: -1px; background: transparent; cursor: pointer;
+  font: 500 14px var(--font-sans); color: var(--color-muted); border-bottom: 2px solid transparent;
+  &:hover { color: var(--color-fg); }
+  &[aria-selected="true"] { color: var(--color-amber); border-bottom-color: var(--color-amber); }
+}

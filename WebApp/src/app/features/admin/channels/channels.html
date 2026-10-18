@@ -6,7 +6,7 @@
   <section class="flex-[1_1_240px] flex flex-col gap-2" aria-label="Canales">
     @for (c of channels; track c.id; let i = $index) {
       <button type="button" [attr.aria-pressed]="i === channel()" (click)="channel.set(i)"
-              class="flex items-center gap-3 w-full p-2.5 rounded-[10px] cursor-pointer border border-line bg-panel hover:not-aria-pressed:bg-raised aria-pressed:border-amber aria-pressed:bg-amber-wash">
+              class="pick-card">
         <span class="w-11 h-11 flex-none rounded-lg flex items-center justify-center font-display font-bold text-[14px] text-amber [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#24241F]" aria-hidden="true">{{ c.num }}</span>
         <span class="flex-1 min-w-0 flex flex-col gap-0.5 text-left">
           <span class="font-semibold text-[14px] text-fg">{{ c.name }}</span>

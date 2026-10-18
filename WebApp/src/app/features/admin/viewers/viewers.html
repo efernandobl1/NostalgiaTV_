@@ -1,0 +1,81 @@
+<app-page-header eyebrow="CH 06 · AUDIENCIA" title="Espectadores" />
+
+<section class="grid grid-cols-[repeat(auto-fit,_minmax(200px,_1fr))] gap-4" aria-label="Indicadores">
+  @for (k of kpis; track k.label) {
+    <div class="flex flex-col gap-2 p-4.5 bg-panel border border-line rounded-[10px]">
+      <span class="font-mono text-[11px] tracking-[0.1em] text-muted">{{ k.label }}</span>
+      <span class="font-display font-semibold text-[34px] leading-[1]">{{ k.value }}</span>
+      <span class="text-[12px] text-muted">{{ k.note }}</span>
+    </div>
+  }
+</section>
+
+<div class="flex flex-wrap gap-4 items-start">
+  <section class="flex-[1_1_300px] min-w-0 flex flex-col gap-2" aria-label="Perfiles">
+    @for (p of profiles; track p.id; let i = $index) {
+      <button type="button" class="pick-card px-3" [attr.aria-pressed]="i === profile()" (click)="profile.set(i)">
+        <span class="w-10 h-10 flex-none rounded-full flex items-center justify-center font-display font-bold text-fg bg-line" aria-hidden="true">{{ p.initials }}</span>
+        <span class="flex-1 min-w-0 flex flex-col gap-0.5 text-left">
+          <span class="font-semibold text-[14px] text-fg">{{ p.name }}</span>
+          <span class="font-mono text-[11px] text-muted">{{ p.id }}</span>
+        </span>
+        <span class="font-mono text-[12px] text-muted whitespace-nowrap">{{ p.devices }} disp.</span>
+      </button>
+    }
+  </section>
+
+  <div class="flex-[999_1_520px] min-w-0 flex flex-col gap-4">
+    <section class="flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="dev">
+      <div class="flex flex-wrap justify-between items-center gap-3">
+        <h2 class="m-0 font-display text-[18px] font-semibold" id="dev">Dispositivos de {{ sel().name }}</h2>
+        <button class="btn btn-ghost btn-sm" type="button" (click)="revoking.set('')">Revocar todos</button>
+      </div>
+      @for (d of devices; track d.name) {
+        <div class="flex flex-wrap items-center gap-3 py-2.5 border-t border-raised-2">
+          <span class="w-2 h-2 rounded-full" aria-hidden="true" [style.background]="d.color"></span>
+          <span class="flex-[1_1_160px] flex flex-col gap-0.5">
+            <span class="text-[14px] font-medium">{{ d.name }}</span>
+            <span class="text-[12px] text-muted">Visto {{ d.seen }} · expira {{ d.expires }}</span>
+          </span>
+          <button class="btn btn-ghost btn-sm px-3 text-danger hover:text-danger" type="button" (click)="revoking.set(d.name)">Revocar</button>
+        </div>
+      }
+    </section>
+
+    <section class="flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="prog">
+      <h2 class="m-0 font-display text-[18px] font-semibold" id="prog">Progreso de visualización</h2>
+      @for (g of progress; track g.series) {
+        <div class="flex flex-col gap-1.5 py-2.5 border-t border-raised-2">
+          <div class="flex flex-wrap justify-between gap-2 text-[14px]">
+            <span><strong class="font-semibold">{{ g.series }}</strong> <span class="font-mono text-[12px] text-amber">{{ g.code }}</span></span>
+            <span class="font-mono text-[12px]" [style.color]="g.color">{{ g.state }}</span>
+          </div>
+          <span class="relative block h-1.5 rounded-[3px] bg-line">
+            @for (r of g.ranges; track r.from) {
+              <span class="absolute top-0 h-1.5 rounded-[3px] bg-amber" [style.left.%]="r.from" [style.width.%]="r.w"></span>
+            }
+          </span>
+        </div>
+      }
+    </section>
+
+    <section class="flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="pair">
+      <h2 class="m-0 font-display text-[18px] font-semibold" id="pair">Vinculaciones pendientes</h2>
+      @for (a of pending; track a.name) {
+        <div class="flex flex-wrap items-center gap-3 py-2.5 border-t border-raised-2">
+          <span class="flex-[1_1_200px] flex flex-col gap-0.5">
+            <span class="text-[14px] font-medium">{{ a.name }}</span>
+            <span class="text-[12px] text-muted">{{ a.kind }} · expira en {{ a.exp }}</span>
+          </span>
+          <button class="btn btn-ghost btn-sm px-3" type="button">Cancelar</button>
+        </div>
+      }
+    </section>
+  </div>
+</div>
+
+@if (revoking() !== null) {
+  <app-confirm-dialog [heading]="revokeHeading()" confirmLabel="Revocar" tone="danger"
+    message="El dispositivo dejará de reproducir de inmediato y tendrá que vincularse otra vez con un código nuevo."
+    (closed)="revoking.set(null)" />
+}
