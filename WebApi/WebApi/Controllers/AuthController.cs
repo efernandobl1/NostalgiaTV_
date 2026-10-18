@@ -77,11 +77,11 @@ public sealed partial class AuthController(IAuthRepository auth, IConfiguration 
         return LocalRedirect(SafeDestination(returnUrl));
     }
 
-    /// <summary>Only the home page and the TV sign-in page are valid post-login destinations.</summary>
+    /// <summary>Only the home page and the TV pairing pages (/vincular, /tv) are valid post-login destinations.</summary>
     public static string SafeDestination(string? value) =>
-        value is "/" or "/tv" || (value?.Length <= 128 && TvCode().IsMatch(value)) ? value! : "/";
+        value is "/" or "/tv" or "/vincular" || (value?.Length <= 128 && TvCode().IsMatch(value)) ? value! : "/";
 
-    [GeneratedRegex(@"^/tv\?code=[A-Za-z2-9-]{12,16}$")]
+    [GeneratedRegex(@"^/(tv|vincular)\?code=[A-Za-z2-9-]{12,16}$")]
     private static partial Regex TvCode();
 }
 

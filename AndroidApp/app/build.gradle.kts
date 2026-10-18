@@ -53,7 +53,11 @@ android {
         compose = true
         buildConfig = true
     }
-    testOptions { unitTests.isReturnDefaultValues = true }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+        // Robolectric renders the Compose screens on the JVM for the screenshot checks.
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
@@ -81,6 +85,9 @@ dependencies {
     testImplementation("org.json:json:20250517")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("org.robolectric:robolectric:4.15.1")
+    testImplementation(platform("androidx.compose:compose-bom:2026.03.01"))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")

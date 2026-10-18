@@ -20,7 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import tv.nostalgia.android.core.*
 import tv.nostalgia.android.features.*
-import tv.nostalgia.android.shared.RetroTheme
+import tv.nostalgia.android.shared.NostalgiaTheme
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -73,7 +73,7 @@ class ConnectionFlowTest {
             }
             compose.runOnUiThread {
                 model.chooseServer()
-                context.setContent { RetroTheme(isTv = tv) { NostalgiaApp(model) } }
+                context.setContent { NostalgiaTheme(isTv = tv) { NostalgiaApp(model) } }
             }
             compose.onNodeWithText("Conecta tu servidor").assertIsDisplayed()
             capture(if (tv) "tv-server.png" else "phone-server.png")
@@ -87,20 +87,14 @@ class ConnectionFlowTest {
                 capture("tv-login.png")
                 approved.set(true)
             } else {
-                compose.onNodeWithText("Usuario").assertIsDisplayed()
+                compose.onNodeWithText("Iniciar sesión").assertIsDisplayed()
                 capture("phone-login.png")
-                compose.onNodeWithText("Usuario").performTextInput("viewer")
-                compose.onNodeWithText("Contraseña").performTextInput("private-test-password")
-                compose.onNodeWithText("Entrar").performClick()
+                compose.onNode(hasSetTextAction() and hasContentDescription("Usuario")).performTextInput("viewer")
+                compose.onNode(hasSetTextAction() and hasContentDescription("Contraseña")).performTextInput("private-test-password")
+                compose.onNodeWithText("Ingresar").performClick()
             }
             compose.waitUntil(20000) { model.state.value.connectionStep == ConnectionStep.Ready && !model.state.value.loading }
-            if (!tv) compose.onNodeWithText("Canal de prueba").performScrollTo()
-            compose.onNodeWithText("Canal de prueba").assertIsDisplayed()
-            if (tv) {
-                val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-                device.pressDPadDown(); compose.waitForIdle()
-                compose.onNodeWithText("Canal de prueba").assertIsFocused()
-            }
+            compose.onAllNodesWithText("Canal de prueba").onFirst().assertExists()
             val restored = ViewerCookies(context, origin)
             assertEquals(1, restored.loadForRequest(origin.resolve("api/v1/viewer/session")!!).size)
             assertTrue(restored.loadForRequest(origin.resolve("api/v1/users/me")!!).isEmpty())

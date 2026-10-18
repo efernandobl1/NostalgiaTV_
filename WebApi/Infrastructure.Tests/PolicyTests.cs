@@ -155,6 +155,8 @@ public class SecurityPolicyTests
     [InlineData("/", "/")]
     [InlineData("/tv", "/tv")]
     [InlineData("/tv?code=ABC-DEF-GHJ-KLM", "/tv?code=ABC-DEF-GHJ-KLM")]
+    [InlineData("/vincular?code=ABC-DEF-GHJ-KLM", "/vincular?code=ABC-DEF-GHJ-KLM")]
+    [InlineData("/vincular?code=ABC&next=//evil", "/")]
     [InlineData("https://evil.example/", "/")]
     [InlineData("//evil.example", "/")]
     [InlineData("/admin", "/")]

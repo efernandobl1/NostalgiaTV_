@@ -20,12 +20,24 @@ import kotlinx.coroutines.sync.withLock
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import tv.nostalgia.android.BuildConfig
 import tv.nostalgia.android.core.*
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.cancelChildren
 
 enum class ConnectionStep { Server, Login, Ready }
 
-enum class Section { Channels, Series, Profile }
+/** Screens of the redesign; the first five are the navigation tabs. */
+sealed interface Screen {
+    data object Home : Screen
+    data object Guide : Screen
+    data object Catalog : Screen
+    data object Pair : Screen
+    data object Profile : Screen
+    data class ChannelInfo(val channelId: Int) : Screen
+    data class SeriesInfo(val seriesId: Int) : Screen
+}
 
 data class AppState(
     val connectionStep: ConnectionStep = ConnectionStep.Server,
@@ -35,15 +47,21 @@ data class AppState(
     val authorization: AuthorizationCode? = null,
     val serverFeatures: ServerFeatures = ServerFeatures(false, false),
     val browserLogin: String? = null,
-    val section: Section = Section.Channels,
+    val screen: Screen = Screen.Home,
+    val backStack: List<Screen> = emptyList(),
+    val settings: PublicSettings = PublicSettings("AllYear", false),
     val channels: List<Channel> = emptyList(),
     val series: List<Series> = emptyList(),
     val seriesPage: Int = 1,
     val totalSeries: Int = 0,
     val categories: List<Category> = emptyList(),
     val seriesFilter: SeriesFilter = SeriesFilter(),
-    val continueOnly: Boolean = false,
-    val selectedSeries: Series? = null,
+    val guideDay: Int = 0,
+    val guide: List<GuideRow> = emptyList(),
+    val guideLoading: Boolean = false,
+    val channelDetail: ChannelDetail? = null,
+    val comments: List<Comment> = emptyList(),
+    val seriesDetail: SeriesDetail? = null,
     val episodes: List<Episode> = emptyList(),
     val season: Int? = null,
     val playback: Playback? = null,
@@ -54,7 +72,10 @@ data class AppState(
     val pairingCode: PairingCode? = null,
     val pairing: Boolean = false,
     val linked: Boolean = false,
-)
+) {
+    /** Navigation tab that owns the current screen. */
+    val tab: Screen get() = (backStack.firstOrNull() ?: screen).let { if (it is Screen.ChannelInfo || it is Screen.SeriesInfo) Screen.Home else it }
+}
 
 class AppViewModel @JvmOverloads constructor(application: Application,
     private val clientFactory: ((okhttp3.HttpUrl, ViewerCookies) -> NostalgiaApi)? = null) : AndroidViewModel(application) {
@@ -62,6 +83,9 @@ class AppViewModel @JvmOverloads constructor(application: Application,
     private val videoPreferences = VideoPreferences(application)
     private val mutableVideoSettings = MutableStateFlow(videoPreferences.load())
     val videoSettings = mutableVideoSettings.asStateFlow()
+    private val appPreferences = AppPreferences(application)
+    private val mutablePreferences = MutableStateFlow(appPreferences.load())
+    val preferences = mutablePreferences.asStateFlow()
     private var cookies = ViewerCookies(application, serverPreferences.load() ?: BuildConfig.API_BASE_URL.toHttpUrl())
     var api = createApi(serverPreferences.load() ?: BuildConfig.API_BASE_URL.toHttpUrl())
         private set
@@ -80,6 +104,12 @@ class AppViewModel @JvmOverloads constructor(application: Application,
     init {
         serverPreferences.load()?.let { connectServer(it.toString()) }
     }
+
+    /** Screenshot tests render screens from a fixed state. */
+    @androidx.annotation.VisibleForTesting
+    internal fun showState(value: AppState) { mutableState.value = value }
+
+    // ── Connection ──
 
     fun chooseServer() {
         viewModelScope.coroutineContext.cancelChildren()
@@ -112,7 +142,7 @@ class AppViewModel @JvmOverloads constructor(application: Application,
             } catch (exception: Exception) {
                 if (exception is CancellationException) throw exception
                 mutableState.update { it.copy(connectionError = when {
-                    exception is ApiException && exception.status == 410 -> "El QR expiró o ya se usó. Genera otro en el dashboard."
+                    exception is ApiException && exception.status == 410 -> "El QR expiró o ya se usó. Genera otro desde la web."
                     exception is ApiException && exception.status == 409 -> "Tu perfil ya tiene diez dispositivos. Desvincula uno desde la web."
                     exception is IllegalArgumentException -> "Usa un servidor HTTPS válido, sin rutas ni contraseñas."
                     else -> "No se pudo conectar. Revisa la dirección, el certificado y que el servidor esté actualizado."
@@ -121,7 +151,7 @@ class AppViewModel @JvmOverloads constructor(application: Application,
         }
     }
 
-    private fun deviceName(): String {
+    fun deviceName(): String {
         val platform = if (isTv()) "Android TV" else "Android"
         return "$platform · ${Build.MODEL}".take(80)
     }
@@ -131,7 +161,8 @@ class AppViewModel @JvmOverloads constructor(application: Application,
         getApplication<Application>().getSystemService(UiModeManager::class.java)?.currentModeType ?: 0)
 
     private fun enterCatalog(session: ViewerSession) {
-        mutableState.update { it.copy(connectionStep = ConnectionStep.Ready, session = session, authorization = null, connectionError = null, loading = true) }
+        mutableState.update { it.copy(connectionStep = ConnectionStep.Ready, session = session, authorization = null, connectionError = null,
+            loading = true, screen = if (it.connectionStep == ConnectionStep.Ready) it.screen else Screen.Home) }
         loadCatalog()
     }
 
@@ -151,13 +182,27 @@ class AppViewModel @JvmOverloads constructor(application: Application,
         mutableState.update { it.copy(authorization = api.authorizeDevice(deviceName())) }
     }
 
+    /** Opens the web sign-in; the TV code links this device once the user finishes there. */
     fun browserLogin(register: Boolean = false) = connectAction {
         val code = api.authorizeDevice(deviceName())
-        val destination = "/tv?code=${code.userCode}"
-        val url = requireNotNull(api.base.resolve("login")).newBuilder().addQueryParameter("returnUrl", destination)
+        val url = requireNotNull(api.base.resolve("login")).newBuilder().addQueryParameter("returnUrl", "/vincular?code=${code.userCode}")
         if (register) url.addQueryParameter("mode", "register")
         mutableState.update { it.copy(authorization = code, browserLogin = url.build().toString()) }
     }
+
+    /** Approving a TV needs the account session, which only the web keeps: the phone opens /vincular there. */
+    fun approveTvInBrowser(code: String) {
+        val clean = code.uppercase().filter { it.isLetterOrDigit() }
+        if (clean.length != 12) {
+            mutableState.update { it.copy(profileError = "El código tiene 12 letras y números, como el que ves en tu TV.") }
+            return
+        }
+        val url = requireNotNull(api.base.resolve("vincular")).newBuilder().addQueryParameter("code", clean.chunked(3).joinToString("-")).build()
+        mutableState.update { it.copy(browserLogin = url.toString(), profileError = null) }
+    }
+
+    fun openUrl(url: String) { mutableState.update { it.copy(browserLogin = url) } }
+
     fun browserOpened() { mutableState.update { it.copy(browserLogin = null) } }
 
     fun cancelAuthorization() { mutableState.update { it.copy(authorization = null, connectionError = null) } }
@@ -188,59 +233,135 @@ class AppViewModel @JvmOverloads constructor(application: Application,
         } finally { if (isActive) mutableState.update { it.copy(connectionBusy = false) } }
     }
 
+    // ── Navigation ──
+
+    /** Switches tab (clearing the detail stack) or pushes a detail screen. */
+    fun navigate(screen: Screen) {
+        request?.cancel()
+        val tab = screen is Screen.Home || screen is Screen.Guide || screen is Screen.Catalog || screen is Screen.Pair || screen is Screen.Profile
+        mutableState.update {
+            if (tab) it.copy(screen = screen, backStack = emptyList(), error = null, loading = false)
+            else it.copy(screen = screen, backStack = it.backStack + it.screen, error = null)
+        }
+        when (screen) {
+            Screen.Home -> refreshChannels()
+            Screen.Guide -> loadGuide(state.value.guideDay)
+            Screen.Catalog -> if (state.value.series.isEmpty()) seriesPage(1)
+            Screen.Profile, Screen.Pair -> refreshSession()
+            is Screen.ChannelInfo -> loadChannel(screen.channelId)
+            is Screen.SeriesInfo -> loadSeries(screen.seriesId)
+        }
+    }
+
+    fun back(): Boolean {
+        request?.cancel()
+        val current = state.value
+        return when {
+            current.playback != null -> { mutableState.update { it.copy(playback = null, loading = false, error = null) }; refreshSession(); true }
+            current.backStack.isNotEmpty() -> {
+                mutableState.update { it.copy(screen = it.backStack.last(), backStack = it.backStack.dropLast(1), loading = false, error = null) }
+                true
+            }
+            current.screen != Screen.Home -> { navigate(Screen.Home); true }
+            else -> false
+        }
+    }
+
+    // ── Catalog data ──
+
     fun loadCatalog() = load {
         val channels = async { api.channels() }
         val series = async { api.series(1) }
         val categories = async { api.categories() }
+        val settings = async { runCatching { api.publicSettings() }.getOrNull() }
         val result = series.await()
         val channelList = channels.await()
         val categoryList = categories.await()
-        mutableState.update { it.copy(channels = channelList, categories = categoryList, series = result.items, totalSeries = result.totalCount, seriesPage = 1, seriesFilter = SeriesFilter()) }
+        mutableState.update { it.copy(channels = channelList, categories = categoryList, series = result.items, totalSeries = result.totalCount,
+            seriesPage = 1, seriesFilter = SeriesFilter(), settings = settings.await() ?: it.settings) }
     }
 
-    fun section(section: Section) {
-        request?.cancel()
-        mutableState.update { it.copy(section = section, selectedSeries = null, season = null, error = null, loading = false) }
-        if (section == Section.Profile || section == Section.Series) refreshSession()
-    }
-
-    fun showSeriesList() {
-        request?.cancel()
-        mutableState.update { it.copy(selectedSeries = null, season = null, error = null, loading = false) }
-        refreshSession()
+    /** Updates what each channel is airing without blocking the screen. */
+    fun refreshChannels() = viewModelScope.launch {
+        try {
+            val channels = api.channels()
+            mutableState.update { it.copy(channels = channels) }
+        } catch (exception: Exception) {
+            if (exception is CancellationException) throw exception
+        }
     }
 
     fun seriesPage(page: Int) = load {
         val result = api.series(page, state.value.seriesFilter)
-        mutableState.update { it.copy(series = result.items, totalSeries = result.totalCount, seriesPage = page) }
+        mutableState.update { it.copy(series = if (page == 1) result.items else it.series + result.items, totalSeries = result.totalCount, seriesPage = page) }
     }
 
     fun filterSeries(filter: SeriesFilter) {
-        mutableState.update { it.copy(seriesFilter = filter, continueOnly = false) }
+        mutableState.update { it.copy(seriesFilter = filter) }
         seriesPage(1)
     }
 
-    fun continueOnly(enabled: Boolean) { mutableState.update { it.copy(continueOnly = enabled) } }
-
-    fun updateVideoSettings(settings: VideoSettings) {
-        val safe = settings.sanitized()
-        videoPreferences.save(safe)
-        mutableVideoSettings.value = safe
+    fun loadGuide(day: Int) {
+        mutableState.update { it.copy(guideDay = day, guideLoading = true) }
+        viewModelScope.launch {
+            try {
+                val rows = api.guide(dayKey(day))
+                mutableState.update { if (it.guideDay == day) it.copy(guide = rows, guideLoading = false) else it }
+            } catch (exception: Exception) {
+                if (exception is CancellationException) throw exception
+                mutableState.update { it.copy(guideLoading = false, error = "No se pudo cargar la guía. Vuelve a intentarlo.") }
+            }
+        }
     }
 
-    fun openSeries(series: Series) = load {
-        val episodes = api.episodes(series.id)
-        mutableState.update { it.copy(selectedSeries = series, episodes = episodes, season = null) }
+    private fun loadChannel(channelId: Int) = load {
+        mutableState.update { it.copy(channelDetail = null, comments = emptyList()) }
+        val detail = async { api.channelDetail(channelId) }
+        val comments = async { runCatching { api.channelComments(channelId) }.getOrDefault(emptyList()) }
+        mutableState.update { it.copy(channelDetail = detail.await(), comments = comments.await()) }
+    }
+
+    /** Comments of the channel on air, for the live screen's "Comentarios" tab. */
+    fun loadComments(channelId: Int) = viewModelScope.launch {
+        try {
+            val comments = api.channelComments(channelId)
+            mutableState.update { it.copy(comments = comments) }
+        } catch (exception: Exception) {
+            if (exception is CancellationException) throw exception
+        }
+    }
+
+    private fun loadSeries(seriesId: Int) = load {
+        mutableState.update { it.copy(seriesDetail = null, episodes = emptyList(), season = null) }
+        val detail = async { api.seriesDetail(seriesId) }
+        val episodes = async { api.episodes(seriesId) }
+        val list = episodes.await()
+        val progress = state.value.session?.progress.orEmpty().associateBy { it.episodeId }
+        // Open on the season of the episode in progress, otherwise the first regular season.
+        val resume = list.firstOrNull { progress[it.id]?.let { item -> !item.completed && item.currentSecond > 0 } == true }
+        mutableState.update { it.copy(seriesDetail = detail.await(), episodes = list,
+            season = resume?.season ?: list.map { episode -> episode.season }.filter { season -> season > 0 }.minOrNull() ?: list.firstOrNull()?.season) }
     }
 
     fun season(season: Int?) { mutableState.update { it.copy(season = season) } }
 
+    // ── Playback ──
+
     fun playEpisode(episode: Episode) {
-        val series = state.value.selectedSeries ?: return
+        val series = state.value.seriesDetail ?: return
         val progress = state.value.session?.progress?.find { it.episodeId == episode.id }
-        mutableState.update { it.copy(playback = Playback(episode.title, "${series.name} · T${episode.season} E${episode.episodeNumber}",
+        mutableState.update { it.copy(playback = Playback(episode.title, "${series.name} · ${episodeCode(episode.season, episode.episodeNumber, episode.episodeType)}",
             episode.filePath, episode.id, if (progress?.completed == false) progress.currentSecond else 0.0,
-            seriesName = series.name, logoPath = series.logoPath, seriesId = series.id), error = null) }
+            seriesName = series.name, logoPath = series.logoPath, seriesId = series.id,
+            seasonNumber = episode.season, episodeNumber = episode.episodeNumber), error = null) }
+    }
+
+    /** The episode to continue: the one in progress, else the first unwatched one. */
+    fun resumeEpisode(): Episode? {
+        val progress = state.value.session?.progress.orEmpty().associateBy { it.episodeId }
+        val episodes = state.value.episodes
+        return episodes.firstOrNull { progress[it.id]?.let { item -> !item.completed && item.currentSecond > 0 } == true }
+            ?: episodes.firstOrNull { progress[it.id]?.completed != true && it.season > 0 } ?: episodes.firstOrNull()
     }
 
     fun nextEpisode(offset: Int) {
@@ -254,22 +375,16 @@ class AppViewModel @JvmOverloads constructor(application: Application,
         mutableState.update { it.copy(playback = live.playback(channel), error = null) }
     }
 
+    fun playChannel(channelId: Int) {
+        val channel = state.value.channels.firstOrNull { it.id == channelId } ?: Channel(channelId, state.value.channelDetail?.name ?: "", null)
+        playChannel(channel)
+    }
+
     fun nextChannel(offset: Int) {
-        val channels = state.value.channels
+        val channels = state.value.channels.filter { it.onAir }.ifEmpty { state.value.channels }
         if (channels.isEmpty()) return
         val index = channels.indexOfFirst { it.id == state.value.playback?.channel?.id }
         playChannel(channels[(index + offset + channels.size) % channels.size])
-    }
-
-    fun back() {
-        request?.cancel()
-        mutableState.update {
-            when {
-                it.playback != null -> it.copy(playback = null, loading = false, error = null)
-                it.selectedSeries != null -> it.copy(selectedSeries = null, loading = false, error = null)
-                else -> it.copy(section = Section.Channels, error = null)
-            }
-        }
     }
 
     suspend fun liveState(channel: Channel): ChannelState = api.channelState(channel.id).also { live ->
@@ -278,9 +393,10 @@ class AppViewModel @JvmOverloads constructor(application: Application,
         }
     }
 
+    // ── Viewer profile ──
+
     suspend fun ensureSession(): ViewerSession = sessionMutex.withLock {
-        val platform = if (getApplication<Application>().packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) "Android TV" else "Android"
-        state.value.session ?: api.startViewer("$platform · ${Build.MODEL}".take(80)).also { session ->
+        state.value.session ?: api.startViewer(deviceName()).also { session ->
             mutableState.update { it.copy(session = session, profileError = null) }
         }
     }
@@ -293,6 +409,27 @@ class AppViewModel @JvmOverloads constructor(application: Application,
         } catch (exception: Exception) {
             if (exception is CancellationException) throw exception
             mutableState.update { it.copy(profileError = "No se pudo actualizar el perfil. Vuelve a intentarlo.") }
+        }
+    }
+
+    fun clearHistory() = viewModelScope.launch {
+        try {
+            api.clearHistory()
+            refreshSession()
+        } catch (exception: Exception) {
+            if (exception is CancellationException) throw exception
+            mutableState.update { it.copy(profileError = "No se pudo borrar el historial. Vuelve a intentarlo.") }
+        }
+    }
+
+    fun removeDevice(deviceId: String) = viewModelScope.launch {
+        if (deviceId == state.value.session?.currentDeviceId) { logout(); return@launch }
+        try {
+            api.logoutViewer(deviceId)
+            refreshSession()
+        } catch (exception: Exception) {
+            if (exception is CancellationException) throw exception
+            mutableState.update { it.copy(profileError = "No se pudo quitar el dispositivo. Vuelve a intentarlo.") }
         }
     }
 
@@ -320,8 +457,12 @@ class AppViewModel @JvmOverloads constructor(application: Application,
         ensureSession()
         val completed = api.progress(episodeId, start, end, duration)
         mutableState.update { state ->
-            state.copy(session = state.session?.let { session -> session.copy(progress =
-                session.progress.filterNot { it.episodeId == episodeId } + WatchProgress(episodeId, end, completed, seriesId)) }, profileError = null)
+            state.copy(session = state.session?.let { session ->
+                val previous = session.progress.firstOrNull { it.episodeId == episodeId }
+                session.copy(progress = listOf((previous ?: WatchProgress(episodeId, end, completed, seriesId))
+                    .copy(currentSecond = end, completed = completed, updatedAt = System.currentTimeMillis())) +
+                    session.progress.filterNot { it.episodeId == episodeId })
+            }, profileError = null)
         }
     }
 
@@ -329,6 +470,17 @@ class AppViewModel @JvmOverloads constructor(application: Application,
         mutableState.update { state -> state.copy(playback = state.playback?.let {
             if (it.channel == null) it.copy(startSecond = position.coerceAtLeast(0.0)) else it
         }) }
+    }
+
+    fun updateVideoSettings(settings: VideoSettings) {
+        val safe = settings.sanitized()
+        videoPreferences.save(safe)
+        mutableVideoSettings.value = safe
+    }
+
+    fun updatePreferences(preferences: AppSettings) {
+        appPreferences.save(preferences)
+        mutablePreferences.value = preferences
     }
 
     private fun load(block: suspend kotlinx.coroutines.CoroutineScope.() -> Unit) {
@@ -347,7 +499,14 @@ class AppViewModel @JvmOverloads constructor(application: Application,
             } finally { if (isActive) mutableState.update { it.copy(loading = false) } }
         }
     }
+
+    companion object {
+        /** Local calendar day as the guide expects it (yyyy-MM-dd). */
+        fun dayKey(offset: Int): String = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            .format(Calendar.getInstance().apply { add(Calendar.DATE, offset) }.time)
+    }
 }
 
 private fun ChannelState.playback(channel: Channel) = Playback(title, if (isBumper || seriesName == channel.name) channel.name else "$seriesName · ${channel.name}",
-    filePath, if (isBumper) 0 else episodeId, currentSecond.coerceAtLeast(0.0), channel, segmentId, secondsUntilNext, seriesName, channel.logoPath, seriesId)
+    filePath, if (isBumper) 0 else episodeId, currentSecond.coerceAtLeast(0.0), channel, segmentId, secondsUntilNext, seriesName, channel.logoPath, seriesId,
+    seasonNumber, episodeNumber, nextTitle, startsAt, endsAt, isBumper)
