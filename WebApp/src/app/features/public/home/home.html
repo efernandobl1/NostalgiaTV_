@@ -1,0 +1,202 @@
+<!-- ── Desktop (md+) ── -->
+<div class="hidden md:flex flex-1 flex-col">
+  @if (theme().tag) {
+    <div class="flex flex-wrap items-center justify-center gap-y-2 gap-x-4 py-3 px-6 text-[14px]" [style.background]="theme().bg" [style.color]="theme().ink">
+      <span class="font-mono text-[12px] tracking-[0.14em] font-medium">{{ theme().tag }}</span>
+      <span>{{ theme().text }}</span>
+    </div>
+  }
+
+  <main class="w-full max-w-340 mx-auto pt-8 px-10 pb-18 flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="flex flex-col gap-1.5">
+        <span class="font-mono text-[13px] tracking-[0.12em]" [style.color]="theme().accent">SÁB 17 OCT · 14:32 · {{ liveCount }} CANALES AL AIRE</span>
+        <h1 class="m-0 font-display font-bold text-[48px] leading-none">Canales</h1>
+        <span class="text-[15px] text-muted">Elige un canal y sintoniza lo que está al aire, como en la tele de antes.</span>
+      </div>
+      <a class="pill min-h-12 px-5 gap-2.5 rounded-3xl text-[15px] font-normal" routerLink="/ver/5">
+        <span class="font-display font-bold" [style.color]="theme().accent">05</span>
+        Volver al último canal
+      </a>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2.5 p-3 border border-line rounded-2xl bg-panel" role="search">
+      <label class="flex-[2_1_260px] flex items-center gap-2 min-h-11 px-3.5 border border-edge rounded-[22px] bg-ink focus-within:outline-2 focus-within:outline-amber">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <input class="flex-1 min-w-0 border-0 outline-none bg-transparent text-fg text-[14px] font-sans" type="search" aria-label="Buscar canal o serie al aire"
+               [value]="q()" (input)="q.set($any($event.target).value)" placeholder="Buscar canal o serie al aire…">
+      </label>
+      <div class="flex flex-wrap gap-1.5" role="group" aria-label="Categoría">
+        @for (k of cats; track k; let i = $index) {
+          <button type="button" class="chip chip-lg" [attr.aria-pressed]="i === cat()" (click)="cat.set(i)">{{ k }}</button>
+        }
+      </div>
+      <label class="flex items-center gap-2 min-h-11 px-1.5 text-[14px] cursor-pointer">
+        <input class="check" type="checkbox" [checked]="onlyLive()" (change)="onlyLive.set(!onlyLive())">Solo al aire
+      </label>
+      <label class="flex items-center gap-2 text-[13px] text-muted">Ordenar
+        <select class="min-h-11 px-2.5 border border-edge rounded-[22px] bg-ink text-fg text-[14px] font-sans [color-scheme:dark]" (change)="sort.set($any($event.target).selectedIndex)">
+          <option>Número de canal</option><option>Nombre</option><option>Era más antigua</option>
+        </select>
+      </label>
+      <div class="flex border border-edge rounded-[22px] overflow-hidden" role="group" aria-label="Vista">
+        <button type="button" class="w-11 h-10.5 flex items-center justify-center border-0 bg-transparent text-fg aria-pressed:bg-amber aria-pressed:text-on-amber" [attr.aria-pressed]="view() === 'grid'" (click)="view.set('grid')" aria-label="Vista en cuadrícula">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="7" height="7"></rect><rect x="13" y="4" width="7" height="7"></rect><rect x="4" y="13" width="7" height="7"></rect><rect x="13" y="13" width="7" height="7"></rect></svg>
+        </button>
+        <button type="button" class="w-11 h-10.5 flex items-center justify-center border-0 bg-transparent text-fg aria-pressed:bg-amber aria-pressed:text-on-amber" [attr.aria-pressed]="view() === 'list'" (click)="view.set('list')" aria-label="Vista en lista">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+      </div>
+    </div>
+
+    @if (!channels().length) {
+      <div class="p-12 border border-dashed border-edge rounded-2xl text-center text-muted">
+        <div class="font-display text-[22px] text-fg">Sin señal con esos filtros</div>
+        <button class="pill mt-3 text-amber hover:text-amber" type="button" (click)="clearFilters()">Quitar filtros</button>
+      </div>
+    }
+
+    @if (view() === 'grid') {
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-5">
+        @for (c of channels(); track c.id) {
+          <article class="flex flex-col border border-line rounded-[18px] overflow-hidden bg-panel">
+            <a class="relative block aspect-video tv-screen" [routerLink]="['/ver', c.id]" [attr.aria-label]="'Ver ' + c.name">
+              <span class="absolute top-3 left-3 py-1 px-2 rounded-sm font-mono text-[11px] tracking-[0.1em]" [style.color]="c.badgeInk" [style.background]="c.badgeBg">{{ c.badge }}</span>
+              <span class="absolute top-1.5 right-3.5 font-display font-bold text-[40px] text-ok [text-shadow:0_0_10px_rgba(139,224,143,0.45)]">{{ c.num }}</span>
+              <app-progress-bar [pct]="c.pct" [height]="4" />
+            </a>
+            <div class="flex flex-col gap-1.5 pt-3.5 px-4 pb-1.5">
+              <span class="font-display font-bold text-[20px]">{{ c.name }}</span>
+              <span class="text-[14px]"><span class="font-mono text-[11px] text-danger">AHORA</span> {{ c.now }}</span>
+              <span class="text-[13px] text-muted">Sigue: {{ c.next }}</span>
+              <span class="self-start py-[3px] px-2.5 rounded-xl text-[12px] text-fg-2 bg-raised-2">Era: {{ c.era }}</span>
+            </div>
+            <div class="flex gap-2 pt-3 px-4 pb-4">
+              <a class="pill pill-primary flex-1 px-0" [routerLink]="['/ver', c.id]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>Ver
+              </a>
+              <a class="pill px-4 font-normal" [routerLink]="['/canal', c.id]">Info</a>
+              <button class="pill w-11 px-0" type="button" (click)="share(c.id)" aria-label="Copiar enlace del canal" title="Compartir">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+    } @else if (channels().length) {
+      <div class="flex flex-col border border-line rounded-2xl overflow-hidden bg-panel">
+        @for (c of channels(); track c.id) {
+          <a class="flex flex-wrap items-center gap-y-3 gap-x-5 py-3.5 px-5 border-b border-raised-2 last:border-b-0 text-fg hover:text-fg hover:bg-raised no-underline" [routerLink]="['/ver', c.id]">
+            <span class="w-14 font-display font-bold text-[28px] text-ok">{{ c.num }}</span>
+            <span class="flex-[1_1_200px] flex flex-col gap-0.5">
+              <span class="font-semibold text-[16px]">{{ c.name }}</span>
+              <span class="text-[12px] text-muted">{{ c.era }}</span>
+            </span>
+            <span class="flex-[2_1_260px] flex flex-col gap-1.5">
+              <span class="text-[14px]">{{ c.now }} <span class="text-muted">· sigue {{ c.next }}</span></span>
+              <span class="block h-[3px] rounded-xs bg-line"><span class="block h-[3px] rounded-xs bg-amber" [style.width.%]="c.pct"></span></span>
+            </span>
+            <span class="py-1 px-2 rounded-sm font-mono text-[11px]" [style.color]="c.badgeInk" [style.background]="c.badgeBg">{{ c.badge }}</span>
+          </a>
+        }
+      </div>
+    }
+
+    <section class="flex flex-col gap-3.5 mt-4" aria-labelledby="cont">
+      <div class="flex justify-between items-baseline gap-3">
+        <h2 class="m-0 font-display text-[24px] font-bold" id="cont">Continuar viendo</h2>
+        <a class="text-[14px]" routerLink="/series">Ver todas las series</a>
+      </div>
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
+        @for (v of continueList; track v.series) {
+          <a class="flex gap-3 items-center p-2.5 border border-line rounded-xl bg-panel text-fg hover:text-fg hover:bg-raised no-underline" routerLink="/series/1">
+            <span class="relative w-24 aspect-video flex-none rounded-md overflow-hidden scan-raised-2">
+              <app-progress-bar [pct]="v.pct" />
+            </span>
+            <span class="flex flex-col gap-0.5 min-w-0">
+              <span class="font-semibold text-[14px]">{{ v.series }}</span>
+              <span class="text-[12px] text-muted">{{ v.code }}</span>
+            </span>
+          </a>
+        }
+      </div>
+    </section>
+  </main>
+
+  <footer class="mt-auto border-t border-raised-2 py-7 px-10 flex flex-wrap justify-between gap-3 text-[13px] text-dim">
+    <span class="font-mono tracking-[0.1em]">NOSTALGIA TV · TRANSMITIENDO DESDE PETÉN</span>
+    <span class="flex gap-4"><a routerLink="/vincular">Vincular TV</a><a routerLink="/login">Panel de administración</a></span>
+  </footer>
+</div>
+
+<!-- ── Mobile (<md) ── -->
+<div class="md:hidden flex flex-1 flex-col">
+  <header class="flex items-center gap-2.5 pt-4 px-4 pb-3">
+    <app-logo-mark [size]="28" [dots]="false" />
+    <span class="flex-1 font-display font-bold text-[17px] tracking-[0.08em]">NOSTALGIA TV</span>
+    <a class="w-11 h-11 flex items-center justify-center text-fg hover:text-fg" routerLink="/series" aria-label="Buscar">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+    </a>
+    <a class="w-11 h-11 flex items-center justify-center text-fg hover:text-fg" routerLink="/vincular" aria-label="Vincular TV">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="13" rx="2"></rect><path d="M8 21h8"></path></svg>
+    </a>
+  </header>
+
+  <main class="flex-1 flex flex-col gap-6 pt-1 px-4 pb-6">
+    @if (theme().tag) {
+      <div class="flex items-center gap-2 py-2.5 px-3 rounded-[10px] text-[13px]" [style.background]="theme().bg" [style.color]="theme().ink">
+        <span class="font-mono text-[11px] tracking-[0.1em]">HALLOWEEN</span>
+        <span>Especiales de terror hasta el 31</span>
+      </div>
+    }
+
+    <a class="flex flex-col rounded-2xl overflow-hidden border border-line bg-panel text-fg hover:text-fg no-underline" routerLink="/ver/5">
+      <span class="relative block aspect-video tv-screen [--screen-edge:#0B0B09]">
+        <span class="absolute top-2.5 left-2.5 py-1 px-2 rounded-sm font-mono text-[11px] tracking-[0.1em] text-on-live bg-live">● EN VIVO</span>
+        <span class="absolute top-1.5 right-3 font-display font-bold text-[30px] text-ok">05</span>
+        <app-progress-bar [pct]="34" track="rgba(255,255,255,0.15)" />
+      </span>
+      <span class="flex flex-col gap-1 pt-3 px-3.5 pb-3.5">
+        <span class="font-mono text-[11px] text-amber">CANAL 5 RETRO · T2 · E14</span>
+        <span class="font-display font-bold text-[24px]">Dragon Ball Z</span>
+        <span class="text-[13px] text-muted">Sigue: Pokémon a las 14:39</span>
+      </span>
+    </a>
+
+    <section class="flex flex-col gap-2.5">
+      <h1 class="m-0 font-display text-[24px] font-bold">Canales</h1>
+      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-0.5" role="group" aria-label="Filtrar canales">
+        @for (f of mobileFilters; track f; let i = $index) {
+          <button type="button" class="chip flex-none" [attr.aria-pressed]="i === mobileFilter()" (click)="mobileFilter.set(i)">{{ f }}</button>
+        }
+      </div>
+      @for (c of mobileChannels(); track c.id) {
+        <a class="flex items-center gap-3 min-h-16 py-2 px-3 rounded-xl bg-panel text-fg hover:text-fg no-underline" [routerLink]="['/ver', c.id]">
+          <span class="w-11 h-11 flex-none rounded-[10px] flex items-center justify-center font-display font-bold text-[17px] text-amber bg-raised-2">{{ c.num }}</span>
+          <span class="flex-1 min-w-0 flex flex-col gap-1">
+            <span class="font-semibold text-[15px]">{{ c.name }}</span>
+            <span class="text-[12px] text-muted truncate">Ahora: {{ c.now }}</span>
+            <span class="block h-[3px] rounded-xs bg-line"><span class="block h-[3px] rounded-xs bg-amber" [style.width.%]="c.pct"></span></span>
+          </span>
+        </a>
+      } @empty {
+        <div class="py-6 text-center text-[14px] text-muted">Sin canales con ese filtro.</div>
+      }
+    </section>
+
+    <section class="flex flex-col gap-2.5">
+      <h2 class="m-0 font-display text-[19px] font-bold">Continuar viendo</h2>
+      <div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+        @for (v of continueList.slice(0, 3); track v.series) {
+          <a class="w-50 flex-none flex flex-col gap-2 text-fg hover:text-fg no-underline" routerLink="/series/1">
+            <span class="relative block aspect-video rounded-[10px] overflow-hidden scan-raised">
+              <app-progress-bar [pct]="v.pct" />
+            </span>
+            <span class="font-semibold text-[14px]">{{ v.series }}</span>
+            <span class="text-[12px] text-muted -mt-1">{{ v.code }}</span>
+          </a>
+        }
+      </div>
+    </section>
+  </main>
+</div>

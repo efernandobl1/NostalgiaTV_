@@ -1,0 +1,184 @@
+<!-- ── Desktop (md+) ── -->
+<main class="hidden md:flex w-full max-w-275 mx-auto pt-10 px-10 pb-18 flex-col gap-7">
+  <div class="flex flex-wrap items-center gap-5">
+    <span class="w-21 h-21 rounded-full flex items-center justify-center font-display font-bold text-[32px] text-on-amber bg-amber" aria-hidden="true">{{ session.initials }}</span>
+    <div class="flex-1 flex flex-col gap-1">
+      <h1 class="m-0 font-display font-bold text-[36px]">{{ session.user }}</h1>
+      <span class="text-[14px] text-muted">Espectador desde sep 2026 · {{ devices.count() }} dispositivos · 128 episodios vistos</span>
+    </div>
+    <a class="pill px-4.5 font-normal" routerLink="/vincular">Mis dispositivos</a>
+  </div>
+
+  <div class="flex gap-1 border-b border-line" role="tablist" aria-label="Secciones del perfil">
+    @for (t of ['Historial', 'Mis comentarios', 'Cuenta']; track t; let i = $index) {
+      <button type="button" role="tab" class="tab min-h-12 px-4.5 font-semibold text-[15px]" [attr.aria-selected]="i === tab()" (click)="tab.set(i)">{{ t }}</button>
+    }
+  </div>
+
+  @switch (tab()) {
+    @case (0) {
+      <div class="flex flex-wrap items-center gap-2.5">
+        @for (f of ['Todo', 'En curso', 'Completados']; track f; let i = $index) {
+          <button type="button" class="chip px-4 text-[14px]" [attr.aria-pressed]="i === filter()" (click)="filter.set(i)">{{ f }}</button>
+        }
+        <span class="flex-1"></span>
+        <button class="pill px-4 text-danger hover:text-danger" type="button" [disabled]="!history().length" (click)="confirm.set('clear')">Borrar historial</button>
+      </div>
+      <div class="flex flex-col gap-2.5">
+        @for (h of filtered(); track h.series) {
+          <div class="flex items-center gap-4 p-3 border border-line rounded-[14px] bg-panel">
+            <a class="relative w-36 aspect-video flex-none rounded-lg overflow-hidden scan-raised-2" [routerLink]="['/series', h.id]" [attr.aria-label]="'Abrir ' + h.series">
+              <app-progress-bar [pct]="h.pct" [height]="4" track="rgba(255,255,255,0.1)" />
+            </a>
+            <span class="flex-1 min-w-0 flex flex-col gap-[3px]">
+              <span class="font-semibold text-[16px]">{{ h.series }}</span>
+              <span class="text-[13px] text-muted">{{ h.code }} · {{ h.title }}</span>
+              <span class="font-mono text-[12px]" [class]="h.done ? 'text-ok' : 'text-amber'">{{ h.done ? '✓ COMPLETADO' : 'EN CURSO ' + h.pct + '%' }} · {{ h.when }}</span>
+            </span>
+            <a class="inline-flex items-center min-h-11 px-4 rounded-[22px] bg-raised-2 hover:bg-line text-fg hover:text-fg text-[14px] no-underline" [routerLink]="['/series', h.id]">{{ h.done ? 'Ver de nuevo' : 'Continuar' }}</a>
+            <button class="w-11 h-11 border-0 rounded-[22px] bg-transparent hover:bg-raised text-muted hover:text-fg cursor-pointer" type="button" (click)="removeHistory(h.series)" aria-label="Quitar del historial">✕</button>
+          </div>
+        } @empty {
+          <div class="p-10 border border-dashed border-edge rounded-2xl text-center text-muted">No hay episodios en el historial.</div>
+        }
+      </div>
+    }
+    @case (1) {
+      <div class="flex flex-col gap-2.5">
+        @for (c of comments(); track c.id) {
+          <div class="flex flex-col gap-2 py-4 px-4.5 border border-line rounded-[14px] bg-panel">
+            <div class="flex flex-wrap items-center gap-2.5 text-[13px]">
+              <a class="font-semibold" [routerLink]="c.link">{{ c.target }}</a>
+              <span class="text-dim">{{ c.time }}</span>
+              <span class="flex-1"></span>
+              <span class="font-mono text-[11px] tracking-[0.08em]" [style.color]="status[c.status].color">{{ status[c.status].label }}</span>
+            </div>
+            @if (editing() === c.id) {
+              <textarea #body class="field field-area rounded-[10px] text-[15px]" rows="3" [value]="c.body"></textarea>
+              <div class="flex gap-2">
+                <button class="pill pill-primary min-h-10 px-3.5 rounded-[20px] text-[13px]" type="button" (click)="saveComment(c.id, body.value)">Guardar</button>
+                <button class="pill min-h-10 px-3.5 rounded-[20px] text-[13px]" type="button" (click)="editing.set(null)">Cancelar</button>
+              </div>
+            } @else {
+              <p class="m-0 text-[15px] leading-normal text-fg-2">{{ c.body }}</p>
+              <div class="flex gap-2">
+                <button class="pill min-h-10 px-3.5 rounded-[20px] text-[13px]" type="button" [disabled]="c.status === 'rejected'" (click)="editing.set(c.id)">Editar</button>
+                <button class="pill min-h-10 px-3.5 rounded-[20px] text-[13px] border-0 text-danger hover:text-danger" type="button" (click)="deleteComment(c.id)">Eliminar</button>
+              </div>
+            }
+          </div>
+        } @empty {
+          <div class="p-10 border border-dashed border-edge rounded-2xl text-center text-muted">Aún no has comentado.</div>
+        }
+      </div>
+    }
+    @case (2) {
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-4">
+        <form class="flex flex-col gap-3.5 p-5 border border-line rounded-2xl bg-panel" (submit)="$event.preventDefault(); savePassword(cur, nxt)">
+          <h2 class="m-0 font-display text-[20px] font-semibold">Cambiar contraseña</h2>
+          <label class="flex flex-col gap-1.5 text-[13px] text-muted">Contraseña actual
+            <input #cur class="field min-h-11.5 px-3.5 rounded-[10px] text-[15px]" type="password" autocomplete="current-password" (input)="passwordSaved.set(false)">
+          </label>
+          <label class="flex flex-col gap-1.5 text-[13px] text-muted">Nueva contraseña
+            <input #nxt class="field min-h-11.5 px-3.5 rounded-[10px] text-[15px]" type="password" autocomplete="new-password" minlength="8" (input)="passwordSaved.set(false)">
+          </label>
+          <div class="flex items-center gap-3">
+            <button class="pill pill-primary px-5" type="submit">Guardar</button>
+            @if (passwordSaved()) { <span class="text-[13px] text-ok" role="status">Contraseña actualizada</span> }
+          </div>
+        </form>
+        <section class="flex flex-col gap-3 p-5 border border-line rounded-2xl bg-panel">
+          <h2 class="m-0 font-display text-[20px] font-semibold">Inicio de sesión y seguridad</h2>
+          <div class="flex items-center gap-2.5 min-h-13 px-3.5 border border-line rounded-[10px]">
+            @if (googleLinked()) {
+              <span class="flex-1 text-[14px]">Google · vinculado</span>
+              <button class="min-h-10 px-3 border-0 bg-transparent text-danger text-[13px] font-medium font-sans cursor-pointer" type="button" (click)="googleLinked.set(false)">Desvincular</button>
+            } @else {
+              <span class="flex-1 text-[14px] text-muted">Google · no vinculado</span>
+              <button class="min-h-10 px-3 border-0 bg-transparent text-amber text-[13px] font-medium font-sans cursor-pointer" type="button" (click)="googleLinked.set(true)">Vincular</button>
+            }
+          </div>
+          <button class="pill" type="button" (click)="confirm.set('everywhere')">Cerrar sesión en todos los dispositivos</button>
+          <button class="pill border-[#5A3A33] text-danger hover:text-danger font-normal" type="button" (click)="signOut()">Cerrar sesión</button>
+        </section>
+      </div>
+    }
+  }
+</main>
+
+<!-- ── Mobile (<md) ── -->
+<div class="md:hidden flex flex-1 flex-col">
+  <header class="flex flex-col gap-3.5 pt-4 px-4">
+    <div class="flex items-center gap-3.5">
+      <span class="w-14 h-14 rounded-full flex items-center justify-center font-display font-bold text-[22px] text-on-amber bg-amber" aria-hidden="true">{{ session.initials }}</span>
+      <span class="flex-1 flex flex-col gap-0.5">
+        <h1 class="m-0 font-display font-bold text-[22px]">{{ session.user }}</h1>
+        <span class="text-[12px] text-muted">128 episodios vistos · {{ devices.count() }} dispositivos</span>
+      </span>
+    </div>
+    <div class="flex border-b border-line" role="tablist" aria-label="Perfil">
+      @for (t of ['Historial', 'Comentarios', 'Ajustes']; track t; let i = $index) {
+        <button type="button" role="tab" class="tab flex-1 font-semibold" [attr.aria-selected]="i === tab()" (click)="tab.set(i)">{{ t }}</button>
+      }
+    </div>
+  </header>
+
+  <main class="flex-1 pt-3 px-4 pb-5">
+    @switch (tab()) {
+      @case (0) {
+        <div class="flex flex-col gap-2">
+          @for (h of filtered(); track h.series) {
+            <a class="flex items-center gap-3 p-2 rounded-xl bg-panel text-fg hover:text-fg no-underline" [routerLink]="['/series', h.id]">
+              <span class="relative w-24 aspect-video flex-none rounded-md overflow-hidden scan-raised-2">
+                <app-progress-bar [pct]="h.pct" track="rgba(255,255,255,0.1)" />
+              </span>
+              <span class="flex-1 min-w-0 flex flex-col gap-0.5">
+                <span class="font-semibold text-[14px]">{{ h.series }}</span>
+                <span class="text-[12px] text-muted">{{ h.code }} · {{ h.mobileWhen }}</span>
+                <span class="font-mono text-[10px]" [class]="h.done ? 'text-ok' : 'text-amber'">{{ h.done ? '✓ COMPLETADO' : 'EN CURSO ' + h.pct + '%' }}</span>
+              </span>
+            </a>
+          } @empty {
+            <div class="py-8 text-center text-[14px] text-muted">No hay episodios en el historial.</div>
+          }
+          <button class="pill mt-1.5 text-danger hover:text-danger" type="button" [disabled]="!history().length" (click)="confirm.set('clear')">Borrar historial</button>
+        </div>
+      }
+      @case (1) {
+        <div class="flex flex-col gap-2">
+          @for (c of comments().slice(0, 2); track c.id) {
+            <div class="flex flex-col gap-1.5 p-3 rounded-xl bg-panel">
+              <span class="flex justify-between gap-2 text-[12px]"><strong class="font-semibold">{{ c.short }}</strong><span class="font-mono text-[10px]" [style.color]="status[c.status].color">{{ status[c.status].short }}</span></span>
+              <span class="text-[14px] leading-[1.45] text-fg-2">{{ c.body }}</span>
+            </div>
+          }
+        </div>
+      }
+      @case (2) {
+        <div class="flex flex-col">
+          @for (s of settings; track s.label) {
+            <label class="flex items-center gap-3 min-h-15 border-b border-raised-2 text-[15px] cursor-pointer">
+              <span class="flex-1 flex flex-col gap-0.5"><span>{{ s.label }}</span><span class="text-[12px] text-muted">{{ s.hint }}</span></span>
+              <input class="w-5 h-5 accent-amber" type="checkbox" [checked]="s.on">
+            </label>
+          }
+          <a class="flex items-center min-h-14 border-b border-raised-2 text-fg hover:text-fg text-[15px] no-underline" routerLink="/vincular">Mis dispositivos <span class="ml-auto text-muted">›</span></a>
+          <button class="pill min-h-12 mt-4 rounded-3xl border-[#5A3A33] text-danger hover:text-danger text-[15px] font-normal" type="button" (click)="signOut()">Cerrar sesión</button>
+        </div>
+      }
+    }
+  </main>
+</div>
+
+@switch (confirm()) {
+  @case ('clear') {
+    <app-confirm-dialog heading="¿Borrar todo el historial?" confirmLabel="Borrar historial"
+      message="Se elimina tu progreso de visualización en todas las series. Esta acción no se puede deshacer."
+      (confirmed)="onConfirm()" (closed)="confirm.set(null)" />
+  }
+  @case ('everywhere') {
+    <app-confirm-dialog heading="¿Cerrar sesión en todos los dispositivos?" confirmLabel="Cerrar sesiones" tone="warning"
+      message="Tendrás que iniciar sesión de nuevo en tus televisores, navegadores y teléfonos."
+      (confirmed)="onConfirm()" (closed)="confirm.set(null)" />
+  }
+}

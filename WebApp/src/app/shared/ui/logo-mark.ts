@@ -8,11 +8,15 @@ import { Component, input } from '@angular/core';
       <rect x="3" y="9" width="30" height="22" rx="4"></rect>
       <path d="M12 3l6 6 6-6"></path>
       <rect x="8" y="14" width="16" height="12" rx="2"></rect>
-      <circle cx="28" cy="16" r="1.2"></circle>
-      <circle cx="28" cy="22" r="1.2"></circle>
+      @if (dots()) {
+        <circle cx="28" cy="16" r="1.2"></circle>
+        <circle cx="28" cy="22" r="1.2"></circle>
+      }
     </svg>
   `,
 })
 export class LogoMark {
   readonly size = input(36);
+  /** The dashboard mark has two knob dots; the public header omits them. */
+  readonly dots = input(true);
 }

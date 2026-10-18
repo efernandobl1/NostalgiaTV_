@@ -35,6 +35,12 @@
   --color-violet: #B8A6FF;
 }
 
+/* Phones in portrait or landscape (landscape phones are wider than md but very short). */
+@custom-variant compact {
+  @media (max-width: 767px) { @slot; }
+  @media (max-height: 500px) { @slot; }
+}
+
 @layer base {
   html, body { background: var(--color-ink); color: var(--color-fg); font-family: var(--font-sans); }
   a { color: var(--color-amber); }
@@ -74,11 +80,44 @@
 @utility check { width: 18px; height: 18px; accent-color: var(--color-amber); }
 @utility card { background: var(--color-panel); border: 1px solid var(--color-line); border-radius: 10px; }
 @utility scanlines { background: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 3px), var(--color-raised); }
+/* CRT scanlines over a theme color: scan-raised, scan-raised-2, scan-rail… Line alpha via [--scan:0.025]. */
+@utility scan-* {
+  --scan-bg: --value(--color-*);
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,var(--scan, 0.04)) 0 1px, transparent 1px 3px), var(--scan-bg);
+}
+/* "Static" TV screen used by channel cards and players. Edge color via [--screen-edge:#0B0B09]. */
+@utility tv-screen {
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, #2A2920 0%, var(--screen-edge, #0E0E0C) 80%);
+}
 @utility chip {
   display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 20px;
   border: 1px solid var(--color-edge); background: transparent; color: var(--color-fg);
   font: 500 13px var(--font-sans); cursor: pointer; white-space: nowrap;
   &[aria-pressed="true"], &.on { border-color: var(--color-amber); background: var(--color-amber); color: var(--color-on-amber); }
+}
+/* Fullscreen overlay control (56px glassy pill). */
+@utility fs-btn {
+  display: inline-flex; align-items: center; justify-content: center; height: 56px; border: 1px solid var(--color-edge-2);
+  border-radius: 28px; background: rgba(11,11,9,0.6); color: var(--color-fg); font: 600 16px var(--font-sans);
+  text-decoration: none; cursor: pointer;
+  &:hover { background: rgba(36,36,31,0.8); color: var(--color-fg); }
+}
+/* Horizontal chip/card rails on phones scroll without a visible scrollbar. */
+@utility no-scrollbar { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
+/* Larger public-site filter chip (44px, 14px). */
+@utility chip-lg { min-height: 44px; padding: 0 16px; border-radius: 22px; font-size: 14px; }
+/* Public-site pill buttons (rounded, 44px). */
+@utility pill {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px;
+  border: 1px solid var(--color-edge); border-radius: 22px; background: transparent; color: var(--color-fg);
+  font: 500 14px var(--font-sans); text-decoration: none; cursor: pointer; white-space: nowrap;
+  &:hover { background: var(--color-raised); color: var(--color-fg); }
+  &:disabled { opacity: .5; cursor: not-allowed; }
+}
+@utility pill-primary {
+  border-color: transparent; background: var(--color-amber); color: var(--color-on-amber); font-weight: 600;
+  &:hover { background: var(--color-amber-hi); color: var(--color-on-amber); }
 }
 
 /* Data tables (design: th mono 11px muted, td 13px with soft row rules). */
