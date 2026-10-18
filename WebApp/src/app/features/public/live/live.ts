@@ -1,7 +1,12 @@
-import { Component, computed, inject, input, numberAttribute, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, numberAttribute, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { CHANNEL_LINEUP, ON_AIR, onAirIndex } from '../../../core/data/live';
+import { Api, errorMessage } from '../../../core/api/api';
+import { PublicComment } from '../../../core/api/models';
+import { createTuner } from '../../../core/data/live';
+import { ago } from '../../../core/data/public-data';
 import { PlayerPrefs } from '../../../core/player-prefs';
+import { Session } from '../../../core/session';
+import { VideoScreen } from '../../../shared/ui/video-screen';
 import { copyLink } from '../../../shared/utils/share';
 
 interface LiveComment { ini: string; user: string; time: string; body: string; pending?: boolean }
@@ -9,42 +14,68 @@ interface LiveComment { ini: string; user: string; time: string; body: string; p
 /** Design: "Web · Ver canal en vivo" + "Móvil · En vivo". */
 @Component({
   selector: 'app-live',
-  imports: [RouterLink],
+  imports: [RouterLink, VideoScreen],
   host: { class: 'flex-1 flex flex-col' },
   templateUrl: './live.html',
 })
 export class Live {
   private readonly router = inject(Router);
+  private readonly api = inject(Api);
+  protected readonly session = inject(Session);
   protected readonly player = inject(PlayerPrefs);
 
   /** Route param `:id`. */
-  readonly id = input(5, { transform: numberAttribute });
-  readonly channels = ON_AIR;
-  readonly index = computed(() => onAirIndex(this.id()));
-  readonly ch = computed(() => ON_AIR[this.index()]);
+  readonly id = input(0, { transform: numberAttribute });
+  readonly tuner = createTuner(this.id);
+  readonly channels = this.tuner.channels;
+  readonly index = this.tuner.index;
+  readonly ch = this.tuner.ch;
+  readonly lineup = this.tuner.lineup;
+  readonly mobileLineup = computed(() => this.lineup().filter(g => g.kind !== 'past'));
+  /** Only one `<video>` plays: the desktop or the mobile one. */
+  readonly mobile = signal(typeof matchMedia !== 'undefined' && matchMedia('(max-width: 767.98px)').matches);
 
   readonly tab = signal(0);
-  readonly lineup = CHANNEL_LINEUP;
-  readonly mobileLineup = CHANNEL_LINEUP.filter(g => g.kind !== 'past').map(g => ({ ...g, title: g.title.replace('Los Caballeros', 'Caballeros') }));
-
   readonly draft = signal('');
-  readonly comments = signal<LiveComment[]>([
-    { ini: 'MA', user: 'maria.g', time: 'hace 5 min', body: 'Los cortes con el bumper de Ya viene son idénticos a como los recuerdo.' },
-    { ini: 'JP', user: 'jpablo', time: 'hace 3 min', body: '¿Alguien más llegando de la escuela para ver esto?' },
-    { ini: 'LU', user: 'lucia', time: 'hace 1 min', body: 'Ojalá pongan la película completa el sábado.' },
+  readonly notice = signal('');
+  private readonly published = signal<PublicComment[]>([]);
+  private readonly pending = signal<LiveComment[]>([]);
+  readonly comments = computed<LiveComment[]>(() => [
+    ...this.published().map(c => ({ ini: c.author.slice(0, 2).toUpperCase(), user: c.author, time: ago(c.createdAtUtc), body: c.body })),
+    ...this.pending(),
   ]);
 
-  tune(index: number): void {
-    const n = ON_AIR.length;
-    this.router.navigate(['/ver', ON_AIR[(index + n) % n].id], { replaceUrl: true });
+  constructor() {
+    if (typeof matchMedia !== 'undefined') {
+      const query = matchMedia('(max-width: 767.98px)');
+      query.addEventListener('change', e => this.mobile.set(e.matches));
+    }
+    effect(() => {
+      const id = this.id();
+      untracked(() => {
+        this.pending.set([]);
+        this.published.set([]);
+        if (id) this.api.channelComments(id).then(page => this.published.set([...page.items].reverse())).catch(() => {});
+      });
+    });
   }
 
-  send(): void {
+  tune(index: number): void {
+    this.router.navigate(['/ver', this.tuner.at(index)], { replaceUrl: true });
+  }
+
+  async send(): Promise<void> {
     const body = this.draft().trim();
     if (!body) return;
-    this.comments.update(list => [...list, { ini: 'FE', user: 'fernando', time: 'pendiente de moderación', body, pending: true }]);
-    this.draft.set('');
+    try {
+      await this.api.postChannelComment(this.id(), body);
+      this.pending.update(list => [...list, { ini: this.session.initials(), user: this.session.user(), time: 'pendiente de moderación', body, pending: true }]);
+      this.draft.set('');
+      this.notice.set('');
+    } catch (error) {
+      this.notice.set(errorMessage(error, 'No se pudo enviar el comentario.'));
+    }
   }
 
-  share(): void { copyLink(`/canal/${this.ch().id}`); }
+  share(): void { copyLink(`/canal/${this.id()}`); }
 }

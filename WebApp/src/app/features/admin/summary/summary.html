@@ -1,10 +1,12 @@
 <app-page-header eyebrow="CH 01 · OPERACIÓN" title="Resumen">
-  <span class="font-mono text-[13px] text-muted">SÁB 17 OCT · 14:32 · America/Guatemala</span>
+  <span class="font-mono text-[13px] text-muted">{{ today() }}</span>
   <a class="btn btn-primary" routerLink="/admin/programacion">Ver programación</a>
 </app-page-header>
 
+@if (error()) { <div class="py-3 px-4 rounded-[10px] border border-[#5A3A33] text-[14px] text-danger" role="alert">{{ error() }}</div> }
+
 <section class="grid grid-cols-[repeat(auto-fit,_minmax(220px,_1fr))] gap-4" aria-label="Indicadores">
-  @for (k of d.kpis; track $index) {
+  @for (k of d().kpis; track $index) {
     <a class="flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px] no-underline text-fg" [routerLink]="k.href">
       <span class="font-mono text-[12px] tracking-[0.1em] text-muted">{{k.label}}</span>
       <span class="flex items-baseline gap-2">
@@ -25,7 +27,7 @@
     <a class="text-[14px]" routerLink="/admin/canales">Gestionar canales</a>
   </div>
   <div class="grid grid-cols-[repeat(auto-fit,_minmax(280px,_1fr))] gap-4">
-    @for (c of d.channels; track $index) {
+    @for (c of d().channels; track $index) {
       <article class="flex flex-col bg-panel border border-line rounded-[10px] overflow-hidden">
         <div class="relative h-32 flex items-end p-3.5 scanlines">
           <span class="absolute top-3 left-3 py-[3px] px-2 rounded-sm font-mono text-[11px] tracking-[0.1em]" [style.color]="c.statusInk" [style.background]="c.statusBg">{{c.status}}</span>
@@ -42,6 +44,8 @@
           <span class="font-mono text-[12px] text-info">{{c.next}}</span>
         </div>
       </article>
+    } @empty {
+      <span class="text-[14px] text-muted">Todavía no hay canales.</span>
     }
   </div>
 </section>
@@ -52,7 +56,7 @@
       <h2 class="m-0 font-display text-[18px] font-semibold" id="queue">Cola de procesamiento</h2>
       <a class="text-[14px]" routerLink="/admin/media">Ver todo</a>
     </div>
-    @for (j of d.jobs; track $index) {
+    @for (j of d().jobs; track $index) {
       <div class="flex flex-col gap-1.5 py-2.5 px-0 border-t border-line">
         <div class="flex justify-between gap-3 text-[14px]">
           <span class="font-medium">{{j.series}}</span>
@@ -61,6 +65,8 @@
         <span class="font-mono text-[12px] text-muted truncate">{{j.worker}} · {{j.file}}</span>
         <div class="h-1 rounded-xs bg-line"><div class="h-1 rounded-xs" [style.width.%]="j.progress" [style.background]="j.color"></div></div>
       </div>
+    } @empty {
+      <span class="py-2.5 border-t border-line text-[14px] text-muted">La cola está vacía.</span>
     }
   </section>
 
@@ -69,7 +75,7 @@
       <h2 class="m-0 font-display text-[18px] font-semibold" id="activity">Actividad reciente</h2>
       <a class="text-[14px]" routerLink="/admin/acceso">Registro completo</a>
     </div>
-    @for (a of d.activity; track $index) {
+    @for (a of d().activity; track $index) {
       <div class="grid grid-cols-[56px_minmax(0,_1fr)] gap-3 py-2.5 px-0 border-t border-line">
         <span class="font-mono text-[12px] text-muted">{{a.time}}</span>
         <div class="flex flex-col gap-0.5 text-[14px]">
@@ -77,12 +83,14 @@
           <span class="font-mono text-[12px] text-muted">{{a.resource}}</span>
         </div>
       </div>
+    } @empty {
+      <span class="py-2.5 border-t border-line text-[14px] text-muted">Sin actividad reciente.</span>
     }
   </section>
 </div>
 
 <section class="flex flex-wrap gap-3 items-stretch" aria-label="Estado de workers">
-  @for (w of d.workers; track $index) {
+  @for (w of d().workers; track $index) {
     <div class="flex-[1_1_200px] flex items-center gap-3 py-3.5 px-4 bg-panel border border-line rounded-[10px]">
       <span class="w-2 h-2 rounded-full" aria-hidden="true" [style.background]="w.color"></span>
       <div class="flex flex-col gap-0.5">
@@ -93,6 +101,6 @@
   }
   <div class="flex-[2_1_320px] flex flex-col justify-center gap-1 py-3.5 px-4 bg-panel border border-line rounded-[10px]">
     <span class="font-mono text-[12px] tracking-[0.1em] text-muted">POLÍTICA DE RECURSOS</span>
-    <span class="text-[14px]">Ahora: modo diurno · 4 núcleos — nocturno 23:00–06:00 · 12 núcleos</span>
+    <span class="text-[14px]">{{ d().resources }}</span>
   </div>
 </section>

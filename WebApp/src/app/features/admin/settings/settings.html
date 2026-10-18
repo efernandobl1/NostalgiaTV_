@@ -1,18 +1,26 @@
 <app-page-header eyebrow="CH 10 · SISTEMA" title="Ajustes">
-  <button class="btn btn-primary" type="button">Guardar cambios</button>
+  <button class="btn btn-primary" type="button" [disabled]="!form() || busy()" (click)="save()">{{ busy() ? 'Guardando…' : 'Guardar cambios' }}</button>
 </app-page-header>
 
+@if (error()) { <div class="py-3 px-4 rounded-[10px] border border-[#5A3A33] text-[14px] text-danger" role="alert">{{ error() }}</div> }
+@if (notice()) { <div class="py-3 px-4 rounded-[10px] border border-line text-[14px] text-ok" role="status">{{ notice() }}</div> }
+
+@if (form(); as f) {
 <div class="grid grid-cols-[repeat(auto-fit,_minmax(420px,_1fr))] gap-4 items-start">
   <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="gen">
     <h2 class="m-0 font-display text-[18px] font-semibold" id="gen">General</h2>
     <label class="flex flex-col gap-1.5 text-[12px] text-muted">Zona horaria
-      <select class="field field-select"><option>America/Guatemala (UTC−6)</option><option>America/Mexico_City</option><option>UTC</option></select>
+      <select class="field field-select" (change)="set('timeZoneId', $any($event.target).value)">
+        @for (z of zones(); track z) { <option [value]="z" [selected]="z === f.timeZoneId">{{ z }}</option> }
+      </select>
     </label>
     <label class="flex flex-col gap-1.5 text-[12px] text-muted">Rol para nuevos espectadores
-      <select class="field field-select"><option>Espectador</option><option>Editor</option></select>
+      <select class="field field-select" (change)="set('viewerRoleId', +$any($event.target).value)">
+        @for (r of roles(); track r.id) { <option [value]="r.id" [selected]="r.id === f.viewerRoleId">{{ r.name }}</option> }
+      </select>
     </label>
     <label class="flex items-center justify-between gap-3 min-h-11 text-[14px]">Registro público habilitado
-      <input class="check" type="checkbox" checked>
+      <input class="check" type="checkbox" [checked]="f.publicRegistrationEnabled" (change)="set('publicRegistrationEnabled', !f.publicRegistrationEnabled)">
     </label>
   </section>
 
@@ -20,58 +28,70 @@
     <h2 class="m-0 font-display text-[18px] font-semibold" id="sch">Reglas de programación</h2>
     <label class="flex flex-col gap-2 text-[12px] text-muted">
       <span class="flex justify-between">Ventana sin repetir episodios <span class="font-mono text-fg">{{ hours() }} h</span></span>
-      <input class="w-full accent-amber" type="range" min="0" max="72" [value]="hours()" (input)="hours.set(+$any($event.target).value)">
+      <input class="w-full accent-amber" type="range" min="0" max="72" [value]="hours()" (input)="setNumber('noRepeatWindowHours', $any($event.target).value)">
     </label>
     <div class="grid grid-cols-2 gap-2.5">
-      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Especiales por día (0–50) <input class="field field-select" type="number" min="0" max="50" value="2"></label>
-      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Especiales por serie/día <input class="field field-select" type="number" min="0" value="1"></label>
-      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Películas por día (0–20) <input class="field field-select" type="number" min="0" max="20" value="1"></label>
-      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Películas por serie/día <input class="field field-select" type="number" min="0" value="1"></label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Especiales por día (0–50) <input class="field field-select" type="number" min="0" max="50" [value]="f.maxSpecialsPerDay" (input)="setNumber('maxSpecialsPerDay', $any($event.target).value)"></label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Especiales por serie/día <input class="field field-select" type="number" min="0" max="50" [value]="f.maxSpecialsPerSeriesPerDay" (input)="setNumber('maxSpecialsPerSeriesPerDay', $any($event.target).value)"></label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Películas por día (0–20) <input class="field field-select" type="number" min="0" max="20" [value]="f.maxMoviesPerDay" (input)="setNumber('maxMoviesPerDay', $any($event.target).value)"></label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Películas por serie/día <input class="field field-select" type="number" min="0" max="20" [value]="f.maxMoviesPerSeriesPerDay" (input)="setNumber('maxMoviesPerSeriesPerDay', $any($event.target).value)"></label>
     </div>
   </section>
 
   <section class="flex flex-col gap-1 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="sea">
     <h2 class="m-0 mb-2.5 font-display text-[18px] font-semibold" id="sea">Temporadas (Halloween / Navidad)</h2>
-    @for (s of seasonal; track s.label) {
+    @for (s of seasonal(); track s.key) {
       <label class="flex items-center justify-between gap-3 min-h-13 border-t border-raised-2">
         <span class="flex flex-col gap-0.5">
           <span class="text-[14px]">{{ s.label }}</span>
           <span class="text-[12px] text-muted">{{ s.hint }}</span>
         </span>
-        <input class="check" type="checkbox" [checked]="s.on">
+        <input class="check" type="checkbox" [checked]="s.on" (change)="toggle(s.key)">
       </label>
     }
   </section>
 
+  @if (canMedia) {
   <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="res">
     <h2 class="m-0 font-display text-[18px] font-semibold" id="res">Política de recursos de media</h2>
     <div class="grid grid-cols-2 gap-2.5">
-      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Núcleos de día <input class="field field-select" type="number" min="1" value="4"></label>
-      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Núcleos de noche <input class="field field-select" type="number" min="1" value="12"></label>
-      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Inicio nocturno <input class="field field-select" type="time" value="23:00"></label>
-      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Fin nocturno <input class="field field-select" type="time" value="06:00"></label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Núcleos de día (1–2) <input class="field field-select" type="number" min="1" max="2" [value]="dayCores()" (input)="dayCores.set(+$any($event.target).value)"></label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Núcleos de noche (1–4) <input class="field field-select" type="number" min="1" max="4" [value]="nightCores()" (input)="nightCores.set(+$any($event.target).value)"></label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Inicio nocturno <input class="field field-select [color-scheme:dark]" type="time" [value]="nightStart()" (change)="nightStart.set($any($event.target).value)"></label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Fin nocturno <input class="field field-select [color-scheme:dark]" type="time" [value]="nightEnd()" (change)="nightEnd.set($any($event.target).value)"></label>
     </div>
     <label class="flex items-center justify-between gap-3 min-h-11 text-[14px]">Modo nocturno habilitado
-      <input class="check" type="checkbox" checked>
+      <input class="check" type="checkbox" [checked]="nightEnabled()" (change)="nightEnabled.set(!nightEnabled())">
     </label>
+    @if (resources(); as r) { <span class="text-[12px] text-muted">El servidor tiene {{ r.availableCores }} núcleos · ahora usa {{ r.currentCores }}.</span> }
   </section>
+  }
 </div>
+} @else if (!error()) {
+  <div class="p-10 text-center text-muted">Cargando ajustes…</div>
+}
 
 <section class="flex flex-col gap-4 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="cat">
   <h2 class="m-0 font-display text-[18px] font-semibold" id="cat">Catálogos</h2>
   <div class="grid grid-cols-[repeat(auto-fit,_minmax(260px,_1fr))] gap-5">
-    @for (c of catalogs(); track c.title; let i = $index) {
+    @for (c of catalogs(); track c.key) {
       <div class="flex flex-col gap-2.5">
         <span class="font-mono text-[11px] tracking-[0.1em] text-muted">{{ c.title }}</span>
         <div class="flex flex-wrap gap-1.5">
-          @for (item of c.items; track item) {
-            <span class="py-1.5 px-3 rounded-[14px] text-[13px] bg-raised-2 border border-line">{{ item }}</span>
+          @for (item of c.items; track item.id) {
+            <span class="inline-flex items-center gap-1.5 py-1.5 pl-3 pr-1.5 rounded-[14px] text-[13px] bg-raised-2 border border-line">
+              {{ item.name }} <span class="font-mono text-[11px] text-muted">{{ item.usage }}</span>
+              <button class="w-6 h-6 border-0 rounded-full bg-transparent text-muted hover:text-danger cursor-pointer disabled:opacity-40" type="button"
+                      [disabled]="item.usage > 0" [attr.title]="item.usage > 0 ? 'En uso' : 'Eliminar'" [attr.aria-label]="'Eliminar ' + item.name" (click)="remove(c.key, item.id)">✕</button>
+            </span>
+          } @empty {
+            <span class="text-[13px] text-muted">Vacío.</span>
           }
         </div>
         <label class="relative flex gap-2">
           <span class="sr-only">Agregar a {{ c.title }}</span>
-          <input #box class="field field-select" type="text" [placeholder]="c.placeholder" (keydown.enter)="add(i, box)">
-          <button class="btn btn-ghost px-3.5 text-[13px]" type="button" (click)="add(i, box)">Agregar</button>
+          <input #box class="field field-select" type="text" maxlength="100" [placeholder]="c.placeholder" (keydown.enter)="add(c.key, box)">
+          <button class="btn btn-ghost px-3.5 text-[13px]" type="button" (click)="add(c.key, box)">Agregar</button>
         </label>
       </div>
     }

@@ -1,32 +1,117 @@
-/** Mock "what's on now" per channel, shared by the live player and the fullscreen overlay. */
+import { computed, DestroyRef, effect, inject, Signal, signal, untracked } from '@angular/core';
+import { Api } from '../api/api';
+import { ChannelState, ScheduleProgram } from '../api/models';
+import { airedPct, episodeCode, hhmm, LiveChannel, PublicData, rememberChannel } from './public-data';
+
+/** What's on a channel right now, shared by the live player, fullscreen and the TV player. */
 export interface OnAir {
   id: number; num: string; name: string; short: string; era: string;
-  now: string; nowShort: string; code: string; title: string; detail: string; ends: string;
-  pct: number; next: string; seriesId: number;
+  now: string; nowShort: string; code: string; title: string; detail: string; starts: string; ends: string;
+  pct: number; next: string; seriesId: number | null; inBreak: boolean; breakLeft: string;
 }
 
-export const ON_AIR: OnAir[] = [
-  { id: 5, num: '05', name: 'Canal 5 Retro', short: 'Canal 5', era: 'Época dorada 1996–2001', now: 'Dragon Ball Z', nowShort: 'Dragon Ball Z',
-    code: 'T2 · E14', title: 'El poder oculto de Gohan', detail: 'T2 · E14 · El poder oculto de Gohan', ends: '14:39', pct: 34, next: 'Pokémon · T3 · E02', seriesId: 1 },
-  { id: 12, num: '12', name: 'Cartoon Clásico', short: 'Cartoon', era: 'Fines de los 90', now: 'Hey Arnold!', nowShort: 'Hey Arnold!',
-    code: 'T1 · E07', title: 'Episodio 7', detail: 'T1 · E07', ends: '14:40', pct: 71, next: 'Los Simpson · T5 · E22', seriesId: 3 },
-  { id: 23, num: '23', name: 'Anime 90s', short: 'Anime 90s', era: 'Tardes de anime', now: 'Los Caballeros del Zodiaco', nowShort: 'Caballeros del Zodiaco',
-    code: 'T1 · E31', title: 'Episodio 31', detail: 'T1 · E31', ends: '14:36', pct: 12, next: 'Digimon Adventure · T1 · E12', seriesId: 6 },
-  { id: 31, num: '31', name: 'Tarde de Sábado', short: 'Sábado', era: 'Sábados 2003', now: 'Digimon: La película', nowShort: 'Digimon: La película',
-    code: 'ESPECIAL', title: 'Película', detail: 'Especial', ends: '15:00', pct: 58, next: 'Pokémon · T1 · E05', seriesId: 5 },
-];
+export interface LineupItem { time: string; title: string; sub: string; kind?: 'now' | 'past'; seriesId: number }
 
-export function onAirIndex(id: number): number {
-  return Math.max(0, ON_AIR.findIndex(c => c.id === id));
+function view(channel: LiveChannel | undefined, id: number, state: ChannelState | null, program: ScheduleProgram | undefined, now: number): OnAir {
+  const name = channel?.name ?? `Canal ${String(id).padStart(2, '0')}`;
+  const episode = state?.kind === 'Episode';
+  // During a break the program (not the interlude) is still what's on.
+  const series = program?.seriesName ?? state?.seriesName ?? channel?.card.now?.seriesName ?? channel?.now ?? 'Fuera del aire';
+  const code = program ? episodeCode(program.seasonNumber, program.episodeNumber, program.episodeType)
+    : state ? episodeCode(state.seasonNumber, state.episodeNumber) : channel?.code ?? '';
+  const title = program?.title ?? (episode ? state?.title : '') ?? '';
+  const starts = program?.startsAtUtc ?? state?.startsAtUtc ?? channel?.card.now?.startsAtUtc;
+  const ends = program?.endsAtUtc ?? state?.endsAtUtc ?? channel?.card.now?.endsAtUtc;
+  const left = state ? Math.max(0, Math.round((new Date(state.endsAtUtc).getTime() - now) / 1000)) : 0;
+  return {
+    id, num: String(id).padStart(2, '0'), name, short: name.split(' ').slice(0, 2).join(' '), era: channel?.era ?? '',
+    now: series, nowShort: series, code, title: title && title !== series ? title : '',
+    detail: [code, title !== series ? title : ''].filter(Boolean).join(' · '),
+    starts: hhmm(starts), ends: hhmm(ends), pct: starts && ends ? airedPct(starts, ends, now) : 0,
+    next: state?.nextTitle ?? channel?.next ?? '—', seriesId: program?.seriesId ?? state?.seriesId ?? channel?.card.now?.seriesId ?? null,
+    inBreak: !!state && !episode, breakLeft: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`,
+  };
 }
 
-/** Upcoming list of the current channel (player side panel). */
-export const CHANNEL_LINEUP: { time: string; title: string; sub: string; kind?: 'now' | 'past' }[] = [
-  { time: '13:48', title: 'Hey Arnold!', sub: 'T2 · E04', kind: 'past' },
-  { time: '14:15', title: 'Dragon Ball Z', sub: 'T2 · E14 · ahora', kind: 'now' },
-  { time: '14:39', title: 'Pokémon', sub: 'T3 · E02' },
-  { time: '15:03', title: 'Digimon: La película', sub: 'Especial' },
-  { time: '16:32', title: 'Los Caballeros del Zodiaco', sub: 'T1 · E31' },
-  { time: '16:56', title: 'El Chavo del 8', sub: 'T3 · E11' },
-  { time: '17:20', title: 'Dragon Ball Z', sub: 'T2 · E15' },
-];
+/**
+ * Channel tuner for a player screen: the channels to zap through, the live view of the tuned one and
+ * its lineup. The `<app-video-screen>` reports each new state through `onState`.
+ */
+export function createTuner(id: Signal<number>) {
+  const api = inject(Api);
+  const data = inject(PublicData);
+  data.use();
+
+  const state = signal<ChannelState | null>(null);
+  const programs = signal<ScheduleProgram[]>([]);
+  const clock = signal(Date.now());
+  const timer = setInterval(() => clock.set(Date.now()), 15_000);
+  inject(DestroyRef).onDestroy(() => clearInterval(timer));
+
+  /** Channels on air; the tuned one stays in the list even when the schedule is empty. */
+  const channels = computed<OnAir[]>(() => {
+    const list = data.onAir().length ? data.onAir() : data.channels();
+    const tuned = id();
+    const ids = list.some(c => c.id === tuned) || !tuned ? list.map(c => c.id) : [...list.map(c => c.id), tuned];
+    return ids.map(channelId => view(data.channel(channelId), channelId, null, undefined, clock()));
+  });
+  const index = computed(() => Math.max(0, channels().findIndex(c => c.id === id())));
+  const current = computed(() => {
+    const now = clock();
+    const live = state();
+    return programs().find(p => new Date(p.startsAtUtc).getTime() <= now && new Date(p.endsAtUtc).getTime() > now)
+      ?? programs().find(p => p.episodeId === live?.episodeId);
+  });
+  const ch = computed(() => {
+    const live = state();
+    return view(data.channel(id()), id(), live?.channelId === id() ? live : null, current(), clock());
+  });
+  const lineup = computed<LineupItem[]>(() => {
+    const now = clock();
+    return programs().map(p => {
+      const start = new Date(p.startsAtUtc).getTime();
+      const end = new Date(p.endsAtUtc).getTime();
+      const kind = start <= now && end > now ? 'now' as const : end <= now ? 'past' as const : undefined;
+      const code = episodeCode(p.seasonNumber, p.episodeNumber, p.episodeType);
+      return { time: hhmm(p.startsAtUtc), title: p.seriesName, sub: kind === 'now' ? `${code} · ahora` : code, kind, seriesId: p.seriesId };
+    });
+  });
+
+  async function loadPrograms(channelId: number): Promise<void> {
+    const from = new Date(Date.now() - 60 * 60_000).toISOString();
+    const to = new Date(Date.now() + 6 * 60 * 60_000).toISOString();
+    try {
+      const list = await api.programs(channelId, from, to);
+      if (id() === channelId) programs.set(list.slice(0, 12));
+    } catch { programs.set([]); }
+  }
+
+  effect(() => {
+    const channelId = id();
+    untracked(() => {
+      state.set(null);
+      programs.set([]);
+      if (!channelId) return;
+      rememberChannel(channelId);
+      loadPrograms(channelId);
+    });
+  });
+
+  return {
+    channels, index, ch, lineup, state,
+    /** Channel id `steps` away from the tuned one, wrapping around. */
+    at(position: number): number {
+      const list = channels();
+      return list.length ? list[(position % list.length + list.length) % list.length].id : id();
+    },
+    onState(next: ChannelState | null): void {
+      const previous = state();
+      state.set(next);
+      clock.set(Date.now());
+      // A new program started: refresh the lineup.
+      if (next && (!previous || next.episodeId !== previous.episodeId) && next.kind === 'Episode' && !current()) loadPrograms(next.channelId);
+    },
+  };
+}
+
+export type Tuner = ReturnType<typeof createTuner>;

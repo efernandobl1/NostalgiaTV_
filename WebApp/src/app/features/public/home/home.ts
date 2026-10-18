@@ -1,9 +1,11 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { continueWatching, lastChannel, PublicData } from '../../../core/data/public-data';
+import { Session } from '../../../core/session';
 import { LogoMark } from '../../../shared/ui/logo-mark';
 import { ProgressBar } from '../../../shared/ui/progress-bar';
 import { copyLink } from '../../../shared/utils/share';
-import { CATEGORIES, CONTINUE_WATCHING, LIVE_CHANNELS, MOBILE_FILTERS, Season, SEASONS } from './home.data';
+import { SEASONS } from './home.data';
 
 /** Design: "Web · Canales (página de inicio)" + "Móvil · Canales (inicio)". */
 @Component({
@@ -13,36 +15,45 @@ import { CATEGORIES, CONTINUE_WATCHING, LIVE_CHANNELS, MOBILE_FILTERS, Season, S
   templateUrl: './home.html',
 })
 export class Home {
-  readonly season = signal<Season>('halloween');
-  readonly theme = computed(() => SEASONS[this.season()]);
-  readonly cats = CATEGORIES;
+  protected readonly data = inject(PublicData);
+  private readonly session = inject(Session);
+
+  readonly theme = computed(() => SEASONS[this.data.season()]);
+  readonly cats = computed(() => ['Todos', ...new Set(this.data.channels().flatMap(c => c.tags))].slice(0, 6));
   readonly cat = signal(0);
   readonly onlyLive = signal(false);
   readonly q = signal('');
   readonly sort = signal(0);
   readonly view = signal<'grid' | 'list'>('grid');
-  readonly continueList = CONTINUE_WATCHING;
-  readonly liveCount = LIVE_CHANNELS.filter(c => c.on).length;
+  readonly continueList = computed(() => continueWatching(this.session.viewer()?.progress ?? []));
+  readonly liveCount = computed(() => this.data.onAir().length);
+  readonly today = new Date().toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '').toUpperCase();
+  readonly last = computed(() => this.data.channel(lastChannel() ?? -1) ?? null);
+  /** Hero of the phone home: the first channel on the air. */
+  readonly featured = computed(() => this.data.onAir()[0] ?? null);
 
   readonly channels = computed(() => {
     const q = this.q().trim().toLowerCase();
-    const cat = CATEGORIES[this.cat()];
-    const list = LIVE_CHANNELS.filter(c =>
+    const cat = this.cats()[this.cat()];
+    const list = this.data.channels().filter(c =>
       (this.cat() === 0 || c.tags.includes(cat)) &&
       (!this.onlyLive() || c.on) &&
       (!q || `${c.name} ${c.now}`.toLowerCase().includes(q)));
     return this.sort() === 1 ? [...list].sort((a, b) => a.name.localeCompare(b.name, 'es')) : list;
   });
 
-  readonly mobileFilters = MOBILE_FILTERS;
+  readonly mobileFilters = computed(() => ['Todos', 'Al aire', ...this.cats().slice(1)]);
   readonly mobileFilter = signal(0);
   readonly mobileChannels = computed(() => {
     const f = this.mobileFilter();
-    if (f === 0) return LIVE_CHANNELS;
-    if (f === 1) return LIVE_CHANNELS.filter(c => c.on);
-    const tag = MOBILE_FILTERS[f].replace(/s$/, '');
-    return LIVE_CHANNELS.filter(c => c.tags.includes(tag));
+    const all = this.data.channels();
+    if (f === 0) return all;
+    if (f === 1) return all.filter(c => c.on);
+    const tag = this.mobileFilters()[f];
+    return all.filter(c => c.tags.includes(tag));
   });
+
+  constructor() { this.data.use(); }
 
   clearFilters(): void {
     this.cat.set(0);

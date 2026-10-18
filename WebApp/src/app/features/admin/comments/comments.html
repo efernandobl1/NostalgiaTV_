@@ -10,9 +10,11 @@
   </div>
   <span class="flex-1"></span>
   <label class="flex items-center gap-2 text-[13px] text-muted">Destino
-    <select class="field field-select w-auto bg-panel"><option>Todos</option><option>Canales</option><option>Series</option></select>
+    <select class="field field-select w-auto bg-panel" (change)="target.set($any($event.target).value)"><option value="">Todos</option><option value="channel">Canales</option><option value="series">Series</option></select>
   </label>
 </div>
+
+@if (error()) { <div class="py-3 px-4 rounded-[10px] border border-[#5A3A33] text-[14px] text-danger" role="alert">{{ error() }}</div> }
 
 <section class="flex flex-col gap-3" aria-label="Comentarios">
   @for (c of items(); track c.id) {
@@ -26,7 +28,7 @@
           <strong class="font-semibold text-[14px]">{{ c.user }}</strong>
           <span class="py-0.5 px-2 rounded-sm font-mono text-[11px] bg-raised-2" [class]="c.isSeries ? 'text-amber' : 'text-info'">{{ c.target }}</span>
           @if (c.replyTo) {
-            <span class="text-[12px] text-muted">↳ respuesta a {{ c.replyTo }}</span>
+            <span class="text-[12px] text-muted">↳ respuesta al comentario {{ c.replyTo }}</span>
           }
           <span class="text-muted">{{ c.time }}</span>
           <span class="flex-1"></span>
@@ -41,6 +43,7 @@
       </div>
     </article>
   } @empty {
-    <div class="py-10 text-center text-[14px] text-muted bg-panel border border-line rounded-[10px]">No hay comentarios en esta bandeja.</div>
+    <div class="py-10 text-center text-[14px] text-muted bg-panel border border-line rounded-[10px]">{{ loading() ? 'Cargando…' : 'No hay comentarios en esta bandeja.' }}</div>
   }
+  @if (hasMore()) { <button class="btn btn-ghost self-center" type="button" (click)="load(tab(), page() + 1)">Cargar más</button> }
 </section>

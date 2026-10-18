@@ -1,14 +1,14 @@
-import { seriesById, seriesIdByName } from '../core/data/series';
+import { episodeCode, playTime, years } from '../core/data/public-data';
 import { passwordScore } from '../features/auth/password';
 import { formatPairCode } from '../features/public/pair/pair';
 import { sectionOf } from '../layouts/public/public-section';
 
 describe('TV pairing code', () => {
-  it('formats free text as XXXX-XXXX', () => {
-    expect(formatPairCode('k7q2m9xd')).toBe('K7Q2-M9XD');
-    expect(formatPairCode('ab 12-c')).toBe('AB12-C');
+  it('formats free text as XXX-XXX-XXX-XXX', () => {
+    expect(formatPairCode('k7q2m9xdab3c')).toBe('K7Q-2M9-XDA-B3C');
+    expect(formatPairCode('ab 12-c')).toBe('AB1-2C');
     expect(formatPairCode('abc')).toBe('ABC');
-    expect(formatPairCode('k7q2m9xd99')).toBe('K7Q2-M9XD');
+    expect(formatPairCode('k7q2m9xdab3c99')).toBe('K7Q-2M9-XDA-B3C');
   });
 });
 
@@ -33,13 +33,13 @@ describe('public navigation section', () => {
   });
 });
 
-describe('series lookup', () => {
-  it('finds series by id and by shortened names', () => {
-    expect(seriesById(4).name).toBe('Pokémon');
-    expect(seriesById(999).id).toBe(1);
-    expect(seriesIdByName('Caballeros')).toBe(6);
-    expect(seriesIdByName('Maratón Hey Arnold!')).toBe(3);
-    expect(seriesIdByName('Digimon: La película')).toBe(5);
-    expect(seriesIdByName('Fuera del aire')).toBeNull();
+describe('schedule formatting', () => {
+  it('labels episodes, years and play time', () => {
+    expect(episodeCode(2, 14)).toBe('T2 · E14');
+    expect(episodeCode(0, 1)).toBe('Especial');
+    expect(episodeCode(1, 1, 'Película')).toBe('Película');
+    expect(years(1989, 1996)).toBe('1989–1996');
+    expect(years('1999-01-01', null)).toBe('1999 –');
+    expect(playTime(754.6)).toBe('12:34');
   });
 });

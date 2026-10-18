@@ -1,6 +1,6 @@
 import { computed, Injectable, signal } from '@angular/core';
 
-/** Player preferences kept across the live page and fullscreen (mock; no real video yet). */
+/** Player preferences (volume, mute, captions) shared by every video screen. */
 @Injectable({ providedIn: 'root' })
 export class PlayerPrefs {
   readonly volume = signal(70);

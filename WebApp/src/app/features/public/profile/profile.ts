@@ -1,19 +1,30 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { Devices } from '../../../core/devices';
-import { seriesIdByName } from '../../../core/data/series';
+import { Api, errorMessage } from '../../../core/api/api';
+import { MyComment as MyCommentDto } from '../../../core/api/models';
+import { ago, episodeCode, playTime } from '../../../core/data/public-data';
 import { Session } from '../../../core/session';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog';
 import { ProgressBar } from '../../../shared/ui/progress-bar';
+import { passwordValid } from '../../auth/password';
 
-interface HistoryItem { series: string; code: string; title: string; pct: number; when: string; mobileWhen: string }
-interface MyComment { id: number; target: string; short: string; link: (string | number)[]; time: string; status: 'pending' | 'published' | 'rejected'; body: string }
+type Status = 'pending' | 'published' | 'rejected';
+interface MyComment { id: number; target: string; short: string; link: (string | number)[]; time: string; status: Status; body: string }
 
 const STATUS = {
   pending: { label: 'PENDIENTE DE MODERACIÓN', short: 'PENDIENTE', color: '#FFB547' },
   published: { label: 'PUBLICADO', short: 'PUBLICADO', color: '#8BE08F' },
   rejected: { label: 'RECHAZADO', short: 'RECHAZADO', color: '#FF8A80' },
 };
+
+function statusOf(value: string): Status {
+  const v = value.toLowerCase();
+  return v === 'approved' || v === 'published' ? 'published' : v === 'rejected' ? 'rejected' : 'pending';
+}
+
+const PREFS_KEY = 'ntv.prefs';
+
+interface Pref { key: string; label: string; hint: string; on: boolean }
 
 /** Design: "Web · Perfil e historial" + "Móvil · Perfil e historial". */
 @Component({
@@ -23,69 +34,153 @@ const STATUS = {
   templateUrl: './profile.html',
 })
 export class Profile {
+  private readonly api = inject(Api);
   private readonly router = inject(Router);
   protected readonly session = inject(Session);
-  protected readonly devices = inject(Devices);
   readonly status = STATUS;
 
   readonly tab = signal(0);
   readonly filter = signal(0);
   readonly confirm = signal<'clear' | 'everywhere' | null>(null);
+  readonly error = signal('');
 
-  readonly history = signal<HistoryItem[]>([
-    { series: 'Dragon Ball Z', code: 'T2 · E14', title: 'El poder oculto de Gohan', pct: 64, when: 'hoy 14:20', mobileWhen: 'hoy' },
-    { series: 'Pokémon', code: 'T3 · E01', title: 'Episodio 1', pct: 21, when: 'ayer', mobileWhen: 'ayer' },
-    { series: 'Hey Arnold!', code: 'T1 · E07', title: 'Episodio 7', pct: 100, when: 'hace 3 días', mobileWhen: 'hace 3 días' },
-    { series: 'Los Simpson', code: 'T5 · E20', title: 'Episodio 20', pct: 100, when: 'hace 5 días', mobileWhen: 'hace 5 días' },
-    { series: 'Digimon Adventure', code: 'T1 · E11', title: 'Episodio 11', pct: 45, when: 'hace 1 semana', mobileWhen: 'hace 1 semana' },
-  ]);
+  readonly deviceCount = computed(() => this.session.viewer()?.devices.length ?? 0);
+  readonly watchedCount = computed(() => (this.session.viewer()?.progress ?? []).filter(p => p.completed).length);
+
+  /** Latest episode per series, newest first. */
+  readonly history = computed(() => {
+    const seen = new Set<number>();
+    return [...(this.session.viewer()?.progress ?? [])]
+      .sort((a, b) => b.updatedAtUtc.localeCompare(a.updatedAtUtc))
+      .filter(p => !seen.has(p.seriesId) && seen.add(p.seriesId))
+      .map(p => ({
+        id: p.seriesId, episodeId: p.episodeId, series: p.seriesName, code: episodeCode(p.seasonNumber, p.episodeNumber), title: p.episodeTitle,
+        pct: p.completed ? 100 : 0, done: p.completed, at: playTime(p.currentSecond), when: ago(p.updatedAtUtc), mobileWhen: ago(p.updatedAtUtc),
+      }));
+  });
   readonly filtered = computed(() => {
     const f = this.filter();
-    return this.history()
-      .filter(h => f === 0 || (f === 1 ? h.pct < 100 : h.pct >= 100))
-      .map(h => ({ ...h, id: seriesIdByName(h.series) ?? 1, done: h.pct >= 100 }));
+    return this.history().filter(h => f === 0 || (f === 1 ? !h.done : h.done));
   });
 
-  readonly comments = signal<MyComment[]>([
-    { id: 1, target: 'Serie · Dragon Ball Z', short: 'Dragon Ball Z', link: ['/series', 1], time: 'hace 2 h', status: 'pending', body: 'Me encanta que pusieran la saga de Namek completa.' },
-    { id: 2, target: 'Canal · Anime 90s', short: 'Canal · Anime 90s', link: ['/canal', 23], time: 'hace 4 días', status: 'published', body: 'Podrían agregar más cortes comerciales en la tarde.' },
-    { id: 3, target: 'Serie · Pokémon', short: 'Pokémon', link: ['/series', 4], time: 'hace 2 semanas', status: 'rejected', body: '[Comentario rechazado por el moderador]' },
-  ]);
+  private readonly rawComments = signal<MyCommentDto[]>([]);
+  readonly comments = computed<MyComment[]>(() => this.rawComments().map(c => {
+    const kind = c.targetType === 'series' ? 'Serie' : 'Canal';
+    return {
+      id: c.id, target: `${kind} · ${c.targetName}`, short: c.targetType === 'series' ? c.targetName : `Canal · ${c.targetName}`,
+      link: c.targetType === 'series' ? ['/series', c.targetId] : ['/canal', c.targetId], time: ago(c.editedAtUtc ?? c.createdAtUtc),
+      status: statusOf(c.status), body: c.body,
+    };
+  }));
   readonly editing = signal<number | null>(null);
 
   // Account
-  readonly googleLinked = signal(true);
-  readonly passwordSaved = signal(false);
-  readonly settings = [
-    { label: 'Reproducir con datos móviles', hint: 'Si está apagado, solo con Wi-Fi', on: true },
-    { label: 'Mostrar número al cambiar de canal', hint: 'Número verde estilo TV de tubo', on: true },
-    { label: 'Efectos de temporada', hint: 'Halloween y Navidad', on: true },
-    { label: 'Subtítulos', hint: 'Cuando estén disponibles', on: false },
-  ];
+  readonly googleLinked = computed(() => (this.session.me()?.externalLogins ?? []).some(l => l.toLowerCase() === 'google'));
+  readonly hasPassword = computed(() => this.session.me()?.hasPassword ?? false);
+  readonly passwordError = signal('');
 
-  removeHistory(series: string): void { this.history.update(l => l.filter(h => h.series !== series)); }
+  /** Device preferences (kept in this browser). */
+  readonly settings = signal<Pref[]>(this.readPrefs([
+    { key: 'mobileData', label: 'Reproducir con datos móviles', hint: 'Si está apagado, solo con Wi-Fi', on: true },
+    { key: 'channelNumber', label: 'Mostrar número al cambiar de canal', hint: 'Número verde estilo TV de tubo', on: true },
+    { key: 'seasonal', label: 'Efectos de temporada', hint: 'Halloween y Navidad', on: true },
+  ]));
 
-  saveComment(id: number, body: string): void {
+  constructor() {
+    effect(() => {
+      const signedIn = this.session.signedIn();
+      untracked(() => { if (signedIn) this.loadComments(); else this.rawComments.set([]); });
+    });
+  }
+
+  private async loadComments(): Promise<void> {
+    try { this.rawComments.set(await this.api.myComments()); } catch { /* shown as empty */ }
+  }
+
+  async removeHistory(seriesId: number): Promise<void> {
+    try { await this.api.resetSeries(seriesId); } catch (error) { this.error.set(errorMessage(error)); }
+    await this.session.refreshViewer();
+  }
+
+  async saveComment(id: number, body: string): Promise<void> {
     const text = body.trim();
-    if (text) this.comments.update(l => l.map(c => (c.id === id ? { ...c, body: text, status: 'pending', time: 'ahora' } : c)));
-    this.editing.set(null);
+    if (!text) return;
+    try {
+      const updated = await this.api.editComment(id, text);
+      this.rawComments.update(l => l.map(c => (c.id === id ? updated : c)));
+      this.editing.set(null);
+    } catch (error) {
+      this.error.set(errorMessage(error, 'No se pudo guardar el comentario.'));
+    }
   }
 
-  deleteComment(id: number): void { this.comments.update(l => l.filter(c => c.id !== id)); }
-
-  savePassword(current: HTMLInputElement, next: HTMLInputElement): void {
-    if (!current.value || next.value.length < 8) return;
-    current.value = next.value = '';
-    this.passwordSaved.set(true);
+  async deleteComment(id: number): Promise<void> {
+    try {
+      await this.api.deleteComment(id);
+      this.rawComments.update(l => l.filter(c => c.id !== id));
+    } catch (error) {
+      this.error.set(errorMessage(error, 'No se pudo eliminar el comentario.'));
+    }
   }
 
-  onConfirm(): void {
-    if (this.confirm() === 'clear') this.history.set([]);
-    if (this.confirm() === 'everywhere') this.signOut();
+  /** Changing the password ends every session, so the viewer signs in again. */
+  async savePassword(current: HTMLInputElement, next: HTMLInputElement): Promise<void> {
+    this.passwordError.set('');
+    if ((this.hasPassword() && !current.value) || !passwordValid(next.value)) {
+      this.passwordError.set('Escribe tu contraseña actual y una nueva de al menos 12 caracteres.');
+      return;
+    }
+    try {
+      await this.api.changePassword(current.value, next.value);
+      await this.session.forget();
+      this.router.navigate(['/login'], { queryParams: { changed: 1 } });
+    } catch (error) {
+      this.passwordError.set(errorMessage(error, 'No se pudo cambiar la contraseña.'));
+    }
   }
 
-  signOut(): void {
-    this.session.signOut();
+  async unlinkGoogle(): Promise<void> {
+    try {
+      await this.api.unlinkLogin('google');
+      this.session.me.set(await this.api.me());
+    } catch (error) {
+      this.error.set(errorMessage(error, 'No se pudo desvincular Google.'));
+    }
+  }
+
+  togglePref(key: string): void {
+    this.settings.update(list => list.map(s => (s.key === key ? { ...s, on: !s.on } : s)));
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(Object.fromEntries(this.settings().map(s => [s.key, s.on])))); } catch { /* private mode */ }
+  }
+
+  private readPrefs(defaults: Pref[]): Pref[] {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as Record<string, boolean>;
+      return defaults.map(d => ({ ...d, on: saved[d.key] ?? d.on }));
+    } catch {
+      return defaults;
+    }
+  }
+
+  async onConfirm(): Promise<void> {
+    const action = this.confirm();
+    try {
+      if (action === 'clear') {
+        await this.api.clearHistory();
+        await this.session.refreshViewer();
+      }
+      if (action === 'everywhere') {
+        await this.api.revokeAllSessions();
+        await this.session.forget();
+        this.router.navigateByUrl('/sesion-cerrada');
+      }
+    } catch (error) {
+      this.error.set(errorMessage(error));
+    }
+  }
+
+  async signOut(): Promise<void> {
+    await this.session.signOut();
     this.router.navigateByUrl('/sesion-cerrada');
   }
 }

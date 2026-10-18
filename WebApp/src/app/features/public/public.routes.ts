@@ -9,6 +9,7 @@ export const PUBLIC_ROUTES: Routes = [
       { path: '', pathMatch: 'full', title: 'NostalgiaTV · Canales', loadComponent: () => import('./home/home').then(m => m.Home) },
       { path: 'series', title: 'NostalgiaTV · Series', loadComponent: () => import('./catalog/catalog').then(m => m.Catalog) },
       { path: 'series/:id', title: 'NostalgiaTV · Serie', loadComponent: () => import('./series-detail/series-detail').then(m => m.SeriesDetail) },
+      { path: 'series/:id/episodio/:episodeId', title: 'NostalgiaTV · Episodio', loadComponent: () => import('./episode/episode').then(m => m.Episode) },
       { path: 'canal/:id', title: 'NostalgiaTV · Canal', loadComponent: () => import('./channel-detail/channel-detail').then(m => m.ChannelDetail) },
       { path: 'ver/:id', title: 'NostalgiaTV · En vivo', loadComponent: () => import('./live/live').then(m => m.Live) },
       { path: 'guia', title: 'NostalgiaTV · Guía', loadComponent: () => import('./guide/guide').then(m => m.Guide) },

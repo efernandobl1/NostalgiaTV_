@@ -1,17 +1,14 @@
-import { Component, computed, input, numberAttribute, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, numberAttribute, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CHANNELS } from '../../../core/data/channels';
-import { seriesById } from '../../../core/data/series';
+import { Api, errorMessage, mediaUrl } from '../../../core/api/api';
+import { PublicComment, PublicEpisode, PublicSeriesDetail } from '../../../core/api/models';
+import { ago, channelNumber, episodeCode, playTime, years } from '../../../core/data/public-data';
+import { Session } from '../../../core/session';
 import { ProgressBar } from '../../../shared/ui/progress-bar';
 import { copyLink } from '../../../shared/utils/share';
 
-interface SeriesComment { ini: string; user: string; time: string; body: string; reply?: boolean }
-
-const EPISODES: [string, string, number][] = [
-  ['E12', 'La batalla en Namek comienza', 100], ['E13', 'La llegada de Freezer', 100],
-  ['E14', 'El poder oculto de Gohan', 64], ['E15', 'Vegeta contra Zarbon', 0],
-  ['E16', 'Las esferas de Namek', 0], ['E17', 'Resumen de la saga', 0],
-];
+interface EpisodeView { id: number; num: string; title: string; pct: number; state: string; stateColor: string; meta: string }
+interface CommentView { id: number; ini: string; user: string; time: string; body: string; reply: boolean }
 
 /** Design: "Web · Detalle de serie" + "Móvil · Serie". */
 @Component({
@@ -21,32 +18,118 @@ const EPISODES: [string, string, number][] = [
   templateUrl: './series-detail.html',
 })
 export class SeriesDetail {
+  private readonly api = inject(Api);
+  protected readonly session = inject(Session);
+
   /** Route param `:id`. */
-  readonly id = input(1, { transform: numberAttribute });
-  readonly series = computed(() => seriesById(this.id()));
-  readonly channel = computed(() => CHANNELS.find(c => c.num === this.series().ch) ?? CHANNELS[0]);
+  readonly id = input(0, { transform: numberAttribute });
+  readonly detail = signal<PublicSeriesDetail | null>(null);
+  readonly allEpisodes = signal<PublicEpisode[]>([]);
+  readonly rawComments = signal<PublicComment[]>([]);
+  readonly commentTotal = signal(0);
+  readonly error = signal('');
+  readonly notice = signal('');
+  readonly replyTo = signal<CommentView | null>(null);
 
-  readonly seasons = ['Especiales', 'T1', 'T2', 'T3', 'T4'];
-  readonly season = signal(2);
-  readonly episodes = EPISODES.map(([num, title, pct]) => ({
-    num, title, pct,
-    state: pct >= 100 ? '✓ VISTO' : pct > 0 ? `EN CURSO ${pct}%` : '',
-    stateColor: pct >= 100 ? '#8BE08F' : pct > 0 ? '#FFB547' : '#A29E91',
-  }));
+  readonly series = computed(() => {
+    const d = this.detail();
+    return {
+      id: d?.id ?? 0, name: d?.name ?? '', synopsis: d?.description ?? '', tags: d?.categories ?? [], logo: mediaUrl(d?.logoPath),
+      years: years(d?.startDate, d?.endDate), rating: d?.rating?.toFixed(1) ?? '—', seasons: (d?.seasons ?? []).filter(s => s > 0).length,
+    };
+  });
+  readonly channel = computed(() => {
+    const on = this.detail()?.onAir[0];
+    return on ? { id: on.channelId, code: `CH ${channelNumber(on.channelId)}`, name: on.channelName } : null;
+  });
 
+  /** Season numbers in display order: specials (0) first. */
+  readonly seasonNumbers = computed(() => [...new Set(this.allEpisodes().map(e => e.seasonNumber))].sort((a, b) => (a === 0 ? -1 : b === 0 ? 1 : a - b)));
+  readonly seasons = computed(() => this.seasonNumbers().map(n => (n === 0 ? 'Especiales' : `T${n}`)));
+  readonly season = signal(0);
+
+  private readonly progress = computed(() => new Map((this.session.viewer()?.progress ?? []).map(p => [p.episodeId, p])));
+
+  readonly episodes = computed<EpisodeView[]>(() => {
+    const number = this.seasonNumbers()[this.season()];
+    return this.allEpisodes().filter(e => e.seasonNumber === number).map(e => {
+      const p = this.progress().get(e.id);
+      const done = p?.completed ?? false;
+      const started = !done && (p?.currentSecond ?? 0) > 0;
+      return {
+        id: e.id, num: e.seasonNumber === 0 ? e.episodeType.toUpperCase() : `E${e.episodeNumber}`, title: e.title, pct: done ? 100 : 0,
+        state: done ? '✓ VISTO' : started ? `EN CURSO · ${playTime(p!.currentSecond)}` : '',
+        stateColor: done ? '#8BE08F' : started ? '#FFB547' : '#A29E91',
+        meta: episodeCode(e.seasonNumber, e.episodeNumber, e.episodeType),
+      };
+    });
+  });
+
+  /** Episode to continue: the one in progress, else the first unwatched regular episode. */
+  readonly resume = computed(() => {
+    const list = this.allEpisodes();
+    const progress = this.progress();
+    const episode = list.find(e => { const p = progress.get(e.id); return p && !p.completed && p.currentSecond > 0; })
+      ?? list.find(e => !progress.get(e.id)?.completed && e.seasonNumber > 0) ?? list[0];
+    if (!episode) return null;
+    const started = (progress.get(episode.id)?.currentSecond ?? 0) > 0 && !progress.get(episode.id)?.completed;
+    return { id: episode.id, label: `${started ? 'Continuar' : 'Reproducir'} ${episodeCode(episode.seasonNumber, episode.episodeNumber, episode.episodeType)}` };
+  });
+
+  readonly comments = computed<CommentView[]>(() => {
+    const list = this.rawComments();
+    const roots = list.filter(c => !c.parentCommentId);
+    const view = (c: PublicComment, reply: boolean): CommentView => ({
+      id: c.id, ini: c.author.slice(0, 2).toUpperCase(), user: c.author, time: ago(c.createdAtUtc), body: c.body, reply,
+    });
+    return roots.flatMap(root => [view(root, false), ...list.filter(c => c.parentCommentId === root.id).map(c => view(c, true))]);
+  });
+  readonly commentCount = computed(() => this.commentTotal());
   readonly draft = signal('');
-  readonly comments = signal<SeriesComment[]>([
-    { ini: 'MA', user: 'maria.g', time: 'hace 2 h', body: 'Me encanta que pusieran la saga de Namek completa, así la veía de niña después de la escuela.' },
-    { ini: 'JP', user: 'jpablo', time: 'hace 1 h', body: 'Igual yo. Falta el episodio 16 pero lo demás está perfecto.', reply: true },
-    { ini: 'LU', user: 'lucia', time: 'ayer', body: '¿Van a agregar las películas como especiales?' },
-  ]);
-  readonly commentCount = computed(() => 45 + this.comments().length);
 
-  publish(): void {
+  constructor() {
+    effect(() => {
+      const id = this.id();
+      untracked(() => this.load(id));
+    });
+  }
+
+  private async load(id: number): Promise<void> {
+    if (!id) return;
+    this.error.set('');
+    try {
+      const [detail, episodes] = await Promise.all([this.api.seriesDetail(id), this.api.episodes(id)]);
+      this.detail.set(detail);
+      this.allEpisodes.set(episodes);
+      const resume = this.resume();
+      const start = resume ? episodes.find(e => e.id === resume.id)?.seasonNumber : undefined;
+      const index = this.seasonNumbers().indexOf(start ?? this.seasonNumbers().find(n => n > 0) ?? 0);
+      this.season.set(Math.max(0, index));
+      this.loadComments(id);
+    } catch (error) {
+      this.error.set(errorMessage(error, 'No se pudo cargar la serie.'));
+    }
+  }
+
+  private async loadComments(id: number): Promise<void> {
+    try {
+      const page = await this.api.seriesComments(id);
+      this.rawComments.set(page.items);
+      this.commentTotal.set(page.totalCount);
+    } catch { /* comments are optional */ }
+  }
+
+  async publish(): Promise<void> {
     const body = this.draft().trim();
     if (!body) return;
-    this.comments.update(list => [{ ini: 'FE', user: 'fernando', time: 'ahora', body }, ...list]);
-    this.draft.set('');
+    try {
+      await this.api.postSeriesComment(this.series().id, body, this.replyTo()?.id);
+      this.draft.set('');
+      this.replyTo.set(null);
+      this.notice.set('Gracias. Tu comentario aparecerá cuando un moderador lo apruebe.');
+    } catch (error) {
+      this.notice.set(errorMessage(error, 'No se pudo publicar el comentario.'));
+    }
   }
 
   share(): void { copyLink(`/series/${this.series().id}`); }

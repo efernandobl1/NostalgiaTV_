@@ -1,16 +1,14 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { AdminApi } from '../../../core/api/admin-api';
+import { errorMessage } from '../../../core/api/api';
+import { ModerationPage } from '../../../core/api/models';
+import { ago } from '../../../core/data/public-data';
 import { PageHeader } from '../../../shared/ui/page-header';
 
+const STATUSES = ['Pending', 'Approved', 'Rejected', 'Hidden'];
 const STATUS: [string, string][] = [['PENDIENTE', '#FFB547'], ['APROBADO', '#8BE08F'], ['RECHAZADO', '#FF8A80'], ['OCULTO', '#A29E91']];
-const BASE = [
-  { id: 1, user: 'maria.g', target: 'SERIE · Dragon Ball Z', isSeries: true, replyTo: '', time: 'hace 2 h', body: 'Me encanta que pusieran la saga de Namek completa, así la veía de niña después de la escuela.' },
-  { id: 2, user: 'jpablo', target: 'SERIE · Dragon Ball Z', isSeries: true, replyTo: 'maria.g', time: 'hace 1 h', body: 'Igual yo, falta el episodio 16 de la temporada 2 pero lo demás está perfecto.' },
-  { id: 3, user: 'lucia', target: 'CANAL · Canal 5 Retro', isSeries: false, replyTo: '', time: 'hace 48 min', body: 'Los bumpers de Ya viene están idénticos a los de la tele de antes, qué nostalgia.' },
-  { id: 4, user: 'fernando', target: 'CANAL · Anime 90s', isSeries: false, replyTo: '', time: 'hace 30 min', body: 'Podrían agregar más cortes comerciales en la tarde para que se sienta más real.' },
-  { id: 5, user: 'invitado_77', target: 'SERIE · Pokémon', isSeries: true, replyTo: '', time: 'hace 12 min', body: '¿Van a subir la temporada 4 con el doblaje original?' },
-];
 
-/** Moderation queue. Actions move a comment out of the current tab (mock, no backend). */
+/** Moderation queue: approve, reject or hide comments (one or many). */
 @Component({
   selector: 'app-comments',
   imports: [PageHeader],
@@ -18,28 +16,68 @@ const BASE = [
   templateUrl: './comments.html',
 })
 export class Comments {
+  private readonly admin = inject(AdminApi);
   readonly labels = ['Pendientes', 'Aprobados', 'Rechazados', 'Ocultos'];
-  readonly counts = signal([12, 340, 18, 5]);
   readonly tab = signal(0);
-  /** comment id -> tab it was moved to, per source tab. */
-  readonly moved = signal<Record<string, number>>({});
+  readonly target = signal<'' | 'channel' | 'series'>('');
+  readonly data = signal<ModerationPage | null>(null);
+  readonly page = signal(1);
+  readonly error = signal('');
+  readonly loading = signal(true);
+  readonly counts = computed(() => STATUSES.map(s => this.data()?.counts[s] ?? 0));
   readonly status = computed(() => STATUS[this.tab()]);
-  readonly items = computed(() => BASE.filter(c => this.moved()[this.tab() + ':' + c.id] === undefined));
+  readonly items = computed(() => (this.data()?.items ?? [])
+    .filter(c => !this.target() || c.targetType === this.target())
+    .map(c => ({
+      id: c.id, user: c.author, isSeries: c.targetType === 'series', target: `${c.targetType === 'series' ? 'SERIE' : 'CANAL'} · ${c.targetName}`,
+      replyTo: c.parentCommentId ? `#${c.parentCommentId}` : '', time: ago(c.createdAtUtc), body: c.body,
+    })));
+  readonly hasMore = computed(() => { const d = this.data(); return !!d && d.page * d.pageSize < d.totalCount; });
   readonly selected = signal<Set<number>>(new Set());
 
-  move(id: number, to: number): void {
-    const from = this.tab();
-    if (from === to) return;
-    this.moved.update(m => ({ ...m, [from + ':' + id]: to }));
-    this.counts.update(c => c.map((n, i) => (i === from ? n - 1 : i === to ? n + 1 : n)));
+  constructor() {
+    effect(() => {
+      const tab = this.tab();
+      untracked(() => { this.selected.set(new Set()); this.load(tab, 1); });
+    });
+  }
+
+  async load(tab = this.tab(), page = this.page()): Promise<void> {
+    try {
+      const result = await this.admin.comments(STATUSES[tab], undefined, page, 25);
+      this.data.set(page > 1 && this.data() ? { ...result, items: [...this.data()!.items, ...result.items] } : result);
+      this.page.set(page);
+      this.error.set('');
+    } catch (error) {
+      this.error.set(errorMessage(error, 'No se pudo cargar la moderación.'));
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async move(id: number, to: number): Promise<void> {
+    if (to === this.tab()) return;
+    try {
+      await this.admin.moderate(id, STATUSES[to]);
+      await this.load(this.tab(), 1);
+    } catch (error) {
+      this.error.set(errorMessage(error, 'No se pudo moderar el comentario.'));
+    }
   }
 
   toggle(id: number): void {
-    this.selected.update(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    this.selected.update(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   }
 
-  approveSelected(): void {
-    for (const id of this.selected()) this.move(id, 1);
-    this.selected.set(new Set());
+  async approveSelected(): Promise<void> {
+    const ids = [...this.selected()];
+    if (!ids.length) return;
+    try {
+      await this.admin.moderateMany(ids, 'Approved');
+      this.selected.set(new Set());
+      await this.load(this.tab(), 1);
+    } catch (error) {
+      this.error.set(errorMessage(error, 'No se pudieron aprobar los comentarios.'));
+    }
   }
 }

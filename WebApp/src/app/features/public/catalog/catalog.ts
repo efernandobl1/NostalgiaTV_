@@ -1,28 +1,18 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { SERIES, SERIES_CATEGORIES, SeriesItem } from '../../../core/data/series';
+import { Api, mediaUrl } from '../../../core/api/api';
+import { PublicSeriesCard } from '../../../core/api/models';
+import { channelNumber, PublicData, years } from '../../../core/data/public-data';
+import { Session } from '../../../core/session';
 import { Poster } from '../../../shared/ui/poster';
 
 const DECADES: [number, string][] = [[1970, '70s'], [1980, '80s'], [1990, '90s'], [2000, '2000s']];
-const SORTS: ((a: SeriesItem, b: SeriesItem) => number)[] = [
-  (a, b) => a.name.localeCompare(b.name, 'es'),
-  (a, b) => +b.rating - +a.rating,
-  (a, b) => a.years.localeCompare(b.years),
-  (a, b) => b.years.localeCompare(a.years),
-];
-/** Mobile chips: [label, predicate]. */
-const MOBILE_CHIPS: [string, (s: SeriesItem) => boolean][] = [
-  ['Todas', () => true],
-  ['Anime', s => s.tags.includes('Anime')],
-  ['Caricatura', s => s.tags.includes('Caricatura')],
-  ['Comedia', s => s.tags.includes('Comedia')],
-  ['80s', s => s.decade === 1980],
-  ['90s', s => s.decade === 1990],
-  ['Al aire', s => !!s.ch],
-  ['Viendo', s => s.pct > 0],
-];
+const SORTS = ['name', 'rating', 'oldest', 'newest'];
+const PAGE = 24;
 
-/** Design: "Web · Catálogo de series" + "Móvil · Series (buscar y filtrar)". */
+export interface SeriesCardView { id: number; name: string; years: string; rating: string; ch: string; pct: number | null; image: string | null }
+
+/** Design: "Web · Catálogo de series" + "Móvil · Series (buscar y filtrar)". Search and filters run on the API. */
 @Component({
   selector: 'app-catalog',
   imports: [RouterLink, Poster],
@@ -30,32 +20,42 @@ const MOBILE_CHIPS: [string, (s: SeriesItem) => boolean][] = [
   templateUrl: './catalog.html',
 })
 export class Catalog {
-  readonly total = SERIES.length;
+  private readonly api = inject(Api);
+  private readonly session = inject(Session);
+  protected readonly data = inject(PublicData);
+
   readonly decades = DECADES;
   readonly q = signal('');
-  readonly picked = signal<string[]>([]);
+  readonly picked = signal<number[]>([]);
   readonly decade = signal<number | null>(null);
   readonly onAir = signal(false);
   readonly watching = signal(false);
   readonly sort = signal(0);
 
-  readonly cats = computed(() => SERIES_CATEGORIES.map(name => ({
-    name, on: this.picked().includes(name), n: SERIES.filter(s => s.tags.includes(name)).length,
-  })));
+  readonly items = signal<PublicSeriesCard[]>([]);
+  readonly totalCount = signal(0);
+  private readonly catalogSize = signal(0);
+  readonly total = computed(() => this.catalogSize());
+  readonly page = signal(1);
+  readonly loading = signal(true);
+  readonly error = signal('');
 
-  readonly results = computed(() => {
-    const q = this.q().trim().toLowerCase();
-    const picked = this.picked();
-    return SERIES.filter(s =>
-      (!q || s.name.toLowerCase().includes(q)) &&
-      (!picked.length || picked.some(p => s.tags.includes(p))) &&
-      (this.decade() === null || s.decade === this.decade()) &&
-      (!this.onAir() || !!s.ch) && (!this.watching() || s.pct > 0),
-    ).sort(SORTS[this.sort()]);
-  });
+  /** Series the viewer has started (for "Que estoy viendo" and the progress bars). */
+  private readonly watched = computed(() => new Set((this.session.viewer()?.progress ?? []).map(p => p.seriesId)));
+
+  readonly cats = computed(() => this.data.categories().map(c => ({ id: c.id, name: c.name, on: this.picked().includes(c.id), n: c.seriesCount })));
+
+  readonly results = computed<SeriesCardView[]>(() => this.items()
+    .filter(s => !this.watching() || this.watched().has(s.id))
+    .map(s => ({
+      id: s.id, name: s.name, years: years(s.startYear, s.endYear), rating: s.rating?.toFixed(1) ?? '—',
+      ch: s.onAir.length ? channelNumber(s.onAir[0].channelId) : '', pct: this.watched().has(s.id) ? 0 : null, image: mediaUrl(s.logoPath),
+    })));
+
+  readonly hasMore = computed(() => this.items().length < this.totalCount());
 
   readonly activeChips = computed(() => {
-    const chips: { label: string; remove: () => void }[] = this.picked().map(c => ({ label: c, remove: () => this.toggleCat(c) }));
+    const chips: { label: string; remove: () => void }[] = this.cats().filter(c => c.on).map(c => ({ label: c.name, remove: () => this.toggleCat(c.id) }));
     const d = this.decade();
     if (d !== null) chips.push({ label: `Década ${String(d).slice(2)}s`, remove: () => this.decade.set(null) });
     if (this.onAir()) chips.push({ label: 'Al aire hoy', remove: () => this.onAir.set(false) });
@@ -63,8 +63,43 @@ export class Catalog {
     return chips;
   });
 
-  toggleCat(name: string): void {
-    this.picked.update(p => (p.includes(name) ? p.filter(x => x !== name) : [...p, name]));
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.data.use();
+    this.api.series({ pageSize: 1 }).then(r => this.catalogSize.set(r.totalCount)).catch(() => {});
+    // Any filter change reloads the first page (search is debounced).
+    effect(() => {
+      const query = { search: this.q().trim(), categoryIds: this.picked(), decade: this.decade(), onAirToday: this.onAir(), sort: SORTS[this.sort()] };
+      untracked(() => {
+        if (this.searchTimer) clearTimeout(this.searchTimer);
+        this.searchTimer = setTimeout(() => this.load(1, query), query.search ? 300 : 0);
+      });
+    });
+  }
+
+  private lastQuery: Parameters<Api['series']>[0] = {};
+
+  async load(page: number, query = this.lastQuery): Promise<void> {
+    this.lastQuery = query;
+    this.loading.set(true);
+    try {
+      const result = await this.api.series({ ...query, page, pageSize: PAGE });
+      this.items.set(page === 1 ? result.items : [...this.items(), ...result.items]);
+      this.totalCount.set(result.totalCount);
+      this.page.set(page);
+      this.error.set('');
+    } catch {
+      this.error.set('No se pudo cargar el catálogo.');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  more(): void { if (this.hasMore() && !this.loading()) this.load(this.page() + 1); }
+
+  toggleCat(id: number): void {
+    this.picked.update(p => (p.includes(id) ? p.filter(x => x !== id) : [...p, id]));
   }
 
   clear(): void {
@@ -75,13 +110,23 @@ export class Catalog {
     this.q.set('');
   }
 
-  // ── Mobile ──
-  readonly mobileChips = MOBILE_CHIPS.map(([label]) => label);
+  // ── Mobile: one chip at a time ──
+  readonly mobileChips = computed(() => ['Todas', ...this.data.categories().slice(0, 3).map(c => c.name), '80s', '90s', 'Al aire', 'Viendo']);
   readonly chip = signal(0);
   readonly byRating = signal(false);
-  readonly mobileResults = computed(() => {
-    const q = this.q().trim().toLowerCase();
-    const test = MOBILE_CHIPS[this.chip()][1];
-    return SERIES.filter(s => test(s) && (!q || s.name.toLowerCase().includes(q))).sort(SORTS[this.byRating() ? 1 : 0]);
-  });
+
+  pickChip(index: number): void {
+    this.chip.set(index);
+    const label = this.mobileChips()[index];
+    const category = this.data.categories().find(c => c.name === label);
+    this.picked.set(category ? [category.id] : []);
+    this.decade.set(label === '80s' ? 1980 : label === '90s' ? 1990 : null);
+    this.onAir.set(label === 'Al aire');
+    this.watching.set(label === 'Viendo');
+  }
+
+  toggleRating(): void {
+    this.byRating.update(v => !v);
+    this.sort.set(this.byRating() ? 1 : 0);
+  }
 }

@@ -1,7 +1,9 @@
-import { afterNextRender, Component, computed, DestroyRef, inject, input, numberAttribute, signal } from '@angular/core';
+import { afterNextRender, Component, computed, DestroyRef, effect, inject, input, numberAttribute, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { ON_AIR, onAirIndex } from '../../../core/data/live';
+import { createTuner } from '../../../core/data/live';
 import { PlayerPrefs } from '../../../core/player-prefs';
+import { PublicData } from '../../../core/data/public-data';
+import { VideoScreen } from '../../../shared/ui/video-screen';
 
 type Overlay = 'controls' | 'zapping' | 'guide' | 'break' | 'idle';
 
@@ -11,7 +13,7 @@ const ZAP_MS = 3000;
 /** Design: "Web · Pantalla completa (overlay)" + "Móvil · Pantalla completa (horizontal)". */
 @Component({
   selector: 'app-fullscreen',
-  imports: [RouterLink],
+  imports: [RouterLink, VideoScreen],
   host: {
     class: 'fixed inset-0 z-50 block bg-black text-fg font-sans select-none',
     '(document:mousemove)': 'wake()',
@@ -24,14 +26,18 @@ export class Fullscreen {
   protected readonly player = inject(PlayerPrefs);
 
   /** Route param `:id`. */
-  readonly id = input(5, { transform: numberAttribute });
+  readonly id = input(0, { transform: numberAttribute });
   /** `?demo` shows the design's overlay-state switcher. */
   readonly demo = input<string>();
 
-  readonly index = computed(() => onAirIndex(this.id()));
-  readonly ch = computed(() => ON_AIR[this.index()]);
-  readonly channels = ON_AIR;
-  readonly seasonFx = true;
+  readonly tuner = createTuner(this.id);
+  readonly index = this.tuner.index;
+  readonly ch = this.tuner.ch;
+  readonly channels = this.tuner.channels;
+  private readonly data = inject(PublicData);
+  readonly seasonFx = computed(() => this.data.season() === 'halloween');
+  /** Mirrors the `compact:` variant so only one `<video>` plays. */
+  readonly compact = signal(false);
 
   readonly mode = signal<Overlay>('controls');
   readonly states: [Overlay, string][] = [['controls', 'Controles'], ['zapping', 'Cambio de canal'], ['guide', 'Guía'], ['break', 'Corte comercial'], ['idle', 'Sin controles']];
@@ -44,6 +50,17 @@ export class Fullscreen {
   private timer?: ReturnType<typeof setTimeout>;
 
   constructor() {
+    const query = matchMedia('(max-width: 767px), (max-height: 500px)');
+    this.compact.set(query.matches);
+    query.addEventListener('change', e => this.compact.set(e.matches));
+    // Commercial breaks switch the overlay on their own.
+    effect(() => {
+      const inBreak = this.ch().inBreak;
+      untracked(() => {
+        if (inBreak && this.mode() !== 'guide') this.setMode('break');
+        else if (!inBreak && this.mode() === 'break') this.setMode('controls');
+      });
+    });
     afterNextRender(() => {
       document.documentElement.requestFullscreen?.().catch(() => undefined);
       this.schedule(HIDE_AFTER_MS);
@@ -68,13 +85,12 @@ export class Fullscreen {
   }
 
   tune(index: number): void {
-    const n = ON_AIR.length;
-    this.router.navigate(['/ver', ON_AIR[(index + n) % n].id, 'pantalla-completa'], { replaceUrl: true, queryParamsHandling: 'preserve' });
+    this.router.navigate(['/ver', this.tuner.at(index), 'pantalla-completa'], { replaceUrl: true, queryParamsHandling: 'preserve' });
     this.setMode('zapping');
   }
 
   exit(): void {
-    this.router.navigate(['/ver', this.ch().id]);
+    this.router.navigate(['/ver', this.id()]);
   }
 
   onKey(e: KeyboardEvent): void {

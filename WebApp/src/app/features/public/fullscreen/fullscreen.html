@@ -1,8 +1,8 @@
 <!-- ── Desktop / TV-size overlay ── -->
 <div class="compact:hidden relative w-full h-full overflow-hidden tv-screen [--screen-edge:#050504]" [class.cursor-none]="mode() === 'idle'">
-  <span class="absolute inset-0 flex items-center justify-center font-mono text-[22px] tracking-[0.16em] text-[#4E4C44]">[ VIDEO EN VIVO ]</span>
+  @if (!compact()) { <app-video-screen [channel]="id()" (state)="tuner.onState($event)" /> }
 
-  @if (seasonFx) {
+  @if (seasonFx()) {
     <span class="absolute inset-0 shadow-[inset_0_0_220px_40px_rgba(255,120,30,0.22)] pointer-events-none" aria-hidden="true"></span>
   }
 
@@ -28,15 +28,7 @@
     @case ('break') {
       <div class="absolute top-12 left-16 flex items-center gap-3.5 py-3.5 px-5 rounded-xl bg-[rgba(11,11,9,0.8)] border border-edge">
         <span class="py-1 px-2 rounded-sm font-mono text-[14px] tracking-[0.1em] text-[#0A1A1F] bg-info">CORTE COMERCIAL</span>
-        <span class="text-[20px]">Volvemos con <strong class="font-semibold">{{ ch().now }}</strong> en <span class="font-mono text-amber">1:12</span></span>
-      </div>
-      <div class="absolute left-16 right-16 bottom-12 flex gap-1 h-2">
-        <span class="flex-[30_0_0] rounded-sm bg-amber"></span>
-        <span class="flex-[2_0_0] rounded-sm bg-violet"></span>
-        <span class="flex-[4_0_0] rounded-sm bg-info"></span>
-        <span class="flex-[4_0_0] rounded-sm bg-[rgba(111,208,234,0.35)]"></span>
-        <span class="flex-[2_0_0] rounded-sm bg-[rgba(184,166,255,0.35)]"></span>
-        <span class="flex-[30_0_0] rounded-sm bg-[rgba(255,181,71,0.25)]"></span>
+        <span class="text-[20px]">Volvemos con <strong class="font-semibold">{{ ch().now }}</strong> en <span class="font-mono text-amber">{{ ch().breakLeft }}</span></span>
       </div>
     }
     @case ('controls') {
@@ -46,7 +38,7 @@
         </button>
         <span class="flex flex-col gap-1">
           <span class="flex items-center gap-2.5 font-mono text-[16px] tracking-[0.1em] text-amber uppercase"><span class="py-[3px] px-2 rounded-sm text-on-live bg-live">● EN VIVO</span>{{ ch().name }}</span>
-          <span class="text-[16px] text-muted">Era: {{ ch().era }}</span>
+          @if (ch().era) { <span class="text-[16px] text-muted">Era: {{ ch().era }}</span> }
         </span>
         <span class="flex-1"></span>
         <span class="font-display font-bold text-[64px] text-ok [text-shadow:0_0_14px_rgba(139,224,143,0.5)]">{{ ch().num }}</span>
@@ -60,16 +52,14 @@
             <span class="text-[20px] text-fg-2">{{ ch().title }}</span>
           </div>
           <div class="w-95 py-4 px-5 rounded-[14px] bg-[rgba(236,232,220,0.08)]">
-            <span class="font-mono text-[14px] tracking-[0.12em] text-muted">A CONTINUACIÓN · {{ ch().ends }}</span>
+            <span class="font-mono text-[14px] tracking-[0.12em] text-muted">A CONTINUACIÓN{{ ch().ends ? ' · ' + ch().ends : '' }}</span>
             <div class="mt-1 font-semibold text-[22px]">{{ ch().next }}</div>
           </div>
         </div>
         <div class="flex items-center gap-4.5">
-          <span class="font-mono text-[18px] text-muted">14:15</span>
+          <span class="font-mono text-[18px] text-muted">{{ ch().starts }}</span>
           <span class="relative flex-1 h-2 rounded-sm bg-[rgba(255,255,255,0.15)]">
             <span class="block h-2 rounded-sm bg-amber" [style.width.%]="ch().pct"></span>
-            <span class="absolute -top-[3px] left-[33%] w-[3px] h-3.5 bg-info" aria-hidden="true"></span>
-            <span class="absolute -top-[3px] left-[66%] w-[3px] h-3.5 bg-info" aria-hidden="true"></span>
           </span>
           <span class="font-mono text-[18px] text-muted">{{ ch().ends }}</span>
         </div>
@@ -85,7 +75,7 @@
           <button class="fs-btn gap-2.5 px-5.5 text-[16px]" type="button" (click)="setMode('guide')">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>Guía
           </button>
-          <a class="fs-btn px-5.5 text-[16px]" [routerLink]="['/series', ch().seriesId]">Ficha de la serie</a>
+          @if (ch().seriesId) { <a class="fs-btn px-5.5 text-[16px]" [routerLink]="['/series', ch().seriesId]">Ficha de la serie</a> }
           <button class="fs-btn w-14" type="button" (click)="exit()" aria-label="Salir de pantalla completa">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"></path></svg>
           </button>
@@ -99,13 +89,13 @@
           <span class="font-display font-bold text-[32px]">Canales</span>
           <button class="w-13 h-13 border-0 rounded-[26px] bg-[rgba(236,232,220,0.1)] hover:bg-[rgba(236,232,220,0.2)] text-fg text-[22px] cursor-pointer" type="button" (click)="setMode('controls')" aria-label="Cerrar guía">✕</button>
         </div>
-        @for (r of channels; track r.id; let k = $index) {
+        @for (r of channels(); track r.id; let k = $index) {
           <button type="button" class="flex items-center gap-4 w-full py-4 px-4.5 rounded-[14px] font-[inherit] text-fg border-2 border-transparent bg-transparent hover:not-aria-pressed:bg-[rgba(236,232,220,0.06)] aria-pressed:bg-amber-wash aria-pressed:border-amber"
                   [attr.aria-pressed]="k === index()" (click)="tune(k)">
             <span class="w-16 font-display font-bold text-[32px] text-amber text-left">{{ r.num }}</span>
             <span class="flex-1 flex flex-col gap-1 text-left">
               <span class="font-semibold text-[20px] uppercase">{{ r.name }}</span>
-              <span class="text-[16px] opacity-80">{{ r.now }} · sigue {{ r.next.split(' · ')[0] }}</span>
+              <span class="text-[16px] opacity-80">{{ r.now }} · sigue {{ r.next }}</span>
             </span>
           </button>
         }
@@ -113,9 +103,6 @@
     }
   }
 
-  @if (player.captions() && mode() !== 'guide') {
-    <span class="absolute left-1/2 bottom-72 -translate-x-1/2 py-1.5 px-4 rounded bg-black/70 text-[26px] pointer-events-none">[ Subtítulos ]</span>
-  }
 
   @if (demo() !== undefined) {
     <div class="absolute left-1/2 top-6 -translate-x-1/2 flex gap-1.5 p-1.5 rounded-3xl bg-[rgba(11,11,9,0.7)] border border-dashed border-edge-2" role="group" aria-label="Estados del overlay (demo)">
@@ -129,8 +116,8 @@
 
 <!-- ── Phone overlay (portrait or landscape) ── -->
 <div class="hidden compact:block relative w-full h-full overflow-hidden tv-screen [--screen-edge:#050504]">
+  @if (compact()) { <app-video-screen [channel]="id()" (state)="tuner.onState($event)" /> }
   <button class="absolute inset-0 border-0 bg-transparent cursor-pointer" type="button" (click)="toggleMobile()" aria-label="Mostrar u ocultar controles"></button>
-  <span class="absolute inset-0 flex items-center justify-center font-mono text-[12px] tracking-[0.14em] text-[#4E4C44] pointer-events-none" aria-hidden="true">[ VIDEO ]</span>
   <span class="absolute top-3 right-13 font-display font-bold text-ok [text-shadow:0_0_10px_rgba(139,224,143,0.5)] pointer-events-none transition-all" aria-hidden="true"
         [style.font-size.px]="mobileControls() ? 40 : 28" [style.opacity]="mobileControls() ? 1 : 0.4">{{ ch().num }}</span>
 
@@ -141,7 +128,7 @@
       </button>
       <span class="flex flex-col gap-0.5 min-w-0">
         <span class="flex items-center gap-1.5 font-mono text-[11px] text-amber uppercase"><span class="py-px px-[5px] rounded-[3px] text-on-live bg-live">EN VIVO</span>{{ ch().name }}</span>
-        <span class="font-semibold text-[16px] truncate">{{ ch().nowShort }} · {{ ch().code === 'ESPECIAL' ? 'Especial' : ch().code }}</span>
+        <span class="font-semibold text-[16px] truncate">{{ ch().nowShort }}{{ ch().code ? ' · ' + ch().code : '' }}</span>
       </span>
       <span class="flex-1"></span>
       <button class="min-w-11 h-11 border-0 rounded-[22px] bg-[rgba(236,232,220,0.12)] text-fg font-mono font-semibold text-[12px] aria-pressed:text-amber" type="button" [attr.aria-pressed]="player.captions()" (click)="player.toggleCaptions()" aria-label="Subtítulos">CC</button>
@@ -160,10 +147,10 @@
       <button class="w-11 h-11 flex items-center justify-center border-0 bg-transparent text-fg" type="button" (click)="player.toggleMute()" [attr.aria-label]="player.muteLabel()">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path [attr.d]="player.muteIcon()"></path></svg>
       </button>
-      <span class="font-mono text-[11px] text-muted">14:15</span>
+      <span class="font-mono text-[11px] text-muted">{{ ch().starts }}</span>
       <span class="flex-1 h-1 rounded-xs bg-[rgba(255,255,255,0.18)]"><span class="block h-1 rounded-xs bg-amber" [style.width.%]="ch().pct"></span></span>
       <span class="font-mono text-[11px] text-muted">{{ ch().ends }}</span>
-      <span class="text-[12px] text-fg-2 whitespace-nowrap max-sm:hidden">Sigue: {{ ch().next.split(' · ')[0] }}</span>
+      <span class="text-[12px] text-fg-2 whitespace-nowrap max-sm:hidden">Sigue: {{ ch().next }}</span>
     </div>
   }
 

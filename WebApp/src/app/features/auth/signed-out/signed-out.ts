@@ -23,7 +23,9 @@ import { Session } from '../../../core/session';
   `,
 })
 export class SignedOut {
+  /** Opening this page directly also ends the session. */
   constructor() {
-    inject(Session).signOut();
+    const session = inject(Session);
+    if (session.signedIn()) session.signOut();
   }
 }

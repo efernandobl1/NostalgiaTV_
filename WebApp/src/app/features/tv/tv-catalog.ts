@@ -1,19 +1,11 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { SERIES, SeriesItem } from '../../core/data/series';
+import { Api } from '../../core/api/api';
+import { PublicSeriesCard } from '../../core/api/models';
+import { PublicData, years } from '../../core/data/public-data';
 import { TvHeader } from './tv-header';
 
-const CHIPS: [string, (s: SeriesItem) => boolean][] = [
-  ['Todas', () => true],
-  ['Anime', s => s.tags.includes('Anime')],
-  ['Caricatura', s => s.tags.includes('Caricatura')],
-  ['Comedia', s => s.tags.includes('Comedia')],
-  ['80s', s => s.decade === 1980],
-  ['90s', s => s.decade === 1990],
-  ['Al aire', s => !!s.ch],
-];
-
-/** Design: "Android TV · Series (buscar y filtrar)". */
+/** Design: "Android TV · Series (buscar y filtrar)". Search and filters run on the API. */
 @Component({
   selector: 'app-tv-catalog',
   imports: [RouterLink, TvHeader],
@@ -29,15 +21,15 @@ const CHIPS: [string, (s: SeriesItem) => boolean][] = [
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
       </label>
       <div class="flex gap-3" role="group" aria-label="Filtros">
-        @for (c of chips; track c; let i = $index) {
-          <button type="button" class="tv-chip tv-focus h-16 px-7 rounded-[32px] text-[22px] font-semibold [--focus-scale:1.05]" [attr.aria-pressed]="i === chip()" (click)="chip.set(i)">{{ c }}</button>
+        @for (c of chips(); track c.label; let i = $index) {
+          <button type="button" class="tv-chip tv-focus h-16 px-7 rounded-[32px] text-[22px] font-semibold [--focus-scale:1.05]" [attr.aria-pressed]="i === chip()" (click)="chip.set(i)">{{ c.label }}</button>
         }
       </div>
     </div>
 
     <div class="flex items-baseline gap-4">
-      <span class="font-display font-semibold text-[30px]">{{ chip() === 0 ? 'Todas las series' : chips[chip()] }}</span>
-      <span class="text-[22px] text-muted">{{ results().length }} series · ordenadas de la A a la Z</span>
+      <span class="font-display font-semibold text-[30px]">{{ chip() === 0 ? 'Todas las series' : chips()[chip()].label }}</span>
+      <span class="text-[22px] text-muted">{{ total() }} series · ordenadas de la A a la Z</span>
     </div>
 
     <div class="flex-1 min-h-0 -m-3 p-3 overflow-y-auto no-scrollbar" data-tv-scroll>
@@ -51,19 +43,55 @@ const CHIPS: [string, (s: SeriesItem) => boolean][] = [
             <span class="font-mono text-[18px] text-muted text-left">{{ p.years }}</span>
           </a>
         } @empty {
-          <span class="col-span-6 py-10 text-center text-[24px] text-muted">Ninguna serie coincide.</span>
+          <span class="col-span-6 py-10 text-center text-[24px] text-muted">{{ loading() ? 'Buscando series…' : 'Ninguna serie coincide.' }}</span>
         }
       </div>
     </div>
   `,
 })
 export class TvCatalog {
-  readonly chips = CHIPS.map(([label]) => label);
+  private readonly api = inject(Api);
+  private readonly data = inject(PublicData);
   readonly chip = signal(0);
   readonly q = signal('');
-  readonly results = computed(() => {
-    const q = this.q().trim().toLowerCase();
-    return SERIES.filter(s => CHIPS[this.chip()][1](s) && (!q || s.name.toLowerCase().includes(q)))
-      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  });
+  readonly items = signal<PublicSeriesCard[]>([]);
+  readonly total = signal(0);
+  readonly loading = signal(true);
+
+  /** "Todas", up to three categories, two decades and "Al aire". */
+  readonly chips = computed(() => [
+    { label: 'Todas' },
+    ...this.data.categories().slice(0, 3).map(c => ({ label: c.name, category: c.id })),
+    { label: '80s', decade: 1980 }, { label: '90s', decade: 1990 }, { label: 'Al aire', onAir: true },
+  ] as { label: string; category?: number; decade?: number; onAir?: boolean }[]);
+
+  readonly results = computed(() => this.items().map(s => ({ id: s.id, name: s.name, years: years(s.startYear, s.endYear), ch: s.onAir.length > 0 })));
+
+  private timer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.data.use();
+    effect(() => {
+      const chip = this.chips()[this.chip()] ?? { label: 'Todas' };
+      const search = this.q().trim();
+      untracked(() => {
+        if (this.timer) clearTimeout(this.timer);
+        this.timer = setTimeout(() => this.load(search, chip), search ? 300 : 0);
+      });
+    });
+  }
+
+  private async load(search: string, chip: { category?: number; decade?: number; onAir?: boolean }): Promise<void> {
+    this.loading.set(true);
+    try {
+      const page = await this.api.series({ search, categoryIds: chip.category ? [chip.category] : [], decade: chip.decade ?? null, onAirToday: chip.onAir, sort: 'name', pageSize: 60 });
+      this.items.set(page.items);
+      this.total.set(page.totalCount);
+    } catch {
+      this.items.set([]);
+      this.total.set(0);
+    } finally {
+      this.loading.set(false);
+    }
+  }
 }

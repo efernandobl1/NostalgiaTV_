@@ -1,5 +1,5 @@
 import { Component, ElementRef, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Session } from '../../core/session';
 import { LogoMark } from '../../shared/ui/logo-mark';
 import { injectSection, PUBLIC_NAV } from './public-section';
@@ -30,7 +30,7 @@ import { injectSection, PUBLIC_NAV } from './public-section';
         </a>
         @if (session.signedIn()) {
           <button class="w-11 h-11 flex items-center justify-center border-0 rounded-full bg-amber text-on-amber font-display font-bold text-[14px] cursor-pointer" type="button"
-                  (click)="menu.set(!menu())" [attr.aria-expanded]="menu()" aria-label="Menú de perfil">{{ session.initials }}</button>
+                  (click)="menu.set(!menu())" [attr.aria-expanded]="menu()" aria-label="Menú de perfil">{{ session.initials() }}</button>
         } @else {
           <a class="inline-flex items-center min-h-11 px-4.5 border border-edge rounded-[22px] text-fg hover:text-fg text-[14px] font-medium no-underline" routerLink="/login">Iniciar sesión</a>
           <a class="inline-flex items-center min-h-11 px-4.5 rounded-[22px] bg-amber text-on-amber hover:text-on-amber text-[14px] font-semibold no-underline" routerLink="/registro">Crear cuenta</a>
@@ -38,10 +38,13 @@ import { injectSection, PUBLIC_NAV } from './public-section';
       </div>
       @if (menu() && session.signedIn()) {
         <div class="absolute top-18 right-10 z-20 w-60 flex flex-col p-2 border border-edge rounded-xl bg-panel shadow-[0_16px_40px_rgba(0,0,0,0.5)]" role="menu">
-          <span class="py-2.5 px-3 text-[13px] text-muted">Sesión iniciada como <strong class="text-fg">{{ session.user }}</strong></span>
+          <span class="py-2.5 px-3 text-[13px] text-muted">Sesión iniciada como <strong class="text-fg">{{ session.user() }}</strong></span>
           <a class="flex items-center min-h-11 px-3 rounded-lg text-fg hover:text-fg hover:bg-raised text-[14px] no-underline" role="menuitem" routerLink="/vincular" (click)="menu.set(false)">Mis dispositivos</a>
           <a class="flex items-center min-h-11 px-3 rounded-lg text-fg hover:text-fg hover:bg-raised text-[14px] no-underline" role="menuitem" routerLink="/perfil" (click)="menu.set(false)">Historial de visualización</a>
-          <a class="flex items-center min-h-11 px-3 rounded-lg text-danger hover:text-danger hover:bg-raised text-[14px] no-underline" role="menuitem" routerLink="/sesion-cerrada" (click)="signOut()">Cerrar sesión</a>
+          @if (session.canUseDashboard()) {
+            <a class="flex items-center min-h-11 px-3 rounded-lg text-fg hover:text-fg hover:bg-raised text-[14px] no-underline" role="menuitem" routerLink="/admin" (click)="menu.set(false)">Panel de control</a>
+          }
+          <button class="flex items-center min-h-11 px-3 border-0 rounded-lg bg-transparent text-danger hover:bg-raised text-[14px] text-left cursor-pointer" role="menuitem" type="button" (click)="signOut()">Cerrar sesión</button>
         </div>
       }
     </header>
@@ -58,8 +61,11 @@ export class PublicHeader {
     if (this.menu() && !this.host.nativeElement.querySelector('header')?.contains(e.target as Node)) this.menu.set(false);
   }
 
-  protected signOut(): void {
+  private readonly router = inject(Router);
+
+  protected async signOut(): Promise<void> {
     this.menu.set(false);
-    this.session.signOut();
+    await this.session.signOut();
+    this.router.navigateByUrl('/sesion-cerrada');
   }
 }
