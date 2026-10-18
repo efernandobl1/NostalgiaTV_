@@ -45,7 +45,7 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient, private 
     suspend fun authorizeDevice(name: String): AuthorizationCode {
         val result = json("viewer/authorization", JSONObject().put("name", name))
         return AuthorizationCode(result.getString("deviceCode"), result.getString("userCode"),
-            result.getString("expiresAtUtc"), result.getInt("interval"))
+            result.getString("expiresAtUtc"), result.getInt("intervalSeconds"))
     }
 
     suspend fun redeemDevice(code: String): Boolean =
@@ -59,31 +59,33 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient, private 
 
     suspend fun series(page: Int, filter: SeriesFilter = SeriesFilter()): SeriesPage {
         val query = base.newBuilder().addQueryParameter("Page", page.toString()).addQueryParameter("PageSize", "24")
-        if (filter.name.isNotBlank()) query.addQueryParameter("Name", filter.name.trim())
+        if (filter.name.isNotBlank()) query.addQueryParameter("Search", filter.name.trim())
         filter.channelId?.let { query.addQueryParameter("ChannelId", it.toString()) }
-        filter.categoryId?.let { query.addQueryParameter("CategoryId", it.toString()) }
+        filter.categoryId?.let { query.addQueryParameter("CategoryIds", it.toString()) }
         val result = json("public/series?${query.build().encodedQuery}")
         return SeriesPage(result.getJSONArray("items").objects().map {
             Series(it.getInt("id"), it.getString("name"), it.nullableString("logoPath"), it.optInt("episodeCount"))
         }, result.getInt("totalCount"))
     }
 
-    suspend fun schedule(channelId: Int): List<ScheduleEntry> = array("public/channels/$channelId/schedule").objects().map {
-        ScheduleEntry(it.getLong("id"), if (it.optBoolean("isBumper")) it.optString("bumperTitle", "Pausa del canal") else it.optString("seriesName"),
-            it.optString("episodeTitle"), utcMillis(it.getString("startTime")), utcMillis(it.getString("endTime")))
+    /** Upcoming program blocks (an episode plus the bumpers and ads inside it). */
+    suspend fun schedule(channelId: Int): List<ScheduleEntry> = array("public/channels/$channelId/programs").objects().map {
+        ScheduleEntry(it.getLong("id"), it.optString("seriesName"), it.optString("title"),
+            utcMillis(it.getString("startsAtUtc")), utcMillis(it.getString("endsAtUtc")))
     }.sortedBy { it.startsAt }
 
     suspend fun episodes(seriesId: Int): List<Episode> = array("public/series/$seriesId/episodes").objects()
         .filter { !it.nullableString("filePath").isNullOrBlank() }
         .map { Episode(it.getInt("id"), it.getString("title"), it.getString("filePath"),
-            it.getInt("season"), it.getInt("episodeNumber")) }.inBroadcastOrder()
+            it.getInt("seasonNumber"), it.getInt("episodeNumber")) }.inBroadcastOrder()
 
     suspend fun channelState(channelId: Int): ChannelState {
         val result = json("public/channels/$channelId/state")
-        return ChannelState(result.getLong("segmentId"), result.optInt("episodeId"),
-            if (result.optBoolean("isBumper")) result.nullableString("bumperTitle") ?: "Pausa del canal"
-            else result.optString("episodeTitle"), result.optString("seriesName"), result.getString("filePath"),
-            result.optDouble("currentSecond", 0.0), result.optDouble("secondsUntilNext", 10.0), result.optBoolean("isBumper"), result.optInt("seriesId"))
+        // Bumpers and ads air between episode slices; only "Episode" segments carry an episode.
+        val interlude = result.optString("kind", "Episode") != "Episode"
+        return ChannelState(result.getLong("segmentId"), if (interlude) 0 else result.optInt("episodeId"),
+            result.nullableString("title") ?: "Pausa del canal", result.nullableString("seriesName") ?: "", result.getString("filePath"),
+            result.optDouble("currentSecond", 0.0), result.optDouble("secondsUntilNext", 10.0), interlude, result.optInt("seriesId"))
     }
 
     suspend fun viewerSession(): ViewerSession = parseSession(json("viewer/session"))

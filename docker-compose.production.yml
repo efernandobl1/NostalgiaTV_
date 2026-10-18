@@ -107,6 +107,7 @@ services:
       Jwt__Audience: ${JWT_AUDIENCE:-nostalgiatv}
       Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
       Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
+      Metadata__Tmdb__ApiKey: ${TMDB_API_KEY:-}
       # Only trust the webapp proxy on this project's private network.
       ReverseProxy__TrustForwardedHeaders: "true"
       ReverseProxy__ProxyHost: webapp

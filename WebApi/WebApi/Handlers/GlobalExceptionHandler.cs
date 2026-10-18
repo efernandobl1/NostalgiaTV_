@@ -1,4 +1,4 @@
-﻿using ApplicationCore.Exceptions;
+using ApplicationCore.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,6 +19,7 @@ namespace WebApi.Handlers
             {
                 NotFoundException => (StatusCodes.Status404NotFound, "Not Found"),
                 UnauthorizedException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
+                ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden"),
                 BadRequestException => (StatusCodes.Status400BadRequest, "Bad Request"),
                 ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
                 _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")

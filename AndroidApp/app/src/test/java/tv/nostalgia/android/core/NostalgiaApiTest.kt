@@ -19,7 +19,7 @@ class NostalgiaApiTest {
         server.enqueue(MockResponse().setBody("""{"product":"NostalgiaTV","deviceAuthorizationVersion":1}"""))
         api.verifyServer()
         assertEquals("/api/v1/server", server.takeRequest().path)
-        server.enqueue(MockResponse().setBody("""{"deviceCode":"secret","userCode":"ABC-DEF-GHJ-KLM","expiresAtUtc":"2026-10-10T12:00:00Z","interval":5}"""))
+        server.enqueue(MockResponse().setBody("""{"deviceCode":"secret","userCode":"ABC-DEF-GHJ-KLM","expiresAtUtc":"2026-10-10T12:00:00Z","intervalSeconds":5}"""))
         assertEquals(5, api.authorizeDevice("TV").interval)
         assertEquals("/api/v1/viewer/authorization", server.takeRequest().path)
         server.enqueue(MockResponse().setResponseCode(202).setBody("""{"status":"pending"}"""))
@@ -54,9 +54,9 @@ class NostalgiaApiTest {
 
     @Test fun sortsEpisodesAndIgnoresMissingFiles() = runTest {
         server.enqueue(MockResponse().setBody("""[
-            {"id":3,"title":"Third","filePath":"wwwroot/uploads/3.mp4","season":1,"episodeNumber":3},
-            {"id":1,"title":"First","filePath":"wwwroot/uploads/1.mp4","season":1,"episodeNumber":1},
-            {"id":2,"title":"Missing","filePath":null,"season":1,"episodeNumber":2}]
+            {"id":3,"title":"Third","filePath":"/uploads/3.mp4","seasonNumber":1,"episodeNumber":3,"episodeType":"Episodio"},
+            {"id":1,"title":"First","filePath":"/uploads/1.mp4","seasonNumber":1,"episodeNumber":1,"episodeType":"Episodio"},
+            {"id":2,"title":"Missing","filePath":null,"seasonNumber":1,"episodeNumber":2,"episodeType":"Episodio"}]
         """))
         assertEquals(listOf(1, 3), api.episodes(9).map { it.id })
     }
@@ -70,10 +70,16 @@ class NostalgiaApiTest {
     }
 
     @Test fun keepsLiveSegmentAndPlaybackOffset() = runTest {
-        server.enqueue(MockResponse().setBody("""{"segmentId":100,"episodeId":9,"episodeTitle":"Pilot","seriesName":"X","filePath":"wwwroot/uploads/9.mp4","currentSecond":345.5,"secondsUntilNext":20,"isBumper":false}"""))
+        server.enqueue(MockResponse().setBody("""{"segmentId":100,"kind":"Episode","episodeId":9,"title":"Pilot","seriesName":"X","filePath":"/uploads/9.mp4","mediaStartSecond":300,"currentSecond":345.5,"secondsUntilNext":20}"""))
         val state = api.channelState(1)
         assertEquals(100L, state.segmentId)
         assertEquals(345.5, state.currentSecond, 0.01)
+        assertFalse(state.isBumper)
+        server.enqueue(MockResponse().setBody("""{"segmentId":101,"kind":"Advertisement","episodeId":null,"title":"Refresco","seriesName":null,"filePath":"/uploads/broadcast/advertisements/a.mp4","mediaStartSecond":0,"currentSecond":3,"secondsUntilNext":7}"""))
+        val ad = api.channelState(1)
+        assertTrue(ad.isBumper)
+        assertEquals(0, ad.episodeId)
+        assertEquals("Refresco", ad.title)
     }
 
     @Test fun surfacesHttpErrors() = runTest {
@@ -86,9 +92,9 @@ class NostalgiaApiTest {
         server.enqueue(MockResponse().setBody("""{"items":[],"totalCount":0}"""))
         api.series(1, SeriesFilter("Simpson & Friends ñ", channelId = 2, categoryId = 4))
         val url = server.takeRequest().requestUrl!!
-        assertEquals("Simpson & Friends ñ", url.queryParameter("Name"))
+        assertEquals("Simpson & Friends ñ", url.queryParameter("Search"))
         assertEquals("2", url.queryParameter("ChannelId"))
-        assertEquals("4", url.queryParameter("CategoryId"))
+        assertEquals("4", url.queryParameter("CategoryIds"))
     }
 
     @Test fun loadsCategories() = runTest {
@@ -98,14 +104,15 @@ class NostalgiaApiTest {
 
     @Test fun sortsGuideAndParsesUtcTimesOnAndroidSix() = runTest {
         server.enqueue(MockResponse().setBody("""[
-          {"id":2,"seriesName":"Series","episodeTitle":"Second","startTime":"2026-10-08T08:00:00Z","endTime":"2026-10-08T08:20:00Z"},
-          {"id":1,"isBumper":true,"bumperTitle":"Bumper","startTime":"2026-10-08T07:40:00Z","endTime":"2026-10-08T08:00:00Z"}]
+          {"id":2,"seriesName":"Series","title":"Second","startsAtUtc":"2026-10-08T08:00:00.1234567Z","endsAtUtc":"2026-10-08T08:20:00Z","segments":[]},
+          {"id":1,"seriesName":"Earlier","title":"First","startsAtUtc":"2026-10-08T07:40:00Z","endsAtUtc":"2026-10-08T08:00:00Z","segments":[]}]
         """))
         val entries = api.schedule(1)
         assertEquals(listOf(1L, 2L), entries.map { it.id })
-        assertEquals("Bumper", entries.first().title)
+        assertEquals("Earlier", entries.first().title)
+        assertEquals("First", entries.first().episodeTitle)
         assertEquals(20 * 60000L, entries[1].endsAt - entries[1].startsAt)
-        assertEquals("/api/v1/public/channels/1/schedule", server.takeRequest().path)
+        assertEquals("/api/v1/public/channels/1/programs", server.takeRequest().path)
     }
 
     @Test fun sendsOnlyActualWatchedRanges() = runTest {

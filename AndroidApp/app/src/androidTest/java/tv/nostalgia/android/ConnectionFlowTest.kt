@@ -52,7 +52,7 @@ class ConnectionFlowTest {
                         "/api/v1/server" -> MockResponse().setBody("""{"product":"NostalgiaTV","deviceAuthorizationVersion":1,"registrationEnabled":true,"googleEnabled":true}""")
                         "/api/v1/viewer/session" -> if (request.method == "POST") viewer else
                             if (request.getHeader("Cookie")?.contains("viewer_device") == true) MockResponse().setBody(session) else MockResponse().setResponseCode(401)
-                        "/api/v1/viewer/authorization" -> MockResponse().setBody("""{"deviceCode":"${"A".repeat(64)}","userCode":"ABC-DEF-GHJ-KLM","expiresAtUtc":"$expires","interval":5}""")
+                        "/api/v1/viewer/authorization" -> MockResponse().setBody("""{"deviceCode":"${"A".repeat(64)}","userCode":"ABC-DEF-GHJ-KLM","expiresAtUtc":"$expires","intervalSeconds":5}""")
                         "/api/v1/viewer/authorization/redeem" -> if (approved.get()) viewer.setBody("""{"status":"connected"}""") else MockResponse().setResponseCode(202).setBody("""{"status":"pending"}""")
                         "/api/v1/auth/token" -> MockResponse().setBody("{}").addHeader("Set-Cookie", "access_token=temporary; Path=/; Secure; HttpOnly")
                             .addHeader("Set-Cookie", "refresh_token=temporary-refresh; Path=/; Secure; HttpOnly")

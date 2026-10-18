@@ -111,9 +111,15 @@ dotnet run
 ```
 
 La API local escucha en `https://localhost:7221`; Scalar está disponible en
-`/scalar/v1` solamente en desarrollo. Las migraciones EF pendientes se aplican
-al iniciar: antes de actualizar producción, respaldar y validar una copia de
-la base de datos.
+`/scalar/v1` solamente en desarrollo. En desarrollo la migración `InitialCreate`
+se aplica al iniciar. El esquema v2 parte de una base limpia: una base con
+migraciones v1 no se modifica y el arranque se detiene. Ver
+[docs/database/RESET.md](docs/database/RESET.md) antes de actualizar producción.
+
+La API sigue el patrón repositorio: `ApplicationCore` define entidades, DTOs e
+interfaces; `Infrastructure/Repositories` contiene las reglas de negocio y todo
+el acceso con Entity Framework; `Infrastructure/Services` solo integra servicios
+web externos (metadatos de TMDB, configurado con `Metadata:Tmdb:ApiKey`).
 
 ### Frontend
 
@@ -166,7 +172,7 @@ con datos simulados no sustituyen la validación del backend ni de producción.
 NostalgiaTV/
 ├── WebApi/
 │   ├── ApplicationCore/          # Entities, DTOs, contracts and settings
-│   ├── Infrastructure/           # EF context, migrations and services
+│   ├── Infrastructure/           # Repositories (business rules + EF), media, broadcasting, external services
 │   ├── Infrastructure.Tests/     # Backend regression tests
 │   └── WebApi/                   # Controllers, middleware and health checks
 ├── WebApp/
@@ -175,7 +181,7 @@ NostalgiaTV/
 │       ├── app/features/dashboard/
 │       ├── app/shared/components/retro-tv/
 │       └── styles/               # Shared dashboard and message-page styles
-├── database-target.dbml          # Target relational schema
+├── docs/database/                # Schema v2 (nostalgiatv_v2.dbml) and reset procedure
 ├── docker-compose.yml            # Local development stack
 ├── docker-compose.production.yml # GHCR production stack
 ├── .github/workflows/deploy.yml  # PR validation and production deployment
@@ -240,8 +246,9 @@ No agregar usuarios al grupo Docker ni usar Watchtower como alternativa al
 despliegue autorizado. No versionar `.env`, `appsettings.Local.json`,
 certificados, JWT, contraseñas, archivos de medios ni backups reales.
 
-Las migraciones iniciales incluyen una cuenta `admin`: cambiar su contraseña
-antes de utilizarla en producción. El README no publica credenciales.
+La migración inicial siembra la cuenta `admin` sin contraseña utilizable; se
+activa solo con `BootstrapAdminPassword` en el primer `--migrate`. El README no
+publica credenciales.
 
 ## Licencia
 

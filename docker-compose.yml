@@ -49,6 +49,7 @@ services:
       Jwt__Audience: ${JWT_ISSUER:-nostalgiatv}
       Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
       Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
+      Metadata__Tmdb__ApiKey: ${TMDB_API_KEY:-}
       BootstrapAdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:?Set a unique initial administrator password}
       # Permite acceder por nginx (mismo origen) sin bucles de redirect; en dev el
       # puerto sigue publicado para llegar directo a Scalar/OpenAPI en :8080.
