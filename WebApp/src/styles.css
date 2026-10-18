@@ -35,6 +35,13 @@
   --color-violet: #B8A6FF;
 }
 
+/* CRT switch-off: the picture collapses to the glowing line of "Sesión cerrada". */
+@keyframes tv-off {
+  0% { transform: scale(1.6, 40); opacity: .25; }
+  55% { transform: scale(1.1, 1); opacity: 1; }
+  100% { transform: scale(1, 1); opacity: 1; }
+}
+
 /* Phones in portrait or landscape (landscape phones are wider than md but very short). */
 @custom-variant compact {
   @media (max-width: 767px) { @slot; }

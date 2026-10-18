@@ -1,0 +1,91 @@
+<!-- ── Desktop (md+) ── -->
+<div class="hidden md:flex min-h-dvh flex-wrap">
+  <app-auth-brand>
+    <div class="flex flex-col gap-3">
+      <span class="font-mono text-[12px] tracking-[0.14em] text-amber">CH 00 · CONTROL MASTER</span>
+      <p class="m-0 font-display font-bold text-[56px] leading-[1.05]">Tus clásicos,<br>al aire otra vez.</p>
+    </div>
+    <div class="flex flex-col gap-2.5">
+      <app-color-bars class="h-2 rounded-xs max-w-70" />
+      <span class="font-mono text-[11px] tracking-[0.1em] text-dim">SEÑAL ESTABLE · PANEL DE ADMINISTRACIÓN</span>
+    </div>
+  </app-auth-brand>
+
+  <main class="flex-[1_1_480px] flex items-center justify-center py-12 px-6">
+    <form class="w-full max-w-100 flex flex-col gap-4.5" (submit)="$event.preventDefault(); submit(user.value, pwd.value)">
+      <div class="flex flex-col gap-1.5">
+        <h1 class="m-0 font-display font-bold text-[32px]">Iniciar sesión</h1>
+        <span class="text-[14px] text-muted">Ingresa con tu usuario del panel.</span>
+      </div>
+
+      @if (error()) {
+        <div class="py-3 px-3.5 border border-[#5A3A33] rounded-lg bg-[#221715] text-[14px] text-[#FFB4AC]" role="alert">Usuario o contraseña incorrectos. Te {{ remaining() === 1 ? 'queda 1 intento' : 'quedan ' + remaining() + ' intentos' }}.</div>
+      }
+      @if (locked()) {
+        <div class="py-3 px-3.5 border border-[#5A4A2A] rounded-lg bg-[#221D12] text-[14px] text-amber-hi" role="alert">Cuenta bloqueada por intentos fallidos. Intenta de nuevo a las 15:10.</div>
+      }
+
+      <label class="flex flex-col gap-1.5 text-[13px] text-muted">Usuario
+        <input #user class="field min-h-12 px-3.5 rounded-lg bg-panel text-[15px]" type="text" autocomplete="username" value="admin">
+      </label>
+      <div class="flex flex-col gap-1.5">
+        <div class="flex justify-between items-baseline">
+          <label class="text-[13px] text-muted" for="pwd">Contraseña</label>
+          <a class="text-[13px]" routerLink="/recuperar">¿Olvidaste tu contraseña?</a>
+        </div>
+        <div class="flex items-center rounded-lg bg-panel border focus-within:outline-2 focus-within:outline-amber" [class]="error() ? 'border-danger' : 'border-edge'">
+          <input #pwd class="flex-1 min-w-0 min-h-11.5 px-3.5 border-0 outline-none bg-transparent text-fg text-[15px] font-sans" id="pwd"
+                 [type]="showPassword() ? 'text' : 'password'" autocomplete="current-password">
+          <button class="w-11.5 h-11.5 flex items-center justify-center border-0 bg-transparent text-muted hover:text-fg cursor-pointer" type="button"
+                  (click)="showPassword.set(!showPassword())" [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'" [attr.aria-pressed]="showPassword()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+        </div>
+      </div>
+      <label class="flex items-center gap-2.5 min-h-11 text-[14px] cursor-pointer"><input class="check" type="checkbox" checked>Mantener sesión iniciada</label>
+
+      <button class="btn btn-primary min-h-12 rounded-lg text-[15px]" type="submit" [disabled]="locked()">Ingresar</button>
+
+      <div class="flex items-center gap-3 font-mono text-[11px] text-dim"><span class="flex-1 h-px bg-line"></span>O<span class="flex-1 h-px bg-line"></span></div>
+      <button class="btn btn-ghost min-h-12 gap-2.5 rounded-lg text-[15px]" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 12h8"></path></svg>
+        Continuar con Google
+      </button>
+      <span class="text-center text-[14px] text-muted">¿No tienes cuenta? <a routerLink="/registro">Crear cuenta</a></span>
+    </form>
+  </main>
+</div>
+
+<!-- ── Mobile (<md) ── -->
+<form class="md:hidden min-h-dvh pt-12 px-5 pb-6 flex flex-col gap-5 scan-ink [--scan:0.025]" (submit)="$event.preventDefault(); submit(muser.value, mpwd.value, true)">
+  <div class="flex flex-col items-center gap-3 pt-3 pb-2">
+    <app-logo-mark [size]="56" [dots]="false" />
+    <span class="font-display font-bold text-[22px] tracking-[0.08em]">NOSTALGIA TV</span>
+    <span class="text-[14px] text-muted text-center">Tus clásicos, al aire otra vez.</span>
+  </div>
+
+  <h1 class="m-0 font-display font-bold text-[26px]">Iniciar sesión</h1>
+  @if (error() || locked()) {
+    <div class="py-3 px-3.5 border rounded-xl text-[14px]" role="alert" [class]="locked() ? 'border-[#5A4A2A] bg-[#221D12] text-amber-hi' : 'border-[#5A3A33] bg-[#221715] text-[#FFB4AC]'">
+      {{ locked() ? 'Cuenta bloqueada por intentos fallidos. Intenta de nuevo a las 15:10.' : 'Usuario o contraseña incorrectos.' }}
+    </div>
+  }
+  <label class="flex flex-col gap-1.5 text-[13px] text-muted">Usuario
+    <input #muser class="field min-h-13 px-3.5 rounded-xl bg-panel text-[16px]" type="text" autocomplete="username" value="fernando">
+  </label>
+  <label class="flex flex-col gap-1.5 text-[13px] text-muted">Contraseña
+    <input #mpwd class="field min-h-13 px-3.5 rounded-xl bg-panel text-[16px]" type="password" autocomplete="current-password">
+  </label>
+  <div class="flex items-center justify-between gap-2">
+    <label class="flex items-center gap-2 min-h-11 text-[14px]"><input class="w-5 h-5 accent-amber" type="checkbox" checked>Mantener sesión</label>
+    <a class="inline-flex items-center min-h-11 text-amber text-[14px] no-underline" routerLink="/recuperar">¿La olvidaste?</a>
+  </div>
+  <button class="pill pill-primary min-h-13 rounded-[26px] text-[16px]" type="submit" [disabled]="locked()">Ingresar</button>
+  <div class="flex items-center gap-3 font-mono text-[11px] text-dim"><span class="flex-1 h-px bg-line"></span>O<span class="flex-1 h-px bg-line"></span></div>
+  <button class="pill min-h-13 gap-2.5 rounded-[26px] text-[16px]" type="button">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 12h8"></path></svg>
+    Continuar con Google
+  </button>
+  <a class="flex items-center justify-center min-h-12 text-fg-2 hover:text-fg text-[15px] no-underline" routerLink="/">Ver canales sin cuenta</a>
+  <span class="mt-auto text-center text-[14px] text-muted">¿No tienes cuenta? <a class="text-amber" routerLink="/registro">Crear cuenta</a></span>
+</form>
