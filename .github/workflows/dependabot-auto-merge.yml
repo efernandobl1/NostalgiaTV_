@@ -1,33 +1,50 @@
 name: Dependabot auto-merge
 
+# Classifies each Dependabot PR. Safe updates get the "automerge" label; after-ci.yml merges them
+# only once their CI has passed. No PR code is checked out or executed here.
 on:
   pull_request_target:
-    types: [opened]
+    types: [opened, reopened, synchronize]
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 jobs:
-  enable-auto-merge:
+  classify:
     if: >-
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+      issues: write
     steps:
-      # The action verifies the Dependabot author and signed commits. No PR code is checked out.
+      # Verifies the Dependabot author and signed commits before reading the update metadata.
       - name: Read Dependabot metadata
         id: metadata
         uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3
 
-      - name: Enable auto-merge for safe package updates
-        if: >-
-          (steps.metadata.outputs.package-ecosystem == 'npm' ||
-           steps.metadata.outputs.package-ecosystem == 'nuget') &&
-          (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
-           steps.metadata.outputs.update-type == 'version-update:semver-minor')
+      - name: Label safe updates for automatic merge
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge --auto --merge "$PR_URL"
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+        run: |
+          set -euo pipefail
+          # Minor/patch releases auto-merge; majors always wait for a person.
+          # Docker digest refreshes (same tag, no update type) are base-image security rebuilds.
+          case "$ECOSYSTEM:$UPDATE_TYPE" in
+            npm_and_yarn:version-update:semver-minor|npm_and_yarn:version-update:semver-patch|\
+            nuget:version-update:semver-minor|nuget:version-update:semver-patch|\
+            github_actions:version-update:semver-minor|github_actions:version-update:semver-patch|\
+            docker:version-update:semver-minor|docker:version-update:semver-patch|docker:)
+              gh label create automerge --color 0E8A16 --description 'Merged automatically after CI passes' 2>/dev/null || true
+              gh pr edit "$PR" --add-label automerge
+              echo "Auto-merge after CI: $ECOSYSTEM $UPDATE_TYPE" >> "$GITHUB_STEP_SUMMARY" ;;
+            *)
+              gh pr edit "$PR" --remove-label automerge 2>/dev/null || true
+              echo "Needs review: $ECOSYSTEM ${UPDATE_TYPE:-unknown}" >> "$GITHUB_STEP_SUMMARY" ;;
+          esac

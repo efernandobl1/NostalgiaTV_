@@ -1,15 +1,20 @@
 name: Build and Deploy
 
+# Runs only for pull requests into main and for commits that land on main.
+# workflow_dispatch exists solely so the Dependabot merger (after-ci.yml) can run the
+# post-merge pipeline: merges made with GITHUB_TOKEN never trigger push workflows.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+# Every job declares the minimum it needs.
+permissions: {}
 
 env:
   REGISTRY: ghcr.io
-  API_IMAGE: ghcr.io/${{ github.repository_owner }}/nostalgia-api
-  WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/nostalgia-web
 
 # Keep production builds/deploys serialized; isolate each PR from that queue.
 concurrency:
@@ -19,34 +24,124 @@ concurrency:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      relevant: ${{ steps.detect.outputs.relevant }}
+    steps:
+      - name: Accept dispatches only on main
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::This pipeline publishes releases; dispatch it only on main."
+          exit 1
+      # Reads the PR file list from the API instead of cloning the whole history.
+      - id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # main always rebuilds both images so every release commit has complete :sha tags.
+          if [ "$EVENT" != pull_request ]; then echo 'relevant=true' >> "$GITHUB_OUTPUT"; exit 0; fi
+          if ! files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files?per_page=100" --jq '.[].filename'); then
+            echo 'relevant=true' >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          relevant=$(printf '%s\n' "$files" | awk '
+            /^$/ { next }
+            /^(AndroidApp\/|docs\/|\.github\/workflows\/android\.yml$)/ { next }
+            /\.md$/ { next }
+            { found=1 }
+            END { print found ? "true" : "false" }')
+          echo "relevant=$relevant" >> "$GITHUB_OUTPUT"
+
+  # Lightweight checks that always run, even for Android- or docs-only changes.
+  scan:
+    name: Repository scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
-    outputs:
-      web: ${{ steps.detect.outputs.web }}
+      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
-      - id: detect
-        shell: bash
-        env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          HEAD: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            echo 'web=true' >> "$GITHUB_OUTPUT"
-          else
-            changed=$(git diff --name-only "$BASE" "$HEAD" | awk '
-              /^(AndroidApp\/|\.github\/workflows\/android\.yml$)/ { next }
-              { found=1 }
-              END { print found ? "true" : "false" }')
-            echo "web=$changed" >> "$GITHUB_OUTPUT"
-          fi
-  # Escaneo de seguridad como gate: si hay CVEs HIGH/CRITICAL, no se publica nada.
-  security-scan:
+      # The action caches the vulnerability database per day; no manual cache needed.
+      - name: Scan filesystem for HIGH and CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          format: table
+      - name: Reject newly introduced vulnerable dependencies
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+      - name: Test automation scripts
+        run: node --test .github/scripts/*.test.mjs
+      - name: Test installation and backup safeguards
+        run: python3 -m unittest discover -s deploy/tests -v
+
+  web:
+    name: WebApp tests
+    needs: changes
+    if: needs.changes.outputs.relevant == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: WebApp
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Enable pnpm
+        id: pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.17.0 --activate
+          echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Cache pnpm store
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.pnpm.outputs.store }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('WebApp/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: Cache Playwright browser
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('WebApp/pnpm-lock.yaml') }}
+      - name: Install, audit and unit test
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm audit --audit-level high
+          pnpm exec ng test --watch=false
+      - name: Check the production bundle with its security policy
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm exec ng build --configuration production
+          pnpm test:security-browser
+
+  api:
+    name: WebApi tests
+    needs: changes
+    if: needs.changes.outputs.relevant == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04
@@ -60,61 +155,19 @@ jobs:
         options: >-
           --health-cmd="/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -C"
           --health-interval=10s --health-timeout=5s --health-retries=20
-    permissions:
-      contents: read
-      pull-requests: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      # Cachea la base de datos de vulnerabilidades de Trivy entre corridas.
-      - name: Cache Trivy DB
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ${{ github.workspace }}/.trivycache
-          key: trivy-db-${{ runner.os }}
-
-      - name: Scan filesystem for HIGH and CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
-        env:
-          TRIVY_CACHE_DIR: ${{ github.workspace }}/.trivycache
-        with:
-          scan-type: fs
-          scan-ref: .
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: '1'
-          format: table
-          skip-dirs: .trivycache
-
-      - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: '24'
-      - name: Audit and test frontend dependencies
-        working-directory: WebApp
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.17.0 --activate
-          pnpm install --frozen-lockfile
-          pnpm audit --audit-level high
-          pnpm exec ng test --watch=false
-      - name: Test dependency cleanup safeguards
-        run: node --test .github/scripts/dependabot-cleanup.test.mjs
-      - name: Test installation and backup safeguards
-        run: python3 -m unittest discover -s deploy/tests -v
-      - name: Check the production bundle with its security policy
-        working-directory: WebApp
-        run: |
-          pnpm exec playwright install --with-deps chromium
-          pnpm exec ng build --configuration production
-          pnpm test:security-browser
-      - name: Set up .NET
-        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
           dotnet-version: '10.0.x'
+      - name: Cache NuGet packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('WebApi/**/*.csproj', 'WebApi/**/*.props') }}
+          restore-keys: nuget-${{ runner.os }}-
       - name: Run security and SQL integration tests
         env:
           NOSTALGIA_MEDIA_TEST_SQL: 'Server=localhost,1433;Database=master;User Id=sa;Password=Isolated-CI-Sql-Test-Only!2026;Encrypt=True;TrustServerCertificate=True'
@@ -123,24 +176,37 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ffmpeg
           dotnet restore WebApi/Infrastructure.Tests -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=high -warnaserror:NU1903,NU1904
-          dotnet test WebApi/Infrastructure.Tests -c Release
+          dotnet test WebApi/Infrastructure.Tests -c Release --no-restore
 
-      - name: Reject newly introduced vulnerable dependencies
-        if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
-        with:
-          fail-on-severity: high
+  # Required status check: aggregates the parallel gates under the name branch protection expects.
+  security-scan:
+    needs: [changes, scan, web, api]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every security and test gate
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          RELEVANT: ${{ needs.changes.outputs.relevant }}
+        run: |
+          printf '%s' "$RESULTS" | jq -e --arg relevant "$RELEVANT" '
+            to_entries | all(.value.result == "success" or (.value.result == "skipped" and $relevant == "false"))'
 
   # Build both images in parallel; the API Docker build also runs its tests.
+  # The job always runs so its required matrix checks report even when a PR only touches Android/docs.
   build-and-push:
     needs: [changes, security-scan]
-    if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: write
       id-token: write
       attestations: write
+    env:
+      RELEVANT: ${{ needs.changes.outputs.relevant }}
+      PUBLISH: ${{ github.event_name != 'pull_request' }}
     strategy:
       fail-fast: false
       matrix:
@@ -154,13 +220,18 @@ jobs:
             context: ./WebApp
             file: ./WebApp/Dockerfile
     steps:
+      - name: Skip images unaffected by this pull request
+        if: env.RELEVANT != 'true'
+        run: echo 'Only Android or documentation changed; images are not rebuilt.' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Checkout
+        if: env.RELEVANT == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Login to GitHub Container Registry
-        if: github.event_name == 'push'
+        if: env.PUBLISH == 'true'
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ${{ env.REGISTRY }}
@@ -168,9 +239,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
+        if: env.RELEVANT == 'true'
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - name: Build ${{ matrix.name }} for scanning
+        if: env.RELEVANT == 'true'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ${{ matrix.context }}
@@ -178,14 +251,18 @@ jobs:
           load: true
           tags: ${{ matrix.image }}:${{ github.sha }}
           provenance: false
+          # Re-run the OS package layers (apt/apk upgrades) so cached layers never hide new fixes.
+          # The publish step below then reuses exactly these freshly scanned layers from the cache.
+          no-cache-filters: ${{ matrix.name == 'api' && 'base,final' || 'final' }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
       - name: Check the non-root web server after runtime updates
-        if: matrix.name == 'web'
+        if: env.RELEVANT == 'true' && matrix.name == 'web'
         env:
           SCANNED_IMAGE: ${{ matrix.image }}:${{ github.sha }}
         run: docker run --rm --add-host webapi:127.0.0.1 --entrypoint nginx "$SCANNED_IMAGE" -t
       - name: Scan final runtime image
+        if: env.RELEVANT == 'true'
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           image-ref: ${{ matrix.image }}:${{ github.sha }}
@@ -193,7 +270,7 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
       - name: Exercise fresh installation and backup restore on Linux
-        if: matrix.name == 'api'
+        if: env.RELEVANT == 'true' && matrix.name == 'api'
         env:
           GH_TOKEN: ${{ github.token }}
           FIXTURE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -201,11 +278,17 @@ jobs:
           OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
-          # The API under test was built above. Use the previously released web solely as the loopback proxy.
-            trap 'docker ps -a; docker logs --tail 60 nostalgiatv-local-https-1 2>&1 || true' ERR
+          trap 'docker ps -a; docker logs --tail 60 nostalgiatv-local-https-1 2>&1 || true' ERR
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$OWNER" --password-stdin
-          docker pull "ghcr.io/$OWNER/nostalgia-web:$FIXTURE_SHA"
-          docker tag "ghcr.io/$OWNER/nostalgia-web:$FIXTURE_SHA" "ghcr.io/$OWNER/nostalgia-web:$RELEASE_SHA"
+          # The API under test was built above. The previously released web image is only the loopback proxy;
+          # fall back to latest when the base commit has no image (Android/docs-only or bot merges).
+          fixture="ghcr.io/$OWNER/nostalgia-web:latest"
+          if [ -n "$FIXTURE_SHA" ] && docker pull "ghcr.io/$OWNER/nostalgia-web:$FIXTURE_SHA"; then
+            fixture="ghcr.io/$OWNER/nostalgia-web:$FIXTURE_SHA"
+          else
+            docker pull "$fixture"
+          fi
+          docker tag "$fixture" "ghcr.io/$OWNER/nostalgia-web:$RELEASE_SHA"
           sudo python3 deploy/manage.py init /opt/nostalgiatv-smoke \
             --server-url https://127.0.0.1 --local-bind 127.0.0.1 --release "$RELEASE_SHA" --web-port 18090
           root=/opt/nostalgiatv-smoke/data/caddy/caddy/pki/authorities/local/root.crt
@@ -229,32 +312,29 @@ jobs:
           assert Path('/opt/nostalgiatv-restored/uploads/restore-probe.txt').read_text() == 'media retained'
           restored.docker('down')
           PY
+      # Only the immutable :sha tag is pushed here; latest moves after both images are verified.
       - name: Publish scanned image with provenance and SBOM
         id: publish
-        if: github.event_name == 'push'
+        if: env.PUBLISH == 'true'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
-          push: ${{ github.event_name == 'push' }}
-          tags: |
-            ${{ matrix.image }}:latest
-            ${{ matrix.image }}:${{ github.sha }}
+          push: true
+          tags: ${{ matrix.image }}:${{ github.sha }}
           provenance: mode=max
           sbom: true
-          # Caché de capas por imagen (scope) para no pisarse entre api/web.
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
-
       - name: Sign image provenance with the temporary GitHub OIDC identity
-        if: github.event_name == 'push'
+        if: env.PUBLISH == 'true'
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-name: ${{ matrix.image }}
           subject-digest: ${{ steps.publish.outputs.digest }}
           push-to-registry: true
       - name: Verify the published signature and workflow identity
-        if: github.event_name == 'push'
+        if: env.PUBLISH == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           SIGNED_IMAGE: oci://${{ matrix.image }}@${{ steps.publish.outputs.digest }}
@@ -263,11 +343,38 @@ jobs:
           --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/deploy.yml"
           --source-ref refs/heads/main
 
-  server-release:
-    name: Publish self-host installation bundle
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  # Production pulls :latest, so it only moves once BOTH images are scanned, signed and verified.
+  promote:
+    name: Promote verified images to latest
+    if: github.event_name != 'pull_request'
     needs: build-and-push
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      packages: write
+    steps:
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - name: Point latest at this release
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          for name in nostalgia-api nostalgia-web; do
+            image="$REGISTRY/$OWNER/$name"
+            docker buildx imagetools create --tag "$image:latest" "$image:$GITHUB_SHA"
+          done
+
+  server-release:
+    name: Publish self-host installation bundle
+    if: github.event_name != 'pull_request'
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
@@ -293,55 +400,48 @@ jobs:
           fi
           gh release upload "$tag" "$bundle.tar.gz" "$bundle.tar.gz.sha256" --clobber
 
-  # Despliegue en la VPS por SSH: baja las imágenes nuevas y reinicia el stack.
+  # VPS deploy over SSH: the restricted dispatcher pulls the new images and restarts the stack.
   deploy:
     name: Deploy to production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build-and-push
+    if: github.event_name != 'pull_request'
+    needs: promote
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     environment:
       name: production
-
     permissions:
       contents: read
-
     steps:
       - name: Configure SSH
-        shell: bash
         env:
           SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
-
+          umask 077
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/deploy_key"
           printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
 
-          chmod 600 "$HOME/.ssh/deploy_key"
-          chmod 600 "$HOME/.ssh/known_hosts"
-
       - name: Deploy NostalgiaTV
-        shell: bash
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
-
-          # La clave 'deploy' en la VPS usa un comando forzado (dispatcher) que lee
-          # el proyecto desde SSH_ORIGINAL_COMMAND. Mandamos "nostalgiatv" para que
-          # el servidor ejecute su script de despliegue. (Si en su lugar la clave
-          # tuviera un comando fijo, este argumento es ignorado: sigue funcionando.)
+          # The 'deploy' key on the VPS has a forced command (dispatcher) that reads the project
+          # from SSH_ORIGINAL_COMMAND; "nostalgiatv" selects this stack's deploy script.
           ssh \
             -i "$HOME/.ssh/deploy_key" \
-            -p "$VPS_PORT" \
+            -p "${VPS_PORT:-22}" \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
             -o ConnectTimeout=15 \
             "$VPS_USER@$VPS_HOST" \
             nostalgiatv
+
+      - name: Remove SSH credentials
+        if: always()
+        run: rm -f "$HOME/.ssh/deploy_key"

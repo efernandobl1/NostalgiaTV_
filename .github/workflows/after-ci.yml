@@ -1,0 +1,91 @@
+name: Integrate after CI
+
+# Runs from main's trusted copy when CI finishes; never checks out or runs PR code.
+# - merge-dependabot: merges labeled Dependabot updates whose checks passed.
+# - sync-develop: fast-forwards develop to each main commit that passed the full pipeline.
+# Optional secret AUTOMATION_TOKEN (fine-grained PAT on this repo: contents, pull requests,
+# workflows and actions read/write) also lets it merge workflow-file updates and fast-forward
+# develop across workflow changes; without it the default GITHUB_TOKEN is used.
+on:
+  workflow_run:
+    workflows: [Build and Deploy, Android APK]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  merge-dependabot:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # One run per tested commit (CI and Android may both finish for it); different PRs never drop each other.
+    concurrency:
+      group: dependabot-merge-${{ github.event.workflow_run.head_sha }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Merge the update if every check passed
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMATION_TOKEN || github.token }}
+          # GITHUB_TOKEN merges do not trigger push workflows, so start the main pipeline explicitly.
+          DISPATCH_DEPLOY: ${{ secrets.AUTOMATION_TOKEN == '' }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: node .github/scripts/dependabot-merge.mjs
+
+  sync-develop:
+    if: >-
+      github.event.workflow_run.name == 'Build and Deploy' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: sync-develop
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: Fast-forward develop to the verified main commit
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMATION_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          status=$(gh api "repos/$GH_REPO/compare/develop...$SHA" --jq .status)
+          case "$status" in
+            identical|behind)
+              echo "develop already contains $SHA." >> "$GITHUB_STEP_SUMMARY" ;;
+            ahead)
+              # force=false: GitHub rejects anything that is not a fast-forward.
+              if gh api -X PATCH "repos/$GH_REPO/git/refs/heads/develop" -f sha="$SHA" -F force=false >/dev/null; then
+                echo "develop fast-forwarded to $SHA." >> "$GITHUB_STEP_SUMMARY"
+              else
+                reason='GitHub rejected the fast-forward (workflow files need AUTOMATION_TOKEN, or a branch rule blocked it).'
+              fi ;;
+            *)
+              reason="develop has commits that are not in main ($status)." ;;
+          esac
+          if [ -n "${reason:-}" ]; then
+            title='develop could not be synchronized with main'
+            body=$(printf 'Automatic fast-forward of `develop` to `%s` failed: %s\n\nSync manually as described in CONTRIBUTING.md (`git merge --ff-only origin/main`). Close this issue afterwards.' "$SHA" "$reason")
+            existing=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+            if [ -n "$existing" ]; then gh issue comment "$existing" --body "$body"; else gh issue create --title "$title" --body "$body"; fi
+            echo "::error::$reason"
+            exit 1
+          fi

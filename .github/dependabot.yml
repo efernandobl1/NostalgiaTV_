@@ -1,6 +1,9 @@
 version: 2
 
-# Version and security updates target main only.
+# Updates target main, where the full pipeline tests them. Safe minor/patch updates merge
+# automatically after CI (dependabot-auto-merge.yml + after-ci.yml), and develop is then
+# fast-forwarded to main, so both branches receive them without manual follow-up.
+# Grouping keeps the number of PRs (and rebases under strict branch protection) low.
 updates:
   - package-ecosystem: "npm"
     directory: "/WebApp"
@@ -11,6 +14,9 @@ updates:
       default-days: 14
       semver-major-days: 30
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
     groups:
       minor-dependencies:
         update-types: ["minor", "patch"]
@@ -27,6 +33,9 @@ updates:
       default-days: 14
       semver-major-days: 30
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
     groups:
       minor-dependencies:
         update-types: ["minor", "patch"]
@@ -38,6 +47,9 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 14
+    commit-message:
+      prefix: "chore"
+      include: "scope"
     ignore:
       - dependency-name: "node"
         update-types: ["version-update:semver-major"]
@@ -49,6 +61,9 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 14
+    commit-message:
+      prefix: "chore"
+      include: "scope"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -57,3 +72,9 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 14
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      minor-actions:
+        update-types: ["minor", "patch"]
