@@ -251,6 +251,9 @@ jobs:
           load: true
           tags: ${{ matrix.image }}:${{ github.sha }}
           provenance: false
+          # Re-run the OS package layers (apt/apk upgrades) so cached layers never hide new fixes.
+          # The publish step below then reuses exactly these freshly scanned layers from the cache.
+          no-cache-filters: ${{ matrix.name == 'api' && 'base,final' || 'final' }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
       - name: Check the non-root web server after runtime updates
