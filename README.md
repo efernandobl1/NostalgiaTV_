@@ -209,18 +209,17 @@ La salud de la WebApp no sustituye la comprobación de readiness de la API.
 Flujo de contribución: **`develop` actualizada → `feature/*` → un PR a `main`**, con commits
 Conventional Commits en inglés y sin coautor. Ver [CONTRIBUTING.md](CONTRIBUTING.md).
 
-- **PR hacia main:** activa revisión de dependencias, escaneo de
-  seguridad y construcción de API/WebApp. El build de la API ejecuta sus
-  pruebas. No publica imágenes ni despliega.
-- **Push a main:** tras aprobar los gates, publica en GHCR las imágenes
-  `nostalgia-api` y `nostalgia-web` con `:latest` y `:<sha>`, y despliega
-  mediante SSH con una clave restringida y el dispatcher autorizado.
-- **Antes de crear cada feature:** actualizar `develop`, integrar el último
-  `origin/main` por fast-forward y subir `develop`, sin otro PR ni force-push.
-  No hay sincronización automática. Dependabot sólo abre PR a `main`.
-- Trivy en este workflow excluye `WebApp/`; la revisión de dependencias del PR
-  comprueba vulnerabilidades nuevas. Esto no equivale a una auditoría completa
-  de todas las dependencias existentes del frontend ni a revisión visual.
+- **PR hacia main:** escaneo Trivy, revisión de dependencias y, en paralelo,
+  pruebas de WebApp, de la API con SQL Server y build/escaneo de ambas imágenes.
+  Los PR que sólo tocan Android o documentación omiten las pruebas pesadas.
+  No publica imágenes ni despliega.
+- **Push a main:** tras aprobar los gates publica en GHCR `nostalgia-api` y
+  `nostalgia-web` con `:<sha>` firmado; `:latest` sólo se mueve cuando ambas
+  imágenes están verificadas, y luego despliega por SSH con la clave restringida.
+- **Dependabot:** abre PR sólo a `main`. Las actualizaciones minor/patch se
+  integran solas cuando su CI pasa; las major esperan revisión.
+- **develop:** se adelanta (fast-forward) a `main` automáticamente después de
+  cada pipeline exitoso de `main`. Si no puede, abre un issue para sincronizar a mano.
 
 En producción se utiliza `docker-compose.production.yml` como
 `/opt/nostalgiatv/docker-compose.yml`. Solo la WebApp publica un puerto en

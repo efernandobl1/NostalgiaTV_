@@ -1,4 +1,5 @@
 import { pathToFileURL } from 'node:url';
+import { githubApi } from './github-api.mjs';
 
 export function isEligible(pull, repository) {
   return pull.state === 'open' && !pull.draft &&
@@ -33,29 +34,6 @@ export async function reconcile(api, repository, log = console.log) {
     });
     log(`Requested an obsolete-update check for PR #${pull.number}.`);
   }
-}
-
-async function githubApi(path, body, paginate = false) {
-  const response = await fetch(`${process.env.GITHUB_API_URL || 'https://api.github.com'}${path}`, {
-    method: body ? 'POST' : 'GET',
-    headers: {
-      Authorization: `Bearer ${process.env.GH_TOKEN}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(30000),
-  });
-  if (!response.ok) throw new Error(`GitHub API returned ${response.status} for ${path}`);
-  const result = await response.json();
-  if (paginate && /rel="next"/.test(response.headers.get('link') || '')) {
-    const page = Number(new URL(path, 'https://api.github.com').searchParams.get('page') || 1);
-    const next = new URL(path, 'https://api.github.com');
-    next.searchParams.set('page', String(page + 1));
-    result.push(...await githubApi(`${next.pathname}${next.search}`, null, true));
-  }
-  return result;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

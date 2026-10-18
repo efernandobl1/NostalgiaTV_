@@ -22,7 +22,8 @@ Angular + SQL Server).
 Todo cambio va **`feature/*` → PR a `main`**. Nunca commitear directo a `main`.
 El despliegue se ejecuta desde `main`. Antes de crear cada feature, integrar
 los últimos cambios de `main` en `develop` por fast-forward, sin otro PR y
-sin forzar la historia. CI no sincroniza las ramas automáticamente.
+sin forzar la historia. CI hace ese fast-forward solo tras cada pipeline exitoso
+de `main`; los pasos manuales quedan como respaldo.
 
 ```bash
 # 1. Partir siempre de develop actualizada
@@ -61,7 +62,7 @@ git push -u origin feature/nombre-corto
 - Antes de empezar cualquier cambio o revisión, actualizar la rama sobre la que
   se trabajará.
 - Actualizar las ramas locales relacionadas (`develop` y `main`) antes de
-  crear una feature. Integrar un PR no actualiza `develop` automáticamente.
+  crear una feature. `develop` se adelanta solo cuando termina el pipeline de `main`.
 - Si un cambio quedó pendiente durante bastante tiempo, reintegrar el estado más
   reciente de `develop` antes de continuar.
 - Si una rama local tiene una historia antigua o divergente, no forzarla sobre el
@@ -118,23 +119,37 @@ docker compose up --build -d        # WebApp: http://localhost:8082
 
 Al integrar en `main`, `.github/workflows/deploy.yml`:
 
-1. Escanea el repositorio con Trivy y bloquea vulnerabilidades HIGH/CRITICAL.
-2. Construye y publica en GHCR las imágenes de API y WebApp con tags `:latest`
-   y `:<sha>`:
-   `ghcr.io/<owner>/nostalgia-api` y `ghcr.io/<owner>/nostalgia-web`.
+1. Escanea el repositorio con Trivy y bloquea vulnerabilidades HIGH/CRITICAL; en
+   paralelo prueba WebApp, la API (con SQL Server) y los scripts de despliegue.
+   El job `security-scan` agrupa esos resultados (es el check requerido).
+2. Construye, escanea y publica en GHCR las imágenes de API y WebApp con `:<sha>`,
+   firmadas y verificadas: `ghcr.io/<owner>/nostalgia-api` y
+   `ghcr.io/<owner>/nostalgia-web`. `:latest` sólo se mueve cuando ambas pasaron.
 3. Despliega automáticamente en la VPS por SSH mediante el dispatcher restringido,
    enviándole el proyecto `nostalgiatv` para ejecutar `docker compose pull` y
    `docker compose up -d` en `/opt/nostalgiatv`.
 
-No actualiza `develop` automáticamente. Esa sincronización se hace antes de
-crear cada feature, mediante el fast-forward descrito arriba.
-`main` sigue requiriendo PR y sus comprobaciones;
-`develop` conserva las comprobaciones y la prohibición de force-push, pero no
-exige PR para recibir commits ya validados. No requiere nuevos secretos.
+Los workflows sólo se activan con PR hacia `main` o al integrar en `main`.
+Un PR que sólo cambia Android o documentación omite las pruebas pesadas, pero
+reporta igualmente los checks requeridos.
 
-Dependabot abre sus actualizaciones únicamente hacia `main`; conserva los plazos
-de espera y la política de auto-merge existente. Android se valida en PR a `main`
-y publica sus APK al integrar allí, sin ejecuciones duplicadas desde `develop`.
+Después de cada pipeline exitoso de `main`, `.github/workflows/after-ci.yml`
+adelanta `develop` a ese commit por fast-forward (nunca fuerza). Si `develop`
+divergió o GitHub rechaza el cambio, abre un issue para sincronizar a mano con el
+fast-forward descrito arriba. `main` sigue requiriendo PR y sus comprobaciones;
+`develop` conserva las comprobaciones y la prohibición de force-push.
+
+Dependabot abre sus actualizaciones únicamente hacia `main` y conserva los plazos
+de espera. `dependabot-auto-merge.yml` etiqueta `automerge` las minor/patch (y los
+refrescos de digest de Docker); `after-ci.yml` las integra cuando todos sus checks
+pasan, ejecuta el pipeline de `main` y luego `develop` recibe el cambio. Las major
+quedan abiertas para revisión. Android se valida en PR a `main` y publica sus APK
+al integrar allí.
+
+- Secret opcional **`AUTOMATION_TOKEN`** (token fine-grained sólo para este repo con
+  Contents, Pull requests, Workflows y Actions en lectura/escritura). Sin él se usa
+  `GITHUB_TOKEN`, que no puede integrar actualizaciones de workflows ni adelantar
+  `develop` sobre cambios en `.github/workflows`; en ese caso deja un aviso.
 
 - Requiere en el entorno de GitHub **`production`** los secrets
   `VPS_SSH_PRIVATE_KEY`, `VPS_KNOWN_HOSTS`, `VPS_HOST`, `VPS_PORT` y `VPS_USER`.
