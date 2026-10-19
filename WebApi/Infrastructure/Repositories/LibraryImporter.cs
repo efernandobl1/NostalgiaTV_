@@ -47,13 +47,15 @@ public sealed class LibraryImporter(NostalgiaTVContext context, MediaLibrary lib
         {
             if (!await context.Series.AnyAsync(series => series.Id == file.SeriesId, token)) throw new IOException("Series no longer exists.");
             await EnsureSeasonAsync(file.SeriesId, season, token);
-            var (title, number) = MediaFilePolicy.EpisodeName(file.FullPath);
+            var (title, number, part) = MediaFilePolicy.EpisodeFile(file.FullPath);
+            var (episodeNumber, episodePart) = await FreeEpisodeNumberAsync(file.SeriesId, season, typeId, number, part, token);
             var episode = new Episode
             {
                 SeriesId = file.SeriesId,
                 SeasonNumber = season,
                 EpisodeTypeId = typeId,
-                EpisodeNumber = await FreeEpisodeNumberAsync(file.SeriesId, season, typeId, number, token),
+                EpisodeNumber = episodeNumber,
+                Part = episodePart,
                 Title = title.Length > 300 ? title[..300] : title,
                 FilePath = publicPath
             };
@@ -89,12 +91,16 @@ public sealed class LibraryImporter(NostalgiaTVContext context, MediaLibrary lib
         await context.SaveChangesAsync(token);
     }
 
-    /// <summary>Keeps the parsed number when free; unnumbered or duplicate files get the next number.</summary>
-    private async Task<int> FreeEpisodeNumberAsync(int seriesId, int season, int typeId, int wanted, CancellationToken token)
+    /// <summary>
+    /// Keeps the parsed number (and part) when free; unnumbered or duplicate files become a complete episode
+    /// with the next number.
+    /// </summary>
+    private async Task<(int Number, string? Part)> FreeEpisodeNumberAsync(int seriesId, int season, int typeId, int wanted, string? part,
+        CancellationToken token)
     {
         var used = await context.Episodes.Where(episode => episode.SeriesId == seriesId && episode.SeasonNumber == season && episode.EpisodeTypeId == typeId)
-            .Select(episode => episode.EpisodeNumber).ToListAsync(token);
-        if (wanted > 0 && !used.Contains(wanted)) return wanted;
-        return used.Count == 0 ? 1 : used.Max() + 1;
+            .Select(episode => new { episode.EpisodeNumber, episode.Part }).ToListAsync(token);
+        if (wanted > 0 && !used.Any(item => item.EpisodeNumber == wanted && item.Part == part)) return (wanted, part);
+        return (used.Count == 0 ? 1 : used.Max(item => item.EpisodeNumber) + 1, null);
     }
 }

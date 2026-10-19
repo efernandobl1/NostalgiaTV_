@@ -52,7 +52,7 @@ export class Viewers {
     }));
   });
   readonly progress = computed(() => (this.detail()?.progress ?? []).map(p => ({
-    series: p.seriesName, code: episodeCode(p.seasonNumber, p.episodeNumber), state: p.completed ? 'COMPLETADO' : `EN CURSO · ${playTime(p.currentSecond)}`,
+    series: p.seriesName, code: episodeCode(p.seasonNumber, p.episodeNumber, null, p.episodePart), state: p.completed ? 'COMPLETADO' : `EN CURSO · ${playTime(p.currentSecond)}`,
     color: p.completed ? '#8BE08F' : '#FFB547', pct: p.completed ? 100 : 0, when: ago(p.updatedAtUtc), key: p.episodeId,
   })));
   readonly pending = computed(() => this.authorizations().map(a => ({

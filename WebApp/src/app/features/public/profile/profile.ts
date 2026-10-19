@@ -54,7 +54,7 @@ export class Profile {
       .sort((a, b) => b.updatedAtUtc.localeCompare(a.updatedAtUtc))
       .filter(p => !seen.has(p.seriesId) && seen.add(p.seriesId))
       .map(p => ({
-        id: p.seriesId, episodeId: p.episodeId, series: p.seriesName, code: episodeCode(p.seasonNumber, p.episodeNumber), title: p.episodeTitle,
+        id: p.seriesId, episodeId: p.episodeId, series: p.seriesName, code: episodeCode(p.seasonNumber, p.episodeNumber, null, p.episodePart), title: p.episodeTitle,
         pct: p.completed ? 100 : 0, done: p.completed, at: playTime(p.currentSecond), when: ago(p.updatedAtUtc), mobileWhen: ago(p.updatedAtUtc),
       }));
   });

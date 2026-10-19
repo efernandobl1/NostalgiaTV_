@@ -36,13 +36,15 @@ public sealed record CategoriesRequest([Required] IReadOnlyList<int> CategoryIds
 public sealed record SeasonRequest([Range(0, 999)] int SeasonNumber);
 
 public sealed record EpisodeItem(int Id, int SeriesId, int SeasonNumber, int EpisodeNumber, int EpisodeTypeId, string EpisodeType,
-    string Title, string? FilePath, bool IsAvailable, long? FileSizeBytes, int BreakPointCount);
+    string Title, string? FilePath, bool IsAvailable, long? FileSizeBytes, int BreakPointCount, string? EpisodePart);
 
 public sealed record EpisodeRequest(
     [Required, StringLength(300, MinimumLength = 1)] string Title,
     [Range(0, 999)] int SeasonNumber,
     [Range(0, 9999)] int EpisodeNumber,
-    [Range(1, int.MaxValue)] int EpisodeTypeId);
+    [Range(1, int.MaxValue)] int EpisodeTypeId,
+    /// <summary>Segment letter of a split episode ("A", "B"…); empty for a complete episode.</summary>
+    [RegularExpression("^[A-Za-z]?$")] string? EpisodePart = null);
 
 public sealed record BreakPointItem(int Id, int EpisodeId, decimal OffsetSeconds, string? Label);
 
@@ -92,6 +94,6 @@ public sealed record PublicSeriesDetail(int Id, string Name, string? Description
     DateOnly StartDate, DateOnly? EndDate, float? Rating, IReadOnlyList<string> Categories, IReadOnlyList<int> Seasons,
     IReadOnlyList<OnAirChannel> OnAir, int CommentCount);
 
-public sealed record PublicEpisode(int Id, int SeasonNumber, int EpisodeNumber, string EpisodeType, string Title, string FilePath);
+public sealed record PublicEpisode(int Id, int SeasonNumber, int EpisodeNumber, string EpisodeType, string Title, string FilePath, string? EpisodePart);
 
 public sealed record CategoryFacet(int Id, string Name, int SeriesCount);

@@ -58,6 +58,8 @@ public class Episode : ISoftDeletable
     public int SeasonNumber { get; set; }
     public int EpisodeTypeId { get; set; }
     public int EpisodeNumber { get; set; }
+    /// <summary>Segment of a split episode ("A", "B"…); null for a complete episode. Parts air back to back.</summary>
+    public string? Part { get; set; }
     public string Title { get; set; } = "";
     public string? FilePath { get; set; }
     public bool IsAvailable { get; set; } = true;

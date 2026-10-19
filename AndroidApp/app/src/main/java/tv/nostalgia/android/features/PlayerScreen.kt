@@ -309,7 +309,7 @@ private fun liveFraction(playback: Playback): Float {
     return ((System.currentTimeMillis() - playback.startsAt).toFloat() / (playback.endsAt - playback.startsAt)).coerceIn(0f, 1f)
 }
 
-private fun Playback.detail(): String = listOf(episodeCode(seasonNumber, episodeNumber), title.takeIf { !isBumper && it != seriesName })
+private fun Playback.detail(): String = listOf(episodeCode(seasonNumber, episodeNumber, part = part), title.takeIf { !isBumper && it != seriesName })
     .filter { !it.isNullOrBlank() }.joinToString(" · ")
 
 // ── Android TV OSD ──
@@ -460,7 +460,7 @@ private fun MobileLive(model: AppViewModel, state: AppState, playback: Playback,
                             Txt(clock(slot.startsAt), 13.sp, if (current) Ntv.Danger else Ntv.Fg, Modifier.width(48.dp), font = Mono)
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Txt(slot.seriesName, 14.sp, weight = FontWeight.SemiBold, lines = 1)
-                                Txt(listOfNotNull(episodeCode(slot.seasonNumber, slot.episodeNumber, slot.episodeType).ifEmpty { null },
+                                Txt(listOfNotNull(episodeCode(slot.seasonNumber, slot.episodeNumber, slot.episodeType, slot.part).ifEmpty { null },
                                     "ahora".takeIf { current }).joinToString(" · "), 12.sp, Ntv.Muted)
                             }
                         }
@@ -484,7 +484,7 @@ private fun MobileLive(model: AppViewModel, state: AppState, playback: Playback,
                     val on = episode.id == playback.episodeId
                     Row(Modifier.fillMaxWidth().panel(if (on) Ntv.AmberWash else Ntv.Panel).clickable { model.playEpisode(episode) }.padding(10.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Txt(if (episode.season == 0) episode.episodeType else "E${episode.episodeNumber}", 12.sp, Ntv.Amber, font = Mono)
+                        Txt(if (episode.season == 0) episode.episodeType else "E${episode.episodeNumber}${episode.part.orEmpty()}", 12.sp, Ntv.Amber, font = Mono)
                         Txt(episode.title, 14.sp, weight = if (on) FontWeight.SemiBold else FontWeight.Normal, lines = 1)
                     }
                 }
@@ -524,7 +524,7 @@ private fun BoxScope.MobileFullscreenControls(model: AppViewModel, state: AppSta
                 if (live) LiveBadge("EN VIVO", 11.sp)
                 Txt(if (live) channel?.name?.uppercase() ?: "" else playback.seriesName.uppercase(), 11.sp, Ntv.Amber, font = Mono, lines = 1)
             }
-            Txt(listOf(if (playback.isBumper) playback.title else playback.seriesName.ifEmpty { playback.title }, episodeCode(playback.seasonNumber, playback.episodeNumber))
+            Txt(listOf(if (playback.isBumper) playback.title else playback.seriesName.ifEmpty { playback.title }, episodeCode(playback.seasonNumber, playback.episodeNumber, part = playback.part))
                 .filter { it.isNotEmpty() }.joinToString(" · "), 16.sp, weight = FontWeight.SemiBold, lines = 1)
         }
         Box(Modifier.size(44.dp).clip(CircleShape).background(Ntv.Glass(.12f)).clickable { locked = true }, contentAlignment = Alignment.Center) {

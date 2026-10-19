@@ -7,7 +7,7 @@ import * as M from './models';
 export interface ChannelForm { name: string; history: string | null; startDate: string; endDate: string | null }
 export interface EraForm { name: string; description: string | null; historicalStartDate: string; historicalEndDate: string | null }
 export interface SeriesForm { name: string; description: string | null; history: string | null; rating: number | null; startDate: string; endDate: string | null; categoryIds: number[]; initialSeasons?: number }
-export interface EpisodeForm { title: string; seasonNumber: number; episodeNumber: number; episodeTypeId: number }
+export interface EpisodeForm { title: string; seasonNumber: number; episodeNumber: number; episodeTypeId: number; episodePart: string | null }
 export interface InterludeForm {
   title: string | null; kind: string; bumperType: string | null; season: string; redistributionAllowed: boolean;
   license: string | null; sourceUrl: string | null; regionCode: string | null; originalYearFrom: number | null; originalYearTo: number | null;

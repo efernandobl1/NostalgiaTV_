@@ -65,11 +65,11 @@ public sealed record EraInterludeRequest([Range(1, 100)] int Weight, [Range(0, 6
 // ── Schedule (admin "Programación" and public guide) ──
 
 public sealed record NowPlaying(long SegmentId, string Kind, int? EpisodeId, int? SeriesId, string? SeriesName, string Title,
-    int? SeasonNumber, int? EpisodeNumber, DateTime StartsAtUtc, DateTime EndsAtUtc, double Progress);
+    int? SeasonNumber, int? EpisodeNumber, DateTime StartsAtUtc, DateTime EndsAtUtc, double Progress, string? EpisodePart);
 
 /// <summary>One program block: the episode plus the bumpers and ads that air inside it.</summary>
 public sealed record ScheduleProgram(long Id, int EpisodeId, int SeriesId, string SeriesName, string Title, int SeasonNumber,
-    int EpisodeNumber, string EpisodeType, DateTime StartsAtUtc, DateTime EndsAtUtc, IReadOnlyList<ScheduleSegment> Segments);
+    int EpisodeNumber, string EpisodeType, DateTime StartsAtUtc, DateTime EndsAtUtc, IReadOnlyList<ScheduleSegment> Segments, string? EpisodePart);
 
 public sealed record ScheduleSegment(long Id, string Kind, int? InterludeId, string Title, DateTime StartsAtUtc, DateTime EndsAtUtc,
     decimal? MediaStartSecond, decimal? MediaEndSecond, bool InAdBreak);
@@ -77,7 +77,7 @@ public sealed record ScheduleSegment(long Id, string Kind, int? InterludeId, str
 public sealed record GuideRow(int ChannelId, string ChannelName, string? LogoPath, IReadOnlyList<GuideSlot> Slots);
 
 public sealed record GuideSlot(long ProgramId, int EpisodeId, int SeriesId, string SeriesName, string Title, int SeasonNumber,
-    int EpisodeNumber, string EpisodeType, bool IsSpecial, bool IsNow, DateTime StartsAtUtc, DateTime EndsAtUtc);
+    int EpisodeNumber, string EpisodeType, bool IsSpecial, bool IsNow, DateTime StartsAtUtc, DateTime EndsAtUtc, string? EpisodePart);
 
 // ── Public channels ──
 
@@ -95,4 +95,4 @@ public sealed record PublicEraSeries(int SeriesId, string Name, string? LogoPath
 /// <summary>Live state pushed every second over SignalR and returned by GET .../state.</summary>
 public sealed record ChannelState(int ChannelId, long SegmentId, string Kind, int? EpisodeId, int? SeriesId, string? SeriesName,
     string? SeriesLogoPath, string Title, int? SeasonNumber, int? EpisodeNumber, string FilePath, double MediaStartSecond, double CurrentSecond,
-    double SecondsUntilNext, string? NextTitle, DateTime StartsAtUtc, DateTime EndsAtUtc);
+    double SecondsUntilNext, string? NextTitle, DateTime StartsAtUtc, DateTime EndsAtUtc, string? EpisodePart);

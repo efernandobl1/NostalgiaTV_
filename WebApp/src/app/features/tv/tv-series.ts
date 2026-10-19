@@ -81,8 +81,8 @@ export class TvSeries {
       const p = progress.get(e.id);
       const started = !!p && !p.completed && p.currentSecond > 0;
       return {
-        id: e.id, num: e.seasonNumber === 0 ? e.episodeType.toUpperCase() : `E${e.episodeNumber}`, title: e.title, pct: p?.completed ? 100 : 0,
-        state: p?.completed ? '✓ VISTO' : started ? `EN CURSO · ${playTime(p!.currentSecond)}` : episodeCode(e.seasonNumber, e.episodeNumber, e.episodeType),
+        id: e.id, num: e.seasonNumber === 0 ? e.episodeType.toUpperCase() : `E${e.episodeNumber}${e.episodePart ?? ''}`, title: e.title, pct: p?.completed ? 100 : 0,
+        state: p?.completed ? '✓ VISTO' : started ? `EN CURSO · ${playTime(p!.currentSecond)}` : episodeCode(e.seasonNumber, e.episodeNumber, e.episodeType, e.episodePart),
         color: p?.completed ? '#8BE08F' : started ? '#FFB547' : '#A29E91',
       };
     });

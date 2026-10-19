@@ -51,6 +51,16 @@ public static class MediaFilePolicy
 
     public static (string Title, int Number) EpisodeName(string path)
     {
+        var (title, number, _) = EpisodeFile(path);
+        return (title, number);
+    }
+
+    /// <summary>
+    /// Title, number and part of an episode file: "T2E05A", "2x05b", "S02E05A" or "05B - …" are part A/B of
+    /// episode 5. The letter must end the code (followed by a separator), so "01x02 Expediente" has no part.
+    /// </summary>
+    public static (string Title, int Number, string? Part) EpisodeFile(string path)
+    {
         var name = Path.GetFileNameWithoutExtension(path);
         if (name.EndsWith(".web", StringComparison.OrdinalIgnoreCase)) name = name[..^4];
         if (name.Contains('Ã') || name.Contains('Â') || name.Contains("â€"))
@@ -58,10 +68,11 @@ public static class MediaFilePolicy
             var repaired = Encoding.UTF8.GetString(Encoding.Latin1.GetBytes(name));
             if (!repaired.Contains('�')) name = repaired;
         }
-        var match = Regex.Match(name, @"[Ss]?\d{1,2}[xXeE](\d{1,3})");
-        if (!match.Success) match = Regex.Match(name, @"^[Ee]?(\d{1,3})[\s.\-_]+");
-        if (!match.Success) return (name, 0);
+        var match = Regex.Match(name, @"[Ss]?\d{1,2}[xXeE](\d{1,3})(?:([A-Da-d])(?![A-Za-z0-9]))?");
+        if (!match.Success) match = Regex.Match(name, @"^[Ee]?(\d{1,3})([A-Da-d])?[\s.\-_]+");
+        if (!match.Success) return (name, 0, null);
         var title = name[(match.Index + match.Length)..].Trim(' ', '-', '–', '—', '.', '_').Replace('_', ' ');
-        return (string.IsNullOrWhiteSpace(title) ? name : title, int.Parse(match.Groups[1].Value));
+        var part = match.Groups[2].Success ? match.Groups[2].Value.ToUpperInvariant() : null;
+        return (string.IsNullOrWhiteSpace(title) ? name : title, int.Parse(match.Groups[1].Value), part);
     }
 }

@@ -662,6 +662,7 @@ namespace Infrastructure.Persistence.Migrations
                     SeasonNumber = table.Column<int>(type: "int", nullable: false),
                     EpisodeTypeId = table.Column<int>(type: "int", nullable: false),
                     EpisodeNumber = table.Column<int>(type: "int", nullable: false),
+                    Part = table.Column<string>(type: "nvarchar(1)", maxLength: 1, nullable: true),
                     Title = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
                     FilePath = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsAvailable = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
@@ -670,6 +671,7 @@ namespace Infrastructure.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Episodes", x => x.Id);
+                    table.CheckConstraint("CK_Episodes_Part", "[Part] IS NULL OR [Part] LIKE '[A-Z]'");
                     table.ForeignKey(
                         name: "FK_Episodes_EpisodeTypes_EpisodeTypeId",
                         column: x => x.EpisodeTypeId,
@@ -1248,9 +1250,9 @@ namespace Infrastructure.Persistence.Migrations
                 column: "EpisodeTypeId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Episodes_SeriesId_SeasonNumber_EpisodeTypeId_EpisodeNumber",
+                name: "IX_Episodes_SeriesId_SeasonNumber_EpisodeTypeId_EpisodeNumber_Part",
                 table: "Episodes",
-                columns: new[] { "SeriesId", "SeasonNumber", "EpisodeTypeId", "EpisodeNumber" },
+                columns: new[] { "SeriesId", "SeasonNumber", "EpisodeTypeId", "EpisodeNumber", "Part" },
                 unique: true,
                 filter: "[DeletedAtUtc] IS NULL");
 

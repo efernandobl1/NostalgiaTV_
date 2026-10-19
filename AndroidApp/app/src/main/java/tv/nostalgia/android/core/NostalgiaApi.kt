@@ -123,7 +123,7 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient, private 
     suspend fun episodes(seriesId: Int): List<Episode> = array("public/series/$seriesId/episodes").objects()
         .filter { !it.nullableString("filePath").isNullOrBlank() }
         .map { Episode(it.getInt("id"), it.getString("title"), it.getString("filePath"),
-            it.getInt("seasonNumber"), it.getInt("episodeNumber"), it.optString("episodeType", "Episodio")) }.inBroadcastOrder()
+            it.getInt("seasonNumber"), it.getInt("episodeNumber"), it.optString("episodeType", "Episodio"), it.nullableString("episodePart")) }.inBroadcastOrder()
 
     suspend fun channelState(channelId: Int): ChannelState {
         val result = json("public/channels/$channelId/state")
@@ -133,7 +133,8 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient, private 
             result.nullableString("title") ?: "Pausa del canal", result.nullableString("seriesName") ?: "", result.getString("filePath"),
             result.optDouble("currentSecond", 0.0), result.optDouble("secondsUntilNext", 10.0), interlude, result.optInt("seriesId"),
             result.nullableInt("seasonNumber"), result.nullableInt("episodeNumber"), result.nullableString("nextTitle"),
-            result.nullableString("startsAtUtc")?.let(::utcMillis) ?: 0, result.nullableString("endsAtUtc")?.let(::utcMillis) ?: 0)
+            result.nullableString("startsAtUtc")?.let(::utcMillis) ?: 0, result.nullableString("endsAtUtc")?.let(::utcMillis) ?: 0,
+            result.nullableString("episodePart"))
     }
 
     suspend fun viewerSession(): ViewerSession = parseSession(json("viewer/session"))
@@ -154,7 +155,7 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient, private 
         return ViewerSession(result.getString("profileId"), devices.size, result.getJSONArray("progress").objects().map {
             WatchProgress(it.getInt("episodeId"), it.getDouble("currentSecond"), it.getBoolean("completed"), it.optInt("seriesId"),
                 it.optString("seriesName"), it.optString("episodeTitle"), it.optInt("seasonNumber"), it.optInt("episodeNumber"),
-                it.nullableString("updatedAtUtc")?.let(::utcMillis) ?: 0)
+                it.nullableString("updatedAtUtc")?.let(::utcMillis) ?: 0, it.nullableString("episodePart"))
         }, devices.firstOrNull { it.optBoolean("current") }?.getString("id"), result.optBoolean("accountLinked"),
             result.nullableString("username"), devices.map {
                 ViewerDevice(it.getString("id"), it.optString("name"), it.nullableString("lastSeenUtc")?.let(::utcMillis) ?: 0, it.optBoolean("current"))
@@ -166,13 +167,13 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient, private 
         it.optJSONObject("now")?.let { now ->
             NowPlaying(now.optString("kind", "Episode"), now.nullableInt("seriesId"), now.nullableString("seriesName"), now.optString("title"),
                 now.nullableInt("seasonNumber"), now.nullableInt("episodeNumber"), utcMillis(now.getString("startsAtUtc")),
-                utcMillis(now.getString("endsAtUtc")), now.optDouble("progress", 0.0).toFloat().coerceIn(0f, 1f))
+                utcMillis(now.getString("endsAtUtc")), now.optDouble("progress", 0.0).toFloat().coerceIn(0f, 1f), now.nullableString("episodePart"))
         }, it.optJSONObject("next")?.let(::parseSlot))
 
     private fun parseSlot(it: JSONObject) = GuideSlot(it.getLong("programId"), it.getInt("episodeId"), it.getInt("seriesId"),
         it.optString("seriesName"), it.optString("title"), it.optInt("seasonNumber"), it.optInt("episodeNumber"),
         it.optString("episodeType", "Episodio"), it.optBoolean("isSpecial"), it.optBoolean("isNow"),
-        utcMillis(it.getString("startsAtUtc")), utcMillis(it.getString("endsAtUtc")))
+        utcMillis(it.getString("startsAtUtc")), utcMillis(it.getString("endsAtUtc")), it.nullableString("episodePart"))
 
     private suspend fun array(path: String) = withContext(Dispatchers.Default) { JSONArray(request(path)) }
     private suspend fun json(path: String, body: JSONObject? = null) =

@@ -181,15 +181,17 @@ Table Episodes {
   SeasonNumber int [not null] // renamed from Season
   EpisodeTypeId int [not null]
   EpisodeNumber int [not null]
+  Part nvarchar(1) [null, note: 'Segment of a split episode (A, B...); NULL = complete episode']
   Title nvarchar(300) [not null]
   FilePath nvarchar(max) [null]
   IsAvailable bit [not null, default: true]
   DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
 
   indexes {
-    (SeriesId, SeasonNumber, EpisodeTypeId, EpisodeNumber) [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+    (SeriesId, SeasonNumber, EpisodeTypeId, EpisodeNumber, Part) [unique, note: 'filter: [DeletedAtUtc] IS NULL']
     EpisodeTypeId
   }
+  Note: 'CK_Episodes_Part: [Part] IS NULL OR [Part] LIKE \'[A-Z]\''
 }
 
 Table EpisodeBreakPoints {

@@ -14,11 +14,11 @@ export function minutesBetween(from: string, to: string): number {
   return Math.max(0, Math.round((new Date(to).getTime() - new Date(from).getTime()) / 60000));
 }
 
-/** "T2 · E14"; specials and movies show their type, season 0 is "Especial". */
-export function episodeCode(season: number | null | undefined, episode: number | null | undefined, type?: string | null): string {
-  if (type && type !== 'Episodio') return type;
+/** "T2 · E14" ("T2 · E5A" for part A of a split episode); specials and movies show their type, season 0 is "Especial". */
+export function episodeCode(season: number | null | undefined, episode: number | null | undefined, type?: string | null, part?: string | null): string {
+  if (type && type !== 'Episodio') return part ? `${type} ${part}` : type;
   if (season == null || episode == null) return '';
-  return season === 0 ? 'Especial' : `T${season} · E${episode}`;
+  return season === 0 ? 'Especial' : `T${season} · E${episode}${part ?? ''}`;
 }
 
 export function years(start: number | string | null | undefined, end: number | string | null | undefined): string {
@@ -59,7 +59,7 @@ export function nowTitle(now: NowPlaying | null | undefined): string {
 }
 
 export function slotLine(slot: GuideSlot): string {
-  return [episodeCode(slot.seasonNumber, slot.episodeNumber, slot.episodeType), slot.title !== slot.seriesName ? slot.title : '']
+  return [episodeCode(slot.seasonNumber, slot.episodeNumber, slot.episodeType, slot.episodePart), slot.title !== slot.seriesName ? slot.title : '']
     .filter(Boolean).join(' · ');
 }
 
@@ -77,7 +77,7 @@ export function toLiveChannel(card: PublicChannelCard): LiveChannel {
     now: nowTitle(card.now), next: card.next ? `${card.next.seriesName} ${hhmm(card.next.startsAtUtc)}` : '—',
     pct: card.now ? Math.round(card.now.progress * 100) : 0, tags: card.categories, on,
     badge: on ? '● EN VIVO' : 'SIN SEÑAL', badgeInk: on ? '#1A0906' : '#ECE8DC', badgeBg: on ? '#FF6B5E' : '#3A3A33',
-    logo: mediaUrl(card.logoPath), code: card.now ? episodeCode(card.now.seasonNumber, card.now.episodeNumber) : '',
+    logo: mediaUrl(card.logoPath), code: card.now ? episodeCode(card.now.seasonNumber, card.now.episodeNumber, null, card.now.episodePart) : '',
     endsAt: card.now ? hhmm(card.now.endsAtUtc) : '', card,
   };
 }
@@ -91,7 +91,7 @@ export function continueWatching(progress: ProgressItem[]): ContinueItem[] {
     .sort((a, b) => b.updatedAtUtc.localeCompare(a.updatedAtUtc))
     .filter(p => !seen.has(p.seriesId) && seen.add(p.seriesId))
     .map(p => ({ seriesId: p.seriesId, series: p.seriesName, episodeId: p.episodeId,
-      code: `${episodeCode(p.seasonNumber, p.episodeNumber)} · en ${playTime(p.currentSecond)}`, pct: 0 }));
+      code: `${episodeCode(p.seasonNumber, p.episodeNumber, null, p.episodePart)} · en ${playTime(p.currentSecond)}`, pct: 0 }));
 }
 
 /**

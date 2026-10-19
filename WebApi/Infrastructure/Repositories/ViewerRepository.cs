@@ -472,7 +472,7 @@ public sealed class ViewerRepository(NostalgiaTVContext context, IMemoryCache ca
         await context.ViewerProgress.AsNoTracking().Where(item => item.ProfileId == profileId)
             .OrderByDescending(item => item.UpdatedAtUtc).Take(2000)
             .Select(item => new ProgressItem(item.Episode.SeriesId, item.Episode.Season.Series.Name, item.EpisodeId, item.Episode.Title,
-                item.Episode.SeasonNumber, item.Episode.EpisodeNumber, item.CurrentSecond, item.Completed, item.UpdatedAtUtc))
+                item.Episode.SeasonNumber, item.Episode.EpisodeNumber, item.CurrentSecond, item.Completed, item.UpdatedAtUtc, item.Episode.Part))
             .ToListAsync();
 
     private static decimal Seconds(double value) => decimal.Round((decimal)Math.Max(0, value), 3);

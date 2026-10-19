@@ -48,8 +48,10 @@ internal static class CatalogConfiguration
         model.Entity<Episode>(episode =>
         {
             episode.Property(item => item.Title).HasMaxLength(300);
+            episode.Property(item => item.Part).HasMaxLength(1);
             episode.Property(item => item.IsAvailable).HasDefaultValue(true);
-            episode.HasIndex(item => new { item.SeriesId, item.SeasonNumber, item.EpisodeTypeId, item.EpisodeNumber }).IsUnique().HasFilter(ActiveRows);
+            episode.ToTable(table => table.HasCheckConstraint("CK_Episodes_Part", "[Part] IS NULL OR [Part] LIKE '[A-Z]'"));
+            episode.HasIndex(item => new { item.SeriesId, item.SeasonNumber, item.EpisodeTypeId, item.EpisodeNumber, item.Part }).IsUnique().HasFilter(ActiveRows);
             episode.HasIndex(item => item.EpisodeTypeId);
             episode.HasOne(item => item.Season).WithMany(season => season.Episodes)
                 .HasForeignKey(item => new { item.SeriesId, item.SeasonNumber }).OnDelete(DeleteBehavior.Restrict);

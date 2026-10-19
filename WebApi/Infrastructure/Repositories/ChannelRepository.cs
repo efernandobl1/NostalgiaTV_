@@ -409,7 +409,7 @@ public sealed class ChannelRepository(NostalgiaTVContext context, MediaLibrary l
         var total = (state.EndsAtUtc - state.StartsAtUtc).TotalSeconds;
         var elapsed = (DateTime.UtcNow - state.StartsAtUtc).TotalSeconds;
         return new NowPlaying(state.SegmentId, state.Kind, state.EpisodeId, state.SeriesId, state.SeriesName, state.Title, state.SeasonNumber,
-            state.EpisodeNumber, state.StartsAtUtc, state.EndsAtUtc, total <= 0 ? 0 : Math.Clamp(elapsed / total, 0, 1));
+            state.EpisodeNumber, state.StartsAtUtc, state.EndsAtUtc, total <= 0 ? 0 : Math.Clamp(elapsed / total, 0, 1), state.EpisodePart);
     }
 
     private static void Apply(Channel channel, ChannelRequest request)

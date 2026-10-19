@@ -12,7 +12,7 @@ public sealed record ViewerSession(Guid ProfileId, bool AccountLinked, string? U
 public sealed record ViewerDeviceItem(Guid Id, string Name, DateTime LastSeenUtc, DateTime ExpiresAtUtc, bool Current);
 
 public sealed record ProgressItem(int SeriesId, string SeriesName, int EpisodeId, string EpisodeTitle, int SeasonNumber,
-    int EpisodeNumber, decimal CurrentSecond, bool Completed, DateTime UpdatedAtUtc);
+    int EpisodeNumber, decimal CurrentSecond, bool Completed, DateTime UpdatedAtUtc, string? EpisodePart);
 
 /// <summary>Result of starting a session: SetToken is the new device credential, if one was issued.</summary>
 public sealed record ViewerSessionStart(ViewerSession Session, string? SetToken, DateTime? TokenExpiresUtc);

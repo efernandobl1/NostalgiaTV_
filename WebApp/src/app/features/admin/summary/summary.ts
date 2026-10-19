@@ -50,7 +50,7 @@ export class Summary {
         return {
           status: on ? 'AL AIRE' : c.activeEraId ? 'SIN SEÑAL' : 'SIN ERA', statusInk: on ? '#1A0906' : '#ECE8DC', statusBg: on ? red : '#3A3A33',
           code: `CH ${channelNumber(c.id)}`, name: c.name, era: c.activeEraName ?? 'sin seleccionar',
-          nowCode: c.now ? (c.now.kind === 'Episode' ? episodeCode(c.now.seasonNumber, c.now.episodeNumber) || 'AL AIRE' : 'INTERLUDIO') : 'FUERA DEL AIRE',
+          nowCode: c.now ? (c.now.kind === 'Episode' ? episodeCode(c.now.seasonNumber, c.now.episodeNumber, null, c.now.episodePart) || 'AL AIRE' : 'INTERLUDIO') : 'FUERA DEL AIRE',
           nowTitle: c.now ? c.now.seriesName ?? c.now.title : c.activeEraId ? 'Sin programación' : 'Selecciona una era para emitir',
           pct: c.now ? Math.round(c.now.progress * 100) : 0,
           next: c.now ? `TERMINA ${hhmm(c.now.endsAtUtc)} · ${c.seriesCount} series` : `${years(c.startDate, c.endDate)} · ${c.eraCount} eras`,

@@ -145,10 +145,10 @@ public sealed class SeriesRepository(NostalgiaTVContext context, MediaLibrary li
         var query = context.Episodes.AsNoTracking().Where(episode => episode.SeriesId == seriesId);
         if (seasonNumber.HasValue) query = query.Where(episode => episode.SeasonNumber == seasonNumber);
         var episodes = await query.OrderBy(episode => episode.SeasonNumber).ThenBy(episode => episode.EpisodeTypeId)
-            .ThenBy(episode => episode.EpisodeNumber).ThenBy(episode => episode.Id)
+            .ThenBy(episode => episode.EpisodeNumber).ThenBy(episode => episode.Part).ThenBy(episode => episode.Id)
             .Select(episode => new EpisodeItem(episode.Id, episode.SeriesId, episode.SeasonNumber, episode.EpisodeNumber, episode.EpisodeTypeId,
                 episode.EpisodeType.Name, episode.Title, episode.FilePath, episode.IsAvailable, null,
-                episode.BreakPoints.Count(point => point.DeletedAtUtc == null)))
+                episode.BreakPoints.Count(point => point.DeletedAtUtc == null), episode.Part))
             .ToListAsync();
         return episodes.Select(episode => episode with { FileSizeBytes = library.FileSize(episode.FilePath) }).ToList();
     }
@@ -157,13 +157,15 @@ public sealed class SeriesRepository(NostalgiaTVContext context, MediaLibrary li
     {
         var episode = await context.Episodes.SingleOrDefaultAsync(item => item.Id == episodeId) ?? throw new NotFoundException("Episodio no encontrado.");
         if (!await context.EpisodeTypes.AnyAsync(type => type.Id == request.EpisodeTypeId)) throw new BadRequestException("El tipo de episodio no existe.");
+        var part = string.IsNullOrWhiteSpace(request.EpisodePart) ? null : request.EpisodePart.Trim().ToUpperInvariant();
         if (await context.Episodes.AnyAsync(item => item.Id != episodeId && item.SeriesId == episode.SeriesId && item.SeasonNumber == request.SeasonNumber
-            && item.EpisodeTypeId == request.EpisodeTypeId && item.EpisodeNumber == request.EpisodeNumber))
-            throw new ConflictException("Ya existe un episodio con esa temporada, tipo y número.");
+            && item.EpisodeTypeId == request.EpisodeTypeId && item.EpisodeNumber == request.EpisodeNumber && item.Part == part))
+            throw new ConflictException("Ya existe un episodio con esa temporada, tipo, número y parte.");
         await importer.EnsureSeasonAsync(episode.SeriesId, request.SeasonNumber);
         episode.Title = request.Title.Trim();
         episode.SeasonNumber = request.SeasonNumber;
         episode.EpisodeNumber = request.EpisodeNumber;
+        episode.Part = part;
         episode.EpisodeTypeId = request.EpisodeTypeId;
         await context.SaveChangesAsync();
         return (await ListEpisodesAsync(episode.SeriesId, request.SeasonNumber)).Single(item => item.Id == episodeId);
@@ -333,7 +335,9 @@ public sealed class SeriesRepository(NostalgiaTVContext context, MediaLibrary li
         var query = context.Episodes.AsNoTracking().Where(episode => episode.SeriesId == seriesId && episode.IsAvailable && episode.FilePath != null);
         if (seasonNumber.HasValue) query = query.Where(episode => episode.SeasonNumber == seasonNumber);
         return await query.OrderBy(episode => episode.SeasonNumber).ThenBy(episode => episode.EpisodeTypeId).ThenBy(episode => episode.EpisodeNumber)
-            .Select(episode => new PublicEpisode(episode.Id, episode.SeasonNumber, episode.EpisodeNumber, episode.EpisodeType.Name, episode.Title, episode.FilePath!))
+            .ThenBy(episode => episode.Part)
+            .Select(episode => new PublicEpisode(episode.Id, episode.SeasonNumber, episode.EpisodeNumber, episode.EpisodeType.Name, episode.Title, episode.FilePath!,
+                episode.Part))
             .ToListAsync();
     }
 

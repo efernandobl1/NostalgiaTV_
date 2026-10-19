@@ -17,8 +17,8 @@ function view(channel: LiveChannel | undefined, id: number, state: ChannelState 
   const episode = state?.kind === 'Episode';
   // During a break the program (not the interlude) is still what's on.
   const series = program?.seriesName ?? state?.seriesName ?? channel?.card.now?.seriesName ?? channel?.now ?? 'Fuera del aire';
-  const code = program ? episodeCode(program.seasonNumber, program.episodeNumber, program.episodeType)
-    : state ? episodeCode(state.seasonNumber, state.episodeNumber) : channel?.code ?? '';
+  const code = program ? episodeCode(program.seasonNumber, program.episodeNumber, program.episodeType, program.episodePart)
+    : state ? episodeCode(state.seasonNumber, state.episodeNumber, null, state.episodePart) : channel?.code ?? '';
   const title = program?.title ?? (episode ? state?.title : '') ?? '';
   const starts = program?.startsAtUtc ?? state?.startsAtUtc ?? channel?.card.now?.startsAtUtc;
   const ends = program?.endsAtUtc ?? state?.endsAtUtc ?? channel?.card.now?.endsAtUtc;
@@ -72,7 +72,7 @@ export function createTuner(id: Signal<number>) {
       const start = new Date(p.startsAtUtc).getTime();
       const end = new Date(p.endsAtUtc).getTime();
       const kind = start <= now && end > now ? 'now' as const : end <= now ? 'past' as const : undefined;
-      const code = episodeCode(p.seasonNumber, p.episodeNumber, p.episodeType);
+      const code = episodeCode(p.seasonNumber, p.episodeNumber, p.episodeType, p.episodePart);
       return { time: hhmm(p.startsAtUtc), title: p.seriesName, sub: kind === 'now' ? `${code} · ahora` : code, kind, seriesId: p.seriesId };
     });
   });

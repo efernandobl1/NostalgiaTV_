@@ -43,7 +43,7 @@ export class Schedule {
     return this.raw().map(p => {
       const total = Math.max(1, seconds(p.startsAtUtc, p.endsAtUtc));
       return {
-        start: hhmm(p.startsAtUtc), end: hhmm(p.endsAtUtc), title: p.seriesName, code: episodeCode(p.seasonNumber, p.episodeNumber, p.episodeType) || p.episodeType,
+        start: hhmm(p.startsAtUtc), end: hhmm(p.endsAtUtc), title: p.seriesName, code: episodeCode(p.seasonNumber, p.episodeNumber, p.episodeType, p.episodePart) || p.episodeType,
         type: p.episodeType, live: new Date(p.startsAtUtc).getTime() <= now && new Date(p.endsAtUtc).getTime() > now,
         segs: p.segments.map(s => ({ w: Math.max(0.2, seconds(s.startsAtUtc, s.endsAtUtc) * 24 / total), color: SEG_COLORS[s.kind] ?? '#3A3A33' })),
       };
@@ -121,7 +121,7 @@ export class Schedule {
     const channel = this.list()[this.channel()];
     const rows = [['Inicio', 'Fin', 'Serie', 'Episodio', 'Título', 'Tipo'], ...this.raw().map(p => [
       new Date(p.startsAtUtc).toLocaleString('es'), new Date(p.endsAtUtc).toLocaleString('es'), p.seriesName,
-      episodeCode(p.seasonNumber, p.episodeNumber, p.episodeType), p.title, p.episodeType,
+      episodeCode(p.seasonNumber, p.episodeNumber, p.episodeType, p.episodePart), p.title, p.episodeType,
     ])];
     const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
     const link = document.createElement('a');

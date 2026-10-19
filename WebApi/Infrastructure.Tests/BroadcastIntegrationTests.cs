@@ -97,6 +97,47 @@ public class BroadcastIntegrationTests
         Assert.Empty(await server.RunAsync<IScheduleRepository, IReadOnlyList<int>>(schedule => schedule.ChannelIdsAsync()));
         Assert.False(await server.DbAsync(context => context.ScheduledPlaybackSegments.AnyAsync(segment => segment.EndsAtUtc > DateTime.UtcNow)));
     }
+
+    /// <summary>"T1E02A"/"T1E02B" import as parts of one episode and always air together, A then B.</summary>
+    [SqlFact]
+    public async Task SplitEpisodePartsAirBackToBack()
+    {
+        await using var server = await TestServer.StartAsync();
+        var series = await server.RunAsync<ISeriesRepository, SeriesDetail>(repository => repository.CreateAsync(
+            new("Esponja", null, null, null, new DateOnly(1999, 1, 1), null, [], 1), null));
+        var old = DateTime.UtcNow.AddMinutes(-10);
+        foreach (var name in new[] { "T1E01 Uno", "T1E02A Mitad A", "T1E02B Mitad B", "T1E03 Tres" })
+        {
+            var path = Path.Combine(series.FolderPath!, "season 1", name + ".mp4");
+            await TestServer.WriteVideoAsync(path, 300);
+            File.SetLastWriteTimeUtc(path, old);
+        }
+        await server.RunAsync<ISeriesRepository, ScanResult>(repository => repository.ScanFolderAsync(series.Id, CancellationToken.None));
+        var episodes = await server.RunAsync<ISeriesRepository, IReadOnlyList<EpisodeItem>>(repository => repository.ListEpisodesAsync(series.Id, 1));
+        Assert.Equal(["1", "2A", "2B", "3"], episodes.Select(episode => $"{episode.EpisodeNumber}{episode.EpisodePart}"));
+        var partA = episodes[1].Id;
+        var partB = episodes[2].Id;
+
+        var channel = await server.RunAsync<IChannelRepository, ChannelDetail>(channels =>
+            channels.CreateAsync(new("Canal Partes", null, new DateTime(1999, 1, 1), null), null));
+        var era = await server.RunAsync<IChannelRepository, EraItem>(channels =>
+            channels.CreateEraAsync(channel.Id, new("Tarde", null, new DateTime(1999, 1, 1), null)));
+        await server.RunAsync<IChannelRepository>(async channels =>
+        {
+            await channels.SetEraSeriesAsync(channel.Id, era.Id, new([new(series.Id, null)]));
+            await channels.ActivateEraAsync(channel.Id, era.Id);
+        });
+        var programs = await server.RunAsync<IScheduleRepository, IReadOnlyList<ScheduleProgram>>(schedule =>
+            schedule.GetProgramsAsync(channel.Id, DateTime.UtcNow.AddMinutes(-10), DateTime.UtcNow.AddHours(12)));
+        var ids = programs.Select(program => program.EpisodeId).ToList();
+        Assert.Contains(partA, ids);
+        for (var index = 0; index < ids.Count; index++)
+        {
+            if (ids[index] == partA && index + 1 < ids.Count) Assert.Equal(partB, ids[index + 1]);
+            if (ids[index] == partB && index > 0) Assert.Equal(partA, ids[index - 1]);
+        }
+        Assert.All(programs.Where(program => program.EpisodeId == partB), program => Assert.Equal("B", program.EpisodePart));
+    }
 }
 
 /// <summary>A series with three episodes and a special, interludes, and a channel era on air.</summary>

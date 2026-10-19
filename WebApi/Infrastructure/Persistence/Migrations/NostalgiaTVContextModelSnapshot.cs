@@ -424,6 +424,10 @@ namespace Infrastructure.Persistence.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
+                    b.Property<string>("Part")
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)");
+
                     b.Property<int>("SeasonNumber")
                         .HasColumnType("int");
 
@@ -439,11 +443,14 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasIndex("EpisodeTypeId");
 
-                    b.HasIndex("SeriesId", "SeasonNumber", "EpisodeTypeId", "EpisodeNumber")
+                    b.HasIndex("SeriesId", "SeasonNumber", "EpisodeTypeId", "EpisodeNumber", "Part")
                         .IsUnique()
                         .HasFilter("[DeletedAtUtc] IS NULL");
 
-                    b.ToTable("Episodes");
+                    b.ToTable("Episodes", t =>
+                        {
+                            t.HasCheckConstraint("CK_Episodes_Part", "[Part] IS NULL OR [Part] LIKE '[A-Z]'");
+                        });
                 });
 
             modelBuilder.Entity("ApplicationCore.Entities.EpisodeBreakPoint", b =>

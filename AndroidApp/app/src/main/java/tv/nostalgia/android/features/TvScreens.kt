@@ -110,7 +110,7 @@ private fun TvHome(model: AppViewModel, state: AppState) {
                 }
                 Txt(featured.now?.let { it.seriesName ?: it.title } ?: featured.name, 44.sp, font = Display, weight = FontWeight.Bold,
                     lineHeight = 44.sp, lines = 2)
-                Txt(featured.now?.let { now -> listOf(episodeCode(now.seasonNumber, now.episodeNumber), now.title.takeIf { now.seriesName != null && it != now.seriesName },
+                Txt(featured.now?.let { now -> listOf(episodeCode(now.seasonNumber, now.episodeNumber, part = now.part), now.title.takeIf { now.seriesName != null && it != now.seriesName },
                     "termina ${clock(now.endsAt)}").filter { !it.isNullOrBlank() }.joinToString(" · ") } ?: "Fuera del aire", 14.sp, Ntv.Fg2, lines = 2)
                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     TvPill("Ver en vivo", { model.playChannel(featured) }, Modifier.focusRequester(watch), primary = true, fontSize = 14.sp, icon = NtvIcon.Play)
@@ -184,7 +184,7 @@ fun TvGuide(model: AppViewModel, state: AppState, onTune: (() -> Unit)? = null) 
                     Txt("CH ${row.channelId.toString().padStart(2, '0')} ${row.channelName.uppercase()} · ${clock(slot.startsAt)}", 11.sp, Ntv.Amber,
                         font = Mono, tracking = tracking(.1f), lines = 1)
                     Txt(slot.seriesName, 32.sp, font = Display, weight = FontWeight.Bold, lineHeight = 32.sp, lines = 1)
-                    Txt(listOf(episodeCode(slot.seasonNumber, slot.episodeNumber, slot.episodeType), slot.title.takeIf { it != slot.seriesName })
+                    Txt(listOf(episodeCode(slot.seasonNumber, slot.episodeNumber, slot.episodeType, slot.part), slot.title.takeIf { it != slot.seriesName })
                         .filter { !it.isNullOrBlank() }.joinToString(" · "), 13.sp, Ntv.Fg2, lines = 1)
                     Txt("OK para sintonizar · mantén OK para ver la serie", 11.sp, Ntv.Muted)
                 } else Txt(if (state.guideLoading) "Cargando la guía…" else "No hay programación para hoy.", 13.sp, Ntv.Muted)
@@ -242,7 +242,7 @@ private fun GuideCell(slot: GuideSlot, modifier: Modifier, onFocus: () -> Unit, 
         .padding(horizontal = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
         val ink = if (focused) Ntv.Ink2 else Ntv.Fg
         Txt(slot.seriesName, 12.sp, ink, weight = FontWeight.SemiBold, lines = 1)
-        Txt(listOf(episodeCode(slot.seasonNumber, slot.episodeNumber, slot.episodeType), slot.title.takeIf { it != slot.seriesName })
+        Txt(listOf(episodeCode(slot.seasonNumber, slot.episodeNumber, slot.episodeType, slot.part), slot.title.takeIf { it != slot.seriesName })
             .filter { !it.isNullOrBlank() }.joinToString(" · "), 9.sp, ink.copy(alpha = .8f), font = Mono, lines = 1)
     }
 }
@@ -343,7 +343,7 @@ private fun TvSeries(model: AppViewModel, state: AppState) {
                 Row(Modifier.padding(top = 5.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (resume != null) {
                         val started = progress[resume.id]?.let { !it.completed && it.currentSecond > 0 } == true
-                        TvPill("${if (started) "Continuar" else "Reproducir"} ${episodeCode(resume.season, resume.episodeNumber, resume.episodeType)}",
+                        TvPill("${if (started) "Continuar" else "Reproducir"} ${episodeCode(resume.season, resume.episodeNumber, resume.episodeType, resume.part)}",
                             { model.playEpisode(resume) }, Modifier.focusRequester(play), primary = true, icon = NtvIcon.Play)
                     }
                     series.onAir.firstOrNull()?.let { (channelId, _) ->
@@ -371,7 +371,7 @@ private fun TvSeries(model: AppViewModel, state: AppState) {
                         val shape = RoundedCornerShape(6.dp)
                         Column(Modifier.width(162.dp).focusRing(shape, { model.playEpisode(episode) }, ring = Ntv.Amber),
                             verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            EpisodeThumb(if (episode.season == 0) episode.episodeType.uppercase() else "E${episode.episodeNumber}",
+                            EpisodeThumb(if (episode.season == 0) episode.episodeType.uppercase() else "E${episode.episodeNumber}${episode.part.orEmpty()}",
                                 if (item?.completed == true) 1f else 0f, Modifier.fillMaxWidth(), 9.sp)
                             Txt(episode.title, 11.sp, weight = FontWeight.SemiBold, lines = 1)
                             val (label, color) = episodeState(item)
@@ -443,7 +443,7 @@ private fun TvChannel(model: AppViewModel, state: AppState) {
                         Txt(clock(slot.startsAt), 11.sp, if (slot.isNow) Ntv.Danger else Ntv.Fg, Modifier.width(40.dp), font = Mono)
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Txt(slot.seriesName, 12.sp, weight = FontWeight.SemiBold, lines = 1)
-                            Txt(listOfNotNull(episodeCode(slot.seasonNumber, slot.episodeNumber, slot.episodeType).ifEmpty { null },
+                            Txt(listOfNotNull(episodeCode(slot.seasonNumber, slot.episodeNumber, slot.episodeType, slot.part).ifEmpty { null },
                                 "ahora".takeIf { slot.isNow }).joinToString(" · "), 9.sp, Ntv.Muted, lines = 1)
                         }
                     }

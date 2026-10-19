@@ -351,10 +351,10 @@ class AppViewModel @JvmOverloads constructor(application: Application,
     fun playEpisode(episode: Episode) {
         val series = state.value.seriesDetail ?: return
         val progress = state.value.session?.progress?.find { it.episodeId == episode.id }
-        mutableState.update { it.copy(playback = Playback(episode.title, "${series.name} · ${episodeCode(episode.season, episode.episodeNumber, episode.episodeType)}",
+        mutableState.update { it.copy(playback = Playback(episode.title, "${series.name} · ${episodeCode(episode.season, episode.episodeNumber, episode.episodeType, episode.part)}",
             episode.filePath, episode.id, if (progress?.completed == false) progress.currentSecond else 0.0,
             seriesName = series.name, logoPath = series.logoPath, seriesId = series.id,
-            seasonNumber = episode.season, episodeNumber = episode.episodeNumber), error = null) }
+            seasonNumber = episode.season, episodeNumber = episode.episodeNumber, part = episode.part), error = null) }
     }
 
     /** The episode to continue: the one in progress, else the first unwatched one. */
@@ -513,4 +513,4 @@ class AppViewModel @JvmOverloads constructor(application: Application,
 
 private fun ChannelState.playback(channel: Channel) = Playback(title, if (isBumper || seriesName == channel.name) channel.name else "$seriesName · ${channel.name}",
     filePath, if (isBumper) 0 else episodeId, currentSecond.coerceAtLeast(0.0), channel, segmentId, secondsUntilNext, seriesName, channel.logoPath, seriesId,
-    seasonNumber, episodeNumber, nextTitle, startsAt, endsAt, isBumper)
+    seasonNumber, episodeNumber, nextTitle, startsAt, endsAt, isBumper, part)

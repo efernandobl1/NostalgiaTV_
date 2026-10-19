@@ -38,6 +38,7 @@ describe('schedule formatting', () => {
     expect(episodeCode(2, 14)).toBe('T2 · E14');
     expect(episodeCode(0, 1)).toBe('Especial');
     expect(episodeCode(1, 1, 'Película')).toBe('Película');
+    expect(episodeCode(2, 5, 'Episodio', 'B')).toBe('T2 · E5B');
     expect(years(1989, 1996)).toBe('1989–1996');
     expect(years('1999-01-01', null)).toBe('1999 –');
     expect(playTime(754.6)).toBe('12:34');

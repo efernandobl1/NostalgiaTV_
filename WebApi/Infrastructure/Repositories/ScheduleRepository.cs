@@ -73,7 +73,7 @@ public sealed class ScheduleRepository(NostalgiaTVContext context, MediaLibrary 
             .Select(program => new
             {
                 program.Id, program.EpisodeId, program.Episode.SeriesId, SeriesName = program.Episode.Season.Series.Name, program.Episode.Title,
-                program.Episode.SeasonNumber, program.Episode.EpisodeNumber, EpisodeType = program.Episode.EpisodeType.Name,
+                program.Episode.SeasonNumber, program.Episode.EpisodeNumber, program.Episode.Part, EpisodeType = program.Episode.EpisodeType.Name,
                 Segments = program.Segments.OrderBy(segment => segment.StartsAtUtc).Select(segment => new ScheduleSegment(segment.Id,
                     segment.InterludeId == null ? "Episode" : segment.Interlude!.Kind, segment.InterludeId,
                     segment.InterludeId == null ? program.Episode.Title : segment.Interlude!.Title,
@@ -82,7 +82,7 @@ public sealed class ScheduleRepository(NostalgiaTVContext context, MediaLibrary 
         return programs.Where(program => program.Segments.Count > 0)
             .Select(program => new ScheduleProgram(program.Id, program.EpisodeId, program.SeriesId, program.SeriesName, program.Title,
                 program.SeasonNumber, program.EpisodeNumber, program.EpisodeType, program.Segments[0].StartsAtUtc, program.Segments[^1].EndsAtUtc,
-                program.Segments))
+                program.Segments, program.Part))
             .OrderBy(program => program.StartsAtUtc).ToList();
     }
 
@@ -121,7 +121,7 @@ public sealed class ScheduleRepository(NostalgiaTVContext context, MediaLibrary 
         return new ChannelState(channelId, current.Id, current.Kind, current.EpisodeId, current.SeriesId, current.SeriesName, current.SeriesLogoPath,
             current.Title, current.SeasonNumber, current.EpisodeNumber, current.FilePath, (double)(current.MediaStartSecond ?? 0),
             (double)(current.MediaStartSecond ?? 0) + elapsed,
-            (current.EndsAtUtc - now).TotalSeconds, next, current.StartsAtUtc, current.EndsAtUtc);
+            (current.EndsAtUtc - now).TotalSeconds, next, current.StartsAtUtc, current.EndsAtUtc, current.EpisodePart);
     }
 
     public async Task<IReadOnlyList<int>> ChannelIdsAsync(CancellationToken token = default) =>
@@ -160,11 +160,21 @@ public sealed class ScheduleRepository(NostalgiaTVContext context, MediaLibrary 
             .Select(link => new { link.SeriesId, Seasons = link.SelectedSeasons.Select(season => season.SeasonNumber).ToList() }).ToListAsync(token);
         if (lineup.Count == 0) return false;
         var seriesIds = lineup.Select(link => link.SeriesId).ToList();
-        var episodes = (await context.Episodes.AsNoTracking()
+        var rows = (await context.Episodes.AsNoTracking()
                 .Where(episode => seriesIds.Contains(episode.SeriesId) && episode.IsAvailable && episode.FilePath != null && episode.Season.Series.DeletedAtUtc == null)
-                .Select(episode => new { episode.Id, episode.SeriesId, episode.SeasonNumber, episode.EpisodeTypeId, episode.FilePath }).ToListAsync(token))
+                .Select(episode => new { episode.Id, episode.SeriesId, episode.SeasonNumber, episode.EpisodeTypeId, episode.EpisodeNumber, episode.Part, episode.FilePath })
+                .ToListAsync(token))
             .Where(episode => lineup.First(link => link.SeriesId == episode.SeriesId).Seasons is var seasons && (seasons.Count == 0 || seasons.Contains(episode.SeasonNumber)))
-            .Select(episode => new EpisodeCandidate(episode.Id, episode.SeriesId, episode.EpisodeTypeId, episode.FilePath!)).ToList();
+            .ToList();
+        // A split episode airs as one unit: the shuffle only sees its first part and the other parts follow it in order.
+        var parts = rows.Where(row => row.Part != null)
+            .GroupBy(row => (row.SeriesId, row.SeasonNumber, row.EpisodeTypeId, row.EpisodeNumber))
+            .Select(group => group.OrderBy(row => row.Part, StringComparer.Ordinal)
+                .Select(row => new EpisodeCandidate(row.Id, row.SeriesId, row.EpisodeTypeId, row.FilePath!)).ToList())
+            .Where(group => group.Count > 1).ToList();
+        var partGroup = parts.SelectMany(group => group.Select(part => (part.Id, group))).ToDictionary(item => item.Id, item => item.group);
+        var episodes = rows.Where(row => !partGroup.TryGetValue(row.Id, out var group) || group[0].Id == row.Id)
+            .Select(row => new EpisodeCandidate(row.Id, row.SeriesId, row.EpisodeTypeId, row.FilePath!)).ToList();
         if (episodes.Count == 0) return false;
 
         var breakRule = await context.ChannelEraBreakRules.AsNoTracking().SingleOrDefaultAsync(rule => rule.ChannelEraId == eraId, token);
@@ -195,10 +205,18 @@ public sealed class ScheduleRepository(NostalgiaTVContext context, MediaLibrary 
         var probed = new Dictionary<string, decimal>(StringComparer.Ordinal);
         var random = Random.Shared;
 
+        // Parts still owed by a split episode whose first part ended the previous pass.
+        var pending = new Queue<EpisodeCandidate>();
+        var lastAired = previous.MaxBy(item => item.StartsAtUtc);
+        if (lastAired != null && partGroup.TryGetValue(lastAired.EpisodeId, out var unfinished))
+            foreach (var part in unfinished.SkipWhile(part => part.Id != lastAired.EpisodeId).Skip(1)) pending.Enqueue(part);
+
         var generated = 0;
         while (current < untilUtc && generated < MaxProgramsPerPass)
         {
-            var episode = Pick(episodes, previous, current, preferredGap, selector, rules, timeZone, random);
+            var episode = pending.Count > 0 ? pending.Dequeue() : Pick(episodes, previous, current, preferredGap, selector, rules, timeZone, random);
+            if (pending.Count == 0 && partGroup.TryGetValue(episode.Id, out var group) && group[0].Id == episode.Id)
+                foreach (var part in group.Skip(1)) pending.Enqueue(part);
             var duration = await DurationAsync(episode.FilePath, probed, token);
             var points = await context.EpisodeBreakPoints.AsNoTracking()
                 .Where(point => point.EpisodeId == episode.Id && point.OffsetSeconds > 0 && point.OffsetSeconds < duration)
@@ -362,7 +380,8 @@ public sealed class ScheduleRepository(NostalgiaTVContext context, MediaLibrary 
                 segment.InterludeId == null ? segment.ScheduledProgram.Episode.SeasonNumber : null,
                 segment.InterludeId == null ? segment.ScheduledProgram.Episode.EpisodeNumber : null,
                 segment.InterludeId == null ? segment.ScheduledProgram.Episode.FilePath! : segment.Interlude!.FilePath,
-                segment.MediaStartSecond, segment.StartsAtUtc, segment.EndsAtUtc))
+                segment.MediaStartSecond, segment.StartsAtUtc, segment.EndsAtUtc,
+                segment.InterludeId == null ? segment.ScheduledProgram.Episode.Part : null))
             .FirstOrDefaultAsync(token);
     }
 
@@ -373,12 +392,13 @@ public sealed class ScheduleRepository(NostalgiaTVContext context, MediaLibrary 
                 && program.Segments.Any(segment => segment.StartsAtUtc < toUtc))
             .Select(program => new ScheduleProgram(program.Id, program.EpisodeId, program.Episode.SeriesId, program.Episode.Season.Series.Name,
                 program.Episode.Title, program.Episode.SeasonNumber, program.Episode.EpisodeNumber, program.Episode.EpisodeType.Name,
-                program.Segments.Min(segment => segment.StartsAtUtc), program.Segments.Max(segment => segment.EndsAtUtc), new List<ScheduleSegment>()))
+                program.Segments.Min(segment => segment.StartsAtUtc), program.Segments.Max(segment => segment.EndsAtUtc), new List<ScheduleSegment>(),
+                program.Episode.Part))
             .ToListAsync()).OrderBy(program => program.StartsAtUtc).ToList();
 
     internal static GuideSlot Slot(ScheduleProgram program, DateTime now) => new(program.Id, program.EpisodeId, program.SeriesId, program.SeriesName,
         program.Title, program.SeasonNumber, program.EpisodeNumber, program.EpisodeType, program.EpisodeType != "Episodio",
-        program.StartsAtUtc <= now && program.EndsAtUtc > now, program.StartsAtUtc, program.EndsAtUtc);
+        program.StartsAtUtc <= now && program.EndsAtUtc > now, program.StartsAtUtc, program.EndsAtUtc, program.EpisodePart);
 
     private static DateTime Clamp(DateTime untilUtc)
     {
@@ -389,5 +409,6 @@ public sealed class ScheduleRepository(NostalgiaTVContext context, MediaLibrary 
     private sealed record PriorProgram(int EpisodeId, int SeriesId, int EpisodeTypeId, DateTime StartsAtUtc, DateTime EndsAtUtc, int? ShuffleCycle);
 
     private sealed record CurrentSegment(long Id, string Kind, int? EpisodeId, int? SeriesId, string? SeriesName, string? SeriesLogoPath,
-        string Title, int? SeasonNumber, int? EpisodeNumber, string FilePath, decimal? MediaStartSecond, DateTime StartsAtUtc, DateTime EndsAtUtc);
+        string Title, int? SeasonNumber, int? EpisodeNumber, string FilePath, decimal? MediaStartSecond, DateTime StartsAtUtc, DateTime EndsAtUtc,
+        string? EpisodePart);
 }

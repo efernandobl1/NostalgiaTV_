@@ -151,9 +151,9 @@ private fun MobileHome(model: AppViewModel, state: AppState) {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(resume, key = { it.episodeId }) { item ->
                             Column(Modifier.width(200.dp).clickable { model.navigate(Screen.SeriesInfo(item.seriesId)) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                EpisodeThumb(episodeCode(item.seasonNumber, item.episodeNumber), 0f, Modifier.fillMaxWidth(), radius = 10.dp)
+                                EpisodeThumb(episodeCode(item.seasonNumber, item.episodeNumber, part = item.part), 0f, Modifier.fillMaxWidth(), radius = 10.dp)
                                 Txt(item.seriesName, 14.sp, weight = FontWeight.SemiBold, lines = 1)
-                                Txt("${episodeCode(item.seasonNumber, item.episodeNumber)} · en ${playTime((item.currentSecond * 1000).toLong())}", 12.sp, Ntv.Muted, lines = 1)
+                                Txt("${episodeCode(item.seasonNumber, item.episodeNumber, part = item.part)} · en ${playTime((item.currentSecond * 1000).toLong())}", 12.sp, Ntv.Muted, lines = 1)
                             }
                         }
                     }
@@ -182,7 +182,7 @@ private fun HeroCard(model: AppViewModel, channel: Channel, now: NowPlaying) {
             ProgressLine(now.progress, Modifier.align(Alignment.BottomCenter), 3.dp, Color.White.copy(alpha = .15f), round = false)
         }
         Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Txt(listOf(channel.name.uppercase(), episodeCode(now.seasonNumber, now.episodeNumber)).filter { it.isNotEmpty() }.joinToString(" · "),
+            Txt(listOf(channel.name.uppercase(), episodeCode(now.seasonNumber, now.episodeNumber, part = now.part)).filter { it.isNotEmpty() }.joinToString(" · "),
                 11.sp, Ntv.Amber, font = Mono, lines = 1)
             Txt(now.seriesName ?: now.title, 24.sp, font = Display, weight = FontWeight.Bold, lines = 2)
             channel.next?.let { Txt("Sigue: ${it.seriesName} a las ${clock(it.startsAt)}", 13.sp, Ntv.Muted, lines = 1) }
@@ -255,7 +255,7 @@ private fun MobileGuide(model: AppViewModel, state: AppState) {
                         }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Txt(slot.seriesName, 15.sp, weight = FontWeight.SemiBold, lines = 1)
-                            Txt(listOf(episodeCode(slot.seasonNumber, slot.episodeNumber, slot.episodeType), slot.title.takeIf { it != slot.seriesName })
+                            Txt(listOf(episodeCode(slot.seasonNumber, slot.episodeNumber, slot.episodeType, slot.part), slot.title.takeIf { it != slot.seriesName })
                                 .filter { !it.isNullOrBlank() }.joinToString(" · "), 12.sp, Ntv.Muted, lines = 2)
                             if (live) ProgressLine(((now - slot.startsAt).toFloat() / (slot.endsAt - slot.startsAt)), Modifier.padding(top = 4.dp), 3.dp, Ntv.Line)
                         }
@@ -375,7 +375,7 @@ private fun MobileSeries(model: AppViewModel, state: AppState) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 if (resume != null) {
                     val started = progress[resume.id]?.let { !it.completed && it.currentSecond > 0 } == true
-                    MobileButton("${if (started) "Continuar" else "Reproducir"} ${episodeCode(resume.season, resume.episodeNumber, resume.episodeType)}",
+                    MobileButton("${if (started) "Continuar" else "Reproducir"} ${episodeCode(resume.season, resume.episodeNumber, resume.episodeType, resume.part)}",
                         { model.playEpisode(resume) }, Modifier.fillMaxWidth(), primary = true, icon = NtvIcon.Play)
                 }
                 series.onAir.firstOrNull()?.let { (channelId, name) ->
@@ -390,7 +390,7 @@ private fun MobileSeries(model: AppViewModel, state: AppState) {
             val item = progress[episode.id]
             Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Ntv.Panel)
                 .clickable { model.playEpisode(episode) }.padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                EpisodeThumb(if (episode.season == 0) episode.episodeType.uppercase() else "E${episode.episodeNumber}", if (item?.completed == true) 1f else 0f,
+                EpisodeThumb(if (episode.season == 0) episode.episodeType.uppercase() else "E${episode.episodeNumber}${episode.part.orEmpty()}", if (item?.completed == true) 1f else 0f,
                     Modifier.width(112.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Txt(episode.title, 14.sp, weight = FontWeight.SemiBold, lineHeight = 17.5.sp, lines = 2)
@@ -634,7 +634,7 @@ private fun MobileProfile(model: AppViewModel, state: AppState) {
                             EpisodeThumb("", if (item.completed) 1f else 0f, Modifier.width(96.dp))
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Txt(item.seriesName, 14.sp, weight = FontWeight.SemiBold, lines = 1)
-                                Txt("${episodeCode(item.seasonNumber, item.episodeNumber)} · ${ago(item.updatedAt)}", 12.sp, Ntv.Muted, lines = 1)
+                                Txt("${episodeCode(item.seasonNumber, item.episodeNumber, part = item.part)} · ${ago(item.updatedAt)}", 12.sp, Ntv.Muted, lines = 1)
                                 Txt(if (item.completed) "✓ COMPLETADO" else "EN CURSO · ${playTime((item.currentSecond * 1000).toLong())}", 10.sp,
                                     if (item.completed) Ntv.Ok else Ntv.Amber, font = Mono)
                             }

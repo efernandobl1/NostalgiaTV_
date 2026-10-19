@@ -60,7 +60,7 @@ export class Series {
   readonly rawEpisodes = signal<EpisodeItem[]>([]);
   readonly marks = signal(new Map<number, number[]>());
   readonly episodes = computed(() => this.rawEpisodes().map(e => ({
-    id: e.id, num: e.seasonNumber === 0 ? (e.episodeType.slice(0, 3).toUpperCase() + e.episodeNumber) : `E${e.episodeNumber}`, title: e.title, type: e.episodeType,
+    id: e.id, num: e.seasonNumber === 0 ? (e.episodeType.slice(0, 3).toUpperCase() + e.episodeNumber + (e.episodePart ?? '')) : `E${e.episodeNumber}${e.episodePart ?? ''}`, title: e.title, type: e.episodeType,
     file: e.filePath ? e.filePath.split('/').pop()! : 'sin archivo', ok: e.isAvailable, marks: this.marks().get(e.id) ?? [], item: e,
   })));
   readonly epIndex = signal(0);

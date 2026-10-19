@@ -172,6 +172,23 @@ public class SecurityPolicyTests
         Assert.Null(MediaFilePolicy.FolderType("season 0"));
         Assert.Null(MediaFilePolicy.FolderType("extras"));
     }
+
+    [Theory]
+    [InlineData("B.E T2E05A.1080p Lat.Www.Serieslandia.Com.web.mp4", 5, "A")]
+    [InlineData("B.E T2E05B.1080p Lat.Www.Serieslandia.Com.web.mp4", 5, "B")]
+    [InlineData("Padrinos 2x05b - Otra.mp4", 5, "B")]
+    [InlineData("S02E05a.mkv", 5, "A")]
+    [InlineData("05B - Segunda parte.mp4", 5, "B")]
+    [InlineData("B.E T2E07 (1).1080p Lat.Www.Serieslandia.Com.mp4", 7, null)]
+    [InlineData("01x02 Expediente X (1080p)[ReyBrena].mp4", 2, null)]
+    [InlineData("Los Simpsons 5x20 - El niño que sabia demasiado.web.mp4", 20, null)]
+    [InlineData("S01E05Bart.mp4", 5, null)]
+    public void EpisodeFilesDetectSplitParts(string file, int number, string? part)
+    {
+        var parsed = MediaFilePolicy.EpisodeFile(file);
+        Assert.Equal(number, parsed.Number);
+        Assert.Equal(part, parsed.Part);
+    }
 }
 
 public class SchemaTests

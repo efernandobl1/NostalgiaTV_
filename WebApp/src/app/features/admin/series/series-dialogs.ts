@@ -153,7 +153,7 @@ export class SeriesDialog {
       <label class="flex flex-col gap-1.5 text-[12px] text-muted">Título
         <input class="field" type="text" maxlength="300" [value]="title()" (input)="title.set($any($event.target).value)">
       </label>
-      <div class="grid grid-cols-3 gap-2.5">
+      <div class="grid grid-cols-4 gap-2.5">
         <label class="flex flex-col gap-1.5 text-[12px] text-muted">Temporada
           <select class="field field-select" (change)="season.set(+$any($event.target).value)">
             @for (t of seasons(); track t) { <option [value]="t" [selected]="t === season()">{{ t === 0 ? 'T0 · Especiales' : 'T' + t }}</option> }
@@ -165,8 +165,9 @@ export class SeriesDialog {
           </select>
         </label>
         <label class="flex flex-col gap-1.5 text-[12px] text-muted">Número <input class="field field-mono" type="number" min="0" max="9999" [value]="number()" (input)="number.set(+$any($event.target).value)"></label>
+        <label class="flex flex-col gap-1.5 text-[12px] text-muted">Parte <input class="field field-mono uppercase" type="text" maxlength="1" placeholder="—" [value]="part()" (input)="part.set($any($event.target).value.replace(/[^a-z]/gi, '').toUpperCase())"></label>
       </div>
-      <span class="text-[12px] text-muted">Temporada + tipo + número deben ser únicos dentro de la serie.</span>
+      <span class="text-[12px] text-muted">Parte = A, B… si el episodio está dividido (se emiten seguidas). Temporada + tipo + número + parte deben ser únicos.</span>
 
       <div class="flex flex-col gap-1.5">
         <span class="text-[12px] text-muted">Archivo de video</span>
@@ -200,6 +201,7 @@ export class EpisodeDialog {
   readonly season = signal(1);
   readonly number = signal(1);
   readonly typeId = signal(1);
+  readonly part = signal('');
   readonly busy = signal(false);
   readonly error = signal('');
   readonly confirmDelete = signal(false);
@@ -214,12 +216,13 @@ export class EpisodeDialog {
     this.season.set(e.seasonNumber);
     this.number.set(e.episodeNumber);
     this.typeId.set(e.episodeTypeId);
+    this.part.set(e.episodePart ?? '');
   }
 
   async save(): Promise<void> {
     this.busy.set(true);
     try {
-      await this.admin.updateEpisode(this.episode().id, { title: this.title().trim(), seasonNumber: this.season(), episodeNumber: this.number(), episodeTypeId: this.typeId() });
+      await this.admin.updateEpisode(this.episode().id, { title: this.title().trim(), seasonNumber: this.season(), episodeNumber: this.number(), episodeTypeId: this.typeId(), episodePart: this.part() || null });
       this.saved.emit();
     } catch (error) {
       this.error.set(errorMessage(error, 'No se pudo guardar el episodio.'));

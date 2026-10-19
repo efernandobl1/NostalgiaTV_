@@ -10,12 +10,12 @@ export interface ServerInfo { product: string; apiVersion: number; deviceAuthori
 export interface PublicSettings { timeZoneId: string; season: 'AllYear' | 'Halloween' | 'Christmas'; seasonalThemesEnabled: boolean; seasonalEffectsEnabled: boolean; registrationEnabled: boolean }
 
 // ── Schedule and channels ──
-export interface NowPlaying { segmentId: number; kind: string; episodeId: number | null; seriesId: number | null; seriesName: string | null; title: string; seasonNumber: number | null; episodeNumber: number | null; startsAtUtc: string; endsAtUtc: string; progress: number }
-export interface GuideSlot { programId: number; episodeId: number; seriesId: number; seriesName: string; title: string; seasonNumber: number; episodeNumber: number; episodeType: string; isSpecial: boolean; isNow: boolean; startsAtUtc: string; endsAtUtc: string }
+export interface NowPlaying { segmentId: number; kind: string; episodeId: number | null; seriesId: number | null; seriesName: string | null; title: string; seasonNumber: number | null; episodeNumber: number | null; startsAtUtc: string; endsAtUtc: string; progress: number; episodePart: string | null }
+export interface GuideSlot { programId: number; episodeId: number; seriesId: number; seriesName: string; title: string; seasonNumber: number; episodeNumber: number; episodeType: string; isSpecial: boolean; isNow: boolean; startsAtUtc: string; endsAtUtc: string; episodePart: string | null }
 export interface GuideRow { channelId: number; channelName: string; logoPath: string | null; slots: GuideSlot[] }
 export interface ScheduleSegment { id: number; kind: string; interludeId: number | null; title: string; startsAtUtc: string; endsAtUtc: string; mediaStartSecond: number | null; mediaEndSecond: number | null; inAdBreak: boolean }
-export interface ScheduleProgram { id: number; episodeId: number; seriesId: number; seriesName: string; title: string; seasonNumber: number; episodeNumber: number; episodeType: string; startsAtUtc: string; endsAtUtc: string; segments: ScheduleSegment[] }
-export interface ChannelState { channelId: number; segmentId: number; kind: string; episodeId: number | null; seriesId: number | null; seriesName: string | null; seriesLogoPath: string | null; title: string; seasonNumber: number | null; episodeNumber: number | null; filePath: string; mediaStartSecond: number; currentSecond: number; secondsUntilNext: number; nextTitle: string | null; startsAtUtc: string; endsAtUtc: string }
+export interface ScheduleProgram { id: number; episodeId: number; seriesId: number; seriesName: string; title: string; seasonNumber: number; episodeNumber: number; episodeType: string; startsAtUtc: string; endsAtUtc: string; segments: ScheduleSegment[]; episodePart: string | null }
+export interface ChannelState { channelId: number; segmentId: number; kind: string; episodeId: number | null; seriesId: number | null; seriesName: string | null; seriesLogoPath: string | null; title: string; seasonNumber: number | null; episodeNumber: number | null; filePath: string; mediaStartSecond: number; currentSecond: number; secondsUntilNext: number; nextTitle: string | null; startsAtUtc: string; endsAtUtc: string; episodePart: string | null }
 export interface PublicChannelCard { id: number; shareId: string; name: string; logoPath: string | null; eraName: string | null; onAir: boolean; categories: string[]; now: NowPlaying | null; next: GuideSlot | null }
 export interface PublicEraSeries { seriesId: number; name: string; logoPath: string | null; seasons: number[] }
 export interface PublicEra { id: number; name: string; description: string | null; historicalStartDate: string; historicalEndDate: string | null; isActive: boolean; series: PublicEraSeries[] }
@@ -25,7 +25,7 @@ export interface PublicChannelDetail { id: number; shareId: string; name: string
 export interface OnAirChannel { channelId: number; channelName: string }
 export interface PublicSeriesCard { id: number; name: string; logoPath: string | null; startYear: number; endYear: number | null; rating: number | null; categories: string[]; onAir: OnAirChannel[]; seasonCount: number; episodeCount: number }
 export interface PublicSeriesDetail { id: number; name: string; description: string | null; history: string | null; logoPath: string | null; startDate: string; endDate: string | null; rating: number | null; categories: string[]; seasons: number[]; onAir: OnAirChannel[]; commentCount: number }
-export interface PublicEpisode { id: number; seasonNumber: number; episodeNumber: number; episodeType: string; title: string; filePath: string }
+export interface PublicEpisode { id: number; seasonNumber: number; episodeNumber: number; episodeType: string; title: string; filePath: string; episodePart: string | null }
 export interface CategoryFacet { id: number; name: string; seriesCount: number }
 
 // ── Community ──
@@ -35,7 +35,7 @@ export interface MyComment { id: number; targetType: 'channel' | 'series'; targe
 
 // ── Viewer ──
 export interface ViewerDevice { id: string; name: string; lastSeenUtc: string; expiresAtUtc: string; current: boolean }
-export interface ProgressItem { seriesId: number; seriesName: string; episodeId: number; episodeTitle: string; seasonNumber: number; episodeNumber: number; currentSecond: number; completed: boolean; updatedAtUtc: string }
+export interface ProgressItem { seriesId: number; seriesName: string; episodeId: number; episodeTitle: string; seasonNumber: number; episodeNumber: number; currentSecond: number; completed: boolean; updatedAtUtc: string; episodePart: string | null }
 export interface ViewerSession { profileId: string; accountLinked: boolean; username: string | null; devices: ViewerDevice[]; progress: ProgressItem[] }
 export interface DeviceAuthorizationInfo { name: string; expiresAtUtc: string }
 export interface DeviceAuthorizationStart { deviceCode: string; userCode: string; expiresAtUtc: string; intervalSeconds: number }
@@ -53,7 +53,7 @@ export interface SeasonSummary { seasonNumber: number; episodeCount: number; mis
 export interface ExternalIdItem { providerId: number; providerCode: string; providerName: string; externalId: string }
 export interface SeriesListItem { id: number; name: string; logoPath: string | null; startDate: string; endDate: string | null; rating: number | null; categories: IdName[]; seasons: number[]; episodeCount: number; missingEpisodeCount: number; onAirChannelCount: number }
 export interface SeriesDetail { id: number; name: string; description: string | null; history: string | null; logoPath: string | null; folderPath: string | null; rating: number | null; startDate: string; endDate: string | null; categories: IdName[]; seasons: SeasonSummary[]; externalIds: ExternalIdItem[] }
-export interface EpisodeItem { id: number; seriesId: number; seasonNumber: number; episodeNumber: number; episodeTypeId: number; episodeType: string; title: string; filePath: string | null; isAvailable: boolean; fileSizeBytes: number | null; breakPointCount: number }
+export interface EpisodeItem { id: number; seriesId: number; seasonNumber: number; episodeNumber: number; episodeTypeId: number; episodeType: string; title: string; filePath: string | null; isAvailable: boolean; fileSizeBytes: number | null; breakPointCount: number; episodePart: string | null }
 export interface BreakPointItem { id: number; episodeId: number; offsetSeconds: number; label: string | null }
 export interface EpisodeUploadResult { fileName: string; success: boolean; message: string | null; episodeId: number | null }
 export interface ScanResult { imported: number; markedMissing: number; pending: number }

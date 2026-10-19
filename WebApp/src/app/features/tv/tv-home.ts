@@ -85,7 +85,7 @@ export class TvHome {
   readonly heroDetail = computed(() => {
     const now = this.hero()?.card.now;
     if (!now) return this.hero()?.era ?? '';
-    const code = episodeCode(now.seasonNumber, now.episodeNumber);
+    const code = episodeCode(now.seasonNumber, now.episodeNumber, null, now.episodePart);
     return [code, now.title !== now.seriesName ? now.title : '', `termina ${hhmm(now.endsAtUtc)}`].filter(Boolean).join(' · ');
   });
 

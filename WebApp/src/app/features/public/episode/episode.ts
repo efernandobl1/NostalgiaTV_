@@ -61,7 +61,7 @@ export class Episode {
 
   private readonly position = computed(() => this.episodes().findIndex(e => e.id === this.episodeId()));
   readonly episode = computed(() => this.episodes()[this.position()] ?? null);
-  readonly code = computed(() => { const e = this.episode(); return e ? episodeCode(e.seasonNumber, e.episodeNumber, e.episodeType) : ''; });
+  readonly code = computed(() => { const e = this.episode(); return e ? episodeCode(e.seasonNumber, e.episodeNumber, e.episodeType, e.episodePart) : ''; });
   readonly hasPrevious = computed(() => this.position() > 0);
   readonly hasNext = computed(() => this.position() >= 0 && this.position() < this.episodes().length - 1);
 

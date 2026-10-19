@@ -57,10 +57,10 @@ export class SeriesDetail {
       const done = p?.completed ?? false;
       const started = !done && (p?.currentSecond ?? 0) > 0;
       return {
-        id: e.id, num: e.seasonNumber === 0 ? e.episodeType.toUpperCase() : `E${e.episodeNumber}`, title: e.title, pct: done ? 100 : 0,
+        id: e.id, num: e.seasonNumber === 0 ? e.episodeType.toUpperCase() : `E${e.episodeNumber}${e.episodePart ?? ''}`, title: e.title, pct: done ? 100 : 0,
         state: done ? '✓ VISTO' : started ? `EN CURSO · ${playTime(p!.currentSecond)}` : '',
         stateColor: done ? '#8BE08F' : started ? '#FFB547' : '#A29E91',
-        meta: episodeCode(e.seasonNumber, e.episodeNumber, e.episodeType),
+        meta: episodeCode(e.seasonNumber, e.episodeNumber, e.episodeType, e.episodePart),
       };
     });
   });
@@ -73,7 +73,7 @@ export class SeriesDetail {
       ?? list.find(e => !progress.get(e.id)?.completed && e.seasonNumber > 0) ?? list[0];
     if (!episode) return null;
     const started = (progress.get(episode.id)?.currentSecond ?? 0) > 0 && !progress.get(episode.id)?.completed;
-    return { id: episode.id, label: `${started ? 'Continuar' : 'Reproducir'} ${episodeCode(episode.seasonNumber, episode.episodeNumber, episode.episodeType)}` };
+    return { id: episode.id, label: `${started ? 'Continuar' : 'Reproducir'} ${episodeCode(episode.seasonNumber, episode.episodeNumber, episode.episodeType, episode.episodePart)}` };
   });
 
   readonly comments = computed<CommentView[]>(() => {
