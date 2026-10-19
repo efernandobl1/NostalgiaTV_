@@ -148,6 +148,8 @@ services:
     restart: unless-stopped
     environment:
       DOTNET_ENVIRONMENT: Production
+      # FFmpeg shares this memory limit: cap the .NET heap at 384 MiB so the encoder keeps the rest.
+      DOTNET_GCHeapHardLimit: "0x18000000"
       TZ: ${TIME_ZONE:-America/Guatemala}
       ConnectionStrings__DefaultConnection: ${DB_APP_CONNECTION_STRING:?Configure the restricted SQL login and verified TLS}
       FFmpeg__BinaryFolder: /usr/bin
@@ -174,7 +176,8 @@ services:
     # This is the hard ceiling. The worker limits itself to the dashboard day/night policy.
     cpus: ${MEDIA_WORKER_CPUS:-4.0}
     cpu_shares: 128
-    mem_limit: 768m
+    # 1080p x264 encoding plus HEVC decoding needs about 1 GiB; 768m got FFmpeg killed (exit 137) near the end.
+    mem_limit: 1536m
     pids_limit: 128
     stop_grace_period: 30s
     logging: *default-log-options
