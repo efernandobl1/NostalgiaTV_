@@ -59,9 +59,13 @@ export class Media {
     if (!r || !r.nightEnabled) return [{ w: 24, label: `DÍA · ${r?.dayCores ?? 1} núcleos`, night: false }];
     const start = r.nightStartMinute / 60, end = r.nightEndMinute / 60;
     const night = `NOCHE · ${r.nightCores}`, day = `DÍA · ${r.dayCores} núcleos`;
-    return start > end
-      ? [{ w: end, label: night, night: true }, { w: start - end, label: day, night: false }, { w: 24 - start, label: '', night: true }]
-      : [{ w: start, label: day, night: false }, { w: end - start, label: night, night: true }, { w: 24 - end, label: '', night: false }];
+    const bands = start > end
+      ? [{ w: end, night: true }, { w: start - end, night: false }, { w: 24 - start, night: true }]
+      : [{ w: start, night: false }, { w: end - start, night: true }, { w: 24 - end, night: false }];
+    // Label the widest band of each kind (a period may start at 00:00 and leave an empty band).
+    const widest = (night: boolean) => bands.filter(b => b.night === night).reduce((a, b) => (b.w > a.w ? b : a));
+    const dayBand = widest(false), nightBand = widest(true);
+    return bands.map(b => ({ ...b, label: b === dayBand ? day : b === nightBand ? night : '' }));
   });
   readonly dayCores = signal(1);
   readonly nightCores = signal(2);

@@ -44,7 +44,7 @@ export class Series {
   readonly info = computed(() => {
     const d = this.detail();
     if (!d) return null;
-    const date = (iso: string) => new Date(iso).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' });
+    const date = (iso: string) => new Date(iso).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
     return {
       name: d.name, rating: d.rating?.toFixed(1) ?? '—', tags: d.categories.map(c => c.name), logo: mediaUrl(d.logoPath),
       dates: `${date(d.startDate)} → ${d.endDate ? date(d.endDate) : 'en emisión'}${d.folderPath ? ' · ' + d.folderPath : ''}`,
@@ -65,6 +65,8 @@ export class Series {
   })));
   readonly epIndex = signal(0);
   readonly ep = computed(() => this.episodes()[this.epIndex()] ?? null);
+  /** Only the id: loading break points updates the episode rows and must not re-trigger the load. */
+  private readonly epId = computed(() => this.ep()?.id ?? null);
   readonly rawBreakPoints = signal<BreakPointItem[]>([]);
   readonly length = computed(() => Math.max(DEFAULT_LENGTH, ...this.rawBreakPoints().map(b => b.offsetSeconds * 1.1)));
   readonly bps = computed(() => this.rawBreakPoints().map(b => ({ id: b.id, pct: b.offsetSeconds * 100 / this.length(), at: formatOffset(b.offsetSeconds), label: b.label ?? 'Corte' })));
@@ -95,8 +97,8 @@ export class Series {
       untracked(() => { if (id !== undefined && number !== undefined) this.loadEpisodes(id, number); else this.rawEpisodes.set([]); });
     });
     effect(() => {
-      const ep = this.ep();
-      untracked(() => { if (ep) this.loadBreakPoints(ep.id); else this.rawBreakPoints.set([]); });
+      const id = this.epId();
+      untracked(() => { if (id) this.loadBreakPoints(id); else this.rawBreakPoints.set([]); });
     });
   }
 

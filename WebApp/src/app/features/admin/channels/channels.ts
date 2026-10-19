@@ -45,7 +45,7 @@ export class Channels {
   readonly info = computed(() => {
     const d = this.detail();
     if (!d) return null;
-    const date = (iso: string) => new Date(iso).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' });
+    const date = (iso: string) => new Date(iso).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
     return { name: d.name, since: `Desde ${date(d.startDate)}`, until: d.endDate ? `Cierre ${date(d.endDate)}` : 'Sin fecha de cierre', shareId: d.shareId, history: d.history ?? '', logo: mediaUrl(d.logoPath) };
   });
 

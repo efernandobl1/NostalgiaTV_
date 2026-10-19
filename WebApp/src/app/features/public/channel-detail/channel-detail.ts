@@ -32,7 +32,7 @@ export class ChannelDetail {
 
   readonly channel = computed(() => {
     const d = this.detail();
-    const since = d ? new Date(d.startDate).toLocaleDateString('es', { month: 'long', year: 'numeric' }).toUpperCase() : '';
+    const since = d ? new Date(d.startDate).toLocaleDateString('es', { month: 'long', year: 'numeric', timeZone: 'UTC' }).toUpperCase() : '';
     return { id: this.id(), num: channelNumber(this.id()), name: d?.name ?? '', history: d?.history ?? '', since, logo: mediaUrl(d?.logoPath), on: this.data.channel(this.id())?.on ?? false };
   });
 
