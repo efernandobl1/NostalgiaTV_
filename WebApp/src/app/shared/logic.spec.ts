@@ -1,6 +1,6 @@
 import { dayKey, episodeCode, playTime, years } from '../core/data/public-data';
 import { passwordScore } from '../features/auth/password';
-import { playerShortcut } from '../features/public/episode/episode';
+import { playerShortcut, randomEpisode } from '../features/public/episode/episode';
 import { formatPairCode } from '../features/public/pair/pair';
 import { sectionOf } from '../layouts/public/public-section';
 
@@ -73,5 +73,19 @@ describe('episode player shortcuts', () => {
     expect(key('ArrowLeft', document.createElement('input'))).toBeNull();
     expect(key(' ', document.createElement('button'))).toBeNull();
     expect(key('ArrowRight', document.createElement('button'))).toBe('forward');
+  });
+});
+
+describe('random playback', () => {
+  const episodes = [1, 2, 3, 4].map(id => ({ id, filePath: id === 4 ? '' : `/uploads/${id}.mp4` }));
+
+  it('never repeats the current episode or picks one without a file', () => {
+    for (const r of [0, 0.5, 0.99]) expect([2, 3]).toContain(randomEpisode(episodes, 1, new Set(), () => r)?.id);
+  });
+
+  it('prefers unfinished episodes, then any other', () => {
+    expect(randomEpisode(episodes, 1, new Set([2]), () => 0.99)?.id).toBe(3);
+    expect(randomEpisode(episodes, 1, new Set([2, 3]), () => 0)?.id).toBe(2);
+    expect(randomEpisode(episodes.slice(0, 1), 1, new Set())).toBeNull();
   });
 });
