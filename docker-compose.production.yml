@@ -1,26 +1,20 @@
 name: nostalgiatv
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Compose de PRODUCCIÓN para la VPS. Se coloca en /opt/nostalgiatv/docker-compose.yml
-# junto a su .env. No construye imágenes: las descarga de GHCR. El despliegue es
-# MANUAL (sin Watchtower, para no correr un contenedor con acceso a docker.sock):
-# cuando el CI publique una nueva :latest, hacés 'docker compose pull && up -d'.
-# El monitoreo (Loki/Alloy/Grafana/Uptime Kuma) corre APARTE en su propio stack;
-# Connect only to NostalgiaTV's monitoring network to avoid cross-project DNS aliases.
+# Compose de PRODUCCIÓN. Se instala como /opt/nostalgiatv/docker-compose.yml junto
+# a su .env. No construye imágenes: usa las de GHCR fijadas por SHA en el .env.
 #
-# Preparación (una sola vez) en la VPS:
-#   docker login ghcr.io -u <usuario> --password-stdin   # token classic (read:packages)
-#   docker network create monitoring-nostalgia    # if it does not exist
-#   mkdir -p /opt/nostalgiatv/{data/sqlserver,logs/webapi,media,uploads}
-#   chown -R 10001:0     /opt/nostalgiatv/data/sqlserver              # contenedor mssql
-#   chown -R 1654:1654   /opt/nostalgiatv/logs /opt/nostalgiatv/media /opt/nostalgiatv/uploads   # 'app' del contenedor .NET
-#   cp env.js /opt/nostalgiatv/env.js                     # apiUrl:'' (mismo origen, no requiere IP)
+# Instalar en un directorio nuevo (crea carpetas, permisos, TLS de SQL, logins
+# dedicados y secretos):  sudo python3 deploy/manage.py init /opt/nostalgiatv ...
+# Actualizar (backup verificado, migración aislada y chequeo de salud): lo hace
+# el workflow de despliegue al fusionar a main, o a mano con
+#   sudo python3 deploy/manage.py update /opt/nostalgiatv --release <sha>
+# No usar 'docker compose pull && up -d' a secas: se saltea el backup.
 #
 # Nada se publica al exterior salvo la webapp en 127.0.0.1:${WEB_HTTP_PORT:-8090}.
-# El nginx del HOST termina TLS y enruta tu dominio hacia ese puerto (ver
-# deploy/nginx-host/nostalgiatv.conf). API y BD quedan ocultas.
-#
-# Desplegar:  cd /opt/nostalgiatv && docker compose pull && docker compose up -d
+# El nginx del HOST termina TLS y enruta el dominio hacia ese puerto (ver
+# deploy/nginx-host/nostalgiatv.conf). API y BD quedan ocultas. El monitoreo
+# corre en su propio stack y solo comparte la red externa monitoring-nostalgia.
 # ─────────────────────────────────────────────────────────────────────────────
 
 x-log-options: &default-log-options
@@ -83,7 +77,8 @@ services:
     logging: *default-log-options
     healthcheck:
       # Local process probe only; application connections validate the pinned certificate.
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -Nm -C || exit 1"]
+      # SQLCMDPASSWORD keeps the password out of the process list.
+      test: ["CMD-SHELL", "SQLCMDPASSWORD=\"$$MSSQL_SA_PASSWORD\" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -Q \"SELECT 1\" -Nm -C || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 15
@@ -113,14 +108,7 @@ services:
       ReverseProxy__ProxyHost: webapp
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads
-      CommunityCatalog__PublicUrl: ${COMMUNITY_CATALOG_URL:-}
-      # Reglas de generación de programación (aleatoria). Configurables por .env.
-      ChannelScheduling__NoRepeatWindowHours: ${SCHED_NO_REPEAT_HOURS:-24}
-      ChannelScheduling__TimeZoneId: ${TIME_ZONE:-America/Guatemala}
-      ChannelScheduling__MaxSpecialsPerSeriesPerDay: ${SCHED_MAX_SPECIALS_PER_SERIES:-2}
-      ChannelScheduling__MaxSpecialsPerDay: ${SCHED_MAX_SPECIALS_PER_DAY:-5}
-      ChannelScheduling__MaxMoviesPerSeriesPerDay: ${SCHED_MAX_MOVIES_PER_SERIES:-2}
-      ChannelScheduling__MaxMoviesPerDay: ${SCHED_MAX_MOVIES_PER_DAY:-2}
+      # Scheduling rules and the guide time zone live in dashboard Settings (SQL Server).
     # Sin 'ports': la API NO se publica al host, sólo es visible dentro de las redes docker.
     expose:
       - "8080"
@@ -144,6 +132,7 @@ services:
       - ALL
     mem_limit: 1g
     cpus: ${API_CPUS:-4.0}
+    pids_limit: 512
     logging: *default-log-options
     healthcheck:
       test: ["CMD-SHELL", "curl --fail --silent --show-error http://127.0.0.1:8080/health || exit 1"]
@@ -213,6 +202,7 @@ services:
     cap_drop:
       - ALL
     mem_limit: 512m
+    pids_limit: 128
     logging: *default-log-options
 
   # Sirve la SPA + reverse proxy a la API (oculta). Publica sólo en localhost:
@@ -242,12 +232,19 @@ services:
     # El contenedor web corre nginx como usuario 'nginx' (non-root) en el puerto
     # no privilegiado 8080: no necesita NINGUNA capability de root.
     user: nginx
+    # Immutable root filesystem: nginx writes only its pid, temp bodies and proxy cache.
+    read_only: true
+    tmpfs:
+      - /run:size=1m,mode=1777
+      - /tmp:size=16m,mode=1777
+      - /var/cache/nginx:size=64m,mode=1777
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     mem_limit: 256m
     cpus: 0.5
+    pids_limit: 64
     logging: *default-log-options
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1"]

@@ -11,7 +11,7 @@ x-log-options: &default-log-options
 
 services:
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: ${SQLSERVER_IMAGE:-mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04}
     container_name: nostalgia-db
     restart: unless-stopped
     environment:
@@ -26,7 +26,7 @@ services:
       - nostalgia-net
     logging: *default-log-options
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -No || exit 1"]
+      test: ["CMD-SHELL", "SQLCMDPASSWORD=\"$$MSSQL_SA_PASSWORD\" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -Q \"SELECT 1\" -No || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 15
@@ -46,17 +46,17 @@ services:
       Cors__AllowedOrigins__0: http://localhost:${WEB_HTTP_PORT:-8082}
       Jwt__Key: ${JWT_SECRET_KEY:?Defina JWT_SECRET_KEY}
       Jwt__Issuer: ${JWT_ISSUER:-nostalgiatv}
-      Jwt__Audience: ${JWT_ISSUER:-nostalgiatv}
+      Jwt__Audience: ${JWT_AUDIENCE:-nostalgiatv}
       Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
       Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
       Metadata__Tmdb__ApiKey: ${TMDB_API_KEY:-}
-      BootstrapAdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:?Set a unique initial administrator password}
+      # Needed only on the first start, while "admin" still has the seed placeholder; the API stops with a clear error otherwise.
+      BootstrapAdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       # Permite acceder por nginx (mismo origen) sin bucles de redirect; en dev el
       # puerto sigue publicado para llegar directo a Scalar/OpenAPI en :8080.
       ReverseProxy__TrustForwardedHeaders: "true"
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads
-      CommunityCatalog__PublicUrl: ${COMMUNITY_CATALOG_URL:-}
       # Scheduling preferences are stored in SQL Server and edited in dashboard Settings.
     ports:
       - "127.0.0.1:${API_HTTP_PORT:-8080}:8080"
