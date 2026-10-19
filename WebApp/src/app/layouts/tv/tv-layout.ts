@@ -2,7 +2,6 @@ import { Component, computed, DestroyRef, ElementRef, inject, signal, viewChild 
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { PublicData } from '../../core/data/public-data';
-import { Session } from '../../core/session';
 import { TvPrefs } from '../../core/tv-prefs';
 
 type Dir = 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight';
@@ -34,13 +33,12 @@ export class TvLayout {
   private readonly router = inject(Router);
   private readonly size = signal({ w: window.innerWidth, h: window.innerHeight });
   private readonly data = inject(PublicData);
-  private readonly session = inject(Session);
   private readonly prefs = inject(TvPrefs);
 
   /** "Efectos de temporada": a warm (Halloween) or cold (Navidad) glow around the screen, if the platform and this TV allow it. */
   readonly seasonGlow = computed(() => {
-    if (!this.prefs.values().seasonal || !this.session.settings()?.seasonalEffectsEnabled) return null;
-    switch (this.data.season()) {
+    if (!this.prefs.values().seasonal) return null;
+    switch (this.data.effects()) {
       case 'halloween': return 'shadow-[inset_0_0_260px_50px_rgba(255,120,30,0.22)]';
       case 'christmas': return 'shadow-[inset_0_0_260px_50px_rgba(150,200,255,0.18)]';
       default: return null;
