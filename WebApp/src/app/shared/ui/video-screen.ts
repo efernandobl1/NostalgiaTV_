@@ -13,14 +13,17 @@ const REPORT_SPAN = 30;
 /**
  * The `<video>` behind every screen. With `channel` it follows the live schedule (state from
  * GET /public/channels/{id}/state, refreshed when the segment ends); with `episode` it plays on demand.
- * Episode playback is reported to /viewer/progress in short continuous spans.
+ * Episode playback is reported to /viewer/progress in short continuous spans; `seekTo` closes the
+ * current span before jumping so a seek never reports time the viewer skipped.
  */
 @Component({
   selector: 'app-video-screen',
   host: { class: 'absolute inset-0 block' },
   template: `
     <video #video class="w-full h-full object-contain bg-black" playsinline preload="auto"
-           [muted]="prefs.muted()" (timeupdate)="tick()" (pause)="report()" (ended)="ended()" (error)="failed()"></video>
+           [muted]="prefs.muted()" (timeupdate)="tick()" (play)="paused.set(false)" (pause)="paused.set(true); report()"
+           (durationchange)="duration.set(finite(video.duration))" (click)="episode() && togglePlay()"
+           (ended)="ended()" (error)="failed()"></video>
     @if (prefs.crt(); as crt) {
       @if (crt.enabled) {
         <div class="video-filters" aria-hidden="true" [class.curvature]="crt.curvature" [class.vignette]="crt.vignette" [class.animate]="crt.animated"
@@ -49,10 +52,15 @@ export class VideoScreen {
 
   readonly message = signal('SINTONIZANDO…');
   readonly blocked = signal(false);
+  /** Playback position, length and state, for on-demand controls. */
+  readonly currentTime = signal(0);
+  readonly duration = signal(0);
+  readonly paused = signal(true);
 
   private timer: ReturnType<typeof setTimeout> | null = null;
   private episodeId: number | null = null;
   private spanStart = 0;
+  protected readonly finite = finite;
 
   constructor() {
     effect(() => {
@@ -95,7 +103,12 @@ export class VideoScreen {
     if (!src) { this.stop('SIN SEÑAL'); return; }
     this.episodeId = episodeId;
     this.message.set('');
-    const seek = () => { element.currentTime = Math.max(0, second); this.spanStart = element.currentTime; this.start(); };
+    const seek = () => {
+      element.currentTime = Math.max(0, second);
+      this.spanStart = element.currentTime;
+      this.currentTime.set(element.currentTime);
+      this.start();
+    };
     if (element.getAttribute('src') !== src) {
       element.src = src;
       element.addEventListener('loadedmetadata', seek, { once: true });
@@ -132,8 +145,32 @@ export class VideoScreen {
     this.message.set(message);
   }
 
+  togglePlay(): void {
+    const element = this.video().nativeElement;
+    if (!element.getAttribute('src')) return;
+    if (element.paused) this.unblock();
+    else element.pause();
+  }
+
+  /** Jumps `seconds` forward (or back, when negative). */
+  seekBy(seconds: number): void {
+    this.seekTo(this.video().nativeElement.currentTime + seconds);
+  }
+
+  /** Jumps to `second`, reporting what was watched up to here first. */
+  seekTo(second: number): void {
+    const element = this.video().nativeElement;
+    const duration = finite(element.duration);
+    if (!duration) return;
+    this.report();
+    element.currentTime = Math.min(duration, Math.max(0, second));
+    this.spanStart = element.currentTime;
+    this.currentTime.set(element.currentTime);
+  }
+
   tick(): void {
     const now = this.video().nativeElement.currentTime;
+    this.currentTime.set(now);
     if (now < this.spanStart || now - this.spanStart > REPORT_SPAN + 10) { this.spanStart = now; return; }
     if (now - this.spanStart >= REPORT_SPAN) this.report();
   }
@@ -162,4 +199,8 @@ export class VideoScreen {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
   }
+}
+
+function finite(value: number): number {
+  return Number.isFinite(value) && value > 0 ? value : 0;
 }
