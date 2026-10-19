@@ -1,3 +1,4 @@
+using System.Data;
 using ApplicationCore.DTOs;
 using ApplicationCore.Entities;
 using ApplicationCore.Exceptions;
@@ -12,9 +13,12 @@ using Microsoft.Extensions.Options;
 namespace Infrastructure.Repositories;
 
 /// <summary>Bumpers and ads library. Only approved interludes reach the schedule.</summary>
-public sealed class InterludeRepository(NostalgiaTVContext context, MediaLibrary library, IScheduleRepository schedule,
+public sealed class InterludeRepository(NostalgiaTVContext context, MediaLibrary library, MediaProbe probe, IScheduleRepository schedule,
     IOptions<SeriesUploadSettings> uploads) : IInterludeRepository
 {
+    /// <summary>Weight and gap of a scanned bumper, the same defaults as the "Asignar interludio" dialog.</summary>
+    private const int ScanWeight = 3, ScanGapSeconds = 900;
+
     public async Task<IReadOnlyList<InterludeItem>> ListAsync(InterludeQuery query)
     {
         var interludes = context.Interludes.AsNoTracking();
@@ -82,6 +86,139 @@ public sealed class InterludeRepository(NostalgiaTVContext context, MediaLibrary
         await context.SaveChangesAsync();
         await transaction.CommitAsync();
         foreach (var channelId in channels) await schedule.RegenerateAsync(channelId, replaceCurrent: false);
+    }
+
+    public async Task<EraFolderScan> ScanEraFolderAsync(int channelId, int eraId, CancellationToken token)
+    {
+        var era = await context.ChannelEras.SingleOrDefaultAsync(item => item.Id == eraId && item.ChannelId == channelId, token)
+            ?? throw new NotFoundException("Era no encontrada.");
+        var folder = await EraFolderAsync(era, token);
+        var known = (await context.Interludes.IgnoreQueryFilters().AsNoTracking()
+                .Select(item => new { item.Id, item.FilePath, Deleted = item.DeletedAtUtc != null }).ToListAsync(token))
+            .DistinctBy(item => item.FilePath, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(item => item.FilePath, StringComparer.OrdinalIgnoreCase);
+
+        // Web copies made by the transcoder are complete; anything else may still be uploading.
+        var converted = (await context.MediaProcessingJobs.AsNoTracking()
+                .Where(job => job.ChannelEraId == era.Id && job.Status == MediaJobStatus.Completed && job.OutputPath != null)
+                .Select(job => job.OutputPath!).ToListAsync(token))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // Probe outside the transaction: ffprobe can take a while per file.
+        var compatible = new List<(string PublicPath, string Title, double Duration)>();
+        var existing = new List<int>();
+        int converting = 0, skipped = 0;
+        foreach (var file in EraFiles(folder))
+        {
+            token.ThrowIfCancellationRequested();
+            // An original kept next to its web copy: the copy is the bumper.
+            if (MediaFilePolicy.IsConverted(file.FullPath)) continue;
+            var publicPath = MediaLibrary.PublicPrefix + file.RelativePath;
+            if (known.TryGetValue(publicPath, out var interlude))
+            {
+                // A bumper deleted from the library stays deleted.
+                if (interlude.Deleted) skipped++;
+                else existing.Add(interlude.Id);
+                continue;
+            }
+            if (!converted.Contains(file.RelativePath) && file.ModifiedUtc > DateTime.UtcNow - LibraryImporter.SettleTime) { skipped++; continue; }
+            MediaInfo info;
+            try { info = await probe.ReadAsync(file.FullPath, token); }
+            catch (IOException) { skipped++; continue; }
+            if (info.Compatible) compatible.Add((publicPath, BumperTitle(file.FullPath), info.Duration));
+            else if (await QueueConversionAsync(era.Id, file, info, token)) converting++;
+            else skipped++;
+        }
+
+        var assignedNow = new List<int>();
+        await using (var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, token))
+        {
+            await context.Database.LockAsync($"era-interludes-{era.Id}", token);
+            var added = new List<Interlude>();
+            foreach (var (publicPath, title, duration) in compatible)
+            {
+                // A concurrent scan may have imported it after the probe.
+                if (await context.Interludes.IgnoreQueryFilters().AnyAsync(item => item.FilePath == publicPath, token)) { skipped++; continue; }
+                var interlude = new Interlude
+                {
+                    Title = title, Kind = InterludeKind.Bumper, BumperType = BumperType.Generic, Season = InterludeSeason.AllYear,
+                    FilePath = publicPath, DurationSeconds = decimal.Round((decimal)duration, 3), ApprovedForBroadcast = true
+                };
+                context.Interludes.Add(interlude);
+                added.Add(interlude);
+            }
+            await context.SaveChangesAsync(token);
+            var assigned = await context.ChannelEraInterludes.Where(link => link.ChannelEraId == era.Id).Select(link => link.InterludeId).ToListAsync(token);
+            assignedNow = added.Select(item => item.Id).Concat(existing).Except(assigned).ToList();
+            foreach (var id in assignedNow)
+                context.ChannelEraInterludes.Add(new ChannelEraInterlude { ChannelEraId = era.Id, InterludeId = id, Weight = ScanWeight, MinimumGapSeconds = ScanGapSeconds });
+            await context.SaveChangesAsync(token);
+            await transaction.CommitAsync(token);
+        }
+        // Bumpers already in the library and already assigned to the era are left as they are.
+        skipped += existing.Except(assignedNow).Count();
+        if (assignedNow.Count > 0 && await context.ChannelEraSelections.AnyAsync(selection => selection.ChannelId == channelId && selection.ChannelEraId == era.Id, token))
+            await schedule.RegenerateAsync(channelId, replaceCurrent: false);
+        return new EraFolderScan(MediaLibrary.PublicPrefix + MediaStorageLayout.RelativeFolder(library.Root, folder), assignedNow.Count, converting, skipped);
+    }
+
+    /// <summary>
+    /// The era's folder: the one created with the era, or the v1 folder kept by the data migration (an absolute path that
+    /// must still be inside the media library). Eras without one get the standard folder.
+    /// </summary>
+    private async Task<string> EraFolderAsync(ChannelEra era, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(era.FolderPath))
+        {
+            era.FolderPath = MediaStorageLayout.EraFolder(era.ChannelId, era.Id);
+            await context.SaveChangesAsync(token);
+        }
+        var path = Path.GetFullPath(Path.IsPathRooted(era.FolderPath) ? era.FolderPath : Path.Combine(library.Root, era.FolderPath));
+        string relative;
+        try { relative = MediaStorageLayout.RelativeFolder(library.Root, path); }
+        catch (IOException) { throw new BadRequestException("La carpeta de la era está fuera de la biblioteca de medios."); }
+        try { return library.CreateFolder(relative); }
+        catch (IOException) { throw new BadRequestException("La carpeta de la era no es válida (no se aceptan enlaces simbólicos)."); }
+    }
+
+    /// <summary>Video files directly in the era folder and in its "bumpers" subfolder (the v1 layout).</summary>
+    private IEnumerable<LibraryFile> EraFiles(string folder)
+    {
+        var bumpers = Path.Combine(folder, "bumpers");
+        foreach (var directory in Directory.Exists(bumpers) ? [folder, bumpers] : new[] { folder })
+        {
+            MediaFilePolicy.SafePath(library.Root, directory);
+            foreach (var path in Directory.EnumerateFiles(directory).Where(MediaFilePolicy.IsCandidate).Order(StringComparer.OrdinalIgnoreCase))
+            {
+                var file = library.Describe(0, path);
+                if (file.Size > 0) yield return file;
+            }
+        }
+    }
+
+    /// <summary>Hands an incompatible file to the transcode worker once; returns whether it is (still) converting.</summary>
+    private async Task<bool> QueueConversionAsync(int eraId, LibraryFile file, MediaInfo info, CancellationToken token)
+    {
+        var status = await context.MediaProcessingJobs.AsNoTracking()
+            .Where(job => job.Worker == MediaWorkers.Transcode && job.Fingerprint == file.Fingerprint).Select(job => job.Status).FirstOrDefaultAsync(token);
+        if (status != null) return status is MediaJobStatus.Queued or MediaJobStatus.Processing;
+        var now = DateTime.UtcNow;
+        context.MediaProcessingJobs.Add(new MediaProcessingJob
+        {
+            Worker = MediaWorkers.Transcode, ChannelEraId = eraId, Fingerprint = file.Fingerprint, SourcePath = file.RelativePath,
+            SourceSize = file.Size, SourceModifiedUtc = file.ModifiedUtc, Status = MediaJobStatus.Queued, CreatedAtUtc = now, UpdatedAtUtc = now,
+            Message = "Conversión necesaria: " + info.IncompatibilityReason
+        });
+        await context.SaveChangesAsync(token);
+        return true;
+    }
+
+    private static string BumperTitle(string path)
+    {
+        var name = Path.GetFileNameWithoutExtension(path);
+        if (name.EndsWith(".web", StringComparison.OrdinalIgnoreCase)) name = name[..^4];
+        name = name.Replace('_', ' ').Trim();
+        return name.Length == 0 ? "Bumper" : name.Length > 300 ? name[..300] : name;
     }
 
     private async Task<InterludeItem> GetAsync(int id) =>

@@ -632,6 +632,9 @@ namespace Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<int?>("ChannelEraId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -651,7 +654,7 @@ namespace Infrastructure.Persistence.Migrations
                     b.Property<double>("Progress")
                         .HasColumnType("float");
 
-                    b.Property<int>("SeriesId")
+                    b.Property<int?>("SeriesId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("SourceModifiedUtc")
@@ -680,6 +683,8 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ChannelEraId", "Status");
+
                     b.HasIndex("SeriesId", "Status");
 
                     b.HasIndex("Worker", "Fingerprint")
@@ -689,6 +694,8 @@ namespace Infrastructure.Persistence.Migrations
 
                     b.ToTable("MediaProcessingJobs", t =>
                         {
+                            t.HasCheckConstraint("CK_MediaProcessingJobs_Owner", "([SeriesId] IS NULL AND [ChannelEraId] IS NOT NULL) OR ([SeriesId] IS NOT NULL AND [ChannelEraId] IS NULL)");
+
                             t.HasCheckConstraint("CK_MediaProcessingJobs_Progress", "[Progress] BETWEEN 0 AND 100");
 
                             t.HasCheckConstraint("CK_MediaProcessingJobs_Status", "[Status] IN ('Queued', 'Processing', 'Completed', 'Failed', 'Skipped')");
@@ -1996,17 +2003,23 @@ namespace Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ApplicationCore.Entities.MediaProcessingJob", b =>
                 {
+                    b.HasOne("ApplicationCore.Entities.ChannelEra", "ChannelEra")
+                        .WithMany()
+                        .HasForeignKey("ChannelEraId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("ApplicationCore.Entities.Series", "Series")
                         .WithMany()
                         .HasForeignKey("SeriesId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ApplicationCore.Entities.MediaWorkerState", null)
                         .WithMany()
                         .HasForeignKey("Worker")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("ChannelEra");
 
                     b.Navigation("Series");
                 });

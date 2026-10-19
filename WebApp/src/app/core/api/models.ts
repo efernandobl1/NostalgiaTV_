@@ -55,6 +55,8 @@ export interface PackagePreviewSeries { key: string; name: string; startYear: nu
 export interface PackagePreviewInterlude { key: string; title: string; kind: string; bumperType: string | null; status: PackageMatchStatus; interludeId: number | null; matchedBy: 'filePath' | 'title' | null }
 export interface ChannelPackagePreview { version: number; name: string; nameTaken: boolean; sourceChannelId: number | null; eras: PackagePreviewEra[]; series: PackagePreviewSeries[]; interludes: PackagePreviewInterlude[] }
 export interface ChannelPackageImportResult { channelId: number; name: string; eras: number; seriesLinked: number; seriesSkipped: number; interludesLinked: number; interludesSkipped: number }
+/** Result of importing an era folder's videos as bumpers; `converting` files are imported by a later scan. */
+export interface EraFolderScan { folder: string; imported: number; converting: number; skipped: number }
 export interface DashboardSummary { seriesCount: number; episodeCount: number; missingEpisodeFiles: number; channelCount: number; liveChannelCount: number; eraCount: number; userCount: number; activeDevices: number; pendingComments: number; queuedMediaJobs: number; failedMediaJobs: number; channels: ChannelListItem[]; latestActivity: ActivityItem[] }
 export interface SeasonSummary { seasonNumber: number; episodeCount: number; missingCount: number }
 export interface ExternalIdItem { providerId: number; providerCode: string; providerName: string; externalId: string }
@@ -74,7 +76,8 @@ export interface ModerationItem { id: number; targetType: string; targetId: numb
 export interface ModerationPage { items: ModerationItem[]; totalCount: number; page: number; pageSize: number; counts: Record<string, number> }
 export interface MediaWorkerItem { id: string; enabled: boolean; heartbeatUtc: string | null; online: boolean }
 export interface ResourcePolicy { dayCores: number; nightCores: number; nightEnabled: boolean; nightStartMinute: number; nightEndMinute: number; timeZoneId: string; availableCores: number; currentCores: number; nightNow: boolean }
-export interface MediaJobItem { id: number; worker: string; seriesId: number; seriesName: string; status: string; progress: number; sourcePath: string; outputPath: string | null; sourceSize: number; message: string | null; createdAtUtc: string; updatedAtUtc: string }
+/** seriesName is "Canal · Era" for a bumper of an era folder (seriesId null). */
+export interface MediaJobItem { id: number; worker: string; seriesId: number | null; seriesName: string; status: string; progress: number; sourcePath: string; outputPath: string | null; sourceSize: number; message: string | null; createdAtUtc: string; updatedAtUtc: string }
 export interface MediaStatus { workers: MediaWorkerItem[]; resources: ResourcePolicy; counts: Record<string, number>; jobs: MediaJobItem[]; totalJobs: number; page: number; pageSize: number }
 export interface SeriesStorage { seriesId: number; name: string; episodeCount: number; missingEpisodeCount: number; sizeBytes: number | null }
 export interface StorageReport { measuredAtUtc: string; libraryBytes: number | null; totalBytes: number | null; availableBytes: number | null; series: SeriesStorage[] }

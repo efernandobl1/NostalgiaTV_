@@ -41,6 +41,7 @@ export class Channels {
   readonly mode = signal<'create' | 'edit'>('edit');
   readonly error = signal('');
   readonly notice = signal('');
+  readonly scanning = signal(false);
   readonly loading = signal(true);
 
   readonly info = computed(() => {
@@ -177,6 +178,25 @@ export class Channels {
       await this.loadDetail(id, era.id);
     } catch (error) {
       this.error.set(errorMessage(error, 'No se pudieron guardar las reglas de corte.'));
+    }
+  }
+
+  /** Imports the era folder's videos as bumpers of the era (v1 "escanear bumpers"). */
+  async scanInterludes(): Promise<void> {
+    const id = this.detail()?.id, era = this.era();
+    if (!id || !era || this.scanning()) return;
+    this.scanning.set(true);
+    try {
+      const scan = await this.admin.scanEraInterludes(id, era.id);
+      const parts = [`${scan.imported} ${scan.imported === 1 ? 'bumper importado' : 'bumpers importados'}`];
+      if (scan.converting) parts.push(`${scan.converting} en conversión (vuelve a escanear cuando terminen)`);
+      if (scan.skipped) parts.push(`${scan.skipped} sin cambios`);
+      this.notice.set(`Carpeta ${scan.folder}: ${parts.join(', ')}.`);
+      await this.loadEra(id, era.id);
+    } catch (error) {
+      this.error.set(errorMessage(error, 'No se pudo escanear la carpeta de la era.'));
+    } finally {
+      this.scanning.set(false);
     }
   }
 
