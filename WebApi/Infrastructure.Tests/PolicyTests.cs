@@ -2,6 +2,7 @@ using ApplicationCore.Entities;
 using ApplicationCore.Policies;
 using Infrastructure.Media;
 using Infrastructure.Persistence;
+using Infrastructure.Repositories;
 using Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using WebApi.Controllers;
@@ -188,6 +189,16 @@ public class SecurityPolicyTests
         var parsed = MediaFilePolicy.EpisodeFile(file);
         Assert.Equal(number, parsed.Number);
         Assert.Equal(part, parsed.Part);
+    }
+
+    [Fact]
+    public void FailedConversionsShowTheFfmpegCause()
+    {
+        var ffmpeg = new IOException("Media process failed (234): [mp4 @ 0x1] Starting second pass\n" +
+            "[aost#0:1/aac @ 0x2] Error submitting a packet to the muxer: Invalid argument\n");
+        Assert.EndsWith("Error submitting a packet to the muxer: Invalid argument", MediaRepository.FailureMessage(ffmpeg));
+        Assert.StartsWith("No hay espacio", MediaRepository.FailureMessage(new IOException("Free space reserve reached; original preserved.")));
+        Assert.True(MediaRepository.FailureMessage(new IOException("Media process failed (1): " + new string('x', 900))).Length <= 500);
     }
 }
 

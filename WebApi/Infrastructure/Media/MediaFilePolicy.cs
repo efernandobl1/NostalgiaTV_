@@ -40,6 +40,9 @@ public static class MediaFilePolicy
     public static string OutputPath(string source) => Path.Combine(Path.GetDirectoryName(source)!,
         Path.GetFileNameWithoutExtension(source) + (Path.GetExtension(source).Equals(".mp4", StringComparison.OrdinalIgnoreCase) ? ".web.mp4" : ".mp4"));
 
+    /// <summary>An original whose web copy exists: the copy is the episode, so the original is neither indexed nor converted again.</summary>
+    public static bool IsConverted(string source) => File.Exists(OutputPath(source));
+
     /// <summary>Folder convention: "season N" (regular episodes), "specials" and "movies" (season 0).</summary>
     public static (int Season, int EpisodeTypeId)? FolderType(string folder)
     {

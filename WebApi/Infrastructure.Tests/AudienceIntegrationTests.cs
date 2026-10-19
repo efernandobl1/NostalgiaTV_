@@ -192,7 +192,10 @@ public class AudienceIntegrationTests
         Assert.Equal("Viejo", episode.Title);
         var status = await server.RunAsync<IMediaRepository, MediaStatus>(media => media.StatusAsync(new("all", "all")));
         Assert.All(status.Workers, worker => Assert.True(worker.Online));
-        Assert.Contains(status.Jobs, item => item.Worker == MediaWorkers.Index && item.Status == MediaJobStatus.Skipped);
+        // The original kept next to its web copy is neither indexed nor reported as pending by a folder scan.
+        Assert.DoesNotContain(status.Jobs, item => item.Worker == MediaWorkers.Index && item.SourcePath == sourcePath);
+        var scan = await server.RunAsync<ISeriesRepository, ScanResult>(repository => repository.ScanFolderAsync(series.Id, CancellationToken.None));
+        Assert.Equal((1, 0), (scan.Imported, scan.Pending));
 
         await Assert.ThrowsAsync<BadRequestException>(() => server.RunAsync<IMediaRepository, int>(media =>
             media.ClearQueueAsync(new("borrar", [MediaJobStatus.Completed]))));

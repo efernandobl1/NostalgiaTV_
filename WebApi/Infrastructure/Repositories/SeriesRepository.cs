@@ -263,6 +263,8 @@ public sealed class SeriesRepository(NostalgiaTVContext context, MediaLibrary li
         int imported = 0, pending = 0;
         foreach (var file in library.Files(seriesId, series.FolderPath))
         {
+            // Originals kept next to their web copy are not pending: the copy is the episode.
+            if (MediaFilePolicy.IsConverted(file.FullPath)) continue;
             if (file.ModifiedUtc > DateTime.UtcNow - LibraryImporter.SettleTime) { pending++; continue; }
             try { await importer.ImportAsync(file, token); imported++; }
             catch (IOException) { pending++; /* Incompatible or unfinished files wait for the media worker. */ }

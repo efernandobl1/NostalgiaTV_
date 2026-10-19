@@ -207,8 +207,8 @@ public sealed class MediaRepository(NostalgiaTVContext context, MediaLibrary lib
                 await importer.ImportAsync(file, token);
             return;
         }
-        // The converted copy already exists (for example after its job record was cleared).
-        if (worker == MediaWorkers.Transcode && File.Exists(MediaFilePolicy.OutputPath(file.FullPath))) return;
+        // The converted copy already exists (for example after its job record was cleared): it is the episode.
+        if (MediaFilePolicy.IsConverted(file.FullPath)) return;
 
         MediaInfo? info = null;
         string? error = null;
@@ -282,15 +282,30 @@ public sealed class MediaRepository(NostalgiaTVContext context, MediaLibrary lib
         {
             logger.LogWarning(exception, "Media job {JobId} failed", job.Id);
             job.Status = MediaJobStatus.Failed;
-            job.Message = exception.Message.StartsWith("Output already exists", StringComparison.Ordinal)
-                ? "Ya existe un MP4 con ese nombre. No se sobrescribió; revisa el archivo existente antes de reintentar."
-                : exception.Message.Contains("full-duration validation", StringComparison.Ordinal)
-                ? "La conversión no conservó la duración completa. El original sigue intacto; revisa el video antes de reintentar."
-                : "No se pudo validar o procesar el archivo. Revisa espacio, permisos y el video original antes de reintentar.";
+            job.Message = FailureMessage(exception);
         }
     }
 
     // ── Helpers ──
+
+    /// <summary>Dashboard text for a failed job; FFmpeg failures keep their last diagnostic line so the cause is visible.</summary>
+    public static string FailureMessage(Exception exception)
+    {
+        var message = exception.Message;
+        if (message.StartsWith("Output already exists", StringComparison.Ordinal))
+            return "Ya existe un MP4 con ese nombre. No se sobrescribió; revisa el archivo existente antes de reintentar.";
+        if (message.Contains("full-duration validation", StringComparison.Ordinal))
+            return "La conversión no conservó la duración completa. El original sigue intacto; revisa el video antes de reintentar.";
+        if (message.Contains("free space", StringComparison.OrdinalIgnoreCase))
+            return "No hay espacio libre suficiente para convertir y conservar el original. Libera espacio antes de reintentar.";
+        if (message.StartsWith("Media process failed", StringComparison.Ordinal))
+        {
+            var detail = message.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? message;
+            const string prefix = "FFmpeg no pudo procesar el video; el original sigue intacto. Detalle: ";
+            return prefix + (detail.Length > 500 - prefix.Length ? detail[..(500 - prefix.Length)] : detail);
+        }
+        return "No se pudo validar o procesar el archivo. Revisa espacio, permisos y el video original antes de reintentar.";
+    }
 
     /// <summary>Heartbeats never touch Enabled, so a pause from the dashboard is never overwritten.</summary>
     private Task HeartbeatAsync(string worker, CancellationToken token) =>
