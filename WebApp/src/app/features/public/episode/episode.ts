@@ -28,6 +28,18 @@ export function playerShortcut(e: Pick<KeyboardEvent, 'key' | 'altKey' | 'ctrlKe
   }
 }
 
+/**
+ * Episode to play after `currentId` in random mode: any other playable episode of the series, preferring
+ * the ones the viewer has not finished.
+ */
+export function randomEpisode<T extends { id: number; filePath: string }>(
+  episodes: readonly T[], currentId: number, finished: ReadonlySet<number>, random = Math.random): T | null {
+  const others = episodes.filter(e => e.id !== currentId && !!e.filePath);
+  const unseen = others.filter(e => !finished.has(e.id));
+  const pool = unseen.length ? unseen : others;
+  return pool.length ? pool[Math.floor(random() * pool.length)] : null;
+}
+
 /** On-demand playback of one episode, resuming where the viewer left it. */
 @Component({
   selector: 'app-episode',
@@ -41,7 +53,7 @@ export function playerShortcut(e: Pick<KeyboardEvent, 'key' | 'altKey' | 'ctrlKe
       } @else {
         <div class="p-3.5 max-md:p-0 rounded-[22px] max-md:rounded-none bg-panel-2 max-md:bg-transparent border border-line max-md:border-0">
           <div class="relative aspect-video w-full rounded-[18px] max-md:rounded-xl overflow-hidden tv-screen [--screen-edge:#0B0B09]">
-            @if (playing(); as p) { <app-video-screen [episode]="p" (finished)="step(1)" /> }
+            @if (playing(); as p) { <app-video-screen [episode]="p" (finished)="next()" /> }
           </div>
           <div class="flex items-center gap-3 pt-3.5 px-1 font-mono text-[12px] text-muted tabular-nums">
             <span>{{ time(position()) }}</span>
@@ -60,6 +72,8 @@ export function playerShortcut(e: Pick<KeyboardEvent, 'key' | 'altKey' | 'ctrlKe
             </button>
             <button class="pill px-3 text-[13px]" type="button" [disabled]="!length()" (click)="screen()?.seekBy(skip)" aria-label="Adelantar 10 segundos">+10 s</button>
             <button class="pill px-3.5 text-[13px]" type="button" [disabled]="!hasNext()" (click)="step(1)">Siguiente ›</button>
+            <button class="pill px-3.5 text-[13px]" type="button" [class.pill-primary]="player.random()" [attr.aria-pressed]="player.random()"
+                    (click)="player.toggleRandom()" title="Al terminar, sigue con un episodio al azar de la serie">Aleatorio</button>
             <span class="flex-1"></span>
             <button class="pill w-11 px-0" type="button" (click)="player.toggleMute()" [attr.aria-label]="player.muteLabel()" [attr.aria-pressed]="player.muted()">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path [attr.d]="player.muteIcon()"></path></svg>
@@ -141,6 +155,14 @@ export class Episode {
     e.preventDefault();
     if (action === 'toggle') screen.togglePlay();
     else screen.seekBy(action === 'back' ? -SKIP : SKIP);
+  }
+
+  /** After an episode ends: the next one, or a random one in random mode. */
+  next(): void {
+    if (!this.player.random()) { this.step(1); return; }
+    const finished = new Set(this.session.viewer()?.progress.filter(p => p.completed).map(p => p.episodeId));
+    const pick = randomEpisode(this.episodes(), this.episodeId(), finished);
+    if (pick) this.router.navigate(['/series', this.id(), 'episodio', pick.id], { replaceUrl: true });
   }
 
   step(offset: number): void {

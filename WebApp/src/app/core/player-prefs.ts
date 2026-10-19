@@ -24,12 +24,24 @@ function loadCrt(): CrtFilters {
   }
 }
 
-/** Player preferences (volume, mute, CRT filters) shared by every video screen. */
+const RANDOM_KEY = 'ntv.random';
+
+function loadRandom(): boolean {
+  try {
+    return localStorage.getItem(RANDOM_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** Player preferences (volume, mute, CRT filters, random playback) shared by every video screen. */
 @Injectable({ providedIn: 'root' })
 export class PlayerPrefs {
   readonly volume = signal(70);
   readonly muted = signal(false);
   readonly crt = signal<CrtFilters>(loadCrt());
+  /** On demand, an ended episode is followed by a random one of the series instead of the next. */
+  readonly random = signal(loadRandom());
 
   readonly muteLabel = computed(() => (this.muted() ? 'Activar sonido' : 'Silenciar'));
   /** Second path of the speaker icon: sound waves or an ✕. */
@@ -48,5 +60,12 @@ export class PlayerPrefs {
     next.density = Math.min(10, Math.max(1, Math.round(next.density)));
     this.crt.set(next);
     try { localStorage.setItem(CRT_KEY, JSON.stringify(next)); } catch { /* Private mode: keep it for this visit only. */ }
+  }
+
+  /** Turns random playback on or off and remembers it on this browser. */
+  toggleRandom(): void {
+    const next = !this.random();
+    this.random.set(next);
+    try { localStorage.setItem(RANDOM_KEY, next ? '1' : '0'); } catch { /* Private mode: keep it for this visit only. */ }
   }
 }
