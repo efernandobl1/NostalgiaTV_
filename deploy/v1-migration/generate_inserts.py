@@ -5,6 +5,10 @@ Run it on a machine with sqlcmd against a *restored copy* of the v1 database (ne
 
     python deploy/v1-migration/generate_inserts.py --server "localhost\\SQLEXPRESS" --database NostalgiaTV_v1_copy --out v1_to_v2.sql
 
+On the Docker host, read a copy restored inside the stack's sqlserver container instead (run with sudo):
+
+    python3 generate_inserts.py --compose-dir /opt/nostalgiatv --database NostalgiaTV_v1_copy --out v1_to_v2.sql
+
 The output runs once on the v2 database right after InitialCreate and the administrator bootstrap
 (docs/database/V1-DATA.md). It keeps the original ids so relations, links and paired devices survive.
 Migrated: categories, series (+ seasons, categories), episodes, channels, eras, era lineups and selections,
@@ -22,10 +26,16 @@ CODE = re.compile(r"[Ss]?\d{1,2}[xXeE](\d{1,3})(?:([A-Da-d])(?![A-Za-z0-9]))?")
 LEADING = re.compile(r"^[Ee]?(\d{1,3})([A-Da-d])?[\s.\-_]+")
 
 
-def query(server, database, sql):
+def query(server, database, sql, compose_dir=None):
     """Runs a FOR JSON query through sqlcmd and returns the rows (sent as UTF-16 hex so no console code page can garble text)."""
     wrapped = f"SET NOCOUNT ON; SELECT CONVERT(varbinary(max), ({sql}))"
-    result = subprocess.run(["sqlcmd", "-S", server, "-E", "-C", "-d", database, "-y", "0", "-Q", wrapped], capture_output=True, check=True)
+    if compose_dir:
+        # sqlcmd inside the stack's sqlserver container as sa; the password never leaves the container environment.
+        command = ["docker", "compose", "--project-directory", compose_dir, "exec", "-T", "sqlserver", "/bin/bash", "-lc",
+                   'export SQLCMDPASSWORD="$MSSQL_SA_PASSWORD"; exec /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -y 0 -d ' + database]
+        result = subprocess.run(command, input=(wrapped + "\nGO\n").encode(), capture_output=True, check=True)
+    else:
+        result = subprocess.run(["sqlcmd", "-S", server, "-E", "-C", "-d", database, "-y", "0", "-Q", wrapped], capture_output=True, check=True)
     output = result.stdout.decode("ascii", errors="replace")
     start = output.find("0x")
     if start < 0:
@@ -73,9 +83,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--server", default=r"localhost\SQLEXPRESS")
     parser.add_argument("--database", default="NostalgiaTV_v1_copy")
+    parser.add_argument("--compose-dir", help="Docker Compose project whose sqlserver container holds the restored copy")
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
-    q = lambda sql: query(args.server, args.database, sql)
+    if not re.fullmatch(r"[A-Za-z0-9_]+", args.database):
+        parser.error("Invalid database name.")
+    q = lambda sql: query(args.server, args.database, sql, args.compose_dir)
 
     categories = q("SELECT Id, Name FROM Categories ORDER BY Id FOR JSON PATH, INCLUDE_NULL_VALUES")
     series = q("SELECT Id, Name, Description, History, LogoPath, FolderPath, Rating, CONVERT(char(10), StartDate, 23) StartDate, "
