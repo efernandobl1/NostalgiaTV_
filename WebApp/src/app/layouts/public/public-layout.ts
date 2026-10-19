@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { SeasonalAtmosphere } from '../../shared/ui/seasonal-atmosphere';
 import { MobileTabbar } from './mobile-tabbar';
 import { PublicHeader } from './public-header';
 
@@ -9,12 +10,13 @@ import { PublicHeader } from './public-header';
  */
 @Component({
   selector: 'app-public-layout',
-  imports: [RouterOutlet, PublicHeader, MobileTabbar],
+  imports: [RouterOutlet, PublicHeader, MobileTabbar, SeasonalAtmosphere],
   host: { class: 'min-h-dvh flex flex-col bg-ink text-fg font-sans' },
   template: `
     <app-public-header class="hidden md:block" />
     <div class="flex-1 flex flex-col"><router-outlet /></div>
     <app-mobile-tabbar class="md:hidden sticky bottom-0 z-30" />
+    <app-seasonal-atmosphere />
   `,
 })
 export class PublicLayout {}

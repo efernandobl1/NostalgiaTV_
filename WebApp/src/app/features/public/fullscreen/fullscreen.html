@@ -2,8 +2,8 @@
 <div class="compact:hidden relative w-full h-full overflow-hidden tv-screen [--screen-edge:#050504]" [class.cursor-none]="mode() === 'idle'">
   @if (!compact()) { <app-video-screen [channel]="id()" (state)="tuner.onState($event)" /> }
 
-  @if (seasonFx()) {
-    <span class="absolute inset-0 shadow-[inset_0_0_220px_40px_rgba(255,120,30,0.22)] pointer-events-none" aria-hidden="true"></span>
+  @if (seasonFx() !== 'none') {
+    <span class="season-glow" [class.christmas]="seasonFx() === 'christmas'" aria-hidden="true"></span>
   }
 
   <span class="absolute right-14 bottom-11 flex items-center gap-2 opacity-45 font-display font-bold text-[20px] tracking-[0.08em]" aria-hidden="true">
@@ -117,6 +117,9 @@
 <!-- ── Phone overlay (portrait or landscape) ── -->
 <div class="hidden compact:block relative w-full h-full overflow-hidden tv-screen [--screen-edge:#050504]">
   @if (compact()) { <app-video-screen [channel]="id()" (state)="tuner.onState($event)" /> }
+  @if (seasonFx() !== 'none') {
+    <span class="season-glow" [class.christmas]="seasonFx() === 'christmas'" aria-hidden="true"></span>
+  }
   <button class="absolute inset-0 border-0 bg-transparent cursor-pointer" type="button" (click)="toggleMobile()" aria-label="Mostrar u ocultar controles"></button>
   <!-- Below the top bar while the controls are up, so it never covers their buttons. -->
   <span class="absolute right-13 font-display font-bold text-ok [text-shadow:0_0_10px_rgba(139,224,143,0.5)] pointer-events-none transition-all" aria-hidden="true"
