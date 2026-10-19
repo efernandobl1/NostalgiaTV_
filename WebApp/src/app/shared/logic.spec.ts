@@ -1,5 +1,6 @@
 import { dayKey, episodeCode, playTime, years } from '../core/data/public-data';
 import { passwordScore } from '../features/auth/password';
+import { playerShortcut } from '../features/public/episode/episode';
 import { formatPairCode } from '../features/public/pair/pair';
 import { sectionOf } from '../layouts/public/public-section';
 
@@ -53,5 +54,24 @@ describe('guide day', () => {
     expect(dayKey(1, 'America/Guatemala')).toBe('2026-10-19');
     expect(dayKey(0, 'UTC')).toBe('2026-10-19');
     vi.useRealTimers();
+  });
+});
+
+describe('episode player shortcuts', () => {
+  const key = (k: string, target: Element = document.body, mods: Partial<KeyboardEvent> = {}) =>
+    playerShortcut({ key: k, altKey: false, ctrlKey: false, metaKey: false, target, ...mods });
+
+  it('plays, pauses and skips', () => {
+    expect(key(' ')).toBe('toggle');
+    expect(key('ArrowLeft')).toBe('back');
+    expect(key('ArrowRight')).toBe('forward');
+    expect(key('Enter')).toBeNull();
+    expect(key('ArrowRight', document.body, { ctrlKey: true })).toBeNull();
+  });
+
+  it('leaves form fields and focused buttons alone', () => {
+    expect(key('ArrowLeft', document.createElement('input'))).toBeNull();
+    expect(key(' ', document.createElement('button'))).toBeNull();
+    expect(key('ArrowRight', document.createElement('button'))).toBe('forward');
   });
 });
