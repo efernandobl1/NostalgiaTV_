@@ -2,6 +2,7 @@ import { Component, computed, effect, ElementRef, inject, signal, untracked, vie
 import { RouterLink } from '@angular/router';
 import { Api } from '../../../core/api/api';
 import { GuideRow, GuideSlot } from '../../../core/api/models';
+import { ChannelEvents, debounce } from '../../../core/data/channel-events';
 import { airedPct, channelNumber, dayKey, hhmm, PublicData, slotLine } from '../../../core/data/public-data';
 import { Session } from '../../../core/session';
 
@@ -125,6 +126,9 @@ export class Guide {
       const day = this.day();
       untracked(() => this.load(day));
     });
+    // A rewritten schedule (an era on air, new interludes) or a new channel changes the grid; new segments do not.
+    const reload = debounce(() => this.load(this.day(), true), 2_000);
+    inject(ChannelEvents).listen(change => { if (change.reason !== 'segment') reload(); });
     effect(() => {
       const name = this.cats()[this.cat()];
       untracked(() => {
@@ -135,16 +139,20 @@ export class Guide {
     });
   }
 
-  private async load(day: number): Promise<void> {
-    this.loading.set(true);
+  /** `quiet` (a live update) keeps the grid on screen while loading and keeps it if the request fails. */
+  private async load(day: number, quiet = false): Promise<void> {
+    if (!quiet) this.loading.set(true);
     try {
-      this.guide.set(await this.api.guide(dayKey(day, this.session.settings()?.timeZoneId)));
+      const guide = await this.api.guide(dayKey(day, this.session.settings()?.timeZoneId));
+      if (this.day() !== day) return;
+      this.guide.set(guide);
       this.error.set('');
     } catch {
+      if (quiet) return;
       this.guide.set([]);
       this.error.set('No se pudo cargar la guía.');
     } finally {
-      this.loading.set(false);
+      if (!quiet) this.loading.set(false);
     }
   }
 

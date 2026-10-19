@@ -204,13 +204,15 @@ public class SecurityPolicyTests
 
 public class SchemaTests
 {
-    /// <summary>The single InitialCreate migration must describe the current model exactly.</summary>
+    /// <summary>
+    /// InitialCreate plus the migrations added since v2 went live must describe the current model exactly.
+    /// </summary>
     [Fact]
     public void MigrationMatchesTheModel()
     {
         using var context = new DesignTimeContextFactory().CreateDbContext([]);
         Assert.False(context.Database.HasPendingModelChanges());
-        Assert.Single(context.Database.GetMigrations());
+        Assert.EndsWith("_InitialCreate", context.Database.GetMigrations().First());
         Assert.Equal(42, context.Model.GetEntityTypes().Count());
     }
 }

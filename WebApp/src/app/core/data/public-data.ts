@@ -1,7 +1,8 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { Api, mediaUrl } from '../api/api';
-import { CategoryFacet, GuideSlot, NowPlaying, ProgressItem, PublicChannelCard } from '../api/models';
+import { CategoryFacet, GuideSlot, NowPlaying, ProgressItem, PublicChannelCard, PublicSettings } from '../api/models';
 import { Session } from '../session';
+import { ChannelEvents, debounce } from './channel-events';
 
 // ── Formatting shared by the public, TV and admin screens ──
 
@@ -135,13 +136,25 @@ export function dayKey(offset = 0, timeZone?: string | null): string {
 
 export type Season = 'none' | 'halloween' | 'christmas';
 
+function seasonOf(settings: PublicSettings): Season {
+  return settings.season === 'Halloween' ? 'halloween' : settings.season === 'Christmas' ? 'christmas' : 'none';
+}
+
+/** Season whose decorations (site atmosphere, fullscreen glow) are on: "Efectos de temporada" in the platform settings. */
+export function seasonalEffects(settings: PublicSettings | null | undefined): Season {
+  return settings?.seasonalEffectsEnabled ? seasonOf(settings) : 'none';
+}
+
 /**
- * Public channels and categories, shared by every screen and refreshed every minute while the app is open.
+ * Public channels and categories, shared by every screen. Refreshed when the API hub reports a channel change and,
+ * as a fallback, every minute while the app is open.
  */
 @Injectable({ providedIn: 'root' })
 export class PublicData {
   private readonly api = inject(Api);
   private readonly session = inject(Session);
+  private readonly events = inject(ChannelEvents);
+  private readonly destroyRef = inject(DestroyRef);
   readonly cards = signal<PublicChannelCard[]>([]);
   readonly categories = signal<CategoryFacet[]>([]);
   readonly loading = signal(true);
@@ -150,9 +163,9 @@ export class PublicData {
   readonly onAir = computed(() => this.channels().filter(c => c.on));
   readonly season = computed<Season>(() => {
     const settings = this.session.settings();
-    if (!settings?.seasonalThemesEnabled) return 'none';
-    return settings.season === 'Halloween' ? 'halloween' : settings.season === 'Christmas' ? 'christmas' : 'none';
+    return settings?.seasonalThemesEnabled ? seasonOf(settings) : 'none';
   });
+  readonly effects = computed(() => seasonalEffects(this.session.settings()));
   private timer: ReturnType<typeof setInterval> | null = null;
 
   /** Starts loading (idempotent); screens call it from their constructor. */
@@ -161,6 +174,8 @@ export class PublicData {
     this.refresh();
     this.api.categories().then(c => this.categories.set(c)).catch(() => {});
     this.timer = setInterval(() => this.refresh(), 60_000);
+    // Breaks change segments in bursts: one refresh per burst.
+    this.events.listen(debounce(() => this.refresh(), 1_500), this.destroyRef);
   }
 
   async refresh(): Promise<void> {

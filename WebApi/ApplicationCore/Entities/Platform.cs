@@ -7,10 +7,12 @@ public class MediaWorkerState
     public DateTime? HeartbeatUtc { get; set; }
 }
 
+/// <summary>A file of a series folder, or of a channel era folder (bumpers converted for the era's folder scan).</summary>
 public class MediaProcessingJob
 {
     public long Id { get; set; }
-    public int SeriesId { get; set; }
+    public int? SeriesId { get; set; }
+    public int? ChannelEraId { get; set; }
     public string Worker { get; set; } = "";
     public string Fingerprint { get; set; } = "";
     public string SourcePath { get; set; } = "";
@@ -23,7 +25,8 @@ public class MediaProcessingJob
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
 
-    public Series Series { get; set; } = null!;
+    public Series? Series { get; set; }
+    public ChannelEra? ChannelEra { get; set; }
 }
 
 /// <summary>Singleton (Id = 1). Times are evaluated in PlatformSettings.TimeZoneId.</summary>
