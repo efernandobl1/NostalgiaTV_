@@ -6,6 +6,12 @@ public sealed record InterludeItem(int Id, string Title, string Kind, string? Bu
     decimal DurationSeconds, bool ApprovedForBroadcast, bool RedistributionAllowed, string? License, string? SourceUrl,
     string? RegionCode, int? OriginalYearFrom, int? OriginalYearTo, int EraCount);
 
+/// <summary>
+/// Result of scanning an era folder: bumpers imported and assigned, files sent to the transcoder (imported by a later
+/// scan once converted) and files left as they were (already imported, still uploading or unreadable).
+/// </summary>
+public sealed record EraFolderScan(string Folder, int Imported, int Converting, int Skipped);
+
 public sealed record InterludeQuery(string? Kind, string? Season, bool? Approved, string? Search);
 
 /// <summary>Metadata of an interlude; the upload form sends the same fields with the MP4 file.</summary>

@@ -125,7 +125,9 @@
 
         <section class="flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="eraint">
           <div class="flex justify-between items-center gap-3">
-            <h2 class="m-0 font-display text-[18px] font-semibold" id="eraint">Interludios de la era</h2>
+            <h2 class="flex-1 m-0 font-display text-[18px] font-semibold" id="eraint">Interludios de la era</h2>
+            <button class="btn btn-ghost btn-sm" type="button" [disabled]="scanning()" (click)="scanInterludes()"
+                    title="Importa como bumpers aprobados los videos de la carpeta de la era y de su subcarpeta «bumpers»">{{ scanning() ? 'Escaneando…' : 'Escanear carpeta' }}</button>
             <button class="btn btn-ghost btn-sm" type="button" (click)="open('eraInterlude')">Asignar</button>
           </div>
           @for (i of eraInterludes(); track i.id + '-' + i.seriesId) {

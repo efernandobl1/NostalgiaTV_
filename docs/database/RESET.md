@@ -1,7 +1,8 @@
 # Reset de la base de datos para el esquema v2
 
-El backend v2 usa una única migración `InitialCreate` generada desde
-[`nostalgiatv_v2.dbml`](nostalgiatv_v2.dbml). La migración no convierte los datos
+El backend v2 parte de la migración `InitialCreate` generada desde
+[`nostalgiatv_v2.dbml`](nostalgiatv_v2.dbml); desde la salida a producción, los
+cambios de esquema se agregan como migraciones nuevas. La migración no convierte los datos
 del esquema v1. Para conservar catálogo, canales y audiencia, seguir
 [V1-DATA.md](V1-DATA.md), que genera un script de datos desde un backup v1 y lo
 aplica después del reset. Usuarios, comentarios y registros de actividad no se
