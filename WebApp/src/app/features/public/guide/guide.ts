@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { Api } from '../../../core/api/api';
 import { GuideRow, GuideSlot } from '../../../core/api/models';
 import { airedPct, channelNumber, dayKey, hhmm, PublicData, slotLine } from '../../../core/data/public-data';
+import { Session } from '../../../core/session';
 
 type SlotKind = 'now' | 'special' | 'past' | undefined;
 
@@ -33,24 +34,24 @@ function link(slot: GuideSlot, kind: SlotKind, channelId: number): (string | num
 export class Guide {
   private readonly api = inject(Api);
   private readonly data = inject(PublicData);
+  private readonly session = inject(Session);
   private readonly grid = viewChild<ElementRef<HTMLElement>>('grid');
+
+  /** Noon (UTC) of the platform's calendar day `offset` days ahead: labels match the day the guide returns. */
+  private date(offset: number): Date { return new Date(`${dayKey(offset, this.session.settings()?.timeZoneId)}T12:00:00Z`); }
 
   /** Today and the next two days (the API covers two days ahead). */
   readonly days = [0, 1, 2].map(offset => {
     if (offset === 0) return 'Hoy';
     if (offset === 1) return 'Mañana';
-    const date = new Date(); date.setDate(date.getDate() + offset);
-    return date.toLocaleDateString('es', { weekday: 'long' }).replace(/^./, c => c.toUpperCase());
+    return this.date(offset).toLocaleDateString('es', { weekday: 'long', timeZone: 'UTC' }).replace(/^./, c => c.toUpperCase());
   });
   readonly mobileDays = [0, 1, 2].map(offset => {
     if (offset < 2) return this.days[offset];
-    const date = new Date(); date.setDate(date.getDate() + offset);
-    return `${date.toLocaleDateString('es', { weekday: 'short' }).replace('.', '').replace(/^./, c => c.toUpperCase())} ${date.getDate()}`;
+    const date = this.date(offset);
+    return `${date.toLocaleDateString('es', { weekday: 'short', timeZone: 'UTC' }).replace('.', '').replace(/^./, c => c.toUpperCase())} ${date.getUTCDate()}`;
   });
-  readonly title = computed(() => {
-    const date = new Date(); date.setDate(date.getDate() + this.day());
-    return date.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
-  });
+  readonly title = computed(() => this.date(this.day()).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).toUpperCase());
   readonly day = signal(0);
   readonly cats = computed(() => ['Todas', ...this.data.categories().slice(0, 4).map(c => c.name)]);
   readonly cat = signal(0);
@@ -128,7 +129,7 @@ export class Guide {
   private async load(day: number): Promise<void> {
     this.loading.set(true);
     try {
-      this.guide.set(await this.api.guide(dayKey(day)));
+      this.guide.set(await this.api.guide(dayKey(day, this.session.settings()?.timeZoneId)));
       this.error.set('');
     } catch {
       this.guide.set([]);

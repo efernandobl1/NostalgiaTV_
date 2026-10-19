@@ -26,7 +26,7 @@ export class Schedule {
   readonly list = signal<ChannelListItem[]>([]);
   readonly channels = computed(() => this.list().map(c => ({ id: c.id, code: `CH ${channelNumber(c.id)}`, name: c.name })));
   readonly channel = signal(0);
-  readonly day = signal(dayKey());
+  readonly day = signal(dayKey(0, this.session.settings()?.timeZoneId));
   readonly detail = signal<ChannelDetail | null>(null);
   readonly raw = signal<ScheduleProgram[]>([]);
   readonly settings = signal<PlatformSettings | null>(null);

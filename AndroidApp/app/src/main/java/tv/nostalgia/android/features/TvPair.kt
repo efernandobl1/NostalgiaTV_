@@ -35,6 +35,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import tv.nostalgia.android.core.ApiException
 import tv.nostalgia.android.core.AuthorizationCode
+import androidx.compose.ui.platform.LocalFocusManager
 import tv.nostalgia.android.shared.*
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -57,13 +58,14 @@ private fun TvServer(model: AppViewModel, state: AppState) {
     var focused by remember { mutableStateOf(false) }
     val field = remember { FocusRequester() }
     LaunchedEffect(Unit) { delay(50); runCatching { field.requestFocus() } }
+    val focus = LocalFocusManager.current
     Column(Modifier.fillMaxSize().padding(horizontal = 60.dp, vertical = 36.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         LogoWordmark(24.dp, 15.sp)
         Spacer(Modifier.weight(1f))
         Txt("Conecta tu servidor", 36.sp, font = Display, weight = FontWeight.Bold, lineHeight = 38.sp)
         Txt("Escribe el dominio o la IP con HTTPS de tu instalación de NostalgiaTV.", 16.sp, Ntv.Fg2)
         val shape = RoundedCornerShape(10.dp)
-        BasicTextField(server, { server = it.take(200) }, Modifier.width(520.dp).focusRequester(field).onFocusChanged { focused = it.isFocused }
+        BasicTextField(server, { server = it.take(200) }, Modifier.width(520.dp).focusRequester(field).onFocusChanged { focused = it.isFocused }.dpadLeavesField(focus) { server.isEmpty() }
             .background(Ntv.Panel2, shape).border(if (focused) 2.dp else 1.dp, if (focused) Ntv.Amber else Ntv.Edge, shape)
             .padding(horizontal = 18.dp, vertical = 14.dp), singleLine = true, enabled = !state.connectionBusy,
             textStyle = TextStyle(color = Ntv.Fg, fontSize = 18.sp, fontFamily = Mono), cursorBrush = SolidColor(Ntv.Amber),

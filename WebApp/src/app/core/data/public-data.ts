@@ -94,11 +94,17 @@ export function continueWatching(progress: ProgressItem[]): ContinueItem[] {
       code: `${episodeCode(p.seasonNumber, p.episodeNumber)} · en ${playTime(p.currentSecond)}`, pct: 0 }));
 }
 
-/** Local calendar day (yyyy-MM-dd) as the guide endpoint expects it. */
-export function dayKey(offset = 0): string {
-  const date = new Date();
-  date.setDate(date.getDate() + offset);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+/**
+ * Calendar day (yyyy-MM-dd) `offset` days from today. The guide endpoint reads the day in the platform's
+ * time zone, so pass `timeZone` (public settings) or a viewer in another zone gets the wrong day.
+ */
+export function dayKey(offset = 0, timeZone?: string | null): string {
+  const date = new Date(Date.now() + offset * 86_400_000);
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: timeZone || undefined, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+  } catch {
+    return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+  }
 }
 
 export type Season = 'none' | 'halloween' | 'christmas';

@@ -1,4 +1,4 @@
-import { episodeCode, playTime, years } from '../core/data/public-data';
+import { dayKey, episodeCode, playTime, years } from '../core/data/public-data';
 import { passwordScore } from '../features/auth/password';
 import { formatPairCode } from '../features/public/pair/pair';
 import { sectionOf } from '../layouts/public/public-section';
@@ -41,5 +41,16 @@ describe('schedule formatting', () => {
     expect(years(1989, 1996)).toBe('1989–1996');
     expect(years('1999-01-01', null)).toBe('1999 –');
     expect(playTime(754.6)).toBe('12:34');
+  });
+});
+
+describe('guide day', () => {
+  it('is the calendar day in the platform time zone', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-19T00:33:00Z'));
+    expect(dayKey(0, 'America/Guatemala')).toBe('2026-10-18');
+    expect(dayKey(1, 'America/Guatemala')).toBe('2026-10-19');
+    expect(dayKey(0, 'UTC')).toBe('2026-10-19');
+    vi.useRealTimers();
   });
 });

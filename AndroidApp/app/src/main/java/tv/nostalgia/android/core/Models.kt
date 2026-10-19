@@ -59,7 +59,8 @@ data class PairingCode(val code: String, val expiresAtUtc: String)
 data class AuthorizationCode(val deviceCode: String, val userCode: String, val expiresAtUtc: String, val interval: Int)
 data class ServerFeatures(val registrationEnabled: Boolean, val googleEnabled: Boolean)
 /** Public theming: the platform's current season (AllYear, Halloween or Christmas). */
-data class PublicSettings(val season: String, val seasonalThemes: Boolean)
+/** [timeZoneId] is the platform's zone: the guide's "day" is a calendar day there, not on the device. */
+data class PublicSettings(val season: String, val seasonalThemes: Boolean, val timeZoneId: String? = null)
 data class Playback(
     val title: String, val subtitle: String, val filePath: String,
     val episodeId: Int, val startSecond: Double = 0.0,

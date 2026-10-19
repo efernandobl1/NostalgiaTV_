@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.*
@@ -142,7 +143,7 @@ private fun LivePreview(model: AppViewModel, channel: Channel?, modifier: Modifi
     Box(modifier.crtGlow()) {
         val image = imageUrl(model, channel?.logoPath)
         if (image != null) AsyncImage(image, null, Modifier.align(Alignment.Center).fillMaxSize(.42f).alpha(.5f), contentScale = ContentScale.Fit)
-        else Txt("[ VISTA PREVIA EN VIVO ]", 9.sp, Ntv.Faint, Modifier.align(Alignment.Center), font = Mono, tracking = tracking(.14f))
+        else if (channel != null) Txt("%02d".format(channel.id), 64.sp, Ntv.Faint, Modifier.align(Alignment.Center), font = Display)
         // Fade into the page so the hero text stays readable.
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Ntv.Ink2, .35f to Color.Transparent)))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(.6f to Color.Transparent, 1f to Ntv.Ink2)))
@@ -192,7 +193,7 @@ fun TvGuide(model: AppViewModel, state: AppState, onTune: (() -> Unit)? = null) 
                 .border(1.dp, Ntv.Line, RoundedCornerShape(9.dp)), contentAlignment = Alignment.Center) {
                 val logo = pick?.let { (row, _) -> imageUrl(model, row.logoPath) }
                 if (logo != null) AsyncImage(logo, null, Modifier.fillMaxSize(.5f), contentScale = ContentScale.Fit)
-                else Txt("[ VISTA PREVIA ]", 9.sp, Ntv.Faint, font = Mono)
+                else pick?.let { (row, _) -> Txt("%02d".format(row.channelId), 48.sp, Ntv.Faint, font = Display) }
             }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -292,6 +293,7 @@ private fun TvCatalog(model: AppViewModel, state: AppState) {
 @Composable
 private fun TvSearchField(value: String, onChange: (String) -> Unit, onSearch: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
+    val focus = LocalFocusManager.current
     val shape = RoundedCornerShape(50)
     Row(Modifier.width(280.dp).height(36.dp).background(Ntv.Panel2, shape)
         .then(if (focused) Modifier.border(2.dp, Ntv.Cream, shape) else Modifier).padding(horizontal = 14.dp),
@@ -299,7 +301,7 @@ private fun TvSearchField(value: String, onChange: (String) -> Unit, onSearch: (
         Icon(NtvIcon.Search, 15.dp, Ntv.Muted)
         Box(Modifier.weight(1f)) {
             if (value.isEmpty()) Txt("Buscar por nombre", 11.sp, Ntv.Muted, weight = FontWeight.Medium, lines = 1)
-            BasicTextField(value, { onChange(it.take(100)) }, Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused },
+            BasicTextField(value, { onChange(it.take(100)) }, Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }.dpadLeavesField(focus) { value.isEmpty() },
                 singleLine = true, textStyle = TextStyle(color = Ntv.Fg, fontSize = 11.sp, fontFamily = Sans), cursorBrush = SolidColor(Ntv.Amber),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { onSearch() }))
         }

@@ -55,7 +55,7 @@ class NostalgiaApi(val base: HttpUrl, private val client: OkHttpClient, private 
 
     suspend fun publicSettings(): PublicSettings {
         val result = json("public/settings")
-        return PublicSettings(result.optString("season", "AllYear"), result.optBoolean("seasonalThemesEnabled"))
+        return PublicSettings(result.optString("season", "AllYear"), result.optBoolean("seasonalThemesEnabled"), result.nullableString("timeZoneId"))
     }
 
     suspend fun channelDetail(channelId: Int): ChannelDetail {

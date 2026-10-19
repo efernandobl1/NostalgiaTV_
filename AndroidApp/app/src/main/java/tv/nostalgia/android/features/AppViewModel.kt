@@ -23,6 +23,7 @@ import tv.nostalgia.android.core.*
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.cancelChildren
 
@@ -305,7 +306,7 @@ class AppViewModel @JvmOverloads constructor(application: Application,
         mutableState.update { it.copy(guideDay = day, guideLoading = true) }
         viewModelScope.launch {
             try {
-                val rows = api.guide(dayKey(day))
+                val rows = api.guide(dayKey(day, state.value.settings.timeZoneId))
                 mutableState.update { if (it.guideDay == day) it.copy(guide = rows, guideLoading = false) else it }
             } catch (exception: Exception) {
                 if (exception is CancellationException) throw exception
@@ -501,9 +502,12 @@ class AppViewModel @JvmOverloads constructor(application: Application,
     }
 
     companion object {
-        /** Local calendar day as the guide expects it (yyyy-MM-dd). */
-        fun dayKey(offset: Int): String = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            .format(Calendar.getInstance().apply { add(Calendar.DATE, offset) }.time)
+        /** Calendar day (yyyy-MM-dd) in the platform's zone, which is how the guide endpoint reads it. */
+        fun dayKey(offset: Int, timeZoneId: String? = null, now: Long = System.currentTimeMillis()): String {
+            val zone = timeZoneId?.let(TimeZone::getTimeZone)?.takeIf { it.id == timeZoneId } ?: TimeZone.getDefault()
+            return SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = zone }
+                .format(Calendar.getInstance(zone).apply { timeInMillis = now; add(Calendar.DATE, offset) }.time)
+        }
     }
 }
 

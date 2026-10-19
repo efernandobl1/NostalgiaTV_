@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Api } from '../../core/api/api';
 import { GuideRow } from '../../core/api/models';
 import { channelNumber, dayKey, hhmm, slotLine } from '../../core/data/public-data';
+import { Session } from '../../core/session';
 
 const WINDOW_MIN = 120;
 
@@ -60,6 +61,7 @@ interface Row { id: number; num: string; name: string; slots: Slot[] }
 export class TvGuide {
   private readonly router = inject(Router);
   private readonly api = inject(Api);
+  private readonly session = inject(Session);
   readonly loading = signal(true);
   private readonly guide = signal<GuideRow[]>([]);
   /** Two hours from the last half hour. */
@@ -88,7 +90,7 @@ export class TvGuide {
   private pressedAt = 0;
 
   constructor() {
-    this.api.guide(dayKey()).then(rows => this.guide.set(rows)).catch(() => this.guide.set([])).finally(() => this.loading.set(false));
+    this.api.guide(dayKey(0, this.session.settings()?.timeZoneId)).then(rows => this.guide.set(rows)).catch(() => this.guide.set([])).finally(() => this.loading.set(false));
   }
 
   press(): void {

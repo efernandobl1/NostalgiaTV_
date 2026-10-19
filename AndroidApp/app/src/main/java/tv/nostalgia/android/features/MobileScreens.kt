@@ -18,6 +18,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -46,6 +48,7 @@ import tv.nostalgia.android.core.*
 import tv.nostalgia.android.shared.*
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.TimeZone
 import java.util.Locale
 
 // Phones follow the 390×844 design 1:1 in dp.
@@ -227,7 +230,7 @@ private fun MobileGuide(model: AppViewModel, state: AppState) {
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                for (day in 0..2) MobileChip(dayLabel(day), state.guideDay == day, { model.loadGuide(day) })
+                for (day in 0..2) MobileChip(dayLabel(day, state.settings.timeZoneId), state.guideDay == day, { model.loadGuide(day) })
             }
             ChipRow {
                 for (item in state.guide) MobileChip("${item.channelId.toString().padStart(2, '0')} ${item.channelName}", item.channelId == row?.channelId,
@@ -269,11 +272,16 @@ private fun Modifier.drawLeftBar(): Modifier = this.drawBehind {
     drawRect(Ntv.Amber, size = androidx.compose.ui.geometry.Size(3.dp.toPx(), size.height))
 }
 
-private fun dayLabel(offset: Int): String = when (offset) {
+/** Same calendar as the guide request: days in the platform's zone. */
+private fun dayLabel(offset: Int, timeZoneId: String?): String = when (offset) {
     0 -> "Hoy"
     1 -> "Mañana"
-    else -> SimpleDateFormat("EEE d", Locale("es")).format(Calendar.getInstance().apply { add(Calendar.DATE, offset) }.time)
-        .replaceFirstChar { it.uppercase() }.replace(".", "")
+    else -> {
+        val zone = timeZoneId?.let(TimeZone::getTimeZone)?.takeIf { it.id == timeZoneId } ?: TimeZone.getDefault()
+        SimpleDateFormat("EEE d", Locale("es")).apply { timeZone = zone }
+            .format(Calendar.getInstance(zone).apply { add(Calendar.DATE, offset) }.time)
+            .replaceFirstChar { it.uppercase() }.replace(".", "")
+    }
 }
 
 // ── Series (buscar y filtrar) ──
@@ -507,7 +515,8 @@ fun ago(millis: Long): String {
 
 @Composable
 private fun MobilePair(model: AppViewModel, state: AppState) {
-    var code by rememberSaveable { mutableStateOf("") }
+    // TextFieldValue so the cursor follows the dashes formatCode inserts (a plain String keeps it behind them).
+    var code by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
     val context = LocalContext.current
     val scanner = rememberLauncherForActivityResult(ScanContract()) { result ->
         val contents = result.contents ?: return@rememberLauncherForActivityResult
@@ -534,12 +543,12 @@ private fun MobilePair(model: AppViewModel, state: AppState) {
                 val shape = RoundedCornerShape(12.dp)
                 Box(Modifier.fillMaxWidth().heightIn(min = 64.dp).background(Ntv.Panel, shape).border(2.dp, Ntv.Edge, shape).padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center) {
-                    if (code.isEmpty()) Txt("XXX-XXX-XXX-XXX", 22.sp, Ntv.Faint, font = Mono, weight = FontWeight.SemiBold, tracking = tracking(.12f))
-                    BasicTextField(code, { value -> code = formatCode(value) }, Modifier.fillMaxWidth(), singleLine = true,
+                    if (code.text.isEmpty()) Txt("XXX-XXX-XXX-XXX", 22.sp, Ntv.Faint, font = Mono, weight = FontWeight.SemiBold, tracking = tracking(.12f))
+                    BasicTextField(code, { value -> formatCode(value.text).let { code = TextFieldValue(it, TextRange(it.length)) } }, Modifier.fillMaxWidth(), singleLine = true,
                         textStyle = TextStyle(color = Ntv.Fg, fontSize = 22.sp, fontFamily = Mono, fontWeight = FontWeight.SemiBold,
                             letterSpacing = tracking(.12f), textAlign = TextAlign.Center), cursorBrush = SolidColor(Ntv.Amber),
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { model.approveTvInBrowser(code) }))
+                        keyboardActions = KeyboardActions(onDone = { model.approveTvInBrowser(code.text) }))
                 }
             }
             if (context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_CAMERA_ANY))
@@ -547,7 +556,7 @@ private fun MobilePair(model: AppViewModel, state: AppState) {
                     scanner.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE).setPrompt("Escanea el QR que muestra tu TV")
                         .setBeepEnabled(false).setOrientationLocked(false))
                 }, Modifier.fillMaxWidth(), icon = NtvIcon.Scan)
-            MobileButton("Vincular", { model.approveTvInBrowser(code) }, Modifier.fillMaxWidth(), primary = true, height = 52.dp)
+            MobileButton("Vincular", { model.approveTvInBrowser(code.text) }, Modifier.fillMaxWidth(), primary = true, height = 52.dp)
             state.profileError?.let { Txt(it, 13.sp, Ntv.Danger) }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth().panel().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

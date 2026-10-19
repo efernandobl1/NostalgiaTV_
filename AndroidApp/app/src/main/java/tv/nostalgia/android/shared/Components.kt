@@ -16,6 +16,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -260,4 +267,19 @@ fun Modifier.panel(color: Color = Ntv.Panel, radius: Dp = 12.dp, border: BorderS
 fun Modifier.topLine(color: Color, bottom: Boolean = false): Modifier = drawBehind {
     val y = if (bottom) size.height - .5.dp.toPx() else 0f
     drawLine(color, Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
+}
+
+/**
+ * Text fields swallow the D-pad on TV, so the remote could never leave them. Up and down always move focus
+ * out of the field; left and right do so only while it is empty (otherwise they move the cursor).
+ */
+fun Modifier.dpadLeavesField(focus: FocusManager, empty: () -> Boolean): Modifier = onPreviewKeyEvent { event ->
+    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+    when (event.key) {
+        Key.DirectionDown -> focus.moveFocus(FocusDirection.Down)
+        Key.DirectionUp -> focus.moveFocus(FocusDirection.Up)
+        Key.DirectionRight -> empty() && focus.moveFocus(FocusDirection.Right)
+        Key.DirectionLeft -> empty() && focus.moveFocus(FocusDirection.Left)
+        else -> false
+    }
 }
