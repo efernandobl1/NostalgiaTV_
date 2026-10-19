@@ -1,9 +1,11 @@
 # Reset de la base de datos para el esquema v2
 
 El backend v2 usa una única migración `InitialCreate` generada desde
-[`nostalgiatv_v2.dbml`](nostalgiatv_v2.dbml). No convierte los datos del esquema
-v1: series, canales, eras, usuarios, comentarios e historial de espectadores
-anteriores **no se migran**.
+[`nostalgiatv_v2.dbml`](nostalgiatv_v2.dbml). La migración no convierte los datos
+del esquema v1. Para conservar catálogo, canales y audiencia, seguir
+[V1-DATA.md](V1-DATA.md), que genera un script de datos desde un backup v1 y lo
+aplica después del reset. Usuarios, comentarios y registros de actividad no se
+conservan.
 
 ## Qué hace la migración automática
 
@@ -33,14 +35,14 @@ base v1 el sitio queda detenido hasta completar el reset.
 2. Detener los servicios que escriben:
 
    ```bash
-   sudo docker compose --project-directory /opt/nostalgiatv -f /opt/nostalgiatv/docker-compose.production.yml stop webapp webapi media-worker
+   sudo docker compose --project-directory /opt/nostalgiatv stop webapp webapi media-worker
    ```
 
 3. Recrear la base vacía desde el contenedor de SQL Server. El comando no pide
    confirmación: revisar la ruta y el nombre de la base antes de ejecutarlo.
 
    ```bash
-   sudo docker compose --project-directory /opt/nostalgiatv -f /opt/nostalgiatv/docker-compose.production.yml exec sqlserver \
+   sudo docker compose --project-directory /opt/nostalgiatv exec sqlserver \
      /bin/bash -lc 'export SQLCMDPASSWORD="$MSSQL_SA_PASSWORD"; /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b \
      -Q "ALTER DATABASE [NostalgiaTV] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [NostalgiaTV]; CREATE DATABASE [NostalgiaTV];"'
    ```
@@ -57,12 +59,16 @@ base v1 el sitio queda detenido hasta completar el reset.
 6. Fusionar a `main`. El despliegue aplica `InitialCreate` sobre la base vacía y
    arranca la API. Después, quitar `BOOTSTRAP_ADMIN_PASSWORD` del `.env`.
 
+7. Si se conservan los datos de v1, aplicar el script en cuanto termine el
+   despliegue ([V1-DATA.md](V1-DATA.md), paso 6).
+
 ## Medios existentes
 
-Los archivos en `uploads/` se conservan. Las carpetas de series antiguas
-(`series/<nombre>-<idAnterior>`) no se vinculan solas porque los identificadores
-cambian: crear la serie de nuevo, mover sus videos a la carpeta que crea el
-panel (`season N`, `specials`, `movies`) y usar «Escanear carpeta».
+Los archivos en `uploads/` se conservan. Con [V1-DATA.md](V1-DATA.md) las series
+mantienen su identificador y su carpeta, así que los episodios siguen vinculados.
+Sin migrar los datos, las carpetas antiguas no se vinculan solas: crear la serie
+de nuevo, mover sus videos a la carpeta que crea el panel (`season N`,
+`specials`, `movies`) y usar «Escanear carpeta».
 
 ## Desarrollo local
 
