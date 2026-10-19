@@ -95,6 +95,32 @@ export function continueWatching(progress: ProgressItem[]): ContinueItem[] {
 }
 
 /**
+ * Episode to play after `currentId` in random mode (0 for "Aleatorio" on the series page): any other playable
+ * episode of the series, preferring the ones the viewer has not finished.
+ */
+export function randomEpisode<T extends { id: number; filePath: string }>(
+  episodes: readonly T[], currentId: number, finished: ReadonlySet<number>, random = Math.random): T | null {
+  const others = episodes.filter(e => e.id !== currentId && !!e.filePath);
+  const unseen = others.filter(e => !finished.has(e.id));
+  const pool = unseen.length ? unseen : others;
+  return pool.length ? pool[Math.floor(random() * pool.length)] : null;
+}
+
+type EpisodeProgress = Pick<ProgressItem, 'currentSecond' | 'completed'>;
+
+/**
+ * Episode a series' "Continuar / Reproducir" button opens: the one in progress, else the first unwatched
+ * regular episode, else the first one. `started` tells "Continuar" from "Reproducir".
+ */
+export function resumeEpisode<T extends { id: number; seasonNumber: number }>(
+  episodes: readonly T[], progress: ReadonlyMap<number, EpisodeProgress>): { episode: T; started: boolean } | null {
+  const inProgress = (e: T) => { const p = progress.get(e.id); return !!p && !p.completed && p.currentSecond > 0; };
+  const started = episodes.find(inProgress);
+  const episode = started ?? episodes.find(e => !progress.get(e.id)?.completed && e.seasonNumber > 0) ?? episodes[0];
+  return episode ? { episode, started: !!started } : null;
+}
+
+/**
  * Calendar day (yyyy-MM-dd) `offset` days from today. The guide endpoint reads the day in the platform's
  * time zone, so pass `timeZone` (public settings) or a viewer in another zone gets the wrong day.
  */

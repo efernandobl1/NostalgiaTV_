@@ -2,7 +2,7 @@ import { Component, computed, effect, inject, input, numberAttribute, signal, un
 import { RouterLink } from '@angular/router';
 import { Api, mediaUrl } from '../../core/api/api';
 import { PublicEpisode, PublicSeriesDetail } from '../../core/api/models';
-import { channelNumber, episodeCode, playTime, years } from '../../core/data/public-data';
+import { channelNumber, episodeCode, playTime, resumeEpisode, years } from '../../core/data/public-data';
 import { Session } from '../../core/session';
 
 /** Design: "Android TV · Detalle de serie". */
@@ -23,10 +23,13 @@ import { Session } from '../../core/session';
       <span class="text-[24px] text-fg-2">{{ (detail()?.categories ?? []).join(' · ') }}</span>
       <p class="m-0 text-[26px] leading-normal text-fg-2 line-clamp-3">{{ detail()?.description ?? '' }}</p>
       <div class="flex gap-5 mt-2.5">
-        @if (onAir(); as ch) {
-          <a class="tv-btn tv-btn-primary tv-focus" data-autofocus [routerLink]="['/tv/ver', ch.channelId]">▶&nbsp; Sintonizar CH {{ num(ch.channelId) }} (al aire)</a>
+        @if (resume(); as r) {
+          <a class="tv-btn tv-btn-primary tv-focus" data-autofocus [routerLink]="['/tv/series', id(), 'episodio', r.id]">▶&nbsp; {{ r.label }}</a>
         }
-        <a class="tv-btn tv-focus" [attr.data-autofocus]="onAir() ? null : ''" routerLink="/tv/guia">Próximas emisiones</a>
+        @if (onAir(); as ch) {
+          <a class="tv-btn tv-focus" [attr.data-autofocus]="resume() ? null : ''" [routerLink]="['/tv/ver', ch.channelId]">Sintonizar CH {{ num(ch.channelId) }} (al aire)</a>
+        }
+        <a class="tv-btn tv-focus" [attr.data-autofocus]="resume() || onAir() ? null : ''" routerLink="/tv/guia">Próximas emisiones</a>
       </div>
     </section>
 
@@ -39,14 +42,14 @@ import { Session } from '../../core/session';
       </div>
       <div class="flex gap-7 overflow-x-auto no-scrollbar -m-3 p-3" data-tv-scroll>
         @for (e of episodes(); track e.id) {
-          <div class="w-81 flex-none flex flex-col gap-2.5 rounded-xl text-fg">
+          <a class="tv-focus w-81 flex-none flex flex-col gap-2.5 rounded-xl text-fg hover:text-fg no-underline" [routerLink]="['/tv/series', id(), 'episodio', e.id]">
             <span class="relative block aspect-video rounded-xl overflow-hidden scan-raised-2">
               <span class="absolute left-3 top-2.5 font-mono text-[18px] text-amber">{{ e.num }}</span>
               <span class="absolute left-0 right-0 bottom-0 h-1.5 bg-[rgba(255,255,255,0.1)]"><span class="block h-1.5 bg-amber" [style.width.%]="e.pct"></span></span>
             </span>
             <span class="text-[22px] font-semibold truncate">{{ e.title }}</span>
             <span class="font-mono text-[17px]" [style.color]="e.color">{{ e.state }}</span>
-          </div>
+          </a>
         } @empty {
           <span class="text-[22px] text-muted">Sin episodios disponibles.</span>
         }
@@ -74,8 +77,16 @@ export class TvSeries {
   });
   readonly seasonNumbers = computed(() => [...new Set(this.all().map(e => e.seasonNumber))].sort((a, b) => (a === 0 ? -1 : b === 0 ? 1 : a - b)));
   readonly seasons = computed(() => this.seasonNumbers().map(n => (n === 0 ? 'Especiales' : `T${n}`)));
+  private readonly progress = computed(() => new Map((this.session.viewer()?.progress ?? []).map(p => [p.episodeId, p])));
+  /** "Continuar / Reproducir": the episode in progress, else the first unwatched one. */
+  readonly resume = computed(() => {
+    const pick = resumeEpisode(this.all(), this.progress());
+    if (!pick) return null;
+    const e = pick.episode;
+    return { id: e.id, label: `${pick.started ? 'Continuar' : 'Reproducir'} ${episodeCode(e.seasonNumber, e.episodeNumber, e.episodeType, e.episodePart)}` };
+  });
   readonly episodes = computed(() => {
-    const progress = new Map((this.session.viewer()?.progress ?? []).map(p => [p.episodeId, p]));
+    const progress = this.progress();
     const number = this.seasonNumbers()[this.season()];
     return this.all().filter(e => e.seasonNumber === number).map(e => {
       const p = progress.get(e.id);

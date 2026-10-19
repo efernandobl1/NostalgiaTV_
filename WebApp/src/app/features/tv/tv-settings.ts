@@ -2,20 +2,34 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Api } from '../../core/api/api';
 import { lastChannel } from '../../core/data/public-data';
+import { CrtFilters, PlayerPrefs } from '../../core/player-prefs';
 import { Session } from '../../core/session';
+import { TvPref, TvPrefs } from '../../core/tv-prefs';
 
-type Kind = 'toggle' | 'danger' | 'link' | undefined;
-interface Row { label: string; hint: string; value: string; kind?: Kind; on?: boolean; pref?: Pref; action?: 'signout' | 'history' | 'series' }
-
-const PREFS_KEY = 'ntv.tv.prefs';
-type Pref = 'lastChannel' | 'channelNumber' | 'seasonal';
-const PREF_DEFAULTS: Record<Pref, boolean> = { lastChannel: true, channelNumber: true, seasonal: true };
-
-function readPrefs(): Record<Pref, boolean> {
-  try { return { ...PREF_DEFAULTS, ...JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') }; } catch { return { ...PREF_DEFAULTS }; }
+type Kind = 'toggle' | 'range' | 'danger' | 'link' | undefined;
+type CrtSwitch = 'enabled' | 'curvature' | 'vignette' | 'animated';
+type CrtLevel = 'intensity' | 'density';
+interface Row {
+  label: string; hint: string; value: string; kind?: Kind; on?: boolean; pref?: TvPref; action?: 'signout' | 'history' | 'series';
+  /** CRT filter the row switches (toggle) or adjusts with ◀ ▶ (range). */
+  crt?: CrtSwitch | CrtLevel; disabled?: boolean;
 }
 
-const SECTION_NAMES = ['Perfil', 'Reproducción', 'Dispositivo', 'Acerca de'];
+/** ◀ ▶ step, range and wrap-around of the CRT sliders on the TV. */
+const LEVELS: Record<CrtLevel, { step: number; min: number; max: number }> = {
+  intensity: { step: 10, min: 0, max: 100 },
+  density: { step: 1, min: 1, max: 10 },
+};
+
+/** Next value of a CRT level for ◀ (−1) or ▶ (+1); OK (`wrap`) goes past the top back to the bottom. */
+export function stepLevel(key: CrtLevel, value: number, direction: 1 | -1, wrap = false): number {
+  const { step, min, max } = LEVELS[key];
+  const next = value + direction * step;
+  if (wrap && next > max) return min;
+  return Math.min(max, Math.max(min, next));
+}
+
+const SECTION_NAMES = ['Perfil', 'Reproducción', 'Imagen', 'Dispositivo', 'Acerca de'];
 
 /** Design: "Android TV · Perfil y ajustes". Focusing a section on the left shows it on the right. */
 @Component({
@@ -39,12 +53,12 @@ const SECTION_NAMES = ['Perfil', 'Reproducción', 'Dispositivo', 'Acerca de'];
       <h1 class="m-0 mb-4 font-display font-bold text-[48px]">{{ sections[section()] }}</h1>
       @for (r of rows(); track r.label; let k = $index) {
         <button type="button" class="flex items-center gap-6 min-h-26 px-7 rounded-[18px] border-0 bg-transparent text-left font-sans cursor-pointer outline-none focus:bg-raised-2 focus:shadow-[inset_0_0_0_2px_#3A3A33]"
-                (click)="activate(k)">
+                [class.opacity-50]="r.disabled" [attr.aria-disabled]="r.disabled || null" (click)="activate(k)" (keydown)="adjust($event, k)">
           <span class="flex-1 flex flex-col gap-1.5">
             <span class="text-[26px] font-semibold" [class]="r.kind === 'danger' ? 'text-danger' : 'text-fg'">{{ r.label }}</span>
             <span class="text-[19px] text-muted">{{ r.hint }}</span>
           </span>
-          <span class="font-mono text-[22px]" [class]="r.kind === 'toggle' && r.on ? 'text-ok' : 'text-fg-2'">{{ r.kind === 'toggle' ? (r.on ? 'SÍ' : 'NO') : r.value }}</span>
+          <span class="font-mono text-[22px]" [class]="r.kind === 'toggle' && r.on ? 'text-ok' : 'text-fg-2'">{{ r.kind === 'toggle' ? (r.on ? 'SÍ' : 'NO') : r.kind === 'range' ? '◀ ' + r.value + ' ▶' : r.value }}</span>
         </button>
       }
     </section>
@@ -54,14 +68,16 @@ export class TvSettings {
   private readonly router = inject(Router);
   private readonly api = inject(Api);
   protected readonly session = inject(Session);
+  private readonly tvPrefs = inject(TvPrefs);
+  private readonly player = inject(PlayerPrefs);
   readonly sections = SECTION_NAMES;
   readonly section = signal(1);
-  private readonly prefs = signal(readPrefs());
   readonly device = computed(() => this.session.viewer()?.devices.find(d => d.current) ?? null);
 
   private readonly data = computed<Row[][]>(() => {
     const viewer = this.session.viewer();
-    const prefs = this.prefs();
+    const prefs = this.tvPrefs.values();
+    const crt = this.player.crt();
     const progress = viewer?.progress ?? [];
     const done = progress.filter(p => p.completed).length;
     const last = lastChannel();
@@ -80,6 +96,14 @@ export class TvSettings {
         { label: 'Calidad de video', hint: 'Se ajusta a tu conexión', value: 'AUTOMÁTICA' },
       ],
       [
+        { label: 'Efecto CRT', hint: 'Líneas de barrido sobre el video, como en la tele de tubo', value: '', kind: 'toggle', on: crt.enabled, crt: 'enabled' },
+        { label: 'Curvatura', hint: 'Sombra de pantalla curva en las esquinas', value: '', kind: 'toggle', on: crt.curvature, crt: 'curvature', disabled: !crt.enabled },
+        { label: 'Oscurecer bordes', hint: 'Viñeta alrededor de la imagen', value: '', kind: 'toggle', on: crt.vignette, crt: 'vignette', disabled: !crt.enabled },
+        { label: 'Animación de líneas', hint: 'Las líneas se desplazan lentamente', value: '', kind: 'toggle', on: crt.animated, crt: 'animated', disabled: !crt.enabled },
+        { label: 'Intensidad de líneas', hint: 'Usa ◀ ▶ para ajustar', value: `${crt.intensity} %`, kind: 'range', crt: 'intensity', disabled: !crt.enabled },
+        { label: 'Separación de líneas', hint: 'Usa ◀ ▶ para ajustar', value: String(crt.density), kind: 'range', crt: 'density', disabled: !crt.enabled },
+      ],
+      [
         { label: 'Nombre', hint: 'Así aparece en Mis dispositivos', value: this.device()?.name ?? '—' },
         { label: 'Sesión válida hasta', hint: 'Se renueva al usar la app', value: expires ? new Date(expires).toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase() : '—' },
         { label: 'Desvincular este TV', hint: 'Cierra la sesión del dispositivo', value: '›', kind: 'danger', action: 'signout' },
@@ -94,10 +118,14 @@ export class TvSettings {
 
   async activate(index: number): Promise<void> {
     const row = this.rows()[index];
+    if (row.disabled) return;
     if (row.kind === 'toggle' && row.pref) {
-      const pref = row.pref;
-      this.prefs.update(p => ({ ...p, [pref]: !p[pref] }));
-      try { localStorage.setItem(PREFS_KEY, JSON.stringify(this.prefs())); } catch { /* private mode */ }
+      this.tvPrefs.toggle(row.pref);
+    } else if (row.kind === 'toggle' && row.crt) {
+      const key = row.crt as CrtSwitch;
+      this.player.setCrt({ [key]: !this.player.crt()[key] });
+    } else if (row.kind === 'range' && row.crt) {
+      this.level(row.crt as CrtLevel, 1, true);
     } else if (row.action === 'series') {
       this.router.navigateByUrl('/tv/series');
     } else if (row.action === 'history') {
@@ -109,5 +137,18 @@ export class TvSettings {
       if (this.session.signedIn()) await this.session.signOut(); else await this.session.ensureViewer();
       this.router.navigateByUrl('/tv/vincular');
     }
+  }
+
+  /** ◀ ▶ on a CRT level row change its value instead of moving the focus. */
+  adjust(event: KeyboardEvent, index: number): void {
+    const row = this.rows()[index];
+    if (row.kind !== 'range' || !row.crt || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
+    event.preventDefault();
+    if (!row.disabled) this.level(row.crt as CrtLevel, event.key === 'ArrowRight' ? 1 : -1);
+  }
+
+  private level(key: CrtLevel, direction: 1 | -1, wrap = false): void {
+    const patch: Partial<CrtFilters> = { [key]: stepLevel(key, this.player.crt()[key], direction, wrap) };
+    this.player.setCrt(patch);
   }
 }
