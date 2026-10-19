@@ -1,0 +1,113 @@
+<!-- ── Desktop (md+) ── -->
+<main class="hidden md:flex w-full max-w-340 mx-auto pt-8 px-10 pb-16 flex-col gap-5">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-col gap-1.5">
+      <span class="font-mono text-[13px] tracking-[0.12em] text-amber">{{ title() }}</span>
+      <h1 class="m-0 font-display font-bold text-[40px]">Guía de programación</h1>
+    </div>
+    <div class="flex gap-1.5" role="group" aria-label="Día">
+      @for (d of days; track d; let i = $index) {
+        <button type="button" class="chip chip-lg px-4.5" [attr.aria-pressed]="i === day()" (click)="day.set(i)">{{ d }}</button>
+      }
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2.5">
+    <label class="flex-[1_1_240px] flex items-center gap-2 min-h-11 px-3.5 border border-edge rounded-[22px] bg-panel focus-within:outline-2 focus-within:outline-amber">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+      <input class="flex-1 min-w-0 border-0 outline-none bg-transparent text-fg text-[14px] font-sans" type="search" aria-label="Buscar en la guía"
+             [value]="q()" (input)="q.set($any($event.target).value)" placeholder="Buscar serie en la guía…">
+    </label>
+    <div class="flex flex-wrap gap-1.5" role="group" aria-label="Categoría">
+      @for (k of cats(); track k; let i = $index) {
+        <button type="button" class="chip chip-lg" [attr.aria-pressed]="i === cat()" (click)="cat.set(i)">{{ k }}</button>
+      }
+    </div>
+    <label class="flex items-center gap-2 min-h-11 text-[14px] cursor-pointer">
+      <input class="check" type="checkbox" [checked]="specialsOnly()" (change)="specialsOnly.set(!specialsOnly())">Solo especiales y películas
+    </label>
+    <span class="flex-1"></span>
+    <button class="pill px-4 border-live text-danger hover:text-danger font-semibold" type="button" (click)="goToNow()">● Ir a ahora</button>
+  </div>
+
+  <div #grid class="overflow-x-auto border border-line rounded-2xl bg-panel">
+    <div class="min-w-270 relative">
+      <div class="flex border-b border-line">
+        <span class="w-50 flex-none"></span>
+        <div class="flex-1 flex">
+          @for (h of hours(); track $index) {
+            <span class="flex-1 py-3 px-2.5 border-l border-raised-2 font-mono text-[12px] text-muted">{{ h }}</span>
+          }
+        </div>
+      </div>
+      @for (r of rows(); track r.id) {
+        <div class="flex border-b border-raised-2 last:border-b-0">
+          <a class="w-50 flex-none flex items-center gap-3 py-3 px-4 text-fg hover:text-fg hover:bg-raised no-underline" [routerLink]="['/ver', r.id]">
+            <span class="font-display font-bold text-[20px] text-amber">{{ r.num }}</span>
+            <span class="text-[14px] font-semibold">{{ r.name }}</span>
+          </a>
+          <div class="flex-1 flex gap-1 py-1.5">
+            @for (s of r.slots; track $index) {
+              <a class="min-w-0 box-border flex flex-col justify-center gap-0.5 py-2 px-2.5 rounded-lg no-underline transition-opacity hover:brightness-110" [routerLink]="s.link" [style]="s.style">
+                <span class="text-[14px] font-semibold truncate">{{ s.title }}</span>
+                <span class="font-mono text-[11px] opacity-80 overflow-hidden whitespace-nowrap">{{ s.sub }}</span>
+              </a>
+            }
+          </div>
+        </div>
+      } @empty {
+        <div class="p-10 text-center text-muted" [attr.role]="error() ? 'alert' : null">{{ loading() ? 'Cargando la guía…' : error() || 'No hay canales con programación.' }}</div>
+      }
+      @if (isToday()) {
+        <span class="absolute top-0 bottom-0 w-0.5 bg-live pointer-events-none" [style.left]="nowLeft()" aria-hidden="true"></span>
+      }
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-4 text-[13px] text-muted">
+    <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-xs bg-amber" aria-hidden="true"></span>Al aire ahora</span>
+    <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-xs bg-[#2C2A44]" aria-hidden="true"></span>Especial / película</span>
+    <span class="inline-flex items-center gap-1.5"><span class="w-0.5 h-3 bg-live" aria-hidden="true"></span>Hora actual {{ nowLabel() }}</span>
+  </div>
+</main>
+
+<!-- ── Mobile (<md) ── -->
+<div class="md:hidden flex flex-1 flex-col">
+  <header class="flex flex-col gap-3 pt-4 px-4 pb-3 border-b border-raised-2">
+    <div class="flex items-center justify-between">
+      <h1 class="m-0 font-display font-bold text-[26px]">Guía</h1>
+      <button class="pill min-h-10 px-3.5 rounded-[20px] border-live text-danger hover:text-danger text-[13px] font-semibold" type="button" (click)="day.set(0)">● Ir a ahora</button>
+    </div>
+    <div class="flex gap-1.5" role="group" aria-label="Día">
+      @for (d of mobileDays; track d; let i = $index) {
+        <button type="button" class="chip flex-none" [attr.aria-pressed]="i === day()" (click)="day.set(i)">{{ d }}</button>
+      }
+    </div>
+    <div class="flex gap-2 overflow-x-auto no-scrollbar pb-0.5" role="group" aria-label="Canal">
+      @for (c of channels(); track c.id; let i = $index) {
+        <button type="button" class="chip flex-none gap-1" [attr.aria-pressed]="i === channel()" (click)="channel.set(i)"><span class="font-display font-bold">{{ c.num }}</span> {{ c.short }}</button>
+      }
+    </div>
+  </header>
+
+  <main class="flex-1 pt-1 px-4 pb-4">
+    @for (s of mobileSlots(); track $index) {
+      <a class="flex gap-3 items-start py-3.5 px-2 border-b border-raised-2 text-fg hover:text-fg no-underline"
+         [class]="s.kind === 'now' ? 'bg-amber-wash shadow-[inset_3px_0_0_#FFB547]' : s.kind === 'past' ? 'opacity-55' : ''" [routerLink]="s.link">
+        <span class="w-13 flex-none flex flex-col gap-0.5">
+          <span class="font-mono text-[14px]" [style.color]="s.timeColor">{{ s.time }}</span>
+          <span class="font-mono text-[10px] text-dim">{{ s.dur }}</span>
+        </span>
+        <span class="flex-1 min-w-0 flex flex-col gap-[3px]">
+          <span class="font-semibold text-[15px]">{{ s.title }}</span>
+          <span class="text-[12px] text-muted">{{ s.sub }}</span>
+          @if (s.kind === 'now') {
+            <span class="block h-[3px] mt-1 rounded-xs bg-line"><span class="block h-[3px] rounded-xs bg-amber" [style.width.%]="s.pct"></span></span>
+          }
+        </span>
+        <span class="font-mono text-[10px] tracking-[0.08em]" [style.color]="s.tagColor">{{ s.tag }}</span>
+      </a>
+    } @empty {
+      <div class="py-8 text-center text-muted text-[14px]">{{ loading() ? 'Cargando la guía…' : error() || 'Sin programación para este canal.' }}</div>
+    }
+  </main>
+</div>

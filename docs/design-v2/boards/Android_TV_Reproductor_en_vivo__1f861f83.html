@@ -1,0 +1,39 @@
+<!-- NostalgiaTV · Android TV · En vivo -->
+<!-- CSS:
+body{margin:0;background:#000}
+-->
+<div class="relative w-480 h-270 overflow-hidden [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_radial-gradient(ellipse_at_center,_#2A2920_0%,_#050504_80%)] text-fg font-sans">
+  <span class="absolute inset-0 flex items-center justify-center font-mono text-[22px] tracking-[0.16em] text-faint">[ VIDEO EN VIVO A PANTALLA COMPLETA ]</span>
+
+  <span class="absolute top-14 right-24 font-display font-bold text-[120px] leading-[1] text-ok [text-shadow:0_0_18px_rgba(139,224,143,0.55)]">{{ch.num}}</span>
+
+  @if (osd) {
+    <div class="absolute left-0 right-0 bottom-0 pt-35 px-24 pb-14 flex flex-col gap-7 [background:linear-gradient(0deg,_rgba(5,5,4,0.96)_40%,_rgba(5,5,4,0))]">
+      <div class="flex items-end gap-10">
+        <span class="w-37 h-37 flex-none rounded-[22px] flex items-center justify-center font-display font-bold text-[64px] text-amber bg-panel-2 border-[2px] border-edge">{{ch.num}}</span>
+        <div class="flex-1 flex flex-col gap-2.5">
+          <span class="font-mono text-[24px] tracking-[0.1em] text-amber">{{ch.name}} · {{ch.era}}</span>
+          <span class="font-display font-bold text-[72px] leading-[1]">{{ch.now}}</span>
+          <span class="text-[28px] text-fg-2">{{ch.detail}}</span>
+        </div>
+        <div class="w-110 flex-none flex flex-col gap-2 py-6 px-7 rounded-[18px] bg-[rgba(236,232,220,0.08)]">
+          <span class="font-mono text-[20px] tracking-[0.12em] text-muted">A CONTINUACIÓN · 14:39</span>
+          <span class="font-semibold text-[30px]">{{ch.nextUp}}</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-6">
+        <span class="font-mono text-[24px] text-muted">14:15</span>
+        <span class="flex-1 h-2.5 rounded-[5px] bg-[rgba(255,255,255,0.15)]"><span class="block h-2.5 rounded-[5px] bg-amber" [style.width.%]="ch.pct"></span></span>
+        <span class="font-mono text-[24px] text-muted">14:39</span>
+      </div>
+      <div class="flex gap-12 text-[22px] text-muted">
+        <span><strong class="font-mono text-fg">▲ ▼</strong> Cambiar canal</span>
+        <span><strong class="font-mono text-fg">OK</strong> Guía</span>
+        <span><strong class="font-mono text-fg">◀</strong> Volver</span>
+        <span class="flex-1"></span>
+        <button class="min-w-22 h-16 border-[2px] border-edge rounded-[32px] bg-transparent text-fg [font:600_22px_'IBM_Plex_Mono',_monospace] cursor-pointer" type="button" (click)="prev($event)">CH−</button>
+        <button class="min-w-22 h-16 border-[2px] border-edge rounded-[32px] bg-transparent text-fg [font:600_22px_'IBM_Plex_Mono',_monospace] cursor-pointer" type="button" (click)="next($event)">CH+</button>
+      </div>
+    </div>
+  }
+</div>

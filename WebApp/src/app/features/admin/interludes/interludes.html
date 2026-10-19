@@ -1,0 +1,111 @@
+<app-page-header eyebrow="CH 05 · CATÁLOGO" title="Interludios" subtitle="Bumpers y anuncios de época que llenan los cortes." />
+
+<div class="flex flex-wrap items-center gap-2.5">
+  <div class="flex gap-1.5" role="group" aria-label="Tipo">
+    @for (k of kinds(); track k[0]; let i = $index) {
+      <button type="button" class="chip" [attr.aria-pressed]="i === kind()" (click)="kind.set(i)">{{ k[0] }} <span class="font-mono text-[11px] opacity-[0.8]">{{ k[1] }}</span></button>
+    }
+  </div>
+  <span class="flex-1"></span>
+  <label class="flex items-center gap-2 text-[13px] text-muted">Bumper
+    <select class="field field-select w-42.5" (change)="bumper.set($any($event.target).value)">
+      <option value="">Todos</option><option value="ComingUp">Ya viene</option><option value="WeContinueWith">Continuamos con</option><option value="Generic">Genérico</option>
+    </select>
+  </label>
+  <label class="flex items-center gap-2 text-[13px] text-muted">Temporada
+    <select class="field field-select w-37.5" (change)="season.set($any($event.target).value)">
+      <option value="">Todas</option><option value="AllYear">Todo el año</option><option value="Halloween">Halloween</option><option value="Christmas">Navidad</option>
+    </select>
+  </label>
+</div>
+
+@if (error()) { <div class="py-3 px-4 rounded-[10px] border border-[#5A3A33] text-[14px] text-danger" role="alert">{{ error() }}</div> }
+@if (notice()) { <div class="py-3 px-4 rounded-[10px] border border-line text-[14px] text-ok" role="status">{{ notice() }}</div> }
+
+<div class="flex flex-wrap gap-4 items-start">
+  <section class="flex-[3_1_560px] min-w-0 py-2 px-3 bg-panel border border-line rounded-[10px] overflow-x-auto" aria-label="Biblioteca">
+    <table class="dtable">
+      <thead><tr><th>TÍTULO</th><th>TIPO</th><th>TEMPORADA</th><th>DURACIÓN</th><th>ÉPOCA</th><th>EMISIÓN</th><th>LICENCIA</th><th></th></tr></thead>
+      <tbody>
+        @for (r of rows(); track r.id) {
+          <tr>
+            <td class="font-medium">{{ r.title }}</td>
+            <td><span class="font-mono text-[11px] tracking-[0.06em] whitespace-nowrap" [style.color]="r.color">{{ r.kind }}</span></td>
+            <td class="text-[13px] text-muted">{{ r.season }}</td>
+            <td class="font-mono text-[13px]">{{ r.dur }}</td>
+            <td class="font-mono text-[12px] text-muted whitespace-nowrap">{{ r.years }}</td>
+            <td><span class="text-[12px] whitespace-nowrap" [style.color]="r.apColor">{{ r.approved }}</span></td>
+            <td class="text-[12px] text-muted">{{ r.license }}</td>
+            <td class="text-right whitespace-nowrap">
+              <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-fg cursor-pointer hover:bg-raised" type="button" (click)="edit(r.item)" aria-label="Editar interludio">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+              </button>
+              <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-danger cursor-pointer hover:bg-raised" type="button" (click)="askDelete(r.item)" aria-label="Eliminar interludio">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="8" class="text-muted">{{ loading() ? 'Cargando…' : 'No hay interludios con estos filtros.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <section class="flex-[2_1_320px] min-w-0 flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="up">
+    <h2 class="m-0 font-display text-[18px] font-semibold" id="up">Subir interludio</h2>
+    <label class="relative flex flex-col items-center justify-center gap-1.5 min-h-30 border border-dashed border-edge-2 rounded-lg cursor-pointer text-center text-[13px] text-muted hover:border-amber">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M4 20h16"></path></svg>
+      <span class="text-fg">{{ file()?.name ?? 'Haz clic para elegir un video' }}</span>
+      <span>MP4 · hasta 512 MB · la duración se detecta con FFmpeg</span>
+      <input class="absolute w-px h-px opacity-0" type="file" accept="video/mp4,video/*" (change)="pick($any($event.target).files?.[0])">
+    </label>
+    <label class="flex flex-col gap-1.5 text-[12px] text-muted">Título
+      <input class="field field-select" type="text" maxlength="300" [value]="f.title()" (input)="f.title.set($any($event.target).value)">
+    </label>
+    <div class="grid grid-cols-2 gap-2.5">
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Tipo
+        <select class="field field-select" (change)="f.kind.set($any($event.target).value)">
+          <option value="Bumper">Bumper</option><option value="Advertisement">Anuncio</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Tipo de bumper
+        <select class="field field-select" [disabled]="f.kind() !== 'Bumper'" (change)="f.bumperType.set($any($event.target).value)">
+          <option value="ComingUp">Ya viene</option><option value="WeContinueWith">Continuamos con</option><option value="Generic">Genérico</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Temporada
+        <select class="field field-select" (change)="f.season.set($any($event.target).value)">
+          <option value="AllYear">Todo el año</option><option value="Halloween">Halloween</option><option value="Christmas">Navidad</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Región <input class="field field-select" type="text" maxlength="20" [value]="f.region()" (input)="f.region.set($any($event.target).value)"></label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Año desde <input class="field field-select" type="number" min="1900" max="2100" [value]="f.yearFrom()" (input)="f.yearFrom.set($any($event.target).value)"></label>
+      <label class="flex flex-col gap-1.5 text-[12px] text-muted">Año hasta <input class="field field-select" type="number" min="1900" max="2100" [value]="f.yearTo()" (input)="f.yearTo.set($any($event.target).value)"></label>
+    </div>
+    <label class="flex flex-col gap-1.5 text-[12px] text-muted">URL de origen
+      <input class="field field-select" type="url" maxlength="1000" placeholder="https://…" [value]="f.sourceUrl()" (input)="f.sourceUrl.set($any($event.target).value)">
+    </label>
+    <label class="flex items-center gap-2.5 min-h-11 text-[14px]"><input class="check" type="checkbox" [checked]="f.approved()" (change)="f.approved.set(!f.approved())">Aprobado para emisión</label>
+    <label class="flex items-center gap-2.5 min-h-11 text-[14px]"><input class="check" type="checkbox" [checked]="f.redistribution()" (change)="f.redistribution.set(!f.redistribution())">Permite redistribución</label>
+    <span class="text-[12px] text-muted">Si permites redistribución, la licencia es obligatoria.</span>
+    <label class="flex flex-col gap-1.5 text-[12px] text-muted">Licencia
+      <input class="field field-select" [class.border-danger]="f.licenseMissing()" type="text" maxlength="500" placeholder="Ej. CC BY 4.0" [value]="f.license()" (input)="f.license.set($any($event.target).value)">
+    </label>
+    @if (progress() !== null) {
+      <div class="h-1.5 rounded-[3px] bg-line"><div class="h-1.5 rounded-[3px] bg-amber" [style.width.%]="progress()"></div></div>
+    }
+    <button class="btn btn-primary" type="button" [disabled]="!file() || f.licenseMissing() || progress() !== null" (click)="upload()">{{ progress() !== null ? 'Subiendo ' + progress() + '%' : 'Guardar interludio' }}</button>
+  </section>
+</div>
+
+@switch (dlg()) {
+  @case ('edit') {
+    @if (selected(); as item) { <app-interlude-dialog [item]="item" (saved)="saved()" (closed)="dlg.set(null)" /> }
+  }
+  @case ('delete') {
+    <app-confirm-dialog heading="¿Eliminar este interludio?" confirmLabel="Eliminar interludio" tone="danger"
+      message="Se quitará de todas las eras donde está asignado. Los cortes ya programados lo conservan hasta regenerarse."
+      (confirmed)="remove()" (closed)="dlg.set(null)" />
+  }
+}

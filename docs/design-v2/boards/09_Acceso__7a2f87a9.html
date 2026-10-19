@@ -1,0 +1,126 @@
+<!-- NostalgiaTV · Acceso -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+table{border-collapse:collapse;width:100%}
+th{text-align:left;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#A29E91;padding:8px 10px;border-bottom:1px solid #2C2C27;white-space:nowrap}
+td{padding:12px 10px;border-bottom:1px solid #24241F;font-size:14px;vertical-align:middle}
+-->
+<div class="min-h-screen flex flex-wrap bg-ink text-fg font-sans">
+  <div class="flex-[1_1_248px] border-r border-raised-2">
+    <!-- DC-IMPORT name="Sidebar" active="access" hint-size="248px,960px" -->
+  </div>
+  <main class="flex-[999_1_560px] min-w-0 pt-8 px-10 pb-14 flex flex-col gap-6 max-w-310">
+
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div class="flex flex-col gap-1.5">
+        <span class="font-mono text-[12px] tracking-[0.14em] text-muted">CH 09 · SISTEMA</span>
+        <h1 class="m-0 font-display font-bold text-[36px]">Acceso</h1>
+      </div>
+      <div class="flex flex-wrap gap-2.5">
+        <button class="btn btn-ghost" type="button" (click)="open.newRole($event)">Nuevo rol</button>
+        <button class="btn btn-primary" type="button" (click)="open.newUser($event)">Nuevo usuario</button>
+      </div>
+    </header>
+
+    <div class="flex gap-1 border-b border-line" role="tablist" aria-label="Secciones">
+      @for (t of tabs; track $index) {
+        <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick($event)" [style]="t.style">{{t.label}}</button>
+      }
+    </div>
+
+    @if (showUsers) {
+      <section class="py-2 px-3 bg-panel border border-line rounded-[10px] overflow-x-auto" aria-label="Usuarios">
+        <table>
+          <thead><tr><th>USUARIO</th><th>ROL</th><th>INICIO EXTERNO</th><th>ESTADO</th><th>SESIONES</th><th></th></tr></thead>
+          <tbody>
+            @for (u of users; track $index) {
+              <tr>
+                <td class="font-semibold">{{u.name}}</td>
+                <td class="text-fg-2">{{u.role}}</td>
+                <td><span class="font-mono text-[12px] text-muted">{{u.ext}}</span></td>
+                <td><span class="text-[13px]" [style.color]="u.stColor">{{u.status}}</span></td>
+                <td class="font-mono text-[12px] text-muted">{{u.sessions}}</td>
+                <td class="text-right whitespace-nowrap">
+                  <button class="min-h-9 py-0 px-3 border border-edge rounded-md bg-transparent text-fg [font:500_12px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="u.revoke($event)">Cerrar sesiones</button>
+                  <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-fg cursor-pointer align-middle" type="button" (click)="u.edit($event)" aria-label="Editar usuario">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    }
+
+    @if (showRoles) {
+      <div class="flex flex-wrap gap-4 items-start">
+        <section class="flex-[1_1_260px] flex flex-col gap-2" aria-label="Roles">
+          @for (r of roles; track $index) {
+            <button type="button" (click)="r.pick($event)" [attr.aria-pressed]="r.pressed" [style]="r.style">
+              <span class="flex items-center justify-between gap-2 w-full">
+                <span class="font-semibold text-[14px] text-fg">{{r.name}}</span>
+                @if (r.viewer) {
+                  <span class="py-0.5 px-2 rounded-sm font-mono text-[10px] tracking-[0.08em] text-[#0A1A1F] bg-info">ROL ESPECTADOR</span>
+                }
+              </span>
+              <span class="text-[12px] text-muted text-left">{{r.desc}}</span>
+            </button>
+          }
+        </section>
+        <section class="flex-[999_1_480px] min-w-0 flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="menus">
+          <div class="flex flex-wrap justify-between items-center gap-3">
+            <h2 class="m-0 font-display text-[18px] font-semibold" id="menus">Menús de {{role.name}}</h2>
+            <span class="flex gap-2">
+              <button class="btn btn-ghost btn-sm" type="button" (click)="open.editRole($event)">Editar rol</button>
+              <button class="btn btn-primary btn-sm" type="button">Guardar permisos</button>
+            </span>
+          </div>
+          @for (m of menus; track $index) {
+            <label [style]="m.style">
+              <input class="check" type="checkbox" [attr.checked]="m.on">
+              <span class="flex-1">{{m.caption}}</span>
+              <span class="font-mono text-[11px] text-dim">{{m.url}}</span>
+            </label>
+          }
+        </section>
+      </div>
+    }
+
+    @if (showLog) {
+      <section class="py-2 px-3 bg-panel border border-line rounded-[10px] overflow-x-auto" aria-label="Registro de actividad">
+        <table>
+          <thead><tr><th>FECHA (UTC)</th><th>USUARIO</th><th>ACCIÓN</th><th>RECURSO</th><th>DESCRIPCIÓN</th></tr></thead>
+          <tbody>
+            @for (l of log; track $index) {
+              <tr>
+                <td class="font-mono text-[12px] text-muted whitespace-nowrap">{{l.at}}</td>
+                <td class="font-medium">{{l.user}}</td>
+                <td><span class="font-mono text-[12px] text-amber">{{l.action}}</span></td>
+                <td class="font-mono text-[12px] text-muted">{{l.resource}}</td>
+                <td class="text-[13px] text-fg-2">{{l.desc}}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    }
+  </main>
+
+  @if (dlg.user) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start py-12 px-4 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-150"><!-- DC-IMPORT name="DlgUser" mode="{{mode}}" on-close="{{close}}" hint-size="100%,680px" --></div>
+    </div>
+  }
+  @if (dlg.role) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start py-12 px-4 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-150"><!-- DC-IMPORT name="DlgRole" mode="{{mode}}" on-close="{{close}}" hint-size="100%,380px" --></div>
+    </div>
+  }
+  @if (dlg.revoke) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start pt-30 px-4 pb-12 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-130"><!-- DC-IMPORT name="DlgConfirm" heading="¿Cerrar todas las sesiones de {{target}}?" message="Se revocan sus tokens de actualización y se incrementa su versión de sesión. Tendrá que iniciar sesión de nuevo en todos sus dispositivos." confirm-label="Cerrar sesiones" tone="warning" on-close="{{close}}" hint-size="100%,300px" --></div>
+    </div>
+  }
+</div>

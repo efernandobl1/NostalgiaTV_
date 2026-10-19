@@ -1,0 +1,49 @@
+<app-page-header eyebrow="CH 07 · AUDIENCIA" title="Comentarios">
+  <button class="btn btn-primary" type="button" [disabled]="!selected().size" (click)="approveSelected()">Aprobar seleccionados</button>
+</app-page-header>
+
+<div class="flex flex-wrap items-center gap-2.5">
+  <div class="flex flex-wrap gap-1.5" role="group" aria-label="Estado">
+    @for (l of labels; track l; let i = $index) {
+      <button type="button" class="chip" [attr.aria-pressed]="i === tab()" (click)="tab.set(i)">{{ l }} <span class="font-mono text-[11px] opacity-[0.8]">{{ counts()[i] }}</span></button>
+    }
+  </div>
+  <span class="flex-1"></span>
+  <label class="flex items-center gap-2 text-[13px] text-muted">Destino
+    <select class="field field-select w-auto bg-panel" (change)="target.set($any($event.target).value)"><option value="">Todos</option><option value="channel">Canales</option><option value="series">Series</option></select>
+  </label>
+</div>
+
+@if (error()) { <div class="py-3 px-4 rounded-[10px] border border-[#5A3A33] text-[14px] text-danger" role="alert">{{ error() }}</div> }
+
+<section class="flex flex-col gap-3" aria-label="Comentarios">
+  @for (c of items(); track c.id) {
+    <article class="relative flex gap-3.5 py-4.5 px-5 bg-panel border border-line rounded-[10px]" [class.ml-10]="!!c.replyTo">
+      <label class="flex items-start pt-0.5">
+        <span class="sr-only">Seleccionar comentario</span>
+        <input class="check" type="checkbox" [checked]="selected().has(c.id)" (change)="toggle(c.id)">
+      </label>
+      <div class="flex-1 min-w-0 flex flex-col gap-2">
+        <div class="flex flex-wrap items-center gap-y-2 gap-x-3 text-[13px]">
+          <strong class="font-semibold text-[14px]">{{ c.user }}</strong>
+          <span class="py-0.5 px-2 rounded-sm font-mono text-[11px] bg-raised-2" [class]="c.isSeries ? 'text-amber' : 'text-info'">{{ c.target }}</span>
+          @if (c.replyTo) {
+            <span class="text-[12px] text-muted">↳ respuesta al comentario {{ c.replyTo }}</span>
+          }
+          <span class="text-muted">{{ c.time }}</span>
+          <span class="flex-1"></span>
+          <span class="font-mono text-[11px] tracking-[0.08em]" [style.color]="status()[1]">{{ status()[0] }}</span>
+        </div>
+        <p class="m-0 text-[15px] leading-[1.55] text-fg-2">{{ c.body }}</p>
+        <div class="flex flex-wrap gap-2">
+          <button class="btn btn-sm bg-ok text-[#0B1A0C] font-semibold" type="button" (click)="move(c.id, 1)">Aprobar</button>
+          <button class="btn btn-ghost btn-sm px-3.5 text-danger hover:text-danger" type="button" (click)="move(c.id, 2)">Rechazar</button>
+          <button class="btn btn-ghost btn-sm" type="button" (click)="move(c.id, 3)">Ocultar</button>
+        </div>
+      </div>
+    </article>
+  } @empty {
+    <div class="py-10 text-center text-[14px] text-muted bg-panel border border-line rounded-[10px]">{{ loading() ? 'Cargando…' : 'No hay comentarios en esta bandeja.' }}</div>
+  }
+  @if (hasMore()) { <button class="btn btn-ghost self-center" type="button" (click)="load(tab(), page() + 1)">Cargar más</button> }
+</section>

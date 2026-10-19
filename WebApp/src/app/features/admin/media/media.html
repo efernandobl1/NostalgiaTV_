@@ -1,0 +1,139 @@
+<app-page-header eyebrow="CH 08 · SISTEMA" title="Procesamiento de media">
+  <button class="btn btn-ghost" type="button" [disabled]="!failed()" (click)="retry()">Reintentar fallidos ({{ failed() }})</button>
+  <button class="btn font-semibold border border-[#6A3A33] bg-[#221715] text-danger hover:bg-[#2C1C19]" type="button" (click)="dlg.set('clear')">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
+    Limpiar cola…
+  </button>
+</app-page-header>
+
+@if (error()) { <div class="py-3 px-4 rounded-[10px] border border-[#5A3A33] text-[14px] text-danger" role="alert">{{ error() }}</div> }
+@if (notice()) { <div class="py-3 px-4 rounded-[10px] border border-line text-[14px] text-ok" role="status">{{ notice() }}</div> }
+
+<div class="flex flex-wrap gap-4 items-stretch">
+  @for (w of workers(); track w.id) {
+    <section class="flex-[1_1_220px] flex flex-col gap-3 p-4.5 bg-panel border border-line rounded-[10px]">
+      <div class="flex items-center justify-between gap-2.5">
+        <span class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full" aria-hidden="true" [style.background]="w.color"></span>
+          <span class="font-mono text-[15px]">{{ w.id }}</span>
+        </span>
+        <label class="flex items-center gap-2 min-h-11 text-[13px] text-muted">
+          <input class="check" type="checkbox" [checked]="w.enabled" (change)="toggleWorker(w.id, w.enabled)">Habilitado
+        </label>
+      </div>
+      <span class="text-[13px] text-muted">{{ w.beat }}</span>
+      <span class="font-mono text-[12px] text-fg-2">{{ w.load }}</span>
+    </section>
+  } @empty {
+    <span class="text-[14px] text-muted">Cargando workers…</span>
+  }
+</div>
+
+<section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="pol">
+  <div class="flex flex-wrap justify-between items-center gap-3">
+    <h2 class="m-0 font-display text-[18px] font-semibold" id="pol">Política de recursos</h2>
+    @if (resources(); as r) { <span class="font-mono text-[12px] text-muted">Ahora: {{ r.nightNow ? 'nocturno' : 'diurno' }} · {{ r.currentCores }} de {{ r.availableCores }} núcleos · {{ r.timeZoneId }}</span> }
+  </div>
+  <div class="flex h-7 rounded-md overflow-hidden font-mono text-[11px]">
+    @for (b of bands(); track $index) {
+      @if (b.w > 0) {
+        <span class="flex items-center pl-2 whitespace-nowrap overflow-hidden" [style.flex]="b.w + ' 0 0'" [class]="b.night ? 'bg-[#2B2A4A] text-[#D9D3FF]' : 'bg-[#3A3122] text-amber-hi'">{{ b.label }}</span>
+      }
+    }
+  </div>
+  <div class="flex justify-between font-mono text-[11px] text-dim"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+  <div class="flex flex-wrap items-end gap-2.5">
+    <label class="flex flex-col gap-1.5 text-[12px] text-muted">Núcleos de día
+      <input class="field field-mono w-24" type="number" min="1" max="2" [value]="dayCores()" (input)="dayCores.set(+$any($event.target).value)">
+    </label>
+    <label class="flex items-center gap-2 min-h-11 text-[13px] text-muted"><input class="check" type="checkbox" [checked]="nightEnabled()" (change)="nightEnabled.set(!nightEnabled())">Modo nocturno</label>
+    <label class="flex flex-col gap-1.5 text-[12px] text-muted">Núcleos de noche
+      <input class="field field-mono w-24" type="number" min="1" max="4" [disabled]="!nightEnabled()" [value]="nightCores()" (input)="nightCores.set(+$any($event.target).value)">
+    </label>
+    <label class="flex flex-col gap-1.5 text-[12px] text-muted">Desde
+      <input class="field field-mono [color-scheme:dark]" type="time" [disabled]="!nightEnabled()" [value]="nightStart()" (change)="nightStart.set($any($event.target).value)">
+    </label>
+    <label class="flex flex-col gap-1.5 text-[12px] text-muted">Hasta
+      <input class="field field-mono [color-scheme:dark]" type="time" [disabled]="!nightEnabled()" [value]="nightEnd()" (change)="nightEnd.set($any($event.target).value)">
+    </label>
+    <button class="btn btn-ghost" type="button" (click)="saveResources()">Guardar política</button>
+  </div>
+</section>
+
+<section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="jobs">
+  <div class="flex flex-wrap items-center gap-2.5">
+    <h2 class="m-0 mr-3 font-display text-[18px] font-semibold" id="jobs">Jobs</h2>
+    @for (t of tabs(); track t[1]; let i = $index) {
+      <button type="button" class="chip" [attr.aria-pressed]="i === tab()" (click)="pickTab(i)">{{ t[0] }} <span class="font-mono text-[11px] opacity-[0.8]">{{ t[2] }}</span></button>
+    }
+    <span class="flex-1"></span>
+    <label class="flex items-center gap-2 text-[12px] text-muted">
+      <span class="sr-only">Worker</span>
+      <select class="field field-select" (change)="worker.set($any($event.target).value); page.set(1)">
+        <option value="all">Todos los workers</option><option value="transcode">transcode</option><option value="index">index</option>
+      </select>
+    </label>
+  </div>
+
+  @if (sel().size > 0) {
+    <div class="flex flex-wrap items-center gap-2.5 py-2.5 px-3.5 border border-[#5A4A2A] rounded-lg bg-[#221D12]" role="region" aria-label="Acciones en lote">
+      <span class="text-[14px]"><strong class="font-mono text-amber">{{ selCount() }}</strong> seleccionados</span>
+      <span class="flex-1"></span>
+      <button class="btn btn-ghost btn-xs" type="button" (click)="retrySelected()">Reintentar</button>
+      <button class="btn btn-xs font-semibold bg-live text-on-live" type="button" (click)="dlg.set('delete')">Eliminar seleccionados</button>
+      <button class="w-9 h-9 border-0 rounded-md bg-transparent text-muted cursor-pointer hover:bg-raised" type="button" (click)="clearSel()" aria-label="Quitar selección">✕</button>
+    </div>
+  }
+
+  <div class="overflow-x-auto">
+    <table class="dtable">
+      <thead><tr><th class="w-9"><input class="check" type="checkbox" aria-label="Seleccionar página" [checked]="allOnPage()" (change)="togglePage()"></th><th>SERIE</th><th>WORKER</th><th>ORIGEN</th><th>TAMAÑO</th><th>PROGRESO</th><th>ESTADO</th><th>MENSAJE</th></tr></thead>
+      <tbody>
+        @for (j of jobs(); track j.id) {
+          <tr [attr.aria-selected]="j.selected" class="aria-selected:bg-[#221D12]">
+            <td><input class="check" type="checkbox" aria-label="Seleccionar job" [disabled]="j.processing" [checked]="j.selected" (change)="toggle(j.id)"></td>
+            <td class="font-medium whitespace-nowrap">{{ j.series }}</td>
+            <td class="font-mono text-[12px]">{{ j.worker }}</td>
+            <td class="font-mono text-[12px] text-muted max-w-55 truncate" [attr.title]="j.path">{{ j.path }}</td>
+            <td class="font-mono text-[12px] whitespace-nowrap">{{ j.size }}</td>
+            <td class="min-w-30">
+              <span class="flex items-center gap-2">
+                <span class="flex-1 h-1 rounded-xs bg-line"><span class="block h-1 rounded-xs" [style.width.%]="j.progress" [style.background]="j.color"></span></span>
+                <span class="font-mono text-[11px] text-muted">{{ j.progress }}%</span>
+              </span>
+            </td>
+            <td><span class="font-mono text-[11px] tracking-[0.06em]" [style.color]="j.color">{{ j.status }}</span></td>
+            <td class="text-[12px] text-muted">{{ j.msg }}</td>
+          </tr>
+        } @empty {
+          <tr><td colspan="8" class="text-muted">No hay jobs en esta vista.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <nav class="flex flex-wrap items-center gap-2.5 text-[13px] text-muted" aria-label="Paginación">
+    <span>Mostrando <strong class="font-mono text-fg">{{ range() }}</strong> de <strong class="font-mono text-fg">{{ matching() }}</strong></span>
+    <label class="flex items-center gap-1.5">Por página
+      <select class="min-h-9 px-2 border border-edge rounded-md bg-ink text-fg font-mono text-[13px] [color-scheme:dark]" (change)="pageSize.set(+$any($event.target).value); page.set(1)">
+        <option value="20">20</option><option value="50">50</option><option value="100">100</option>
+      </select>
+    </label>
+    <span class="flex-1"></span>
+    <button class="w-9 h-9 border border-edge rounded-md bg-transparent text-fg cursor-pointer disabled:text-[#5A5A52] disabled:border-line" type="button" aria-label="Página anterior" [disabled]="page() === 1" (click)="page.set(page() - 1)">‹</button>
+    @for (p of pages(); track $index) {
+      <button type="button" [attr.aria-current]="p === '' + page() ? 'page' : null" [disabled]="p === '…'" (click)="page.set(+p)"
+              class="min-w-9 h-9 px-2 rounded-md font-mono font-medium text-[13px] cursor-pointer border border-edge bg-transparent text-fg aria-[current=page]:border-amber aria-[current=page]:bg-amber aria-[current=page]:text-on-amber">{{ p }}</button>
+    }
+    <button class="w-9 h-9 border border-edge rounded-md bg-transparent text-fg cursor-pointer disabled:text-[#5A5A52] disabled:border-line" type="button" aria-label="Página siguiente" [disabled]="page() >= pageCount()" (click)="page.set(page() + 1)">›</button>
+  </nav>
+</section>
+
+@switch (dlg()) {
+  @case ('clear') { <app-clear-queue-dialog [counts]="counts()" (cleared)="cleared($event)" (closed)="dlg.set(null)" /> }
+  @case ('delete') {
+    <app-confirm-dialog [heading]="'¿Eliminar ' + selCount() + ' jobs seleccionados?'" confirmLabel="Eliminar" tone="danger"
+      message="Los jobs en procesamiento se omiten. Los registros eliminados no se pueden recuperar."
+      (closed)="dlg.set(null)" (confirmed)="deleteSelected()" />
+  }
+}

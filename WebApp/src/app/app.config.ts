@@ -1,21 +1,17 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { AuthInterceptor } from './core/interceptors/auth.interceptor';
+import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { routes } from './app.routes';
-import { provideNativeDateAdapter, MAT_DATE_LOCALE } from '@angular/material/core';
-import { MatPaginatorIntl } from '@angular/material/paginator';
-import { createPaginatorIntl } from './core/services/paginator-intl';
+import { apiInterceptor } from './core/api/api';
+import { Session } from './core/session';
 
 export const appConfig: ApplicationConfig = {
-    providers: [
-        provideBrowserGlobalErrorListeners(),
-        provideZoneChangeDetection({ eventCoalescing: true }),
-        provideRouter(routes),
-        provideHttpClient(withInterceptors([AuthInterceptor])),
-        provideNativeDateAdapter(),
-        { provide: MatPaginatorIntl, useFactory: createPaginatorIntl },
-        // Fechas en formato dd/MM/yyyy en todos los datepickers de Material.
-        { provide: MAT_DATE_LOCALE, useValue: 'en-GB' }
-    ]
+  providers: [
+    provideBrowserGlobalErrorListeners(),
+    provideZonelessChangeDetection(),
+    provideHttpClient(withFetch(), withInterceptors([apiInterceptor])),
+    provideRouter(routes, withComponentInputBinding()),
+    // Account, viewer device and server settings are known before the first screen renders.
+    provideAppInitializer(() => inject(Session).load()),
+  ],
 };

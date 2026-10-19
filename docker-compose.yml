@@ -11,7 +11,7 @@ x-log-options: &default-log-options
 
 services:
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: ${SQLSERVER_IMAGE:-mcr.microsoft.com/mssql/server:2022-CU20-ubuntu-22.04}
     container_name: nostalgia-db
     restart: unless-stopped
     environment:
@@ -26,7 +26,7 @@ services:
       - nostalgia-net
     logging: *default-log-options
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -No || exit 1"]
+      test: ["CMD-SHELL", "SQLCMDPASSWORD=\"$$MSSQL_SA_PASSWORD\" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -Q \"SELECT 1\" -No || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 15
@@ -46,16 +46,17 @@ services:
       Cors__AllowedOrigins__0: http://localhost:${WEB_HTTP_PORT:-8082}
       Jwt__Key: ${JWT_SECRET_KEY:?Defina JWT_SECRET_KEY}
       Jwt__Issuer: ${JWT_ISSUER:-nostalgiatv}
-      Jwt__Audience: ${JWT_ISSUER:-nostalgiatv}
+      Jwt__Audience: ${JWT_AUDIENCE:-nostalgiatv}
       Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
       Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
-      BootstrapAdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:?Set a unique initial administrator password}
+      Metadata__Tmdb__ApiKey: ${TMDB_API_KEY:-}
+      # Needed only on the first start, while "admin" still has the seed placeholder; the API stops with a clear error otherwise.
+      BootstrapAdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       # Permite acceder por nginx (mismo origen) sin bucles de redirect; en dev el
       # puerto sigue publicado para llegar directo a Scalar/OpenAPI en :8080.
       ReverseProxy__TrustForwardedHeaders: "true"
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads
-      CommunityCatalog__PublicUrl: ${COMMUNITY_CATALOG_URL:-}
       # Scheduling preferences are stored in SQL Server and edited in dashboard Settings.
     ports:
       - "127.0.0.1:${API_HTTP_PORT:-8080}:8080"
@@ -85,6 +86,8 @@ services:
     restart: unless-stopped
     environment:
       DOTNET_ENVIRONMENT: Development
+      # FFmpeg shares this memory limit: cap the .NET heap at 384 MiB so the encoder keeps the rest.
+      DOTNET_GCHeapHardLimit: "0x18000000"
       ConnectionStrings__DefaultConnection: Server=sqlserver;Database=NostalgiaTV;User Id=sa;Password=${DB_PASSWORD};TrustServerCertificate=True;Encrypt=True
       FFmpeg__BinaryFolder: /usr/bin
       MediaSettings__BasePath: /app/wwwroot/uploads
@@ -108,7 +111,8 @@ services:
       - no-new-privileges:true
     cpus: ${MEDIA_WORKER_CPUS:-4.0}
     cpu_shares: 128
-    mem_limit: 768m
+    # 1080p x264 encoding plus HEVC decoding needs about 1 GiB; 768m got FFmpeg killed (exit 137) near the end.
+    mem_limit: 1536m
     pids_limit: 128
     stop_grace_period: 30s
     logging: *default-log-options

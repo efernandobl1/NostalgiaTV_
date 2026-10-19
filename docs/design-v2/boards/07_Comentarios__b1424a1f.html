@@ -1,0 +1,62 @@
+<!-- NostalgiaTV · Comentarios -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+select{min-height:44px;padding:0 10px;border:1px solid #3A3A33;border-radius:6px;background:#171714;color:#ECE8DC;font:14px 'IBM Plex Sans',sans-serif;color-scheme:dark}
+-->
+<div class="min-h-screen flex flex-wrap bg-ink text-fg font-sans">
+  <div class="flex-[1_1_248px] border-r border-raised-2">
+    <!-- DC-IMPORT name="Sidebar" active="comments" hint-size="248px,960px" -->
+  </div>
+  <main class="flex-[999_1_560px] min-w-0 pt-8 px-10 pb-14 flex flex-col gap-6 max-w-310">
+
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div class="flex flex-col gap-1.5">
+        <span class="font-mono text-[12px] tracking-[0.14em] text-muted">CH 07 · AUDIENCIA</span>
+        <h1 class="m-0 font-display font-bold text-[36px]">Comentarios</h1>
+      </div>
+      <button class="btn btn-primary" type="button">Aprobar seleccionados</button>
+    </header>
+
+    <div class="flex flex-wrap items-center gap-2.5">
+      <div class="flex flex-wrap gap-1.5" role="group" aria-label="Estado">
+        @for (t of tabs; track $index) {
+          <button type="button" (click)="t.pick($event)" [attr.aria-pressed]="t.pressed" [style]="t.style">{{t.label}} <span class="font-mono text-[11px] opacity-[0.8]">{{t.count}}</span></button>
+        }
+      </div>
+      <span class="flex-1"></span>
+      <label class="flex items-center gap-2 text-[13px] text-muted">Destino
+        <select><option>Todos</option><option>Canales</option><option>Series</option></select>
+      </label>
+    </div>
+
+    <section class="flex flex-col gap-3" aria-label="Comentarios">
+      @for (c of items; track $index) {
+        <article [style]="c.cardStyle">
+          <label class="flex items-start pt-0.5">
+            <span class="absolute w-[1px] h-[1px] overflow-hidden [clip:rect(0_0_0_0)]">Seleccionar comentario</span>
+            <input class="check" type="checkbox">
+          </label>
+          <div class="flex-1 min-w-0 flex flex-col gap-2">
+            <div class="flex flex-wrap items-center gap-y-2 gap-x-3 text-[13px]">
+              <strong class="font-semibold text-[14px]">{{c.user}}</strong>
+              <span class="py-0.5 px-2 rounded-sm font-mono text-[11px] bg-raised-2" [style.color]="c.targetColor">{{c.target}}</span>
+              @if (c.isReply) {
+                <span class="text-[12px] text-muted">↳ respuesta a {{c.replyTo}}</span>
+              }
+              <span class="text-muted">{{c.time}}</span>
+              <span class="flex-1"></span>
+              <span class="font-mono text-[11px] tracking-[0.08em]" [style.color]="c.statusColor">{{c.status}}</span>
+            </div>
+            <p class="m-0 text-[15px] leading-[1.55] text-fg-2">{{c.body}}</p>
+            <div class="flex flex-wrap gap-2">
+              <button class="min-h-10 py-0 px-3.5 border-0 rounded-md bg-ok text-[#0B1A0C] [font:600_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Aprobar</button>
+              <button class="min-h-10 py-0 px-3.5 border border-edge rounded-md bg-transparent text-danger [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Rechazar</button>
+              <button class="btn btn-ghost btn-sm" type="button">Ocultar</button>
+            </div>
+          </div>
+        </article>
+      }
+    </section>
+  </main>
+</div>

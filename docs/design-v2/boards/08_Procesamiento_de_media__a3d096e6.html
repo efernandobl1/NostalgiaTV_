@@ -1,0 +1,148 @@
+<!-- NostalgiaTV · Procesamiento de media -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+table{border-collapse:collapse;width:100%}
+th{text-align:left;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#A29E91;padding:8px 10px;border-bottom:1px solid #2C2C27;white-space:nowrap}
+td{padding:10px;border-bottom:1px solid #24241F;font-size:14px;vertical-align:middle}
+-->
+<div class="min-h-screen flex flex-wrap bg-ink text-fg font-sans">
+  <div class="flex-[1_1_248px] border-r border-raised-2">
+    <!-- DC-IMPORT name="Sidebar" active="media" hint-size="248px,960px" -->
+  </div>
+  <main class="flex-[999_1_560px] min-w-0 pt-8 px-10 pb-14 flex flex-col gap-6 max-w-310">
+
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div class="flex flex-col gap-1.5">
+        <span class="font-mono text-[12px] tracking-[0.14em] text-muted">CH 08 · SISTEMA</span>
+        <h1 class="m-0 font-display font-bold text-[36px]">Procesamiento de media</h1>
+      </div>
+      <div class="flex flex-wrap gap-2.5">
+        <button class="btn btn-ghost" type="button">Reintentar fallidos (7)</button>
+        <button class="inline-flex items-center gap-2 min-h-11 py-0 px-4 border border-[#6A3A33] rounded-md bg-[#221715] text-danger [font:600_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="openClear($event)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
+          Limpiar cola…
+        </button>
+      </div>
+    </header>
+
+    <div class="flex flex-wrap gap-4 items-stretch">
+      @for (w of workers; track $index) {
+        <section class="flex-[1_1_220px] flex flex-col gap-3 p-4.5 bg-panel border border-line rounded-[10px]">
+          <div class="flex items-center justify-between gap-2.5">
+            <span class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" aria-hidden="true" [style.background]="w.color"></span>
+              <span class="font-mono text-[15px]">{{w.id}}</span>
+            </span>
+            <label class="flex items-center gap-2 min-h-11 text-[13px] text-muted">
+              <input class="check" type="checkbox" [attr.checked]="w.enabled">Habilitado
+            </label>
+          </div>
+          <span class="text-[13px] text-muted">{{w.beat}}</span>
+          <span class="font-mono text-[12px] text-fg-2">{{w.load}}</span>
+        </section>
+      }
+    </div>
+
+    <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="pol">
+      <div class="flex flex-wrap justify-between items-center gap-3">
+        <h2 class="m-0 font-display text-[18px] font-semibold" id="pol">Política de recursos</h2>
+        <a class="text-[13px]" routerLink="/admin/ajustes">Editar</a>
+      </div>
+      <div class="flex h-7 rounded-md overflow-hidden font-mono text-[11px]">
+        <span class="flex-[6_0_0] flex items-center pl-2 bg-[#2B2A4A] text-[#D9D3FF]">NOCHE · 12</span>
+        <span class="flex-[17_0_0] flex items-center pl-2 bg-[#3A3122] text-amber-hi">DÍA · 4 núcleos</span>
+        <span class="flex-[1_0_0] bg-[#2B2A4A]"></span>
+      </div>
+      <div class="flex justify-between font-mono text-[11px] text-dim"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span></div>
+    </section>
+
+    <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="jobs">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <h2 class="my-0 mr-3 ml-0 font-display text-[18px] font-semibold" id="jobs">Jobs</h2>
+        @for (t of tabs; track $index) {
+          <button type="button" (click)="t.pick($event)" [attr.aria-pressed]="t.pressed" [style]="t.style">{{t.label}} <span class="font-mono text-[11px] opacity-[0.8]">{{t.count}}</span></button>
+        }
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <label class="flex-[2_1_260px] flex items-center gap-2 min-h-11 py-0 px-3 border border-edge rounded-md bg-ink">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+          <input class="flex-1 min-w-0 border-0 outline-none bg-transparent text-fg [font:14px_'IBM_Plex_Sans',_sans-serif]" type="search" aria-label="Buscar jobs" placeholder="Buscar por archivo, ruta o huella…">
+        </label>
+        <label class="flex-[1_1_160px] flex flex-col gap-1 text-[11px] text-muted">
+          <span class="absolute w-[1px] h-[1px] overflow-hidden [clip:rect(0_0_0_0)]">Serie</span>
+          <select class="min-h-11 py-0 px-2.5 border border-edge rounded-md bg-ink text-fg [font:14px_'IBM_Plex_Sans',_sans-serif] [color-scheme:dark]"><option>Todas las series</option><option>Dragon Ball Z</option><option>Pokémon</option><option>Los Simpson</option></select>
+        </label>
+        <label class="flex-[1_1_140px] flex flex-col gap-1 text-[11px] text-muted">
+          <span class="absolute w-[1px] h-[1px] overflow-hidden [clip:rect(0_0_0_0)]">Worker</span>
+          <select class="min-h-11 py-0 px-2.5 border border-edge rounded-md bg-ink text-fg [font:14px_'IBM_Plex_Sans',_sans-serif] [color-scheme:dark]"><option>Todos los workers</option><option>transcode</option><option>probe</option><option>thumbnails</option></select>
+        </label>
+        <label class="flex-[1_1_160px] flex flex-col gap-1 text-[11px] text-muted">
+          <span class="absolute w-[1px] h-[1px] overflow-hidden [clip:rect(0_0_0_0)]">Ordenar</span>
+          <select class="min-h-11 py-0 px-2.5 border border-edge rounded-md bg-ink text-fg [font:14px_'IBM_Plex_Sans',_sans-serif] [color-scheme:dark]"><option>Más recientes</option><option>Más antiguos</option><option>Mayor tamaño</option></select>
+        </label>
+      </div>
+
+      @if (hasSel) {
+        <div class="flex flex-wrap items-center gap-2.5 py-2.5 px-3.5 border border-[#5A4A2A] rounded-lg bg-[#221D12]" role="region" aria-label="Acciones en lote">
+          <span class="text-[14px]"><strong class="font-mono text-amber">{{selCount}}</strong> seleccionados</span>
+          <button class="min-h-9 py-0 px-2.5 border-0 bg-transparent text-amber [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer underline" type="button" (click)="selectAllMatching($event)">Seleccionar los {{matching}} que coinciden</button>
+          <span class="flex-1"></span>
+          <button class="btn btn-ghost btn-xs" type="button">Reintentar</button>
+          <button class="min-h-9 py-0 px-3 border-0 rounded-md bg-live text-on-live [font:600_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="openDeleteSel($event)">Eliminar seleccionados</button>
+          <button class="w-9 h-9 border-0 rounded-md bg-transparent text-muted cursor-pointer" type="button" (click)="clearSel($event)" aria-label="Quitar selección">✕</button>
+        </div>
+      }
+
+      <div class="overflow-x-auto">
+        <table>
+          <thead><tr><th class="w-9"><input class="check" type="checkbox" aria-label="Seleccionar página" [attr.checked]="allOnPage" (change)="togglePage($event)"></th><th>SERIE</th><th>WORKER</th><th>ORIGEN</th><th>TAMAÑO</th><th>PROGRESO</th><th>ESTADO</th><th>MENSAJE</th></tr></thead>
+          <tbody>
+            @for (j of jobs; track $index) {
+              <tr [style]="j.rowStyle">
+                <td><input class="check" type="checkbox" aria-label="Seleccionar job" [attr.checked]="j.selected" (change)="j.toggle($event)"></td>
+                <td class="font-medium whitespace-nowrap">{{j.series}}</td>
+                <td class="font-mono text-[12px]">{{j.worker}}</td>
+                <td class="font-mono text-[12px] text-muted max-w-55 truncate">{{j.path}}</td>
+                <td class="font-mono text-[12px] whitespace-nowrap">{{j.size}}</td>
+                <td class="min-w-30">
+                  <span class="flex items-center gap-2">
+                    <span class="flex-1 h-1 rounded-xs bg-line"><span class="block h-1 rounded-xs" [style.width.%]="j.progress" [style.background]="j.color"></span></span>
+                    <span class="font-mono text-[11px] text-muted">{{j.progress}}%</span>
+                  </span>
+                </td>
+                <td><span class="font-mono text-[11px] tracking-[0.06em]" [style.color]="j.color">{{j.status}}</span></td>
+                <td class="text-[12px] text-muted">{{j.msg}}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <nav class="flex flex-wrap items-center gap-2.5 text-[13px] text-muted" aria-label="Paginación">
+        <span>Mostrando <strong class="font-mono text-fg">1–50</strong> de <strong class="font-mono text-fg">{{matching}}</strong></span>
+        <label class="flex items-center gap-1.5">Por página
+          <select class="min-h-9 py-0 px-2 border border-edge rounded-md bg-ink text-fg [font:13px_'IBM_Plex_Mono',_monospace] [color-scheme:dark]"><option>50</option><option>100</option><option>250</option></select>
+        </label>
+        <span class="flex-1"></span>
+        <button class="w-9 h-9 border border-line rounded-md bg-transparent text-[#5A5A52]" type="button" aria-label="Página anterior" disabled="">‹</button>
+        @for (p of pages; track $index) {
+          <button type="button" [attr.aria-current]="p.current" [style]="p.style">{{p.label}}</button>
+        }
+        <button class="w-9 h-9 border border-edge rounded-md bg-transparent text-fg cursor-pointer" type="button" aria-label="Página siguiente">›</button>
+      </nav>
+    </section>
+  </main>
+
+  @if (dlgClear) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start py-12 px-4 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-150"><!-- DC-IMPORT name="DlgClearQueue" on-close="{{close}}" hint-size="100%,680px" --></div>
+    </div>
+  }
+  @if (dlgDelete) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start pt-30 px-4 pb-12 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-130"><!-- DC-IMPORT name="DlgConfirm" heading="{{delHeading}}" message="Los jobs en procesamiento se omiten. Los registros eliminados no se pueden recuperar." confirm-label="Eliminar" tone="danger" on-close="{{close}}" hint-size="100%,300px" --></div>
+    </div>
+  }
+</div>

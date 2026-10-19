@@ -1,90 +1,43 @@
 using System.Security.Claims;
-using ApplicationCore.Entities;
-using Infrastructure.Contexts;
+using ApplicationCore.Interfaces.Repositories;
 
 namespace WebApi.Middleware;
 
-public sealed class ActivityLoggingMiddleware
+/// <summary>Records successful admin changes (Resumen → actividad reciente).</summary>
+public sealed class ActivityLoggingMiddleware(RequestDelegate next, ILogger<ActivityLoggingMiddleware> logger)
 {
     private static readonly HashSet<string> TrackedMethods = ["POST", "PUT", "PATCH", "DELETE"];
-    private readonly RequestDelegate _next;
-    private readonly ILogger<ActivityLoggingMiddleware> _logger;
 
-    public ActivityLoggingMiddleware(RequestDelegate next, ILogger<ActivityLoggingMiddleware> logger)
+    public async Task InvokeAsync(HttpContext context, IActivityRepository activity)
     {
-        _next = next;
-        _logger = logger;
-    }
-
-    public async Task InvokeAsync(HttpContext context, NostalgiaTVContext database)
-    {
-        await _next(context);
-
-        if (!ShouldTrack(context))
-        {
-            return;
-        }
-
+        await next(context);
+        if (!ShouldTrack(context)) return;
         try
         {
+            int? userId = int.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
             var username = context.User.Identity?.Name ?? "Sistema";
-            int? userId = int.TryParse(context.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
-                ? id
-                : null;
-            var path = context.Request.Path.Value ?? string.Empty;
-
-            database.ActivityLogs.Add(new ActivityLog
-            {
-                UserId = userId,
-                Username = username,
-                Action = GetAction(context.Request.Method),
-                Resource = GetResource(path),
-                Description = BuildDescription(username, context.Request.Method, path),
-                CreatedAtUtc = DateTime.UtcNow,
-            });
-
-            await database.SaveChangesAsync(context.RequestAborted);
+            var path = context.Request.Path.Value ?? "";
+            var action = context.Request.Method switch { "POST" => "create", "DELETE" => "delete", _ => "edit" };
+            var resource = Resource(path);
+            var verb = action switch { "create" => "creó o ejecutó", "delete" => "eliminó", _ => "actualizó" };
+            await activity.LogAsync(userId, action, resource, $"{username} {verb} {resource}", CancellationToken.None);
         }
         catch (Exception exception)
         {
-            _logger.LogWarning(exception, "Could not persist the activity entry");
+            logger.LogWarning(exception, "Could not persist the activity entry");
         }
     }
 
-    private static bool ShouldTrack(HttpContext context)
-    {
-        var path = context.Request.Path.Value ?? string.Empty;
-        return context.Response.StatusCode < 400
-            && TrackedMethods.Contains(context.Request.Method)
-            && path.StartsWith("/api/v1/", StringComparison.OrdinalIgnoreCase)
-            && !context.Request.Path.StartsWithSegments("/api/v1/viewer")
-            && !path.StartsWith("/api/v1/auth/", StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool ShouldTrack(HttpContext context) =>
+        context.Response.StatusCode < 400 && TrackedMethods.Contains(context.Request.Method)
+        && context.Request.Path.StartsWithSegments("/api/v1/admin");
 
-    private static string GetAction(string method) => method switch
+    /// <summary>"/api/v1/admin/channels/3/eras" → "channels/eras".</summary>
+    private static string Resource(string path)
     {
-        "POST" => "create",
-        "PUT" or "PATCH" => "edit",
-        "DELETE" => "delete",
-        _ => "change",
-    };
-
-    private static string GetResource(string path)
-    {
-        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        return segments.Length > 2 ? segments[2] : "dashboard";
-    }
-
-    private static string BuildDescription(string username, string method, string path)
-    {
-        var action = GetAction(method) switch
-        {
-            "create" => "creó o ejecutó",
-            "edit" => "actualizó",
-            "delete" => "eliminó",
-            _ => "modificó",
-        };
-
-        return $"{username} {action} {GetResource(path)}";
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries).Skip(3)
+            .Where(segment => !segment.All(char.IsDigit) && !Guid.TryParse(segment, out _)).Take(3);
+        var resource = string.Join('/', segments);
+        return resource.Length == 0 ? "admin" : resource;
     }
 }

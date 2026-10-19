@@ -1,0 +1,52 @@
+<!-- NostalgiaTV · Vincular TV -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+-->
+<div class="min-h-screen bg-ink text-fg font-sans">
+  <!-- DC-IMPORT name="PubHeader" active="pair" hint-size="100%,80px" -->
+
+  <main class="max-w-300 my-0 mx-auto pt-12 px-10 pb-18 flex flex-wrap gap-8 items-start">
+    <section class="flex-[3_1_480px] min-w-0 flex flex-col gap-5.5 p-8 bg-panel border border-line rounded-[18px]" aria-labelledby="pair">
+      @if (form) {
+        <div class="flex flex-col gap-2">
+          <span class="font-mono text-[13px] tracking-[0.12em] text-amber">ANDROID TV · SMART TV</span>
+          <h1 class="m-0 font-display font-bold text-[36px]" id="pair">Vincular un televisor</h1>
+          <p class="m-0 text-[15px] leading-[1.55] text-muted">Abre NostalgiaTV en tu TV y escribe aquí el código que aparece en pantalla. El código vence en 10 minutos.</p>
+        </div>
+        <label class="flex flex-col gap-2 text-[13px] text-muted">Código del televisor
+          <input class="min-h-18 py-0 px-5 w-full max-w-105 border-[2px] border-edge rounded-xl bg-ink text-fg [font:600_34px_'IBM_Plex_Mono',_monospace] tracking-[0.2em] uppercase" type="text" [attr.value]="code" (change)="setCode($event)" maxlength="9" autocomplete="one-time-code" placeholder="XXXX-XXXX">
+        </label>
+        <label class="flex flex-col gap-2 text-[13px] text-muted">Nombre del dispositivo
+          <input class="min-h-12 py-0 px-3.5 w-full max-w-105 border border-edge rounded-[10px] bg-ink text-fg [font:15px_'IBM_Plex_Sans',_sans-serif]" type="text" value="TV de la sala">
+        </label>
+        <button class="self-start min-h-13 py-0 px-7 border-0 rounded-[26px] bg-amber text-on-amber [font:600_16px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="link($event)">Vincular televisor</button>
+      }
+      @if (done) {
+        <span class="w-16 h-16 rounded-full flex items-center justify-center bg-[#1E2A1E]" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8BE08F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>
+        </span>
+        <h1 class="m-0 font-display font-bold text-[36px]">¡Listo! Tu TV ya está vinculada</h1>
+        <p class="m-0 text-[15px] leading-[1.55] text-muted">«TV de la sala» comenzará a reproducir en unos segundos con tu progreso guardado.</p>
+        <button class="self-start min-h-12 py-0 px-5.5 border border-edge rounded-3xl bg-transparent text-fg [font:500_15px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="reset($event)">Vincular otro</button>
+      }
+    </section>
+
+    <section class="flex-[2_1_340px] min-w-0 flex flex-col gap-3" aria-labelledby="devs">
+      <h2 class="m-0 font-display text-[24px] font-bold" id="devs">Mis dispositivos</h2>
+      @for (d of devices; track $index) {
+        <div class="flex items-center gap-3.5 py-3.5 px-4 border border-line rounded-[14px] bg-panel">
+          <span class="w-11 h-11 flex-none rounded-[10px] flex items-center justify-center bg-raised-2 text-amber" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect [attr.x]="d.x" [attr.y]="d.y" [attr.width]="d.w" [attr.height]="d.h" rx="2"></rect></svg>
+          </span>
+          <span class="flex-1 min-w-0 flex flex-col gap-0.5">
+            <span class="font-semibold text-[15px]">{{d.name}}</span>
+            <span class="text-[12px] text-muted">{{d.meta}}</span>
+          </span>
+          <button class="min-h-10 py-0 px-3 border border-edge rounded-[20px] bg-transparent text-danger [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Quitar</button>
+        </div>
+      }
+      <p class="mt-1 mx-0 mb-0 text-[13px] leading-[1.5] text-dim">Al quitar un dispositivo se cierra su sesión de inmediato. Tu progreso de visualización se conserva.</p>
+    </section>
+  </main>
+</div>

@@ -1,0 +1,79 @@
+<!-- NostalgiaTV · Móvil · Inicio -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+-->
+<div class="w-97.5 h-211 flex flex-col overflow-hidden bg-ink text-fg font-sans">
+  <header class="flex-none flex items-center gap-2.5 pt-4 px-4 pb-3">
+    <svg width="28" height="28" viewBox="0 0 36 36" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path><rect x="8" y="14" width="16" height="12" rx="2"></rect></svg>
+    <span class="flex-1 font-display font-bold text-[17px] tracking-[0.08em]">NOSTALGIA TV</span>
+    <a class="w-11 h-11 flex items-center justify-center text-fg" routerLink="/MobCatalog" aria-label="Buscar">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+    </a>
+    <a class="w-11 h-11 flex items-center justify-center text-fg" routerLink="/MobPair" aria-label="Vincular TV">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="13" rx="2"></rect><path d="M8 21h8"></path></svg>
+    </a>
+  </header>
+
+  <main class="flex-1 overflow-y-auto flex flex-col gap-6 pt-1 px-4 pb-6">
+    <div class="flex items-center gap-2 py-2.5 px-3 rounded-[10px] bg-[#2A1A0C] text-[#FFC48A] text-[13px]">
+      <span class="font-mono text-[11px] tracking-[0.1em]">HALLOWEEN</span>
+      <span>Especiales de terror hasta el 31</span>
+    </div>
+
+    <a class="flex flex-col rounded-2xl overflow-hidden border border-line bg-panel text-fg no-underline" routerLink="/MobPlayer">
+      <span class="relative block aspect-[16_/_9] [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_radial-gradient(ellipse_at_center,_#2A2920_0%,_#0B0B09_80%)]">
+        <span class="absolute top-2.5 left-2.5 py-1 px-2 rounded-sm font-mono text-[11px] tracking-[0.1em] text-on-live bg-live">● EN VIVO</span>
+        <span class="absolute top-1.5 right-3 font-display font-bold text-[30px] text-ok">05</span>
+        <span class="absolute left-0 right-0 bottom-0 h-[3px] bg-[rgba(255,255,255,0.15)]"><span class="block h-[3px] w-[34%] bg-amber"></span></span>
+      </span>
+      <span class="flex flex-col gap-1 pt-3 px-3.5 pb-3.5">
+        <span class="font-mono text-[11px] text-amber">CANAL 5 RETRO · T2 · E14</span>
+        <span class="font-display font-bold text-[24px]">Dragon Ball Z</span>
+        <span class="text-[13px] text-muted">Sigue: Pokémon a las 14:39</span>
+      </span>
+    </a>
+
+    <section class="flex flex-col gap-2.5">
+      <h1 class="m-0 font-display text-[24px] font-bold">Canales</h1>
+      <div class="flex gap-2 overflow-x-auto pb-0.5" role="group" aria-label="Filtrar canales">
+        @for (f of filters; track $index) {
+          <button type="button" (click)="f.pick($event)" [attr.aria-pressed]="f.pressed" [style]="f.style">{{f.label}}</button>
+        }
+      </div>
+      @for (c of channels; track $index) {
+        <a class="flex items-center gap-3 min-h-16 py-2 px-3 rounded-xl bg-panel text-fg no-underline" routerLink="/MobPlayer">
+          <span class="w-11 h-11 flex-none rounded-[10px] flex items-center justify-center font-display font-bold text-[17px] text-amber bg-raised-2">{{c.num}}</span>
+          <span class="flex-1 min-w-0 flex flex-col gap-1">
+            <span class="font-semibold text-[15px]">{{c.name}}</span>
+            <span class="text-[12px] text-muted truncate">Ahora: {{c.now}}</span>
+            <span class="block h-[3px] rounded-xs bg-line"><span class="block h-[3px] rounded-xs bg-amber" [style.width.%]="c.pct"></span></span>
+          </span>
+        </a>
+      }
+    </section>
+
+    <section class="flex flex-col gap-2.5">
+      <h2 class="m-0 font-display text-[19px] font-bold">Continuar viendo</h2>
+      <div class="flex gap-3 overflow-x-auto pb-1">
+        @for (v of cont; track $index) {
+          <a class="w-50 flex-none flex flex-col gap-2 text-fg no-underline" routerLink="/MobSeries">
+            <span class="relative block aspect-[16_/_9] rounded-[10px] overflow-hidden [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#1F1F1B]">
+              <span class="absolute left-0 right-0 bottom-0 h-[3px] bg-[rgba(255,255,255,0.12)]"><span class="block h-[3px] bg-amber" [style.width.%]="v.pct"></span></span>
+            </span>
+            <span class="font-semibold text-[14px]">{{v.series}}</span>
+            <span class="text-[12px] text-muted mt--1">{{v.code}}</span>
+          </a>
+        }
+      </div>
+    </section>
+  </main>
+
+  <nav class="flex-none flex border-t border-raised-2 bg-rail pb-2" aria-label="Principal">
+    @for (t of tabs; track $index) {
+      <a [routerLink]="t.href" [attr.aria-current]="t.current" [style]="t.style">
+        <span class="w-6 h-1 rounded-xs" aria-hidden="true" [style.background]="t.bar"></span>
+        {{t.label}}
+      </a>
+    }
+  </nav>
+</div>

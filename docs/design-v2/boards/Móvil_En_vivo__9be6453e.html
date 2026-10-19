@@ -1,0 +1,82 @@
+<!-- NostalgiaTV · Móvil · En vivo -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+-->
+<div class="w-97.5 h-211 flex flex-col overflow-hidden bg-ink text-fg font-sans">
+  <div class="flex-none relative aspect-[16_/_9] [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_radial-gradient(ellipse_at_center,_#2A2920_0%,_#050504_80%)]">
+    <a class="absolute top-1.5 left-1.5 w-11 h-11 flex items-center justify-center text-fg" routerLink="/MobHome" aria-label="Volver">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <span class="absolute top-2 right-3.5 font-display font-bold text-[32px] text-ok [text-shadow:0_0_8px_rgba(139,224,143,0.5)]">{{ch.num}}</span>
+    <span class="absolute inset-0 flex items-center justify-center font-mono text-[11px] tracking-[0.12em] text-faint">[ VIDEO ]</span>
+    <a class="absolute right-1.5 bottom-2 w-11 h-11 flex items-center justify-center text-fg" routerLink="/MobFullscreen" aria-label="Pantalla completa">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg>
+    </a>
+    <button class="absolute right-13 bottom-2 w-11 h-11 flex items-center justify-center border-0 bg-transparent text-fg" type="button" aria-label="Silenciar">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"></path><path d="M17 8a5 5 0 0 1 0 8"></path></svg>
+    </button>
+    <span class="absolute left-0 right-0 bottom-0 h-[3px] bg-[rgba(255,255,255,0.15)]"><span class="block h-[3px] bg-amber" [style.width.%]="ch.pct"></span></span>
+  </div>
+
+  <main class="flex-1 overflow-y-auto flex flex-col gap-4 pt-3.5 px-4 pb-5">
+    <div class="flex flex-col gap-1">
+      <span class="flex items-center gap-2 font-mono text-[11px] text-amber">
+        <span class="py-0.5 px-1.5 rounded-[3px] text-on-live bg-live">EN VIVO</span><a class="text-amber" routerLink="/MobChannel">{{ch.name}} ›</a>
+      </span>
+      <h1 class="m-0 font-display font-bold text-[26px]">{{ch.now}}</h1>
+      <span class="text-[13px] text-muted">{{ch.detail}}</span>
+    </div>
+
+    <div class="flex gap-2 overflow-x-auto pb-0.5">
+      @for (c of chips; track $index) {
+        <button type="button" (click)="c.pick($event)" [attr.aria-pressed]="c.pressed" [style]="c.style">{{c.num}} · {{c.short}}</button>
+      }
+    </div>
+
+    <div class="flex border-b border-line" role="tablist" aria-label="Panel">
+      @for (t of tabs; track $index) {
+        <button type="button" role="tab" [attr.aria-selected]="t.selected" (click)="t.pick($event)" [style]="t.style">{{t.label}}</button>
+      }
+    </div>
+
+    @if (showGuide) {
+      <div class="flex flex-col">
+        @for (g of guide; track $index) {
+          <div [style]="g.style">
+            <span class="w-12 flex-none font-mono text-[13px]" [style.color]="g.timeColor">{{g.time}}</span>
+            <span class="flex flex-col gap-0.5">
+              <span class="font-semibold text-[14px]">{{g.title}}</span>
+              <span class="text-[12px] text-muted">{{g.sub}}</span>
+            </span>
+          </div>
+        }
+      </div>
+    }
+    @if (showChat) {
+      <div class="flex flex-col gap-3.5">
+        @for (m of comments; track $index) {
+          <div class="flex gap-2.5">
+            <span class="w-7.5 h-7.5 flex-none rounded-full flex items-center justify-center font-display font-bold text-[11px] bg-line" aria-hidden="true">{{m.ini}}</span>
+            <span class="flex flex-col gap-0.5">
+              <span class="text-[12px]"><strong class="font-semibold">{{m.user}}</strong> <span class="text-dim">{{m.time}}</span></span>
+              <span class="text-[14px] leading-[1.45] text-fg-2">{{m.body}}</span>
+            </span>
+          </div>
+        }
+        <div class="flex gap-2">
+          <input class="flex-1 min-w-0 min-h-11 py-0 px-3.5 border border-edge rounded-[22px] bg-panel text-fg [font:14px_'IBM_Plex_Sans',_sans-serif]" type="text" aria-label="Escribe un comentario" placeholder="Escribe un comentario…">
+          <button class="min-h-11 py-0 px-4 border-0 rounded-[22px] bg-amber text-on-amber [font:600_14px_'IBM_Plex_Sans',_sans-serif]" type="button">Enviar</button>
+        </div>
+      </div>
+    }
+  </main>
+
+  <nav class="flex-none flex border-t border-raised-2 bg-rail pb-2" aria-label="Principal">
+    @for (t of nav; track $index) {
+      <a [routerLink]="t.href" [attr.aria-current]="t.current" [style]="t.style">
+        <span class="w-6 h-1 rounded-xs" aria-hidden="true" [style.background]="t.bar"></span>
+        {{t.label}}
+      </a>
+    }
+  </nav>
+</div>

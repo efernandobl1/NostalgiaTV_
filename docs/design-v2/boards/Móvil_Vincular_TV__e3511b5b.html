@@ -1,0 +1,69 @@
+<!-- NostalgiaTV · Móvil · Vincular TV -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+-->
+<div class="w-97.5 h-211 flex flex-col overflow-hidden bg-ink text-fg font-sans">
+  <header class="flex-none flex items-center gap-1.5 pt-2 px-2 pb-1">
+    <a class="w-11 h-11 flex items-center justify-center text-fg" routerLink="/MobHome" aria-label="Volver">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <span class="font-display font-semibold text-[18px]">Vincular TV</span>
+  </header>
+
+  <main class="flex-1 overflow-y-auto flex flex-col gap-5.5 pt-3 px-4 pb-6">
+    @if (form) {
+      <div class="flex flex-col gap-2">
+        <h1 class="m-0 font-display font-bold text-[26px] leading-[1.1]">Escribe el código que ves en tu TV</h1>
+        <span class="text-[14px] leading-[1.5] text-muted">Abre NostalgiaTV en el televisor y elige «Vincular dispositivo».</span>
+      </div>
+      <label class="flex flex-col gap-2 text-[13px] text-muted">Código
+        <input class="min-h-16 py-0 px-4 w-full border-[2px] border-edge rounded-xl bg-panel text-fg [font:600_28px_'IBM_Plex_Mono',_monospace] tracking-[0.16em] text-center uppercase" type="text" [attr.value]="code" (change)="setCode($event)" maxlength="9" autocomplete="one-time-code" placeholder="XXXX-XXXX">
+      </label>
+      <button class="flex items-center justify-center gap-2.5 min-h-12 border border-edge rounded-3xl bg-transparent text-fg [font:500_15px_'IBM_Plex_Sans',_sans-serif]" type="button">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"></path><path d="M9 9h6v6H9z"></path></svg>
+        Escanear código QR
+      </button>
+      <label class="flex flex-col gap-2 text-[13px] text-muted">Nombre del televisor
+        <input class="min-h-12 py-0 px-3.5 w-full border border-edge rounded-[10px] bg-panel text-fg [font:15px_'IBM_Plex_Sans',_sans-serif]" type="text" value="TV de la sala">
+      </label>
+      <button class="min-h-13 border-0 rounded-[26px] bg-amber text-on-amber [font:600_16px_'IBM_Plex_Sans',_sans-serif]" type="button" (click)="link($event)">Vincular</button>
+    }
+    @if (done) {
+      <div class="flex flex-col items-center gap-3.5 py-8 px-2 text-center">
+        <span class="w-18 h-18 rounded-full flex items-center justify-center bg-[#1E2A1E]" aria-hidden="true">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8BE08F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>
+        </span>
+        <h1 class="m-0 font-display font-bold text-[26px]">TV vinculada</h1>
+        <span class="text-[14px] text-muted">«TV de la sala» ya puede reproducir con tu perfil.</span>
+        <button class="min-h-12 py-0 px-6 border border-edge rounded-3xl bg-transparent text-fg [font:500_15px_'IBM_Plex_Sans',_sans-serif]" type="button" (click)="reset($event)">Vincular otra</button>
+      </div>
+    }
+
+    <section class="flex flex-col gap-2">
+      <div class="flex items-center gap-3 p-3 rounded-xl bg-panel">
+        <span class="w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-on-amber bg-amber" aria-hidden="true">FE</span>
+        <span class="flex-1 flex flex-col gap-0.5"><span class="font-semibold text-[14px]">fernando</span><span class="text-[12px] text-muted">Cuenta de espectador</span></span>
+        <a class="inline-flex items-center min-h-10 py-0 px-3 text-amber text-[13px] no-underline" routerLink="/MobProfile">Ver perfil</a>
+      </div>
+      <h2 class="mt-2 mx-0 mb-0 font-display text-[18px] font-bold">Mis dispositivos</h2>
+      @for (d of devices; track $index) {
+        <div class="flex items-center gap-3 min-h-15 py-2 px-3 rounded-xl bg-panel">
+          <span class="flex-1 flex flex-col gap-0.5">
+            <span class="font-semibold text-[14px]">{{d.name}}</span>
+            <span class="text-[12px] text-muted">{{d.meta}}</span>
+          </span>
+          <button class="min-h-10 py-0 px-3 border-0 rounded-[20px] bg-transparent text-danger [font:500_13px_'IBM_Plex_Sans',_sans-serif]" type="button">Quitar</button>
+        </div>
+      }
+    </section>
+  </main>
+
+  <nav class="flex-none flex border-t border-raised-2 bg-rail pb-2" aria-label="Principal">
+    @for (t of nav; track $index) {
+      <a [routerLink]="t.href" [attr.aria-current]="t.current" [style]="t.style">
+        <span class="w-6 h-1 rounded-xs" aria-hidden="true" [style.background]="t.bar"></span>
+        {{t.label}}
+      </a>
+    }
+  </nav>
+</div>

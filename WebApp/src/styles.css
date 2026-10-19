@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+/* NostalgiaTV v2 design tokens (from the "NostalgiaTV v2" design canvas). */
+@theme {
+  --font-display: "Chakra Petch", sans-serif;
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  --color-ink: #0E0E0C;
+  --color-ink-2: #0B0B09;
+  --color-ink-3: #050504;
+  --color-rail: #121210;
+  --color-panel: #171714;
+  --color-panel-2: #1A1A16;
+  --color-raised: #1F1F1B;
+  --color-raised-2: #24241F;
+  --color-line: #2C2C27;
+  --color-edge: #3A3A33;
+  --color-edge-2: #4A4A42;
+  --color-fg: #ECE8DC;
+  --color-fg-2: #D6D2C6;
+  --color-muted: #A29E91;
+  --color-dim: #8C887D;
+  --color-faint: #5E5B52;
+  --color-amber: #FFB547;
+  --color-amber-hi: #FFD08A;
+  --color-on-amber: #1A1206;
+  --color-amber-wash: #24231C;
+  --color-cream: #FFF3DA;
+  --color-danger: #FF8A80;
+  --color-live: #FF6B5E;
+  --color-on-live: #1A0906;
+  --color-ok: #8BE08F;
+  --color-info: #6FD0EA;
+  --color-violet: #B8A6FF;
+}
+
+/* CRT switch-off: the picture collapses to the glowing line of "Sesión cerrada". */
+@keyframes tv-off {
+  0% { transform: scale(1.6, 40); opacity: .25; }
+  55% { transform: scale(1.1, 1); opacity: 1; }
+  100% { transform: scale(1, 1); opacity: 1; }
+}
+
+/* Phones in portrait or landscape (landscape phones are wider than md but very short). */
+@custom-variant compact {
+  @media (max-width: 767px) { @slot; }
+  @media (max-height: 500px) { @slot; }
+}
+
+@layer base {
+  html, body { background: var(--color-ink); color: var(--color-fg); font-family: var(--font-sans); }
+  a { color: var(--color-amber); }
+  a:hover { color: var(--color-amber-hi); }
+  button { cursor: pointer; }
+}
+
+/* ── Reusable control styles (repeated across the whole design) ── */
+@utility btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 16px; border-radius: 6px; border: 0;
+  font: 500 14px var(--font-sans); cursor: pointer; text-decoration: none;
+  &:disabled { opacity: .5; cursor: not-allowed; }
+}
+@utility btn-primary { background: var(--color-amber); color: var(--color-on-amber); font-weight: 600; padding: 0 18px;
+  &:hover { background: var(--color-amber-hi); color: var(--color-on-amber); } }
+@utility btn-ghost { background: transparent; color: var(--color-fg); border: 1px solid var(--color-edge);
+  &:hover { background: var(--color-raised); color: var(--color-fg); } }
+@utility btn-danger { background: var(--color-live); color: var(--color-on-live); font-weight: 600; padding: 0 18px; }
+@utility btn-danger-text { background: transparent; color: var(--color-danger); padding: 0 14px; }
+@utility btn-sm { min-height: 40px; padding: 0 14px; font-size: 13px; }
+@utility btn-xs { min-height: 36px; padding: 0 12px; font-size: 13px; }
+@utility btn-icon {
+  display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--color-muted); cursor: pointer;
+  &:hover { background: var(--color-raised); color: var(--color-fg); }
+}
+@utility field {
+  min-height: 44px; padding: 0 12px; width: 100%; border: 1px solid var(--color-edge); border-radius: 6px;
+  background: var(--color-ink); color: var(--color-fg); font: 14px var(--font-sans); color-scheme: dark;
+  &:focus { outline: 2px solid var(--color-amber); outline-offset: -1px; }
+}
+@utility field-mono { font: 14px var(--font-mono); padding: 0 10px; }
+@utility field-date { font: 13px var(--font-mono); padding: 0 8px; }
+@utility field-select { padding: 0 10px; }
+@utility field-area { min-height: 0; padding: 10px 12px; font: 14px/1.5 var(--font-sans); resize: vertical; }
+@utility check { width: 18px; height: 18px; accent-color: var(--color-amber); }
+@utility card { background: var(--color-panel); border: 1px solid var(--color-line); border-radius: 10px; }
+@utility scanlines { background: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 3px), var(--color-raised); }
+/* CRT scanlines over a theme color: scan-raised, scan-raised-2, scan-rail… Line alpha via [--scan:0.025]. */
+@utility scan-* {
+  --scan-bg: --value(--color-*);
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,var(--scan, 0.04)) 0 1px, transparent 1px 3px), var(--scan-bg);
+}
+/* "Static" TV screen used by channel cards and players. Edge color via [--screen-edge:#0B0B09]. */
+@utility tv-screen {
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, #2A2920 0%, var(--screen-edge, #0E0E0C) 80%);
+}
+@utility chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 20px;
+  border: 1px solid var(--color-edge); background: transparent; color: var(--color-fg);
+  font: 500 13px var(--font-sans); cursor: pointer; white-space: nowrap;
+  &[aria-pressed="true"], &.on { border-color: var(--color-amber); background: var(--color-amber); color: var(--color-on-amber); }
+}
+/* Fullscreen overlay control (56px glassy pill). */
+@utility fs-btn {
+  display: inline-flex; align-items: center; justify-content: center; height: 56px; border: 1px solid var(--color-edge-2);
+  border-radius: 28px; background: rgba(11,11,9,0.6); color: var(--color-fg); font: 600 16px var(--font-sans);
+  text-decoration: none; cursor: pointer;
+  &:hover { background: rgba(36,36,31,0.8); color: var(--color-fg); }
+}
+/* ── Android TV (10-foot UI on a 1920×1080 stage) ── */
+/* D-pad focus ring: cream by default, amber for posters/episodes via [--ring:#FFB547]. */
+@utility tv-focus {
+  outline: none; transition: transform .12s ease-out, box-shadow .12s ease-out;
+  &:focus, &[data-focus="true"] { box-shadow: 0 0 0 4px #0B0B09, 0 0 0 8px var(--ring, #FFF3DA); transform: scale(var(--focus-scale, 1.04)); }
+}
+@utility tv-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 14px; height: 76px; padding: 0 36px;
+  border: 0; border-radius: 38px; background: rgba(236,232,220,0.12); color: var(--color-fg);
+  font: 700 26px var(--font-sans); text-decoration: none; cursor: pointer; white-space: nowrap;
+  &:hover { color: var(--color-fg); }
+}
+@utility tv-btn-primary { background: var(--color-amber); color: var(--color-on-amber); &:hover { color: var(--color-on-amber); } }
+@utility tv-chip {
+  display: inline-flex; align-items: center; height: 52px; padding: 0 24px; border: 0; border-radius: 26px;
+  background: rgba(236,232,220,0.1); color: var(--color-fg); font: 400 20px var(--font-sans); cursor: pointer;
+  &[aria-pressed="true"] { background: var(--color-amber); color: var(--color-on-amber); font-weight: 600; }
+}
+/* Horizontal chip/card rails on phones scroll without a visible scrollbar. */
+@utility no-scrollbar { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
+/* Larger public-site filter chip (44px, 14px). */
+@utility chip-lg { min-height: 44px; padding: 0 16px; border-radius: 22px; font-size: 14px; }
+/* Public-site pill buttons (rounded, 44px). */
+@utility pill {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px;
+  border: 1px solid var(--color-edge); border-radius: 22px; background: transparent; color: var(--color-fg);
+  font: 500 14px var(--font-sans); text-decoration: none; cursor: pointer; white-space: nowrap;
+  &:hover { background: var(--color-raised); color: var(--color-fg); }
+  &:disabled { opacity: .5; cursor: not-allowed; }
+}
+@utility pill-primary {
+  border-color: transparent; background: var(--color-amber); color: var(--color-on-amber); font-weight: 600;
+  &:hover { background: var(--color-amber-hi); color: var(--color-on-amber); }
+}
+
+/* Data tables (design: th mono 11px muted, td 13px with soft row rules). */
+@layer components {
+  .dtable { border-collapse: collapse; width: 100%; }
+  .dtable th { text-align: left; font: 500 11px var(--font-mono); letter-spacing: .1em; color: var(--color-muted); padding: 8px 10px; border-bottom: 1px solid var(--color-line); }
+  .dtable td { padding: 10px; border-bottom: 1px solid var(--color-raised-2); font-size: 13px; vertical-align: top; }
+}
+/* Selectable list card (channels, series, profiles...). */
+@utility pick-card {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--color-line); background: var(--color-panel); color: inherit; font: inherit; text-align: left;
+  &:hover { background: var(--color-raised); }
+  &[aria-pressed="true"] { border-color: var(--color-amber); background: var(--color-amber-wash); }
+}
+/* Underlined section tabs (role="tab" + aria-selected). */
+@utility tab {
+  min-height: 44px; padding: 0 16px; border: 0; margin-bottom: -1px; background: transparent; cursor: pointer;
+  font: 500 14px var(--font-sans); color: var(--color-muted); border-bottom: 2px solid transparent;
+  &:hover { color: var(--color-fg); }
+  &[aria-selected="true"] { color: var(--color-amber); border-bottom-color: var(--color-amber); }
+}

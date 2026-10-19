@@ -14,31 +14,26 @@ ENV LANG=C.UTF-8 \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa AS build
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 # Copiar sólo los .csproj primero maximiza el uso de la caché de capas en 'restore'.
+# The test suite runs in CI (with SQL Server and ffmpeg) before any image is built.
 COPY ["WebApi/WebApi.csproj", "WebApi/"]
 COPY ["ApplicationCore/ApplicationCore.csproj", "ApplicationCore/"]
 COPY ["Infrastructure/Infrastructure.csproj", "Infrastructure/"]
-COPY ["Infrastructure.Tests/Infrastructure.Tests.csproj", "Infrastructure.Tests/"]
-RUN dotnet restore "Infrastructure.Tests/Infrastructure.Tests.csproj" \
-    && dotnet restore "WebApi/WebApi.csproj"
+RUN dotnet restore "WebApi/WebApi.csproj"
 COPY . .
-RUN dotnet test "Infrastructure.Tests/Infrastructure.Tests.csproj" -c $BUILD_CONFIGURATION --no-restore
 WORKDIR "/src/WebApi"
 # 'publish' ya compila; se elimina el paso 'build' redundante para acelerar la imagen.
-RUN dotnet publish "WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "WebApi.csproj" -c $BUILD_CONFIGURATION --no-restore -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
-# El usuario no-root necesita poder escribir los logs (request/response) y los uploads.
+# The non-root user writes only logs and uploads; the application files stay owned by root.
 USER root
 RUN mkdir -p /app/Logs /app/wwwroot/uploads \
-    && chown -R "$APP_UID":"$APP_UID" /app
+    && chown "$APP_UID":"$APP_UID" /app/Logs /app/wwwroot/uploads
 USER $APP_UID
 
 ENTRYPOINT ["dotnet", "WebApi.dll"]

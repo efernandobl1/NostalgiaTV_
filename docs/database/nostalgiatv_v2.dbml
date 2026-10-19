@@ -1,0 +1,695 @@
+// NostalgiaTV - proposed schema v2 (normalized to 4NF)
+// Database: SQL Server
+
+Project NostalgiaTV {
+  database_type: 'SQLServer'
+}
+
+// =====================================================================
+// Security & users
+// =====================================================================
+
+Table Roles {
+  Id int [pk, increment]
+  Name nvarchar(100) [not null]
+  Description nvarchar(max) [not null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    Name [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+  }
+}
+
+Table Menus {
+  Id int [pk, increment]
+  ParentId int [null]
+  Name nvarchar(100) [not null]
+  Caption nvarchar(200) [not null]
+  Icon nvarchar(100) [not null]
+  Url nvarchar(400) [not null]
+  SortOrder int [not null]
+  IsVisible bit [not null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    Name [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+    (ParentId, SortOrder)
+  }
+}
+
+// Renamed from MenuRol
+Table RoleMenus {
+  RoleId int [not null]
+  MenuId int [not null]
+
+  indexes {
+    (RoleId, MenuId) [pk]
+    MenuId
+  }
+}
+
+Table Users {
+  Id int [pk, increment]
+  RoleId int [not null] // renamed from RolId
+  Username nvarchar(100) [not null]
+  PasswordHash nvarchar(max) [not null]
+  FailedLoginAttempts int [not null]
+  LockedUntilUtc datetime2 [null]
+  SessionVersion int [not null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    Username [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+    RoleId
+  }
+}
+
+// Split from Users.GoogleSubject: reusable for any external provider
+Table UserExternalLogins {
+  Provider nvarchar(40) [not null]
+  Subject nvarchar(255) [not null]
+  UserId int [not null]
+  CreatedAtUtc datetime2 [not null]
+
+  indexes {
+    (Provider, Subject) [pk]
+    (UserId, Provider) [unique]
+  }
+}
+
+Table RefreshTokens {
+  Id int [pk, increment]
+  UserId int [not null]
+  Token nvarchar(64) [not null, unique]
+  ReplacedByTokenId int [null] // was ReplacedByToken (string copy of the token)
+  IpAddress nvarchar(45) [not null]
+  IsPersistent bit [not null]
+  CreatedAt datetime2 [not null]
+  ExpiresAt datetime2 [not null]
+  RevokedAt datetime2 [null]
+
+  indexes {
+    (UserId, RevokedAt)
+    ExpiresAt
+  }
+}
+
+Table ActivityLogs {
+  Id bigint [pk, increment]
+  UserId int [null]
+  Action nvarchar(100) [not null]
+  Resource nvarchar(400) [not null]
+  Description nvarchar(max) [not null]
+  CreatedAtUtc datetime2 [not null]
+
+  indexes {
+    CreatedAtUtc
+    (UserId, CreatedAtUtc)
+  }
+}
+
+// =====================================================================
+// Catalog
+// =====================================================================
+
+Table Categories {
+  Id int [pk, increment]
+  Name nvarchar(100) [not null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    Name [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+  }
+}
+
+Table Series {
+  Id int [pk, increment]
+  Name nvarchar(200) [not null]
+  Description nvarchar(max) [null]
+  History nvarchar(max) [null]
+  LogoPath nvarchar(max) [null]
+  FolderPath nvarchar(max) [null]
+  Rating real [null]
+  StartDate date [not null]
+  EndDate date [null]
+  // Seasons removed: derived from SeriesSeasons
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    Name
+  }
+
+  Note: 'CK_Series_Dates: [EndDate] IS NULL OR [EndDate] >= [StartDate]'
+}
+
+// New: real season entity, so episodes and era filters can reference it
+Table SeriesSeasons {
+  SeriesId int [not null]
+  SeasonNumber int [not null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    (SeriesId, SeasonNumber) [pk]
+  }
+
+  Note: 'CK_SeriesSeasons_SeasonNumber: [SeasonNumber] >= 0'
+}
+
+Table SeriesCategories {
+  SeriesId int [not null]
+  CategoryId int [not null] // renamed from CategoriesId
+
+  indexes {
+    (SeriesId, CategoryId) [pk]
+    CategoryId
+  }
+}
+
+Table EpisodeTypes {
+  Id int [pk, increment]
+  Name nvarchar(50) [not null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    Name [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+  }
+}
+
+Table Episodes {
+  Id int [pk, increment]
+  SeriesId int [not null]
+  SeasonNumber int [not null] // renamed from Season
+  EpisodeTypeId int [not null]
+  EpisodeNumber int [not null]
+  Part nvarchar(1) [null, note: 'Segment of a split episode (A, B...); NULL = complete episode']
+  Title nvarchar(300) [not null]
+  FilePath nvarchar(max) [null]
+  IsAvailable bit [not null, default: true]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    (SeriesId, SeasonNumber, EpisodeTypeId, EpisodeNumber, Part) [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+    EpisodeTypeId
+  }
+  Note: 'CK_Episodes_Part: [Part] IS NULL OR [Part] LIKE \'[A-Z]\''
+}
+
+Table EpisodeBreakPoints {
+  Id int [pk, increment]
+  EpisodeId int [not null]
+  OffsetSeconds decimal(12,3) [not null]
+  Label nvarchar(200) [null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    (EpisodeId, OffsetSeconds) [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+  }
+
+  Note: 'CK_EpisodeBreakPoints_Offset: [OffsetSeconds] > 0'
+}
+
+Table MetadataProviders {
+  Id int [pk, increment]
+  Code nvarchar(80) [not null]
+  Name nvarchar(200) [not null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    Code [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+  }
+}
+
+Table SeriesExternalIds {
+  Id int [pk, increment]
+  SeriesId int [not null]
+  ProviderId int [not null]
+  ExternalId nvarchar(300) [not null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    (ProviderId, ExternalId) [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+    (SeriesId, ProviderId) [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+  }
+}
+
+Table MetadataImportRuns {
+  Id bigint [pk, increment]
+  SeriesExternalId int [not null]
+  LanguageCode nvarchar(20) [null]
+  Status nvarchar(40) [not null]
+  StartedAtUtc datetime2 [not null]
+  FinishedAtUtc datetime2 [null]
+
+  indexes {
+    (SeriesExternalId, StartedAtUtc)
+  }
+}
+
+// =====================================================================
+// Comments (split: shared base + one table per target)
+// =====================================================================
+
+Table Comments {
+  Id bigint [pk, increment]
+  UserId int [not null]
+  Body nvarchar(2000) [not null]
+  Status nvarchar(20) [not null]
+  CreatedAtUtc datetime2 [not null]
+  EditedAtUtc datetime2 [null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    UserId
+    (Status, CreatedAtUtc)
+  }
+
+  Note: 'Delete comments through this table (subtypes cascade).\nCK_Comments_Status: [Status] IN (\'Pending\', \'Approved\', \'Rejected\', \'Hidden\')'
+}
+
+Table ChannelComments {
+  CommentId bigint [pk]
+  ChannelId int [not null]
+
+  indexes {
+    ChannelId
+  }
+}
+
+Table SeriesComments {
+  CommentId bigint [pk]
+  SeriesId int [not null]
+  ParentCommentId bigint [null]
+
+  indexes {
+    (CommentId, SeriesId) [unique, note: 'Alternate key for same-series replies']
+    SeriesId
+    (ParentCommentId, SeriesId)
+  }
+}
+
+// =====================================================================
+// Channels & eras
+// =====================================================================
+
+Table Channels {
+  Id int [pk, increment]
+  ShareId uniqueidentifier [not null, unique, default: `NEWID()`]
+  Name nvarchar(200) [not null]
+  History nvarchar(max) [null]
+  LogoPath nvarchar(max) [null]
+  StartDate datetime2 [not null]
+  EndDate datetime2 [null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    Name [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+  }
+
+  Note: 'CK_Channels_Dates: [EndDate] IS NULL OR [EndDate] >= [StartDate]'
+}
+
+Table ChannelEras {
+  Id int [pk, increment]
+  ChannelId int [not null]
+  Name nvarchar(200) [not null]
+  Description nvarchar(max) [null]
+  FolderPath nvarchar(max) [null]
+  HistoricalStartDate datetime2 [not null]
+  HistoricalEndDate datetime2 [null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    (ChannelId, Id) [unique, note: 'Alternate key used by ChannelEraSelections']
+    (ChannelId, Name) [unique, note: 'filter: [DeletedAtUtc] IS NULL']
+  }
+
+  Note: 'CK_ChannelEras_HistoricalDates: [HistoricalEndDate] IS NULL OR [HistoricalEndDate] >= [HistoricalStartDate]'
+}
+
+// 1:1 with Channels (PK = ChannelId)
+Table ChannelEraSelections {
+  ChannelId int [pk]
+  ChannelEraId int [not null]
+  SelectedAtUtc datetime2 [not null]
+
+  indexes {
+    (ChannelId, ChannelEraId)
+  }
+}
+
+Table ChannelEraBreakRules {
+  ChannelEraId int [pk]
+  MinimumAds int [not null]
+  MaximumAds int [not null]
+  MaximumBreakSeconds int [not null]
+
+  Note: 'CK_ChannelEraBreakRules_AdCount: [MinimumAds] >= 1 AND [MaximumAds] >= [MinimumAds]\nCK_ChannelEraBreakRules_Duration: [MaximumBreakSeconds] > 0'
+}
+
+Table ChannelEraSeries {
+  ChannelEraId int [not null] // renamed from ChannelErasId
+  SeriesId int [not null]
+  // HasSeasonFilter removed: derived = EXISTS(ChannelEraSelectedSeasons)
+
+  indexes {
+    (ChannelEraId, SeriesId) [pk]
+    SeriesId
+  }
+}
+
+Table ChannelEraSelectedSeasons {
+  ChannelEraId int [not null] // renamed from ChannelErasId
+  SeriesId int [not null]
+  SeasonNumber int [not null]
+
+  indexes {
+    (ChannelEraId, SeriesId, SeasonNumber) [pk]
+    (SeriesId, SeasonNumber)
+  }
+}
+
+// =====================================================================
+// Interludes (bumpers / ads)
+// =====================================================================
+
+Table Interludes {
+  Id int [pk, increment]
+  Title nvarchar(300) [not null]
+  Kind nvarchar(30) [not null]
+  BumperType nvarchar(30) [null, note: 'Only for bumpers: ComingUp = Ya viene, WeContinueWith = Continuamos con, Generic = Bumper generico']
+  Season nvarchar(30) [not null, default: 'AllYear']
+  FilePath nvarchar(1000) [not null]
+  DurationSeconds decimal(12,3) [not null]
+  ApprovedForBroadcast bit [not null]
+  RedistributionAllowed bit [not null]
+  License nvarchar(500) [null]
+  SourceUrl nvarchar(1000) [null]
+  RegionCode nvarchar(20) [null]
+  OriginalYearFrom int [null]
+  OriginalYearTo int [null]
+  DeletedAtUtc datetime2 [null, note: 'Soft delete: NULL = active']
+
+  indexes {
+    (Kind, BumperType, Season, ApprovedForBroadcast)
+  }
+
+  Note: 'CK_Interludes_Duration: [DurationSeconds] > 0\nCK_Interludes_Kind: [Kind] IN (\'Bumper\', \'Advertisement\')\nCK_Interludes_BumperType: ([Kind] = \'Bumper\' AND [BumperType] IN (\'ComingUp\', \'WeContinueWith\', \'Generic\')) OR ([Kind] = \'Advertisement\' AND [BumperType] IS NULL)\nCK_Interludes_OriginalYears: [OriginalYearTo] IS NULL OR [OriginalYearFrom] IS NULL OR [OriginalYearTo] >= [OriginalYearFrom]\nCK_Interludes_Redistribution: [RedistributionAllowed] = 0 OR LEN(LTRIM(RTRIM([License]))) > 0 AND [License] IS NOT NULL\nCK_Interludes_Season: [Season] IN (\'AllYear\', \'Halloween\', \'Christmas\')'
+}
+
+// Era-wide bumpers/ads. Role removed: derived from Interludes.Kind + BumperType
+Table ChannelEraInterludes {
+  ChannelEraId int [not null]
+  InterludeId int [not null]
+  Weight int [not null]
+  MinimumGapSeconds int [not null]
+
+  indexes {
+    (ChannelEraId, InterludeId) [pk]
+    InterludeId
+  }
+
+  Note: 'CK_Weight: [Weight] > 0\nCK_Gap: [MinimumGapSeconds] >= 0'
+}
+
+// Split from ChannelEraInterludes: series-scoped interludes
+Table ChannelEraSeriesInterludes {
+  ChannelEraId int [not null]
+  SeriesId int [not null]
+  InterludeId int [not null]
+  Weight int [not null]
+  MinimumGapSeconds int [not null]
+
+  indexes {
+    (ChannelEraId, SeriesId, InterludeId) [pk]
+    InterludeId
+  }
+
+  Note: 'CK_Weight: [Weight] > 0\nCK_Gap: [MinimumGapSeconds] >= 0'
+}
+
+// =====================================================================
+// Scheduling (retro broadcast model)
+// =====================================================================
+
+Table ScheduledPrograms {
+  Id bigint [pk, increment]
+  ChannelEraId int [not null]
+  EpisodeId int [not null]
+  ShuffleCycle int [null]
+  GeneratedAtUtc datetime2 [not null]
+
+  indexes {
+    (ChannelEraId, GeneratedAtUtc)
+    EpisodeId
+  }
+}
+
+Table ScheduledAdBreaks {
+  Id bigint [pk, increment]
+  ScheduledProgramId bigint [not null]
+  EpisodeBreakPointId int [not null]
+
+  indexes {
+    (Id, ScheduledProgramId) [unique, note: 'Alternate key used by ScheduledPlaybackSegments']
+    (ScheduledProgramId, EpisodeBreakPointId) [unique]
+    EpisodeBreakPointId
+  }
+}
+
+Table ScheduledPlaybackSegments {
+  Id bigint [pk, increment]
+  ScheduledProgramId bigint [not null]
+  ScheduledAdBreakId bigint [null]
+  InterludeId int [null]
+  StartsAtUtc datetime2 [not null]
+  EndsAtUtc datetime2 [not null]
+  MediaStartSecond decimal(12,3) [null]
+  MediaEndSecond decimal(12,3) [null]
+
+  indexes {
+    (ScheduledProgramId, StartsAtUtc) [unique]
+    (ScheduledAdBreakId, ScheduledProgramId)
+    (StartsAtUtc, EndsAtUtc)
+    InterludeId
+  }
+
+  Note: 'CK_Content: ([InterludeId] IS NULL AND [ScheduledAdBreakId] IS NULL AND [MediaStartSecond] IS NOT NULL AND [MediaEndSecond] IS NOT NULL AND [MediaStartSecond] >= 0 AND [MediaEndSecond] > [MediaStartSecond]) OR ([InterludeId] IS NOT NULL AND [MediaStartSecond] IS NULL AND [MediaEndSecond] IS NULL)\nCK_Time: [EndsAtUtc] > [StartsAtUtc]'
+}
+
+// =====================================================================
+// Media processing
+// =====================================================================
+
+Table MediaWorkerStates {
+  Id nvarchar(20) [pk]
+  Enabled bit [not null]
+  HeartbeatUtc datetime2 [null]
+}
+
+Table MediaProcessingJobs {
+  Id bigint [pk, increment]
+  SeriesId int [not null]
+  Worker nvarchar(20) [not null]
+  Fingerprint nvarchar(64) [not null]
+  SourcePath nvarchar(2048) [not null]
+  SourceSize bigint [not null]
+  SourceModifiedUtc datetime2 [not null]
+  OutputPath nvarchar(2048) [null]
+  Status nvarchar(20) [not null]
+  Progress float [not null]
+  Message nvarchar(500) [null]
+  CreatedAtUtc datetime2 [not null]
+  UpdatedAtUtc datetime2 [not null]
+
+  indexes {
+    (Worker, Fingerprint) [unique]
+    (Worker, Status, Id)
+    (SeriesId, Status)
+  }
+
+  Note: 'CK_Status: [Status] IN (\'Queued\', \'Processing\', \'Completed\', \'Failed\', \'Skipped\')\nCK_Progress: [Progress] BETWEEN 0 AND 100'
+}
+
+// Singleton. TimeZoneId removed: use PlatformSettings.TimeZoneId
+Table MediaResourcePolicies {
+  Id int [pk]
+  DayCores int [not null]
+  NightCores int [not null]
+  NightEnabled bit [not null]
+  NightStartMinute int [not null]
+  NightEndMinute int [not null]
+
+  Note: 'CK_Singleton: [Id] = 1\nCK_NightMinutes: [NightStartMinute] BETWEEN 0 AND 1439 AND [NightEndMinute] BETWEEN 0 AND 1439'
+}
+
+Table PlatformSettings {
+  Id int [pk]
+  ViewerRoleId int [not null] // replaces Roles.IsViewerRole
+  TimeZoneId nvarchar(100) [not null]
+  PublicRegistrationEnabled bit [not null]
+  NoRepeatWindowHours int [not null]
+  MaxSpecialsPerDay int [not null]
+  MaxSpecialsPerSeriesPerDay int [not null]
+  MaxMoviesPerDay int [not null]
+  MaxMoviesPerSeriesPerDay int [not null]
+  SeasonalEffectsEnabled bit [not null]
+  SeasonalEpisodesEnabled bit [not null]
+  SeasonalInterludesEnabled bit [not null]
+  SeasonalThemesEnabled bit [not null]
+
+  Note: 'CK_PlatformSettings_Limits: [NoRepeatWindowHours] BETWEEN 0 AND 72 AND [MaxSpecialsPerDay] BETWEEN 0 AND 50 AND [MaxSpecialsPerSeriesPerDay] BETWEEN 0 AND [MaxSpecialsPerDay] AND [MaxMoviesPerDay] BETWEEN 0 AND 20 AND [MaxMoviesPerSeriesPerDay] BETWEEN 0 AND [MaxMoviesPerDay]\nCK_PlatformSettings_Singleton: [Id] = 1'
+}
+
+// =====================================================================
+// Viewers & devices
+// =====================================================================
+
+Table ViewerProfiles {
+  Id uniqueidentifier [pk]
+  UserId int [null]
+  CreatedAtUtc datetime2 [not null]
+
+  indexes {
+    UserId [unique, note: 'filter: [UserId] IS NOT NULL']
+  }
+}
+
+Table ViewerDevices {
+  Id uniqueidentifier [pk]
+  ProfileId uniqueidentifier [not null]
+  Name nvarchar(80) [not null]
+  TokenHash nvarchar(64) [not null, unique]
+  SessionVersion int [null]
+  LastSeenUtc datetime2 [not null]
+  ExpiresAtUtc datetime2 [not null]
+
+  indexes {
+    ProfileId
+    ExpiresAtUtc
+  }
+}
+
+Table ViewerPairingCodes {
+  Hash nvarchar(64) [pk]
+  DeviceId uniqueidentifier [not null, unique]
+  ExpiresAtUtc datetime2 [not null]
+
+  indexes {
+    ExpiresAtUtc
+  }
+}
+
+Table DeviceAuthorizations {
+  DeviceCodeHash nvarchar(64) [pk]
+  UserCodeHash nvarchar(64) [not null, unique]
+  ProfileId uniqueidentifier [null]
+  Name nvarchar(80) [not null]
+  SessionVersion int [null]
+  ExpiresAtUtc datetime2 [not null]
+
+  indexes {
+    ProfileId
+    ExpiresAtUtc
+  }
+}
+
+Table ViewerProgress {
+  ProfileId uniqueidentifier [not null]
+  EpisodeId int [not null]
+  CurrentSecond decimal(12,3) [not null]
+  Completed bit [not null]
+  UpdatedAtUtc datetime2 [not null]
+
+  indexes {
+    (ProfileId, EpisodeId) [pk]
+    EpisodeId
+    (ProfileId, UpdatedAtUtc)
+  }
+}
+
+Table ViewerWatchRanges {
+  Id bigint [pk, increment]
+  ProfileId uniqueidentifier [not null]
+  EpisodeId int [not null]
+  StartSecond decimal(12,3) [not null]
+  EndSecond decimal(12,3) [not null]
+
+  indexes {
+    (ProfileId, EpisodeId, StartSecond)
+  }
+
+  Note: 'CK_Range: [StartSecond] >= 0 AND [EndSecond] > [StartSecond]'
+}
+
+// =====================================================================
+// Relationships
+// =====================================================================
+
+// Security
+Ref: Menus.ParentId > Menus.Id [delete: no action]
+Ref: RoleMenus.RoleId > Roles.Id [delete: restrict]
+Ref: RoleMenus.MenuId > Menus.Id [delete: restrict]
+Ref: Users.RoleId > Roles.Id [delete: restrict] // was cascade
+Ref: UserExternalLogins.UserId > Users.Id [delete: restrict]
+Ref: RefreshTokens.UserId > Users.Id [delete: restrict]
+Ref: RefreshTokens.ReplacedByTokenId > RefreshTokens.Id [delete: no action]
+Ref: ActivityLogs.UserId > Users.Id [delete: set null] // new
+
+// Catalog
+Ref: SeriesSeasons.SeriesId > Series.Id [delete: restrict]
+Ref: SeriesCategories.SeriesId > Series.Id [delete: restrict]
+Ref: SeriesCategories.CategoryId > Categories.Id [delete: restrict]
+Ref: Episodes.(SeriesId, SeasonNumber) > SeriesSeasons.(SeriesId, SeasonNumber) [delete: restrict]
+Ref: Episodes.EpisodeTypeId > EpisodeTypes.Id [delete: restrict] // was cascade
+Ref: EpisodeBreakPoints.EpisodeId > Episodes.Id [delete: restrict]
+Ref: SeriesExternalIds.SeriesId > Series.Id [delete: restrict]
+Ref: SeriesExternalIds.ProviderId > MetadataProviders.Id [delete: restrict]
+Ref: MetadataImportRuns.SeriesExternalId > SeriesExternalIds.Id [delete: restrict]
+
+// Comments
+Ref: Comments.UserId > Users.Id [delete: restrict]
+Ref: ChannelComments.CommentId - Comments.Id [delete: restrict]
+Ref: ChannelComments.ChannelId > Channels.Id [delete: restrict]
+Ref: SeriesComments.CommentId - Comments.Id [delete: restrict]
+Ref: SeriesComments.SeriesId > Series.Id [delete: restrict]
+Ref: SeriesComments.(ParentCommentId, SeriesId) > SeriesComments.(CommentId, SeriesId) [delete: no action]
+
+// Channels & eras
+Ref: ChannelEras.ChannelId > Channels.Id [delete: restrict]
+Ref: ChannelEraSelections.(ChannelId, ChannelEraId) > ChannelEras.(ChannelId, Id) [delete: restrict]
+Ref: ChannelEraBreakRules.ChannelEraId - ChannelEras.Id [delete: restrict]
+Ref: ChannelEraSeries.ChannelEraId > ChannelEras.Id [delete: restrict]
+Ref: ChannelEraSeries.SeriesId > Series.Id [delete: restrict]
+Ref: ChannelEraSelectedSeasons.(ChannelEraId, SeriesId) > ChannelEraSeries.(ChannelEraId, SeriesId) [delete: cascade]
+Ref: ChannelEraSelectedSeasons.(SeriesId, SeasonNumber) > SeriesSeasons.(SeriesId, SeasonNumber) [delete: no action]
+
+// Interludes
+Ref: ChannelEraInterludes.ChannelEraId > ChannelEras.Id [delete: restrict]
+Ref: ChannelEraInterludes.InterludeId > Interludes.Id [delete: restrict]
+Ref: ChannelEraSeriesInterludes.(ChannelEraId, SeriesId) > ChannelEraSeries.(ChannelEraId, SeriesId) [delete: cascade]
+Ref: ChannelEraSeriesInterludes.InterludeId > Interludes.Id [delete: restrict]
+
+// Scheduling
+Ref: ScheduledPrograms.ChannelEraId > ChannelEras.Id [delete: restrict]
+Ref: ScheduledPrograms.EpisodeId > Episodes.Id [delete: restrict]
+Ref: ScheduledAdBreaks.ScheduledProgramId > ScheduledPrograms.Id [delete: cascade]
+Ref: ScheduledAdBreaks.EpisodeBreakPointId > EpisodeBreakPoints.Id [delete: restrict]
+Ref: ScheduledPlaybackSegments.ScheduledProgramId > ScheduledPrograms.Id [delete: cascade]
+Ref: ScheduledPlaybackSegments.(ScheduledAdBreakId, ScheduledProgramId) > ScheduledAdBreaks.(Id, ScheduledProgramId) [delete: no action]
+Ref: ScheduledPlaybackSegments.InterludeId > Interludes.Id [delete: restrict]
+
+// Media
+Ref: MediaProcessingJobs.SeriesId > Series.Id [delete: restrict]
+Ref: MediaProcessingJobs.Worker > MediaWorkerStates.Id [delete: restrict]
+
+// Settings
+Ref: PlatformSettings.ViewerRoleId > Roles.Id [delete: restrict]
+
+// Viewers
+Ref: ViewerProfiles.UserId - Users.Id [delete: set null]
+Ref: ViewerDevices.ProfileId > ViewerProfiles.Id [delete: cascade]
+Ref: ViewerPairingCodes.DeviceId - ViewerDevices.Id [delete: cascade]
+Ref: DeviceAuthorizations.ProfileId > ViewerProfiles.Id [delete: cascade]
+Ref: ViewerProgress.ProfileId > ViewerProfiles.Id [delete: cascade]
+Ref: ViewerProgress.EpisodeId > Episodes.Id [delete: restrict]
+Ref: ViewerWatchRanges.(ProfileId, EpisodeId) > ViewerProgress.(ProfileId, EpisodeId) [delete: cascade]

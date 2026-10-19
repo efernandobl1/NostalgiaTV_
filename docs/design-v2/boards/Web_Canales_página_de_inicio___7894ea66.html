@@ -1,0 +1,135 @@
+<!-- NostalgiaTV · Canales -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+-->
+<div class="min-h-screen bg-ink text-fg font-sans">
+  <!-- DC-IMPORT name="PubHeader" active="channels" hint-size="100%,80px" -->
+
+  @if (hasSeason) {
+    <div class="flex flex-wrap items-center justify-center gap-y-2 gap-x-4 py-3 px-6 text-[14px]" [style.background]="seasonBg" [style.color]="seasonInk">
+      <span class="font-mono text-[12px] tracking-[0.14em] font-medium">{{seasonTag}}</span>
+      <span>{{seasonText}}</span>
+    </div>
+  }
+
+  <main class="max-w-340 my-0 mx-auto pt-8 px-10 pb-18 flex flex-col gap-6">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="flex flex-col gap-1.5">
+        <span class="font-mono text-[13px] tracking-[0.12em]" [style.color]="accent">SÁB 17 OCT · 14:32 · 4 CANALES AL AIRE</span>
+        <h1 class="m-0 font-display font-bold text-[48px] leading-[1]">Canales</h1>
+        <span class="text-[15px] text-muted">Elige un canal y sintoniza lo que está al aire, como en la tele de antes.</span>
+      </div>
+      <a class="inline-flex items-center gap-2.5 min-h-12 py-0 px-5 border border-edge rounded-3xl text-fg text-[15px] no-underline" routerLink="/ver/5">
+        <span class="font-display font-bold" [style.color]="accent">05</span>
+        Volver al último canal
+      </a>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2.5 p-3 border border-line rounded-2xl bg-panel" role="search">
+      <label class="flex-[2_1_260px] flex items-center gap-2 min-h-11 py-0 px-3.5 border border-edge rounded-[22px] bg-ink">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <input class="flex-1 min-w-0 border-0 outline-none bg-transparent text-fg [font:14px_'IBM_Plex_Sans',_sans-serif]" type="search" aria-label="Buscar canal o serie al aire" [attr.value]="q" (change)="setQ($event)" placeholder="Buscar canal o serie al aire…">
+      </label>
+      <div class="flex flex-wrap gap-1.5" role="group" aria-label="Categoría">
+        @for (k of cats; track $index) {
+          <button type="button" (click)="k.pick($event)" [attr.aria-pressed]="k.pressed" [style]="k.style">{{k.name}}</button>
+        }
+      </div>
+      <label class="flex items-center gap-2 min-h-11 py-0 px-1.5 text-[14px] cursor-pointer">
+        <input class="check" type="checkbox" [attr.checked]="onlyLive" (change)="toggleLive($event)">Solo al aire
+      </label>
+      <label class="flex items-center gap-2 text-[13px] text-muted">Ordenar
+        <select class="min-h-11 py-0 px-2.5 border border-edge rounded-[22px] bg-ink text-fg [font:14px_'IBM_Plex_Sans',_sans-serif] [color-scheme:dark]"><option>Número de canal</option><option>Nombre</option><option>Era más antigua</option></select>
+      </label>
+      <div class="flex border border-edge rounded-[22px] overflow-hidden" role="group" aria-label="Vista">
+        <button type="button" (click)="gridView($event)" [attr.aria-pressed]="isGrid" aria-label="Vista en cuadrícula" [style]="gridBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="7" height="7"></rect><rect x="13" y="4" width="7" height="7"></rect><rect x="4" y="13" width="7" height="7"></rect><rect x="13" y="13" width="7" height="7"></rect></svg>
+        </button>
+        <button type="button" (click)="listView($event)" [attr.aria-pressed]="isList" aria-label="Vista en lista" [style]="listBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+      </div>
+    </div>
+
+    @if (empty) {
+      <div class="p-12 border border-dashed border-edge rounded-2xl text-center text-muted">
+        <div class="font-display text-[22px] text-fg">Sin señal con esos filtros</div>
+        <button class="mt-3 min-h-11 py-0 px-4.5 border border-edge rounded-[22px] bg-transparent text-amber [font:500_14px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button" (click)="clearFilters($event)">Quitar filtros</button>
+      </div>
+    }
+
+    @if (isGrid) {
+      <div class="grid grid-cols-[repeat(auto-fill,_minmax(300px,_1fr))] gap-5">
+        @for (c of channels; track $index) {
+          <article class="flex flex-col border border-line rounded-[18px] overflow-hidden bg-panel">
+            <a class="relative block aspect-[16_/_9] [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_radial-gradient(ellipse_at_center,_#2A2920_0%,_#0E0E0C_80%)]" routerLink="/ver/5" aria-label="Ver {{c.name}}">
+              <span class="absolute top-3 left-3 py-1 px-2 rounded-sm font-mono text-[11px] tracking-[0.1em]" [style.color]="c.badgeInk" [style.background]="c.badgeBg">{{c.badge}}</span>
+              <span class="absolute top-1.5 right-3.5 font-display font-bold text-[40px] text-ok [text-shadow:0_0_10px_rgba(139,224,143,0.45)]">{{c.num}}</span>
+              <span class="absolute left-0 right-0 bottom-0 h-1 bg-[rgba(255,255,255,0.12)]"><span class="block h-1 bg-amber" [style.width.%]="c.pct"></span></span>
+            </a>
+            <div class="flex flex-col gap-1.5 pt-3.5 px-4 pb-1.5">
+              <span class="font-display font-bold text-[20px]">{{c.name}}</span>
+              <span class="text-[14px]"><span class="font-mono text-[11px] text-danger">AHORA</span> {{c.now}}</span>
+              <span class="text-[13px] text-muted">Sigue: {{c.next}}</span>
+              <span class="self-start py-[3px] px-2.5 rounded-xl text-[12px] text-fg-2 bg-raised-2">Era: {{c.era}}</span>
+            </div>
+            <div class="flex gap-2 pt-3 px-4 pb-4">
+              <a class="flex-1 inline-flex items-center justify-center gap-2 min-h-11 rounded-[22px] bg-amber text-on-amber font-semibold text-[14px] no-underline" routerLink="/ver/5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>Ver
+              </a>
+              <a class="inline-flex items-center min-h-11 py-0 px-4 border border-edge rounded-[22px] text-fg text-[14px] no-underline" routerLink="/canal/5">Info</a>
+              <button class="w-11 h-11 inline-flex items-center justify-center border border-edge rounded-[22px] bg-transparent text-fg cursor-pointer" type="button" aria-label="Copiar enlace del canal" title="Compartir">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+    }
+
+    @if (isList) {
+      <div class="flex flex-col border border-line rounded-2xl overflow-hidden bg-panel">
+        @for (c of channels; track $index) {
+          <a class="flex flex-wrap items-center gap-y-3 gap-x-5 py-3.5 px-5 border-b border-raised-2 text-fg no-underline" routerLink="/ver/5">
+            <span class="w-14 font-display font-bold text-[28px] text-ok">{{c.num}}</span>
+            <span class="flex-[1_1_200px] flex flex-col gap-0.5">
+              <span class="font-semibold text-[16px]">{{c.name}}</span>
+              <span class="text-[12px] text-muted">{{c.era}}</span>
+            </span>
+            <span class="flex-[2_1_260px] flex flex-col gap-1.5">
+              <span class="text-[14px]">{{c.now}} <span class="text-muted">· sigue {{c.next}}</span></span>
+              <span class="block h-[3px] rounded-xs bg-line"><span class="block h-[3px] rounded-xs bg-amber" [style.width.%]="c.pct"></span></span>
+            </span>
+            <span class="py-1 px-2 rounded-sm font-mono text-[11px]" [style.color]="c.badgeInk" [style.background]="c.badgeBg">{{c.badge}}</span>
+          </a>
+        }
+      </div>
+    }
+
+    <section class="flex flex-col gap-3.5 mt-4" aria-labelledby="cont">
+      <div class="flex justify-between items-baseline gap-3">
+        <h2 class="m-0 font-display text-[24px] font-bold" id="cont">Continuar viendo</h2>
+        <a class="text-[14px]" routerLink="/series">Ver todas las series</a>
+      </div>
+      <div class="grid grid-cols-[repeat(auto-fill,_minmax(240px,_1fr))] gap-4">
+        @for (v of continueList; track $index) {
+          <a class="flex gap-3 items-center p-2.5 border border-line rounded-xl bg-panel text-fg no-underline" routerLink="/series/1">
+            <span class="relative w-24 aspect-[16_/_9] flex-none rounded-md overflow-hidden [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#24241F]">
+              <span class="absolute left-0 right-0 bottom-0 h-[3px] bg-[rgba(255,255,255,0.12)]"><span class="block h-[3px] bg-amber" [style.width.%]="v.pct"></span></span>
+            </span>
+            <span class="flex flex-col gap-0.5 min-w-0">
+              <span class="font-semibold text-[14px]">{{v.series}}</span>
+              <span class="text-[12px] text-muted">{{v.code}}</span>
+            </span>
+          </a>
+        }
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-raised-2 py-7 px-10 flex flex-wrap justify-between gap-3 text-[13px] text-dim">
+    <span class="font-mono tracking-[0.1em]">NOSTALGIA TV · TRANSMITIENDO DESDE PETÉN</span>
+    <span class="flex gap-4"><a routerLink="/vincular">Vincular TV</a><a routerLink="/login">Panel de administración</a></span>
+  </footer>
+</div>

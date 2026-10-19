@@ -1,0 +1,160 @@
+@if (error()) {
+  <div class="flex-1 flex flex-col items-center justify-center gap-3 p-10 text-center text-muted" role="alert">{{ error() }} <a routerLink="/">Volver a los canales</a></div>
+} @else if (!detail()) {
+  <div class="flex-1 flex items-center justify-center p-10 text-muted">Cargando el canal…</div>
+} @else {
+<!-- ── Desktop (md+) ── -->
+<div class="hidden md:flex flex-1 flex-col">
+  <section class="border-b border-raised-2 scan-rail [--scan:0.025]">
+    <div class="max-w-340 mx-auto pt-5 px-10 pb-10 flex flex-col gap-5">
+      <a class="self-start inline-flex items-center min-h-11 text-[14px] no-underline" routerLink="/">← Todos los canales</a>
+      <div class="flex flex-wrap gap-8 items-center">
+        <div class="w-33 h-33 flex-none rounded-[20px] flex items-center justify-center font-display font-bold text-[56px] text-ok scan-raised [--scan:0.05] border border-edge" aria-hidden="true">
+          @if (channel().logo) { <img class="max-w-[75%] max-h-[75%] object-contain" [src]="channel().logo" alt=""> } @else { {{ channel().num }} }
+        </div>
+        <div class="flex-[1_1_420px] flex flex-col gap-2.5">
+          <span class="flex items-center gap-2.5 font-mono text-[13px] tracking-[0.1em] text-amber">
+            @if (channel().on) { <span class="py-[3px] px-2 rounded-sm text-on-live bg-live">● EN VIVO</span> } @else { <span class="py-[3px] px-2 rounded-sm text-fg bg-edge">SIN SEÑAL</span> }
+            DESDE {{ channel().since }}
+          </span>
+          <h1 class="m-0 font-display font-bold text-[52px] leading-none">{{ channel().name }}</h1>
+          @if (channel().history) { <p class="m-0 max-w-170 text-[16px] leading-[1.6] text-fg-2">{{ channel().history }}</p> }
+        </div>
+        <div class="flex flex-wrap gap-2.5">
+          <a class="pill pill-primary min-h-13 px-6 gap-2.5 rounded-[26px] text-[16px]" [routerLink]="['/ver', channel().id]">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>Ver en vivo
+          </a>
+          <a class="pill min-h-13 px-5 rounded-[26px] text-[15px] font-normal" routerLink="/guia">Guía del canal</a>
+          <button class="pill min-h-13 px-5 rounded-[26px] text-[15px]" type="button" (click)="share()">Compartir</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="w-full max-w-340 mx-auto pt-8 px-10 pb-18 flex flex-col gap-10">
+    <section class="flex flex-col gap-3.5" aria-labelledby="eras">
+      <h2 class="m-0 font-display text-[26px] font-bold" id="eras">Historia del canal</h2>
+      <div class="flex gap-1.5">
+        @for (e of eras(); track e.id; let i = $index) {
+          <button type="button" class="min-w-0 flex flex-col items-start gap-1 p-3.5 rounded-[10px] text-left font-[inherit] border border-edge bg-panel text-fg hover:not-aria-pressed:bg-raised aria-pressed:border-amber aria-pressed:bg-amber aria-pressed:text-on-amber"
+                  [style.flex]="e.w + ' 1 0'" [attr.aria-pressed]="i === eraIndex()" (click)="eraIndex.set(i)">
+            <span class="font-mono text-[12px] opacity-85">{{ e.years }}</span>
+            <span class="font-semibold text-[16px]">{{ e.name }}</span>
+            @if (e.onAir) { <span class="font-mono text-[11px] tracking-[0.1em]">● AL AIRE AHORA</span> }
+          </button>
+        } @empty {
+          <span class="text-[15px] text-muted">Este canal todavía no tiene eras.</span>
+        }
+      </div>
+      @if (era()?.desc) { <p class="m-0 text-[15px] leading-[1.6] text-fg-2 max-w-205">{{ era()!.desc }}</p> }
+    </section>
+
+    <div class="flex flex-wrap gap-8 items-start">
+      <section class="flex-[999_1_560px] min-w-0 flex flex-col gap-3.5" aria-labelledby="ser">
+        <h2 class="m-0 font-display text-[24px] font-bold" id="ser">Series de la era {{ era()?.name ?? '' }}</h2>
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-4">
+          @for (s of series(); track s.id) {
+            <a class="group flex flex-col gap-1.5 text-fg hover:text-fg no-underline" [routerLink]="['/series', s.id]">
+              <app-poster class="p-2.5 rounded-[10px] group-hover:border-edge-2" [name]="s.name" [image]="s.image" />
+              <span class="text-[12px] text-muted">{{ s.seasons }}</span>
+            </a>
+          } @empty {
+            <span class="text-[14px] text-muted">Sin series en esta era.</span>
+          }
+        </div>
+      </section>
+
+      <aside class="flex-[1_1_340px] min-w-0 flex flex-col gap-6">
+        <section class="flex flex-col gap-1 p-4.5 border border-line rounded-2xl bg-panel" aria-labelledby="up">
+          <h2 class="m-0 mb-2 font-display text-[20px] font-semibold" id="up">Próximos programas</h2>
+          @for (n of upcoming(); track $index) {
+            <div class="flex gap-3 py-2.5 border-t border-raised-2">
+              <span class="w-12 font-mono text-[14px]" [style.color]="n.color">{{ n.time }}</span>
+              <span class="flex flex-col gap-0.5"><span class="font-semibold text-[14px]">{{ n.title }}</span><span class="text-[12px] text-muted">{{ n.sub }}</span></span>
+            </div>
+          } @empty {
+            <span class="py-2.5 border-t border-raised-2 text-[14px] text-muted">Sin programación próxima.</span>
+          }
+        </section>
+        <section class="flex flex-col gap-3 p-4.5 border border-line rounded-2xl bg-panel" aria-labelledby="cc">
+          <h2 class="m-0 font-display text-[20px] font-semibold" id="cc">Comentarios del canal <span class="font-mono text-[14px] text-muted">{{ commentCount() }}</span></h2>
+          @for (m of comments(); track m.id) {
+            <div class="flex flex-col gap-0.5 py-2 border-t border-raised-2">
+              <span class="text-[13px]"><strong class="font-semibold">{{ m.user }}</strong> <span class="text-dim">· {{ m.time }}</span></span>
+              <span class="text-[14px] leading-[1.45] text-fg-2">{{ m.body }}</span>
+            </div>
+          }
+          <a class="text-[14px]" [routerLink]="['/ver', channel().id]">Ver todos y comentar</a>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<!-- ── Mobile (<md) ── -->
+<main class="md:hidden flex flex-1 flex-col">
+  <div class="relative pt-13 px-4 pb-4.5 flex flex-col gap-3 scan-rail [--scan:0.03] border-b border-raised-2">
+    <a class="absolute top-1.5 left-1.5 w-11 h-11 flex items-center justify-center text-fg hover:text-fg" routerLink="/" aria-label="Volver">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <button class="absolute top-1.5 right-1.5 w-11 h-11 flex items-center justify-center border-0 bg-transparent text-fg" type="button" (click)="share()" aria-label="Compartir canal">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+    </button>
+    <div class="flex items-center gap-3.5">
+      <span class="w-18 h-18 flex-none rounded-[14px] flex items-center justify-center font-display font-bold text-[32px] text-ok bg-raised border border-edge" aria-hidden="true">{{ channel().num }}</span>
+      <div class="flex flex-col gap-1">
+        <span class="flex items-center gap-1.5 font-mono text-[10px] text-amber">
+          @if (channel().on) { <span class="py-px px-[5px] rounded-[3px] text-on-live bg-live">EN VIVO</span> }
+          {{ activeEra()?.name?.toUpperCase() ?? '' }}
+        </span>
+        <h1 class="m-0 font-display font-bold text-[26px] leading-[1.05]">{{ channel().name }}</h1>
+      </div>
+    </div>
+    @if (channel().history) { <p class="m-0 text-[14px] leading-normal text-fg-2 line-clamp-4">{{ channel().history }}</p> }
+    <div class="flex gap-2">
+      <a class="pill pill-primary flex-1 min-h-12 rounded-3xl text-[15px]" [routerLink]="['/ver', channel().id]">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>Ver en vivo
+      </a>
+      <a class="pill min-h-12 px-4.5 rounded-3xl font-normal" routerLink="/guia">Guía</a>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4.5 p-4">
+    <section class="flex flex-col gap-2.5">
+      <h2 class="m-0 font-display text-[18px] font-bold">Eras</h2>
+      <div class="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
+        @for (e of eras(); track e.id; let i = $index) {
+          <button type="button" class="flex-none flex flex-col items-start gap-0.5 py-2 px-3.5 rounded-[10px] font-[inherit] border border-edge bg-panel text-fg aria-pressed:border-amber aria-pressed:bg-amber aria-pressed:text-on-amber"
+                  [attr.aria-pressed]="i === eraIndex()" (click)="eraIndex.set(i)">
+            <span class="font-mono text-[10px] opacity-85">{{ e.years }}</span>
+            <span class="font-semibold text-[14px]">{{ e.name }}</span>
+          </button>
+        }
+      </div>
+      @if (era()?.mobileDesc) { <span class="text-[13px] leading-normal text-muted">{{ era()!.mobileDesc }}</span> }
+    </section>
+
+    <section class="flex flex-col gap-2.5">
+      <h2 class="m-0 font-display text-[18px] font-bold">Series de esta era</h2>
+      <div class="flex gap-2.5 overflow-x-auto no-scrollbar pb-0.5">
+        @for (s of series(); track s.id) {
+          <a class="w-27.5 flex-none flex flex-col gap-1.5 text-fg hover:text-fg no-underline" [routerLink]="['/series', s.id]">
+            <app-poster class="p-2 rounded-[10px]" [name]="s.name" [image]="s.image" [titleSize]="13" />
+          </a>
+        }
+      </div>
+    </section>
+
+    <section class="flex flex-col">
+      <h2 class="m-0 mb-1.5 font-display text-[18px] font-bold">Comentarios</h2>
+      @for (m of comments(); track m.id) {
+        <div class="flex flex-col gap-0.5 py-2.5 border-b border-raised-2">
+          <span class="text-[12px]"><strong class="font-semibold">{{ m.user }}</strong> <span class="text-dim">· {{ m.time }}</span></span>
+          <span class="text-[14px] leading-[1.45] text-fg-2">{{ m.body }}</span>
+        </div>
+      }
+      <a class="flex items-center min-h-11 text-amber text-[14px] no-underline" [routerLink]="['/ver', channel().id]">Ver todos y comentar</a>
+    </section>
+  </div>
+</main>
+}

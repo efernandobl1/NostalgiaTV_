@@ -1,0 +1,49 @@
+<!-- NostalgiaTV · Android TV · Series -->
+<!-- CSS:
+body{margin:0;background:#0B0B09}
+-->
+<div class="w-480 h-270 overflow-hidden py-12 px-24 flex flex-col gap-8 bg-ink-2 text-fg font-sans">
+  <header class="flex items-center gap-10">
+    <span class="font-display font-bold text-[28px] tracking-[0.08em]">NOSTALGIA TV</span>
+    <nav class="flex gap-2">
+      <span class="py-3 px-6.5 text-[24px] text-muted">Canales</span>
+      <span class="py-3 px-6.5 text-[24px] text-muted">Guía</span>
+      <span class="py-3 px-6.5 rounded-[30px] bg-fg text-ink-2 font-semibold text-[24px]">Series</span>
+      <span class="py-3 px-6.5 text-[24px] text-muted">Vincular</span>
+    </nav>
+    <span class="flex-1"></span>
+    <span class="font-display font-semibold text-[30px]">14:32</span>
+  </header>
+
+  <div class="flex items-center gap-5">
+    <button type="button" (click)="focusSearch($event)" [style]="searchStyle">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+      Buscar por nombre o con la voz
+      <svg class="ml-auto" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
+    </button>
+    <div class="flex gap-3" role="group" aria-label="Filtros">
+      @for (c of chips; track $index) {
+        <button type="button" (click)="c.pick($event)" [attr.aria-pressed]="c.pressed" [style]="c.style">{{c.label}}</button>
+      }
+    </div>
+  </div>
+
+  <div class="flex items-baseline gap-4">
+    <span class="font-display font-semibold text-[30px]">{{heading}}</span>
+    <span class="text-[22px] text-muted">{{count}} series · ordenadas de la A a la Z</span>
+  </div>
+
+  <div class="grid grid-cols-[repeat(6,_minmax(0,_1fr))] gap-7">
+    @for (p of posters; track $index) {
+      <button type="button" (click)="p.pick($event)" [style]="p.style">
+        <span class="relative flex items-end aspect-[2_/_3] p-4.5 rounded-2xl [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#1F1F1B]">
+          @if (p.onAir) {
+            <span class="absolute top-3.5 left-3.5 py-1 px-2.5 rounded-md font-mono text-[16px] text-on-live bg-live">AL AIRE</span>
+          }
+          <span class="font-display font-bold text-[26px] leading-[1.1] text-left text-fg">{{p.name}}</span>
+        </span>
+        <span class="font-mono text-[18px] text-muted text-left">{{p.years}}</span>
+      </button>
+    }
+  </div>
+</div>

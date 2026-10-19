@@ -1,0 +1,114 @@
+<!-- NostalgiaTV · Ajustes -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+select,input[type=number],input[type=time],input[type=text]{min-height:44px;padding:0 10px;box-sizing:border-box;width:100%;border:1px solid #3A3A33;border-radius:6px;background:#0E0E0C;color:#ECE8DC;font:14px 'IBM Plex Sans',sans-serif;color-scheme:dark}
+-->
+<div class="min-h-screen flex flex-wrap bg-ink text-fg font-sans">
+  <div class="flex-[1_1_248px] border-r border-raised-2">
+    <!-- DC-IMPORT name="Sidebar" active="settings" hint-size="248px,960px" -->
+  </div>
+  <main class="flex-[999_1_560px] min-w-0 pt-8 px-10 pb-14 flex flex-col gap-6 max-w-310">
+
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div class="flex flex-col gap-1.5">
+        <span class="font-mono text-[12px] tracking-[0.14em] text-muted">CH 10 · SISTEMA</span>
+        <h1 class="m-0 font-display font-bold text-[36px]">Ajustes</h1>
+      </div>
+      <button class="btn btn-primary" type="button">Guardar cambios</button>
+    </header>
+
+    <div class="grid grid-cols-[repeat(auto-fit,_minmax(420px,_1fr))] gap-4 items-start">
+
+      <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="gen">
+        <h2 class="m-0 font-display text-[18px] font-semibold" id="gen">General</h2>
+        <label class="flex flex-col gap-1.5 text-[12px] text-muted">Zona horaria
+          <select><option>America/Guatemala (UTC−6)</option><option>America/Mexico_City</option><option>UTC</option></select>
+        </label>
+        <label class="flex flex-col gap-1.5 text-[12px] text-muted">Rol para nuevos espectadores
+          <select><option>Espectador</option><option>Editor</option></select>
+        </label>
+        <label class="flex items-center justify-between gap-3 min-h-11 text-[14px]">Registro público habilitado
+          <input class="check" type="checkbox" checked="">
+        </label>
+      </section>
+
+      <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="sch">
+        <h2 class="m-0 font-display text-[18px] font-semibold" id="sch">Reglas de programación</h2>
+        <label class="flex flex-col gap-2 text-[12px] text-muted">
+          <span class="flex justify-between">Ventana sin repetir episodios <span class="font-mono text-fg">{{hours}} h</span></span>
+          <input class="w-full accent-amber" type="range" min="0" max="72" [attr.value]="hours" (change)="setHours($event)">
+        </label>
+        <div class="grid grid-cols-[repeat(2,_minmax(0,_1fr))] gap-2.5">
+          <label class="flex flex-col gap-1.5 text-[12px] text-muted">Especiales por día (0–50)
+            <input type="number" min="0" max="50" value="2">
+          </label>
+          <label class="flex flex-col gap-1.5 text-[12px] text-muted">Especiales por serie/día
+            <input type="number" min="0" value="1">
+          </label>
+          <label class="flex flex-col gap-1.5 text-[12px] text-muted">Películas por día (0–20)
+            <input type="number" min="0" max="20" value="1">
+          </label>
+          <label class="flex flex-col gap-1.5 text-[12px] text-muted">Películas por serie/día
+            <input type="number" min="0" value="1">
+          </label>
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-1 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="sea">
+        <h2 class="mt-0 mx-0 mb-2.5 font-display text-[18px] font-semibold" id="sea">Temporadas (Halloween / Navidad)</h2>
+        @for (s of seasonal; track $index) {
+          <label class="flex items-center justify-between gap-3 min-h-13 border-t border-raised-2">
+            <span class="flex flex-col gap-0.5">
+              <span class="text-[14px]">{{s.label}}</span>
+              <span class="text-[12px] text-muted">{{s.hint}}</span>
+            </span>
+            <input class="check" type="checkbox" [attr.checked]="s.on">
+          </label>
+        }
+      </section>
+
+      <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="res">
+        <h2 class="m-0 font-display text-[18px] font-semibold" id="res">Política de recursos de media</h2>
+        <div class="grid grid-cols-[repeat(2,_minmax(0,_1fr))] gap-2.5">
+          <label class="flex flex-col gap-1.5 text-[12px] text-muted">Núcleos de día
+            <input type="number" min="1" value="4">
+          </label>
+          <label class="flex flex-col gap-1.5 text-[12px] text-muted">Núcleos de noche
+            <input type="number" min="1" value="12">
+          </label>
+          <label class="flex flex-col gap-1.5 text-[12px] text-muted">Inicio nocturno
+            <input type="time" value="23:00">
+          </label>
+          <label class="flex flex-col gap-1.5 text-[12px] text-muted">Fin nocturno
+            <input type="time" value="06:00">
+          </label>
+        </div>
+        <label class="flex items-center justify-between gap-3 min-h-11 text-[14px]">Modo nocturno habilitado
+          <input class="check" type="checkbox" checked="">
+        </label>
+      </section>
+    </div>
+
+    <section class="flex flex-col gap-4 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="cat">
+      <h2 class="m-0 font-display text-[18px] font-semibold" id="cat">Catálogos</h2>
+      <div class="grid grid-cols-[repeat(auto-fit,_minmax(260px,_1fr))] gap-5">
+        @for (c of catalogs; track $index) {
+          <div class="flex flex-col gap-2.5">
+            <span class="font-mono text-[11px] tracking-[0.1em] text-muted">{{c.title}}</span>
+            <div class="flex flex-wrap gap-1.5">
+              @for (i of c.items; track $index) {
+                <span class="py-1.5 px-3 rounded-[14px] text-[13px] bg-raised-2 border border-line">{{i}}</span>
+              }
+            </div>
+            <label class="relative flex gap-2">
+              <span class="absolute w-[1px] h-[1px] overflow-hidden [clip:rect(0_0_0_0)]">Agregar a {{c.title}}</span>
+              <input type="text" [attr.placeholder]="c.placeholder">
+              <button class="min-h-11 py-0 px-3.5 border border-edge rounded-md bg-transparent text-fg [font:500_13px_'IBM_Plex_Sans',_sans-serif] cursor-pointer" type="button">Agregar</button>
+            </label>
+          </div>
+        }
+      </div>
+    </section>
+  </main>
+</div>

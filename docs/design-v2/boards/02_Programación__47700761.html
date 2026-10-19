@@ -1,0 +1,119 @@
+<!-- NostalgiaTV · Programación -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+table{border-collapse:collapse;width:100%}
+th{text-align:left;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#A29E91;padding:8px 10px;border-bottom:1px solid #2C2C27}
+td{padding:10px;border-bottom:1px solid #24241F;font-size:13px;vertical-align:top}
+-->
+<div class="min-h-screen flex flex-wrap bg-ink text-fg font-sans">
+  <div class="flex-[1_1_248px] border-r border-raised-2">
+    <!-- DC-IMPORT name="Sidebar" active="schedule" hint-size="248px,960px" -->
+  </div>
+  <main class="flex-[999_1_560px] min-w-0 pt-8 px-10 pb-14 flex flex-col gap-6 max-w-310">
+
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div class="flex flex-col gap-1.5">
+        <span class="font-mono text-[12px] tracking-[0.14em] text-muted">CH 02 · OPERACIÓN</span>
+        <h1 class="m-0 font-display font-bold text-[36px]">Programación</h1>
+      </div>
+      <div class="flex flex-wrap gap-2.5">
+        <button class="btn btn-ghost" type="button">Exportar guía</button>
+        <button class="btn btn-primary" type="button" (click)="openRegen($event)">Regenerar programación</button>
+      </div>
+    </header>
+
+    <div class="flex flex-wrap items-center gap-2.5">
+      @for (c of channels; track $index) {
+        <button type="button" (click)="c.pick($event)" [attr.aria-pressed]="c.pressed" [style]="c.style">
+          <span class="font-mono text-[11px] opacity-[0.8]">{{c.code}}</span>
+          {{c.name}}
+        </button>
+      }
+      <span class="flex-1"></span>
+      <label class="flex items-center gap-2 text-[13px] text-muted">Día
+        <input class="min-h-10 py-0 px-2.5 border border-edge rounded-md bg-panel text-fg [font:13px_'IBM_Plex_Mono',_monospace] [color-scheme:dark]" type="date" value="2026-10-17">
+      </label>
+    </div>
+
+    <div class="flex flex-wrap gap-3 items-center py-3.5 px-4 bg-panel border border-line rounded-[10px] text-[13px]">
+      <span class="font-mono text-[11px] tracking-[0.1em] text-muted">ERA EN EMISIÓN</span>
+      <strong class="font-semibold">Época dorada 1996–2001</strong>
+      <span class="text-muted">·</span>
+      <span class="text-muted">Generada 06:00 · ciclo de shuffle 3</span>
+      <span class="flex-1"></span>
+      <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-xs bg-amber" aria-hidden="true"></span>Episodio</span>
+      <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-xs bg-info" aria-hidden="true"></span>Anuncio</span>
+      <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-xs bg-violet" aria-hidden="true"></span>Bumper</span>
+    </div>
+
+    <div class="flex flex-wrap gap-4 items-start">
+      <section class="flex-[3_1_520px] min-w-0 flex flex-col bg-panel border border-line rounded-[10px] overflow-hidden" aria-label="Guía del día">
+        @for (p of programs; track $index) {
+          <button type="button" (click)="p.pick($event)" [attr.aria-pressed]="p.pressed" [style]="p.rowStyle">
+            <span class="flex flex-col gap-0.5 w-18 flex-none">
+              <span class="font-mono text-[15px] text-fg">{{p.start}}</span>
+              <span class="font-mono text-[11px] text-muted">{{p.end}}</span>
+            </span>
+            <span class="flex-1 min-w-0 flex flex-col gap-2 text-left">
+              <span class="flex flex-wrap items-baseline gap-2">
+                <span class="font-semibold text-[15px] text-fg">{{p.title}}</span>
+                <span class="font-mono text-[12px] text-amber">{{p.code}}</span>
+                <span class="text-[12px] text-muted">{{p.type}}</span>
+                @if (p.live) {
+                  <span class="py-0.5 px-1.5 rounded-sm font-mono text-[10px] tracking-[0.1em] text-on-live bg-live">AL AIRE</span>
+                }
+              </span>
+              <span class="flex gap-0.5 h-3">
+                @for (s of p.segs; track $index) {
+                  <span class="rounded-xs" [style.flex]="'' + s.w + ' 0 0'" [style.background]="s.color"></span>
+                }
+              </span>
+            </span>
+          </button>
+        }
+      </section>
+
+      <aside class="flex-[2_1_340px] min-w-0 flex flex-col gap-4">
+        <section class="flex flex-col gap-3 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="seg">
+          <div class="flex flex-col gap-1">
+            <span class="font-mono text-[11px] tracking-[0.1em] text-muted">SEGMENTOS DE REPRODUCCIÓN</span>
+            <h2 class="m-0 font-display text-[20px] font-semibold" id="seg">{{sel.title}} · {{sel.code}}</h2>
+          </div>
+          <div class="overflow-x-auto">
+            <table>
+              <thead><tr><th>INICIO</th><th>TIPO</th><th>CONTENIDO</th><th>MEDIA</th></tr></thead>
+              <tbody>
+                @for (r of segRows; track $index) {
+                  <tr>
+                    <td class="font-mono text-muted">{{r.at}}</td>
+                    <td><span class="font-mono text-[11px]" [style.color]="r.color">{{r.kind}}</span></td>
+                    <td>{{r.content}}</td>
+                    <td class="font-mono text-muted whitespace-nowrap">{{r.range}}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="flex flex-col gap-2.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="rules">
+          <h2 class="m-0 font-display text-[18px] font-semibold" id="rules">Reglas aplicadas</h2>
+          @for (r of rules; track $index) {
+            <div class="flex justify-between gap-3 py-2 px-0 border-t border-raised-2 text-[13px]">
+              <span class="text-muted">{{r.label}}</span>
+              <span class="font-mono">{{r.value}}</span>
+            </div>
+          }
+          <a class="text-[13px]" routerLink="/admin/ajustes">Editar en Ajustes</a>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  @if (dlgRegen) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start pt-30 px-4 pb-12 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-130"><!-- DC-IMPORT name="DlgConfirm" heading="¿Regenerar la programación de hoy?" message="Se descartan los programas futuros del canal y se genera una guía nueva con un ciclo de shuffle distinto. Lo que está al aire ahora no se interrumpe." confirm-label="Regenerar" tone="warning" on-close="{{close}}" hint-size="100%,300px" --></div>
+    </div>
+  }
+</div>

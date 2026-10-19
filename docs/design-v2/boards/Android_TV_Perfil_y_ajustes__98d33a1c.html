@@ -1,0 +1,28 @@
+<!-- NostalgiaTV · Android TV · Ajustes -->
+<!-- CSS:
+body{margin:0;background:#0B0B09}
+-->
+<div class="w-480 h-270 overflow-hidden py-16 px-24 flex gap-16 bg-ink-2 text-fg font-sans">
+  <nav class="w-130 flex-none flex flex-col gap-2.5" aria-label="Ajustes">
+    <div class="flex items-center gap-5 mb-7">
+      <span class="w-22 h-22 rounded-full flex items-center justify-center font-display font-bold text-[34px] text-on-amber bg-amber" aria-hidden="true">FE</span>
+      <span class="flex flex-col gap-1"><span class="font-display font-bold text-[40px]">fernando</span><span class="text-[20px] text-muted">Smart TV sala</span></span>
+    </div>
+    @for (s of sections; track $index) {
+      <button type="button" (click)="s.pick($event)" [style]="s.style">{{s.label}} <span class="ml-auto opacity-[0.6]" aria-hidden="true">›</span></button>
+    }
+  </nav>
+
+  <section class="flex-1 flex flex-col gap-3.5 py-10 px-12 rounded-[28px] bg-panel-2">
+    <h1 class="mt-0 mx-0 mb-4 font-display font-bold text-[48px]">{{title}}</h1>
+    @for (r of rows; track $index) {
+      <div [style]="r.style">
+        <span class="flex-1 flex flex-col gap-1.5">
+          <span class="text-[26px] font-semibold" [style.color]="r.ink">{{r.label}}</span>
+          <span class="text-[19px] text-muted">{{r.hint}}</span>
+        </span>
+        <span class="font-mono text-[22px]" [style.color]="r.valueColor">{{r.value}}</span>
+      </div>
+    }
+  </section>
+</div>

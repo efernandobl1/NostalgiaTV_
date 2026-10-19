@@ -1,0 +1,194 @@
+<!-- NostalgiaTV · Series y episodios -->
+<!-- CSS:
+body{margin:0;background:#0E0E0C}
+a{color:#FFB547}a:hover{color:#FFD08A}
+table{border-collapse:collapse;width:100%}
+th{text-align:left;font:500 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#A29E91;padding:8px 10px;border-bottom:1px solid #2C2C27}
+td{padding:10px;border-bottom:1px solid #24241F;font-size:14px;vertical-align:middle}
+-->
+<div class="min-h-screen flex flex-wrap bg-ink text-fg font-sans">
+  <div class="flex-[1_1_248px] border-r border-raised-2">
+    <!-- DC-IMPORT name="Sidebar" active="series" hint-size="248px,960px" -->
+  </div>
+  <main class="flex-[999_1_560px] min-w-0 pt-8 px-10 pb-14 flex flex-col gap-6 max-w-310">
+
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div class="flex flex-col gap-1.5">
+        <span class="font-mono text-[12px] tracking-[0.14em] text-muted">CH 04 · CATÁLOGO</span>
+        <h1 class="m-0 font-display font-bold text-[36px]">Series y episodios</h1>
+      </div>
+      <div class="flex flex-wrap gap-2.5">
+        <button class="btn btn-ghost" type="button">Escanear carpeta</button>
+        <button class="btn btn-primary" type="button" (click)="open.newSeries($event)">Nueva serie</button>
+      </div>
+    </header>
+
+    <div class="flex flex-wrap items-center gap-2.5">
+      <label class="flex-[1_1_260px] flex items-center gap-2 min-h-11 py-0 px-3 border border-edge rounded-md bg-panel">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A29E91" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <span class="absolute w-[1px] h-[1px] overflow-hidden [clip:rect(0_0_0_0)]">Buscar series</span>
+        <input class="flex-1 min-w-0 border-0 outline-none bg-transparent text-fg [font:14px_'IBM_Plex_Sans',_sans-serif]" type="search" placeholder="Buscar por nombre…">
+      </label>
+      @for (c of cats; track $index) {
+        <button type="button" (click)="c.pick($event)" [attr.aria-pressed]="c.pressed" [style]="c.style">{{c.name}}</button>
+      }
+    </div>
+
+    <div class="flex flex-wrap gap-4 items-start">
+      <section class="flex-[1_1_260px] flex flex-col gap-2" aria-label="Series">
+        @for (s of series; track $index) {
+          <button type="button" (click)="s.pick($event)" [attr.aria-pressed]="s.pressed" [style]="s.style">
+            <span class="w-11 h-14 flex-none rounded-md [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#2C2C27]" aria-hidden="true"></span>
+            <span class="flex-1 min-w-0 flex flex-col gap-[3px] text-left">
+              <span class="font-semibold text-[14px] text-fg">{{s.name}}</span>
+              <span class="font-mono text-[11px] text-muted">{{s.years}} · {{s.seasons}} temp.</span>
+              <span class="text-[12px]" [style.color]="s.warnColor">{{s.files}}</span>
+            </span>
+          </button>
+        }
+      </section>
+
+      <div class="flex-[999_1_600px] min-w-0 flex flex-col gap-4">
+        <section class="flex flex-wrap gap-5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="sname">
+          <div class="w-27.5 h-37.5 rounded-lg flex items-center justify-center font-mono text-[11px] text-dim border border-dashed border-edge [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_#1F1F1B]" aria-hidden="true">PÓSTER</div>
+          <div class="flex-[1_1_340px] flex flex-col gap-2.5">
+            <div class="flex flex-wrap items-baseline gap-3">
+              <h2 class="m-0 font-display text-[26px] font-bold" id="sname">Dragon Ball Z</h2>
+              <span class="font-mono text-[13px] text-amber">★ 8.8</span>
+              <span class="flex-1"></span>
+              <button class="inline-flex items-center gap-1.5 btn btn-ghost btn-sm" type="button" (click)="open.editSeries($event)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+                Editar serie
+              </button>
+              <button class="w-10 h-10 inline-flex items-center justify-center border border-edge rounded-md bg-transparent text-danger cursor-pointer" type="button" (click)="open.deleteSeries($event)" aria-label="Eliminar serie">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
+              </button>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="py-1 px-2.5 rounded-xl text-[12px] bg-line">Anime</span>
+              <span class="py-1 px-2.5 rounded-xl text-[12px] bg-line">Acción</span>
+              <span class="py-1 px-2.5 rounded-xl text-[12px] bg-line">Aventura</span>
+            </div>
+            <span class="font-mono text-[12px] text-muted">26 abr 1989 → 31 ene 1996 · /media/series/dbz</span>
+            <p class="m-0 text-[14px] leading-[1.55] text-fg-2 max-w-155">Descripción e historia de la serie, importadas desde el proveedor de metadatos y editables a mano.</p>
+          </div>
+          <div class="flex-[1_1_220px] flex flex-col gap-2">
+            <span class="font-mono text-[11px] tracking-[0.1em] text-muted">IDS EXTERNOS</span>
+            @for (x of extIds; track $index) {
+              <div class="flex flex-col gap-0.5 p-2.5 border border-line rounded-md">
+                <span class="flex justify-between text-[13px]"><strong class="font-semibold">{{x.provider}}</strong><span class="font-mono">{{x.id}}</span></span>
+                <span class="text-[12px]" [style.color]="x.color">{{x.run}}</span>
+              </div>
+            }
+            <button class="btn btn-ghost btn-sm" type="button" (click)="open.import($event)">Importar metadatos</button>
+          </div>
+        </section>
+
+        <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="eps">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <h2 class="my-0 mr-3 ml-0 font-display text-[18px] font-semibold" id="eps">Episodios</h2>
+            <div class="flex flex-wrap gap-1.5" role="group" aria-label="Temporadas">
+              @for (t of seasons; track $index) {
+                <button type="button" (click)="t.pick($event)" [attr.aria-pressed]="t.pressed" [style]="t.style">{{t.label}}</button>
+              }
+            </div>
+            <span class="flex-1"></span>
+            <button class="btn btn-ghost btn-sm" type="button" (click)="open.season($event)">Agregar temporada</button>
+            <button class="btn btn-primary btn-sm" type="button" (click)="open.newEpisode($event)">Agregar episodio</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table>
+              <thead><tr><th>#</th><th>TÍTULO</th><th>TIPO</th><th>ARCHIVO</th><th>CORTES</th><th class="text-right">ACCIONES</th></tr></thead>
+              <tbody>
+                @for (e of episodes; track $index) {
+                  <tr [style]="e.rowStyle">
+                    <td class="font-mono text-amber">{{e.num}}</td>
+                    <td><button class="p-0 border-0 [background:none] text-fg [font:500_14px_'IBM_Plex_Sans',_sans-serif] text-left cursor-pointer min-h-8" type="button" (click)="e.pick($event)">{{e.title}}</button></td>
+                    <td class="text-[13px] text-muted">{{e.type}}</td>
+                    <td><span class="font-mono text-[12px]" [style.color]="e.fileColor">{{e.file}}</span></td>
+                    <td>
+                      <span class="relative block w-35 h-1.5 rounded-[3px] bg-line">
+                        @for (m of e.marks; track $index) {
+                          <span class="absolute top-[-3px] w-[3px] h-3 rounded-[1px] bg-info" [style.left.%]="m"></span>
+                        }
+                      </span>
+                    </td>
+                    <td class="text-right whitespace-nowrap">
+                      <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-fg cursor-pointer" type="button" (click)="e.edit($event)" aria-label="Editar episodio" title="Editar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+                      </button>
+                      <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-danger cursor-pointer" type="button" (click)="e.remove($event)" aria-label="Eliminar episodio" title="Eliminar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="flex flex-col gap-3.5 p-5 bg-panel border border-line rounded-[10px]" aria-labelledby="bp">
+          <div class="flex flex-wrap justify-between items-center gap-3">
+            <div class="flex flex-col gap-1">
+              <span class="font-mono text-[11px] tracking-[0.1em] text-muted">PUNTOS DE CORTE</span>
+              <h2 class="m-0 font-display text-[18px] font-semibold" id="bp">{{ep.num}} · {{ep.title}}</h2>
+            </div>
+            <button class="btn btn-primary btn-sm" type="button" (click)="open.breakpoint($event)">Agregar punto</button>
+          </div>
+          <div class="relative h-14 rounded-md [background:repeating-linear-gradient(90deg,_#2C2C27_0_1px,_transparent_1px_10%),_#1F1F1B]">
+            @for (b of bps; track $index) {
+              <span class="absolute top-0 bottom-0 w-0.5 bg-info" [style.left.%]="b.pct">
+                <span class="absolute top-1.5 left-1.5 whitespace-nowrap font-mono text-[11px] text-info">{{b.at}} · {{b.label}}</span>
+              </span>
+            }
+          </div>
+          <div class="flex justify-between font-mono text-[11px] text-dim"><span>00:00</span><span>10:50</span><span>21:40</span></div>
+          @for (b of bps; track $index) {
+            <div class="flex items-center gap-3 py-1 px-0 border-t border-raised-2">
+              <span class="w-22.5 font-mono text-[13px] text-info">{{b.at}}</span>
+              <span class="flex-1 text-[14px]">{{b.label}}</span>
+              <button class="w-10 h-10 inline-flex items-center justify-center border-0 rounded-md bg-transparent text-fg cursor-pointer" type="button" (click)="open.breakpoint($event)" aria-label="Editar punto de corte">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+              </button>
+            </div>
+          }
+          @if (noBps) {
+            <span class="text-[13px] text-muted">Este episodio no tiene puntos de corte; se emitirá sin anuncios intermedios.</span>
+          }
+        </section>
+      </div>
+    </div>
+  </main>
+
+  @if (dlg.series) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start py-12 px-4 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-150"><!-- DC-IMPORT name="DlgSeries" mode="{{seriesMode}}" on-close="{{close}}" hint-size="100%,860px" --></div>
+    </div>
+  }
+  @if (dlg.episode) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start py-12 px-4 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-150"><!-- DC-IMPORT name="DlgEpisode" mode="{{episodeMode}}" episode-title="{{editTitle}}" on-close="{{close}}" hint-size="100%,640px" --></div>
+    </div>
+  }
+  @if (dlg.season) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start py-12 px-4 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-150"><!-- DC-IMPORT name="DlgSeason" on-close="{{close}}" hint-size="100%,360px" --></div>
+    </div>
+  }
+  @if (dlg.breakpoint) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start py-12 px-4 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-150"><!-- DC-IMPORT name="DlgBreakPoint" on-close="{{close}}" hint-size="100%,440px" --></div>
+    </div>
+  }
+  @if (dlg.import) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start py-12 px-4 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-150"><!-- DC-IMPORT name="DlgImport" on-close="{{close}}" hint-size="100%,580px" --></div>
+    </div>
+  }
+  @if (dlg.confirm) {
+    <div class="fixed inset-0 z-[50] flex justify-center items-start pt-30 px-4 pb-12 overflow-y-auto bg-[rgba(6,6,5,0.78)]">
+      <div class="w-full max-w-130"><!-- DC-IMPORT name="DlgConfirm" heading="{{confirm.heading}}" message="{{confirm.message}}" confirm-label="{{confirm.label}}" tone="danger" on-close="{{close}}" hint-size="100%,300px" --></div>
+    </div>
+  }
+</div>

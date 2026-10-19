@@ -1,0 +1,154 @@
+@if (error()) {
+  <div class="flex-1 flex flex-col items-center justify-center gap-3 p-10 text-center text-muted" role="alert">
+    {{ error() }} <a routerLink="/series">Volver a Series</a>
+  </div>
+} @else if (!detail()) {
+  <div class="flex-1 flex items-center justify-center p-10 text-muted">Cargando la serie…</div>
+} @else {
+<!-- ── Desktop (md+) ── -->
+<div class="hidden md:flex flex-1 flex-col">
+  <section class="border-b border-raised-2 scan-rail [--scan:0.025]">
+    <div class="max-w-340 mx-auto pt-5 px-10">
+      <a class="inline-flex items-center gap-1.5 min-h-11 text-[14px] no-underline" routerLink="/series">← Volver a Series</a>
+    </div>
+    <div class="max-w-340 mx-auto pt-3 px-10 pb-10 flex flex-wrap gap-9 items-end">
+      <div class="w-55 aspect-[2/3] flex-none rounded-[14px] border border-edge flex items-center justify-center font-mono text-[12px] text-dim scan-raised-2 [--scan:0.05]" aria-hidden="true">
+        @if (series().logo) { <img class="max-w-[80%] max-h-[70%] object-contain" [src]="series().logo" alt=""> } @else { PÓSTER }
+      </div>
+      <div class="flex-[1_1_420px] flex flex-col gap-3.5">
+        <span class="font-mono text-[13px] tracking-[0.12em] text-amber">{{ series().years.replace('–', ' – ') }} · {{ series().seasons }} {{ series().seasons === 1 ? 'TEMPORADA' : 'TEMPORADAS' }} · ★ {{ series().rating }}</span>
+        <h1 class="m-0 font-display font-bold text-[56px] leading-none">{{ series().name }}</h1>
+        <div class="flex flex-wrap gap-1.5">
+          @for (t of series().tags; track t) {
+            <span class="py-[5px] px-3 rounded-[14px] text-[13px] bg-line">{{ t }}</span>
+          }
+        </div>
+        <p class="m-0 max-w-170 text-[16px] leading-[1.6] text-fg-2">{{ series().synopsis }}</p>
+        <div class="flex flex-wrap gap-2.5 mt-1">
+          @if (resume(); as r) {
+            <a class="pill pill-primary min-h-13 px-6 gap-2.5 rounded-[26px] text-[16px]" [routerLink]="['/series', series().id, 'episodio', r.id]">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>
+              {{ r.label }}
+            </a>
+          }
+          @if (channel(); as ch) {
+            <a class="pill min-h-13 px-4.5 rounded-[26px] text-fg-2 font-normal" [routerLink]="['/ver', ch.id]">Se emite en <strong class="ml-1.5 font-semibold text-fg">{{ ch.code }} · {{ ch.name }}</strong></a>
+          }
+          <a class="pill min-h-13 px-4.5 rounded-[26px] font-normal" routerLink="/guia">Próximas emisiones</a>
+          <button class="pill min-h-13 px-4.5 rounded-[26px]" type="button" (click)="share()">Compartir</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="w-full max-w-340 mx-auto pt-8 px-10 pb-18 flex flex-wrap gap-8 items-start">
+    <section class="flex-[999_1_600px] min-w-0 flex flex-col gap-4" aria-labelledby="eps">
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="m-0 mr-3 font-display text-[26px] font-bold" id="eps">Episodios</h2>
+        <div class="flex flex-wrap gap-1.5" role="group" aria-label="Temporadas">
+          @for (t of seasons(); track t; let i = $index) {
+            <button type="button" class="chip px-4 text-[14px]" [attr.aria-pressed]="i === season()" (click)="season.set(i)">{{ t }}</button>
+          }
+        </div>
+      </div>
+      @for (e of episodes(); track e.id) {
+        <a class="flex gap-4 items-center p-3 border border-line rounded-[14px] bg-panel text-fg hover:text-fg hover:bg-raised no-underline" [routerLink]="['/series', series().id, 'episodio', e.id]">
+          <span class="relative w-42 aspect-video flex-none rounded-lg overflow-hidden scan-raised-2">
+            <span class="absolute left-2 top-1.5 font-mono text-[12px] text-amber">{{ e.num }}</span>
+            <app-progress-bar [pct]="e.pct" [height]="4" track="rgba(255,255,255,0.1)" />
+          </span>
+          <span class="flex-1 min-w-0 flex flex-col gap-1">
+            <span class="font-semibold text-[16px]">{{ e.title }}</span>
+            <span class="text-[13px] text-muted">{{ e.meta }}</span>
+          </span>
+          <span class="font-mono text-[12px] whitespace-nowrap" [style.color]="e.stateColor">{{ e.state }}</span>
+        </a>
+      } @empty {
+        <div class="p-8 border border-dashed border-edge rounded-[14px] text-center text-muted">Esta serie todavía no tiene episodios disponibles.</div>
+      }
+    </section>
+
+    <section class="flex-[1_1_360px] min-w-0 flex flex-col gap-4" aria-labelledby="com">
+      <h2 class="m-0 font-display text-[26px] font-bold" id="com">Comentarios <span class="font-mono text-[15px] text-muted">{{ commentCount() }}</span></h2>
+      @if (session.signedIn()) {
+        <label class="flex flex-col gap-2 text-[13px] text-muted">{{ replyTo() ? 'Respuesta a ' + replyTo()!.user : 'Tu comentario' }}
+          <textarea class="p-3 w-full border border-edge rounded-[10px] bg-panel text-fg text-[15px] leading-normal font-sans resize-y focus:outline-2 focus:outline-amber" rows="3" maxlength="2000"
+                    placeholder="¿Qué recuerdas de esta serie?" [value]="draft()" (input)="draft.set($any($event.target).value)"></textarea>
+        </label>
+        <div class="flex justify-end gap-2">
+          @if (replyTo()) { <button class="pill px-4" type="button" (click)="replyTo.set(null)">Cancelar respuesta</button> }
+          <button class="pill pill-primary px-5" type="button" (click)="publish()" [disabled]="!draft().trim()">Publicar</button>
+        </div>
+      } @else {
+        <span class="text-[14px] text-muted"><a routerLink="/login" [queryParams]="{ returnUrl: '/series/' + series().id }">Inicia sesión</a> para comentar.</span>
+      }
+      @if (notice()) { <span class="text-[13px] text-amber-hi" role="status">{{ notice() }}</span> }
+      @for (c of comments(); track c.id) {
+        <article class="flex gap-3 py-3.5 border-t border-raised-2" [class.ml-12]="c.reply">
+          <span class="w-9 h-9 flex-none rounded-full flex items-center justify-center font-display font-bold text-[13px] bg-line" aria-hidden="true">{{ c.ini }}</span>
+          <div class="flex-1 min-w-0 flex flex-col gap-1">
+            <span class="text-[14px]"><strong class="font-semibold">{{ c.user }}</strong> <span class="text-dim">· {{ c.time }}</span></span>
+            <p class="m-0 text-[15px] leading-normal text-fg-2">{{ c.body }}</p>
+            @if (!c.reply && session.signedIn()) {
+              <button class="self-start min-h-9 p-0 border-0 bg-transparent text-amber hover:text-amber-hi text-[13px] font-medium font-sans cursor-pointer" type="button" (click)="replyTo.set(c)">Responder</button>
+            }
+          </div>
+        </article>
+      } @empty {
+        <span class="text-[14px] text-muted">Todavía no hay comentarios publicados.</span>
+      }
+    </section>
+  </main>
+</div>
+
+<!-- ── Mobile (<md) ── -->
+<main class="md:hidden flex flex-1 flex-col">
+  <div class="relative pt-14 px-4 pb-4.5 flex gap-3.5 items-end scan-rail [--scan:0.03] border-b border-raised-2">
+    <a class="absolute top-1.5 left-1.5 w-11 h-11 flex items-center justify-center text-fg hover:text-fg" routerLink="/series" aria-label="Volver">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+    </a>
+    <span class="w-26 aspect-[2/3] flex-none rounded-[10px] border border-edge scan-raised-2 [--scan:0.05] flex items-center justify-center" aria-hidden="true">
+      @if (series().logo) { <img class="max-w-[80%] max-h-[70%] object-contain" [src]="series().logo" alt=""> }
+    </span>
+    <div class="flex flex-col gap-1.5 min-w-0">
+      <span class="font-mono text-[11px] text-amber">{{ series().years }} · ★ {{ series().rating }}</span>
+      <h1 class="m-0 font-display font-bold text-[28px] leading-[1.05]">{{ series().name }}</h1>
+      <span class="text-[12px] text-muted">{{ series().tags.join(' · ') }}</span>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4 p-4">
+    @if (resume(); as r) {
+      <a class="pill pill-primary min-h-12 gap-2.5 rounded-3xl text-[15px]" [routerLink]="['/series', series().id, 'episodio', r.id]">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>
+        {{ r.label }}
+      </a>
+    }
+    @if (channel(); as ch) {
+      <a class="pill min-h-12 rounded-3xl text-[14px] font-normal" [routerLink]="['/ver', ch.id]">Al aire en {{ ch.name }}</a>
+    }
+    <p class="m-0 text-[14px] leading-[1.55] text-fg-2">{{ series().synopsis }}</p>
+
+    <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5" role="group" aria-label="Temporadas">
+      @for (t of seasons(); track t; let i = $index) {
+        <button type="button" class="chip flex-none" [attr.aria-pressed]="i === season()" (click)="season.set(i)">{{ t }}</button>
+      }
+    </div>
+
+    <div class="flex flex-col gap-2">
+      @for (e of episodes(); track e.id) {
+        <a class="flex gap-3 items-center p-2 rounded-xl bg-panel text-fg hover:text-fg no-underline" [routerLink]="['/series', series().id, 'episodio', e.id]">
+          <span class="relative w-28 aspect-video flex-none rounded-md overflow-hidden scan-raised-2">
+            <span class="absolute left-1.5 top-1 font-mono text-[11px] text-amber">{{ e.num }}</span>
+            <app-progress-bar [pct]="e.pct" track="rgba(255,255,255,0.1)" />
+          </span>
+          <span class="flex-1 min-w-0 flex flex-col gap-[3px]">
+            <span class="font-semibold text-[14px] leading-[1.25]">{{ e.title }}</span>
+            <span class="font-mono text-[11px]" [style.color]="e.stateColor">{{ e.state || e.meta }}</span>
+          </span>
+        </a>
+      }
+    </div>
+  </div>
+</main>
+}

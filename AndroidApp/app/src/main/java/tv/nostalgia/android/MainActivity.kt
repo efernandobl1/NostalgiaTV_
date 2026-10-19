@@ -12,7 +12,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import tv.nostalgia.android.features.NostalgiaApp
 import tv.nostalgia.android.core.DeviceMode
-import tv.nostalgia.android.shared.RetroTheme
+import tv.nostalgia.android.shared.NostalgiaTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,6 +29,6 @@ class MainActivity : ComponentActivity() {
             isAppearanceLightNavigationBars = false
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
-        setContent { RetroTheme(isTv) { NostalgiaApp(viewModel()) } }
+        setContent { NostalgiaTheme(isTv) { NostalgiaApp(viewModel()) } }
     }
 }

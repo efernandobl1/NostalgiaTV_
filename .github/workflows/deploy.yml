@@ -193,7 +193,7 @@ jobs:
           printf '%s' "$RESULTS" | jq -e --arg relevant "$RELEVANT" '
             to_entries | all(.value.result == "success" or (.value.result == "skipped" and $relevant == "false"))'
 
-  # Build both images in parallel; the API Docker build also runs its tests.
+  # Build both images in parallel once the test jobs above pass (images do not rerun the suite).
   # The job always runs so its required matrix checks report even when a PR only touches Android/docs.
   build-and-push:
     needs: [changes, security-scan]

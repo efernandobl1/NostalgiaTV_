@@ -1,0 +1,37 @@
+<!-- NostalgiaTV · Android TV · Vincular -->
+<!-- CSS:
+body{margin:0;background:#0B0B09}
+-->
+<div class="w-480 h-270 overflow-hidden py-18 px-30 flex flex-col [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.02)_0_1px,_transparent_1px_3px),_#0B0B09] text-fg font-sans">
+  <span class="flex items-center gap-3.5">
+    <svg width="48" height="48" viewBox="0 0 36 36" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path><rect x="8" y="14" width="16" height="12" rx="2"></rect></svg>
+    <span class="font-display font-bold text-[30px] tracking-[0.08em]">NOSTALGIA TV</span>
+  </span>
+
+  <div class="flex-1 flex items-center gap-30">
+    <div class="flex-1 flex flex-col gap-10">
+      <h1 class="m-0 font-display font-bold text-[72px] leading-[1.05]">Vincula este televisor</h1>
+      <ol class="m-0 p-0 list-none flex flex-col gap-6 text-[32px] leading-[1.35]">
+        <li class="flex gap-5"><span class="font-display font-bold text-amber">1</span><span>En tu teléfono o computadora abre <strong class="font-mono font-medium text-amber">TU-SERVIDOR/vincular</strong></span></li>
+        <li class="flex gap-5"><span class="font-display font-bold text-amber">2</span><span>Inicia sesión y escribe este código:</span></li>
+      </ol>
+      <div class="flex items-center gap-7">
+        <span class="py-7 px-11 rounded-[20px] border-[3px] border-amber font-mono font-medium text-[88px] tracking-[0.16em] text-fg bg-panel-2">K7Q2-M9XD</span>
+      </div>
+      <div class="flex items-center gap-4.5 text-[26px] text-muted">
+        <span class="w-3.5 h-3.5 rounded-full bg-amber shadow-[0_0_0_6px_rgba(255,181,71,0.2)]" aria-hidden="true"></span>
+        Esperando confirmación · el código vence en 9:41
+      </div>
+    </div>
+
+    <div class="w-105 flex-none flex flex-col items-center gap-6">
+      <div class="w-90 h-90 p-7 rounded-3xl bg-fg grid grid-cols-[repeat(9,_minmax(0,_1fr))] gap-1.5" aria-hidden="true">
+        @for (q of qr; track $index) {
+          <span class="rounded-[3px]" [style.background]="q"></span>
+        }
+      </div>
+      <span class="text-[24px] text-muted text-center">O escanea con la cámara del teléfono</span>
+      <span class="inline-flex items-center h-18 py-0 px-9 rounded-[36px] bg-[rgba(236,232,220,0.12)] font-semibold text-[26px] shadow-[0_0_0_4px_#0B0B09,_0_0_0_8px_#FFF3DA]">Obtener otro código</span>
+    </div>
+  </div>
+</div>

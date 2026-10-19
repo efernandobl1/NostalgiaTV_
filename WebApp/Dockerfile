@@ -7,16 +7,16 @@ COPY . .
 RUN pnpm exec ng build --configuration production
 
 FROM nginx:1.31-alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2 AS final
-# Patch runtime libraries without changing the pinned base or disabling image scans.
-RUN apk upgrade --no-cache libexpat pcre2 tiff
+# Patch every runtime package without changing the pinned base or disabling image scans.
+RUN apk upgrade --no-cache
 COPY --from=build /app/dist/WebApp/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Non-root: el master de nginx corre como el usuario 'nginx' (no root) y escucha
-# en 8080 (puerto no privilegiado). Se le da propiedad de los directorios que
-# necesita escribir (cache, pid, html donde se monta env.js). Endurece el
+# en 8080 (puerto no privilegiado). Solo puede escribir su cache y su pid: la SPA
+# y la configuración quedan de root (env.js se monta de solo lectura). Endurece el
 # contenedor web sin depender de capabilities de red privilegiadas.
-RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /etc/nginx/conf.d \
+RUN chown -R nginx:nginx /var/cache/nginx \
     && touch /var/run/nginx.pid && chown nginx:nginx /var/run/nginx.pid
 
 USER nginx

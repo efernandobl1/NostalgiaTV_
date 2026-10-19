@@ -1,0 +1,64 @@
+<!-- NostalgiaTV · Android TV · Inicio -->
+<!-- CSS:
+body{margin:0;background:#0B0B09}
+-->
+<div class="relative w-480 h-270 overflow-hidden py-12 px-24 flex flex-col gap-10 [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.02)_0_1px,_transparent_1px_3px),_#0B0B09] text-fg font-sans">
+  <div class="absolute top-0 right-0 w-275 h-160 [background:repeating-linear-gradient(0deg,_rgba(255,255,255,0.04)_0_1px,_transparent_1px_3px),_radial-gradient(ellipse_at_60%_40%,_#2C2A20_0%,_#0B0B09_70%)]" aria-hidden="true">
+    <span class="absolute inset-0 flex items-center justify-center font-mono text-[18px] tracking-[0.14em] text-faint">[ VISTA PREVIA EN VIVO ]</span>
+  </div>
+
+  <header class="relative flex items-center gap-12">
+    <span class="flex items-center gap-3.5">
+      <svg width="44" height="44" viewBox="0 0 36 36" fill="none" stroke="#FFB547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="30" height="22" rx="4"></rect><path d="M12 3l6 6 6-6"></path><rect x="8" y="14" width="16" height="12" rx="2"></rect></svg>
+      <span class="font-display font-bold text-[28px] tracking-[0.08em]">NOSTALGIA TV</span>
+    </span>
+    <nav class="flex gap-3">
+      <span class="py-3 px-7 rounded-[30px] bg-fg text-ink-2 font-semibold text-[24px]">Canales</span>
+      <span class="py-3 px-7 text-[24px] text-muted">Guía</span>
+      <span class="py-3 px-7 text-[24px] text-muted">Series</span>
+      <span class="py-3 px-7 text-[24px] text-muted">Vincular</span>
+    </nav>
+    <span class="flex-1"></span>
+    <span class="w-14 h-14 flex items-center justify-center rounded-[28px] bg-[rgba(236,232,220,0.1)]" aria-label="Buscar"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ECE8DC" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></span>
+    <span class="font-display font-semibold text-[32px]">14:32</span>
+    <span class="w-14 h-14 rounded-full flex items-center justify-center font-display font-bold text-[22px] text-on-amber bg-amber" aria-hidden="true">FE</span>
+  </header>
+
+  <section class="relative w-205 flex flex-col gap-4.5 mt-10">
+    <span class="flex items-center gap-4">
+      <span class="py-2 px-3.5 rounded-md font-mono text-[20px] tracking-[0.12em] text-on-live bg-live">● EN VIVO</span>
+      <span class="font-mono text-[22px] text-amber">CH 05 · CANAL 5 RETRO</span>
+    </span>
+    <h1 class="m-0 font-display font-bold text-[88px] leading-[1]">Dragon Ball Z</h1>
+    <span class="text-[28px] text-fg-2">T2 · E14 · El poder oculto de Gohan · termina 14:39</span>
+    <div class="flex gap-5 mt-4">
+      <span class="inline-flex items-center gap-3.5 h-19 py-0 px-10 rounded-[38px] bg-amber text-on-amber font-bold text-[28px] shadow-[0_0_0_4px_#0B0B09,_0_0_0_8px_#FFF3DA] [transform:scale(1.04)]">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>
+        Ver en vivo
+      </span>
+      <span class="inline-flex items-center h-19 py-0 px-10 rounded-[38px] bg-[rgba(236,232,220,0.12)] font-semibold text-[28px]">Guía</span>
+    </div>
+  </section>
+
+  <section class="relative flex flex-col gap-5 mt-auto">
+    <div class="flex items-center gap-4">
+      <h2 class="my-0 mr-4 ml-0 font-display font-semibold text-[32px]">Canales</h2>
+      <span class="h-13 inline-flex items-center py-0 px-6 rounded-[26px] bg-amber text-on-amber font-semibold text-[20px]">Todos</span>
+      <span class="h-13 inline-flex items-center py-0 px-6 rounded-[26px] bg-[rgba(236,232,220,0.1)] text-[20px]">Anime</span>
+      <span class="h-13 inline-flex items-center py-0 px-6 rounded-[26px] bg-[rgba(236,232,220,0.1)] text-[20px]">Caricaturas</span>
+      <span class="h-13 inline-flex items-center py-0 px-6 rounded-[26px] bg-[rgba(236,232,220,0.1)] text-[20px]">Solo al aire</span>
+    </div>
+    <div class="flex gap-7">
+      @for (c of channels; track $index) {
+        <div [style]="c.style">
+          <span class="flex items-center gap-4">
+            <span class="font-display font-bold text-[44px] text-amber">{{c.num}}</span>
+            <span class="font-semibold text-[24px]">{{c.name}}</span>
+          </span>
+          <span class="text-[22px] text-fg-2 truncate">{{c.now}}</span>
+          <span class="block h-1.5 rounded-[3px] bg-[rgba(255,255,255,0.12)]"><span class="block h-1.5 rounded-[3px] bg-amber" [style.width.%]="c.pct"></span></span>
+        </div>
+      }
+    </div>
+  </section>
+</div>
