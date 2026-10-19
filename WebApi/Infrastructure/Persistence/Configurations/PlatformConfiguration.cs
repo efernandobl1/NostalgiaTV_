@@ -20,12 +20,15 @@ internal static class PlatformConfiguration
             job.HasIndex(item => new { item.Worker, item.Fingerprint }).IsUnique();
             job.HasIndex(item => new { item.Worker, item.Status, item.Id });
             job.HasIndex(item => new { item.SeriesId, item.Status });
+            job.HasIndex(item => new { item.ChannelEraId, item.Status });
             job.HasOne(item => item.Series).WithMany().HasForeignKey(item => item.SeriesId).OnDelete(DeleteBehavior.Restrict);
+            job.HasOne(item => item.ChannelEra).WithMany().HasForeignKey(item => item.ChannelEraId).OnDelete(DeleteBehavior.Restrict);
             job.HasOne<MediaWorkerState>().WithMany().HasForeignKey(item => item.Worker).OnDelete(DeleteBehavior.Restrict);
             job.ToTable(table =>
             {
                 table.HasCheckConstraint("CK_MediaProcessingJobs_Status", "[Status] IN ('Queued', 'Processing', 'Completed', 'Failed', 'Skipped')");
                 table.HasCheckConstraint("CK_MediaProcessingJobs_Progress", "[Progress] BETWEEN 0 AND 100");
+                table.HasCheckConstraint("CK_MediaProcessingJobs_Owner", "([SeriesId] IS NULL AND [ChannelEraId] IS NOT NULL) OR ([SeriesId] IS NOT NULL AND [ChannelEraId] IS NULL)");
             });
         });
 

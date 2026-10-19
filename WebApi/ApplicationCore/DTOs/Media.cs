@@ -17,7 +17,8 @@ public sealed record ResourcePolicyRequest([Range(1, 2)] int DayCores, [Range(1,
     }
 }
 
-public sealed record MediaJobItem(long Id, string Worker, int SeriesId, string SeriesName, string Status, double Progress,
+/// <summary>SeriesName is the series, or "Channel · Era" for an era folder's bumper.</summary>
+public sealed record MediaJobItem(long Id, string Worker, int? SeriesId, string SeriesName, string Status, double Progress,
     string SourcePath, string? OutputPath, long SourceSize, string? Message, DateTime CreatedAtUtc, DateTime UpdatedAtUtc);
 
 public sealed record MediaQuery(string Worker = "all", string View = "pending", int Page = 1, int PageSize = 20);
