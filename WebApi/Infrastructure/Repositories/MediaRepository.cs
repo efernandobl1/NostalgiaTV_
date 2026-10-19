@@ -48,7 +48,8 @@ public sealed class MediaRepository(NostalgiaTVContext context, MediaLibrary lib
             ? jobs.OrderByDescending(job => job.Status == MediaJobStatus.Processing).ThenBy(job => job.Id)
             : jobs.OrderByDescending(job => job.UpdatedAtUtc).ThenByDescending(job => job.Id);
         var items = await ordered.Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(job => new MediaJobItem(job.Id, job.Worker, job.SeriesId, job.Series.Name, job.Status, job.Progress, job.SourcePath,
+            .Select(job => new MediaJobItem(job.Id, job.Worker, job.SeriesId,
+                job.Series != null ? job.Series.Name : job.ChannelEra != null ? job.ChannelEra.Channel.Name + " · " + job.ChannelEra.Name : "—", job.Status, job.Progress, job.SourcePath,
                 job.OutputPath, job.SourceSize, job.Message, job.CreatedAtUtc, job.UpdatedAtUtc))
             .ToListAsync();
         return new MediaStatus(workers, await ResourcesAsync(), counts, items, total, page, pageSize);
@@ -240,7 +241,7 @@ public sealed class MediaRepository(NostalgiaTVContext context, MediaLibrary lib
         try
         {
             var path = MediaFilePolicy.SafePath(library.Root, Path.Combine(library.Root, job.SourcePath));
-            var file = new LibraryFile(job.SeriesId, path, job.SourcePath, job.SourceSize, job.SourceModifiedUtc);
+            var file = new LibraryFile(job.SeriesId ?? 0, path, job.SourcePath, job.SourceSize, job.SourceModifiedUtc);
             MediaLibrary.EnsureUnchanged(file);
             var info = await probe.ReadAsync(path, token);
             if (worker == MediaWorkers.Index)

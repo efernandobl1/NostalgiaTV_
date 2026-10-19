@@ -116,6 +116,14 @@ public sealed class AdminChannelsController(IChannelRepository channels) : ApiCo
     public Task<EraInterludeItem> AssignInterlude(int id, int eraId, int interludeId, int? seriesId, EraInterludeRequest request) =>
         channels.AssignInterludeAsync(id, eraId, interludeId, seriesId, request);
 
+    /// <summary>
+    /// Imports the videos in the era's folder (and its "bumpers" subfolder) as approved bumpers of the era, as v1 did;
+    /// incompatible files go to the transcoder and a later scan imports their web copy.
+    /// </summary>
+    [HttpPost("{id:int}/eras/{eraId:int}/interludes/scan"), Authorize(Policy = AdminPolicies.Interludes), EnableRateLimiting("UploadPolicy")]
+    public Task<EraFolderScan> ScanInterludes(int id, int eraId, [FromServices] IInterludeRepository interludes, CancellationToken token) =>
+        interludes.ScanEraFolderAsync(id, eraId, token);
+
     [HttpDelete("{id:int}/eras/{eraId:int}/interludes/{interludeId:int}")]
     public async Task<IActionResult> RemoveInterlude(int id, int eraId, int interludeId, int? seriesId)
     {
