@@ -205,7 +205,8 @@ def main():
                    for r in valid_ranges])
     out += ["", "COMMIT TRANSACTION;", "PRINT 'NostalgiaTV v1 data imported.';"]
 
-    with open(args.out, "w", encoding="utf-8-sig", newline="\r\n") as file:
+    # No BOM: sqlcmd skips it with -i but fails on it when the script arrives on standard input.
+    with open(args.out, "w", encoding="utf-8", newline="\n") as file:
         file.write("\n".join(out) + "\n")
     parts = [e for e in kept_episodes if e["Part"]]
     print(f"categories {len(categories)}, series {len(series)}, seasons {len(seasons)}, episodes {len(kept_episodes)} "
