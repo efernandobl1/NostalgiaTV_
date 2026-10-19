@@ -73,7 +73,10 @@ export function createTuner(id: Signal<number>) {
       const end = new Date(p.endsAtUtc).getTime();
       const kind = start <= now && end > now ? 'now' as const : end <= now ? 'past' as const : undefined;
       const code = episodeCode(p.seasonNumber, p.episodeNumber, p.episodeType, p.episodePart);
-      return { time: hhmm(p.startsAtUtc), title: p.seriesName, sub: kind === 'now' ? `${code} · ahora` : code, kind, seriesId: p.seriesId };
+      // The episode name leads; the series and its code go below (the series alone when the episode has no own name).
+      const named = !!p.title && p.title !== p.seriesName;
+      const sub = [named ? p.seriesName : '', code, kind === 'now' ? 'ahora' : ''].filter(Boolean).join(' · ');
+      return { time: hhmm(p.startsAtUtc), title: named ? p.title : p.seriesName, sub, kind, seriesId: p.seriesId };
     });
   });
 

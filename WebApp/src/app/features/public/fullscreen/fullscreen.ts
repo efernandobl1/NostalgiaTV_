@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { createTuner } from '../../../core/data/live';
 import { PlayerPrefs } from '../../../core/player-prefs';
 import { PublicData } from '../../../core/data/public-data';
+import { CrtSettings } from '../../../shared/ui/crt-settings';
 import { VideoScreen } from '../../../shared/ui/video-screen';
 
 type Overlay = 'controls' | 'zapping' | 'guide' | 'break' | 'idle';
@@ -13,7 +14,7 @@ const ZAP_MS = 3000;
 /** Design: "Web · Pantalla completa (overlay)" + "Móvil · Pantalla completa (horizontal)". */
 @Component({
   selector: 'app-fullscreen',
-  imports: [RouterLink, VideoScreen],
+  imports: [RouterLink, VideoScreen, CrtSettings],
   host: {
     class: 'fixed inset-0 z-50 block bg-black text-fg font-sans select-none',
     '(document:mousemove)': 'wake()',

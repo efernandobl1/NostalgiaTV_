@@ -21,6 +21,12 @@ const REPORT_SPAN = 30;
   template: `
     <video #video class="w-full h-full object-contain bg-black" playsinline preload="auto"
            [muted]="prefs.muted()" (timeupdate)="tick()" (pause)="report()" (ended)="ended()" (error)="failed()"></video>
+    @if (prefs.crt(); as crt) {
+      @if (crt.enabled) {
+        <div class="video-filters" aria-hidden="true" [class.curvature]="crt.curvature" [class.vignette]="crt.vignette" [class.animate]="crt.animated"
+             [style.--scanline-opacity]="crt.intensity / 100" [style.--scanline-size.px]="crt.density * 2"></div>
+      }
+    }
     @if (blocked()) {
       <button class="absolute inset-0 m-auto w-fit h-fit pill pill-primary px-5" type="button" (click)="unblock()">▶ Toca para reproducir</button>
     } @else if (message()) {

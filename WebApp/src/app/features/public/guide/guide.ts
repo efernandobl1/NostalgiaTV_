@@ -6,6 +6,8 @@ import { airedPct, channelNumber, dayKey, hhmm, PublicData, slotLine } from '../
 import { Session } from '../../../core/session';
 
 type SlotKind = 'now' | 'special' | 'past' | undefined;
+/** A program block of the grid, or empty air time (`spacer`). */
+interface GridSlot { spacer?: boolean; title?: string; sub?: string; link?: (string | number)[]; style: string }
 
 const WINDOW_MIN = 240;
 const SLOT_COLORS: Record<string, string> = {
@@ -90,20 +92,27 @@ export class Guide {
   readonly rows = computed(() => {
     const from = this.start(), to = from + WINDOW_MIN * 60_000, now = this.now();
     return this.guide().map(row => {
-      const slots = row.slots
+      const visible = row.slots
         .map(slot => ({ slot, a: Math.max(from, new Date(slot.startsAtUtc).getTime()), b: Math.min(to, new Date(slot.endsAtUtc).getTime()) }))
         .filter(x => x.b > x.a)
-        .map(({ slot, a, b }) => {
-          const kind = kindOf(slot, now);
-          const shown = kind === 'past' ? undefined : kind;
-          return {
-            title: slot.seriesName, sub: slotLine(slot) || hhmm(slot.startsAtUtc), link: link(slot, kind, row.channelId),
-            style: `flex: ${Math.max(1, Math.round((b - a) / 60_000))} 0 0; ${SLOT_COLORS[shown ?? 'default']} opacity: ${this.matches(slot) ? 1 : 0.3};`,
-          };
+        .sort((x, y) => x.a - y.a);
+      // Every block grows by its minutes in the window; empty time becomes a spacer so blocks line up with the hours.
+      const slots: GridSlot[] = [];
+      let cursor = from;
+      for (const { slot, a, b } of visible) {
+        if (a - cursor >= 60_000) slots.push({ spacer: true, style: `flex: ${(a - cursor) / 60_000} 0 0;` });
+        const kind = kindOf(slot, now);
+        const shown = kind === 'past' ? undefined : kind;
+        slots.push({
+          title: slot.seriesName, sub: slotLine(slot) || hhmm(slot.startsAtUtc), link: link(slot, kind, row.channelId),
+          style: `flex: ${(b - a) / 60_000} 0 0; ${SLOT_COLORS[shown ?? 'default']} opacity: ${this.matches(slot) ? 1 : 0.3};`,
         });
+        cursor = Math.max(cursor, b);
+      }
+      if (slots.length && to - cursor >= 60_000) slots.push({ spacer: true, style: `flex: ${(to - cursor) / 60_000} 0 0;` });
       return {
         id: row.channelId, num: channelNumber(row.channelId), name: row.channelName,
-        slots: slots.length ? slots : [{ title: 'Fuera del aire', sub: 'Sin programación', link: ['/canal', row.channelId], style: `flex: ${WINDOW_MIN} 0 0; ${SLOT_COLORS['default']}` }],
+        slots: slots.length ? slots : [{ title: 'Fuera del aire', sub: 'Sin programación', link: ['/canal', row.channelId], style: `flex: ${WINDOW_MIN} 0 0; ${SLOT_COLORS['default']}` } as GridSlot],
       };
     });
   });

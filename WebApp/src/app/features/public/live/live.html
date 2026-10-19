@@ -18,7 +18,7 @@
         <label class="flex items-center gap-2 text-[13px] text-muted">Volumen
           <input class="w-30 accent-amber" type="range" min="0" max="100" [value]="player.muted() ? 0 : player.volume()" (input)="player.setVolume(+$any($event.target).value)">
         </label>
-        <button class="pill px-3 font-mono font-semibold text-[12px] aria-pressed:border-amber aria-pressed:text-amber" type="button" [attr.aria-pressed]="player.captions()" (click)="player.toggleCaptions()" aria-label="Subtítulos">CC</button>
+        <app-crt-settings />
         <a class="pill w-11 px-0" [routerLink]="['/ver', ch().id, 'pantalla-completa']" aria-label="Pantalla completa">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg>
         </a>
@@ -70,8 +70,8 @@
         @for (g of lineup(); track $index) {
           <div class="flex gap-3 py-3 px-2.5 rounded-lg" [class]="g.kind === 'now' ? 'bg-amber-wash shadow-[inset_3px_0_0_#FFB547]' : g.kind === 'past' ? 'opacity-60' : ''">
             <span class="w-13 flex-none font-mono text-[14px]" [class]="g.kind === 'now' ? 'text-danger' : g.kind === 'past' ? 'text-dim' : 'text-fg'">{{ g.time }}</span>
-            <span class="flex flex-col gap-0.5">
-              <span class="font-semibold text-[14px]">{{ g.title }}</span>
+            <span class="flex flex-col gap-0.5 min-w-0">
+              <span class="font-semibold text-[14px] line-clamp-2 break-words" [title]="g.title">{{ g.title }}</span>
               <span class="text-[12px] text-muted">{{ g.sub }}</span>
             </span>
           </div>
@@ -152,8 +152,8 @@
         @for (g of mobileLineup(); track $index) {
           <div class="flex gap-3 py-3 px-2 border-b border-raised-2" [class]="g.kind === 'now' ? 'bg-amber-wash shadow-[inset_3px_0_0_#FFB547]' : ''">
             <span class="w-12 flex-none font-mono text-[13px]" [class]="g.kind === 'now' ? 'text-danger' : 'text-fg'">{{ g.time }}</span>
-            <span class="flex flex-col gap-0.5">
-              <span class="font-semibold text-[14px]">{{ g.title }}</span>
+            <span class="flex flex-col gap-0.5 min-w-0">
+              <span class="font-semibold text-[14px] line-clamp-2 break-words" [title]="g.title">{{ g.title }}</span>
               <span class="text-[12px] text-muted">{{ g.sub }}</span>
             </span>
           </div>
