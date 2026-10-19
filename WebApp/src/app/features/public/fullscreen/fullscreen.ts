@@ -48,6 +48,9 @@ export class Fullscreen {
   readonly locked = signal(false);
   readonly mobileControls = computed(() => this.show() && !this.locked());
 
+  /** The CRT panel is open: keep the controls up and let Escape close it first. */
+  readonly crtOpen = signal(false);
+
   private timer?: ReturnType<typeof setTimeout>;
 
   constructor() {
@@ -95,8 +98,10 @@ export class Fullscreen {
   }
 
   onKey(e: KeyboardEvent): void {
+    // Keys typed inside the CRT panel (sliders use the arrows) are not player shortcuts.
+    if ((e.target as Element | null)?.closest?.('app-crt-settings')) return;
     switch (e.key) {
-      case 'Escape': this.mode() === 'guide' ? this.setMode('controls') : this.exit(); break;
+      case 'Escape': this.crtOpen() ? this.crtOpen.set(false) : this.mode() === 'guide' ? this.setMode('controls') : this.exit(); break;
       case 'ArrowUp': this.tune(this.index() + 1); break;
       case 'ArrowDown': this.tune(this.index() - 1); break;
       case 'g': case 'G': this.setMode(this.mode() === 'guide' ? 'controls' : 'guide'); break;
@@ -112,6 +117,6 @@ export class Fullscreen {
 
   private schedule(ms: number): void {
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.mode.set('idle'), ms);
+    this.timer = setTimeout(() => this.crtOpen() ? this.schedule(ms) : this.mode.set('idle'), ms);
   }
 }

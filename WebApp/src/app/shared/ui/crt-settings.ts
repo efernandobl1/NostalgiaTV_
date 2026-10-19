@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, inject, input, model } from '@angular/core';
 import { CrtFilters, PlayerPrefs } from '../../core/player-prefs';
 
 let next = 0;
@@ -6,7 +6,7 @@ let next = 0;
 /** "CRT" button of the player controls and its panel to tune the CRT filters over the video. */
 @Component({
   selector: 'app-crt-settings',
-  host: { class: 'relative inline-flex', '(document:keydown.escape)': 'open.set(false)', '(document:click)': 'outside($event)' },
+  host: { class: 'relative inline-flex', '(keydown.escape)': 'close($event)', '(document:click)': 'outside($event)' },
   template: `
     <button type="button" [class]="buttonClass()" aria-label="Filtros CRT" aria-haspopup="dialog"
             [attr.aria-expanded]="open()" [attr.aria-controls]="panelId" [attr.aria-pressed]="prefs.crt().enabled"
@@ -45,7 +45,8 @@ export class CrtSettings {
   /** Opens the panel above the button (bottom controls) or below it (top bar). */
   readonly drop = input<'up' | 'down'>('up');
 
-  readonly open = signal(false);
+  /** Panel visibility; players bind it to keep their controls up while it is open. */
+  readonly open = model(false);
   protected readonly panelId = `crt-panel-${++next}`;
   protected readonly switches: { key: 'enabled' | 'curvature' | 'vignette' | 'animated'; label: string }[] = [
     { key: 'enabled', label: 'Efecto CRT' },
@@ -55,6 +56,14 @@ export class CrtSettings {
   ];
 
   protected set(key: keyof CrtFilters, value: boolean): void { this.prefs.setCrt({ [key]: value }); }
+
+  /** Escape inside the panel closes it and stays there, so players do not also react to it. */
+  protected close(event: Event): void {
+    if (!this.open()) return;
+    event.stopPropagation();
+    this.open.set(false);
+    this.host.nativeElement.querySelector('button')?.focus();
+  }
 
   protected outside(event: Event): void {
     if (this.open() && !this.host.nativeElement.contains(event.target as Node)) this.open.set(false);

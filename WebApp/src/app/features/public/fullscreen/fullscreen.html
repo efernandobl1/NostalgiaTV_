@@ -71,7 +71,7 @@
           </button>
           <input class="w-40 accent-amber" type="range" aria-label="Volumen" min="0" max="100" [value]="player.muted() ? 0 : player.volume()" (input)="player.setVolume(+$any($event.target).value)">
           <span class="flex-1"></span>
-          <app-crt-settings buttonClass="fs-btn min-w-14 px-3 font-mono text-[15px] aria-pressed:border-amber aria-pressed:text-amber" />
+          <app-crt-settings [(open)]="crtOpen" buttonClass="fs-btn min-w-14 px-3 font-mono text-[15px] aria-pressed:border-amber aria-pressed:text-amber" />
           <button class="fs-btn gap-2.5 px-5.5 text-[16px]" type="button" (click)="setMode('guide')">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>Guía
           </button>
@@ -118,8 +118,9 @@
 <div class="hidden compact:block relative w-full h-full overflow-hidden tv-screen [--screen-edge:#050504]">
   @if (compact()) { <app-video-screen [channel]="id()" (state)="tuner.onState($event)" /> }
   <button class="absolute inset-0 border-0 bg-transparent cursor-pointer" type="button" (click)="toggleMobile()" aria-label="Mostrar u ocultar controles"></button>
-  <span class="absolute top-3 right-13 font-display font-bold text-ok [text-shadow:0_0_10px_rgba(139,224,143,0.5)] pointer-events-none transition-all" aria-hidden="true"
-        [style.font-size.px]="mobileControls() ? 40 : 28" [style.opacity]="mobileControls() ? 1 : 0.4">{{ ch().num }}</span>
+  <!-- Below the top bar while the controls are up, so it never covers their buttons. -->
+  <span class="absolute right-13 font-display font-bold text-ok [text-shadow:0_0_10px_rgba(139,224,143,0.5)] pointer-events-none transition-all" aria-hidden="true"
+        [style.top.px]="mobileControls() ? 76 : 12" [style.font-size.px]="mobileControls() ? 40 : 28" [style.opacity]="mobileControls() ? 1 : 0.4">{{ ch().num }}</span>
 
   @if (mobileControls()) {
     <div class="absolute left-0 right-0 top-0 pt-3 px-11 max-sm:px-3 pb-10 flex items-center gap-2.5 bg-[linear-gradient(180deg,rgba(5,5,4,0.88),rgba(5,5,4,0))]">
