@@ -1,6 +1,7 @@
 import { computed, DestroyRef, effect, inject, Signal, signal, untracked } from '@angular/core';
 import { Api } from '../api/api';
 import { ChannelState, ScheduleProgram } from '../api/models';
+import { ChannelEvents } from './channel-events';
 import { airedPct, episodeCode, hhmm, LiveChannel, PublicData, rememberChannel } from './public-data';
 
 /** What's on a channel right now, shared by the live player, fullscreen and the TV player. */
@@ -98,6 +99,10 @@ export function createTuner(id: Signal<number>) {
       rememberChannel(channelId);
       loadPrograms(channelId);
     });
+  });
+  inject(ChannelEvents).listen(change => {
+    const tuned = id();
+    if (tuned && ((change.reason === 'schedule' && change.channelId === tuned) || change.reason === 'reconnected')) loadPrograms(tuned);
   });
 
   return {

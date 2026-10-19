@@ -1,6 +1,7 @@
 import { Component, DestroyRef, ElementRef, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
 import { Api, mediaUrl } from '../../core/api/api';
 import { ChannelState } from '../../core/api/models';
+import { ChannelEvents } from '../../core/data/channel-events';
 import { PlayerPrefs } from '../../core/player-prefs';
 import { Session } from '../../core/session';
 
@@ -51,6 +52,7 @@ export class VideoScreen {
   readonly blocked = signal(false);
 
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private segmentId: number | null = null;
   private episodeId: number | null = null;
   private spanStart = 0;
 
@@ -70,19 +72,30 @@ export class VideoScreen {
       element.volume = this.prefs.volume() / 100;
     });
     inject(DestroyRef).onDestroy(() => { this.report(); this.clearTimer(); });
+    // The hub reports a rewritten schedule (for example an era going on air): follow it before the segment ends.
+    inject(ChannelEvents).listen(change => {
+      const channel = this.channel();
+      if (channel && ((change.reason === 'schedule' && change.channelId === channel) || change.reason === 'reconnected')) this.tune(channel, true);
+    });
   }
 
-  private async tune(channel: number): Promise<void> {
+  /** `keep`: a live update; the picture only jumps when another segment is on air now. */
+  private async tune(channel: number, keep = false): Promise<void> {
     const requested = performance.now();
     try {
       const state = await this.api.channelState(channel);
       if (this.channel() !== channel) return;
-      this.state.emit(state);
-      const elapsed = (performance.now() - requested) / 2000;
-      this.play(state.episodeId, state.filePath, state.currentSecond + elapsed);
+      this.clearTimer();
+      if (!keep || state.segmentId !== this.segmentId) {
+        this.state.emit(state);
+        const elapsed = (performance.now() - requested) / 2000;
+        this.segmentId = state.segmentId;
+        this.play(state.episodeId, state.filePath, state.currentSecond + elapsed);
+      }
       this.timer = setTimeout(() => this.tune(channel), Math.max(1, state.secondsUntilNext) * 1000 + 500);
     } catch {
-      if (this.channel() !== channel) return;
+      // A failed live update keeps the picture and the segment timer.
+      if (this.channel() !== channel || keep) return;
       this.state.emit(null);
       this.stop('SIN SEÑAL');
       this.timer = setTimeout(() => this.tune(channel), 15_000);
@@ -129,6 +142,7 @@ export class VideoScreen {
     element.removeAttribute('src');
     element.load();
     this.episodeId = null;
+    this.segmentId = null;
     this.message.set(message);
   }
 
