@@ -36,7 +36,8 @@ export class Fullscreen {
   readonly ch = this.tuner.ch;
   readonly channels = this.tuner.channels;
   private readonly data = inject(PublicData);
-  readonly seasonFx = computed(() => this.data.season() === 'halloween');
+  /** Seasonal glow over the picture, on with "Efectos de temporada" like the site atmosphere. */
+  readonly seasonFx = this.data.effects;
   /** Mirrors the `compact:` variant so only one `<video>` plays. */
   readonly compact = signal(false);
 

@@ -1,6 +1,6 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { Api, mediaUrl } from '../api/api';
-import { CategoryFacet, GuideSlot, NowPlaying, ProgressItem, PublicChannelCard } from '../api/models';
+import { CategoryFacet, GuideSlot, NowPlaying, ProgressItem, PublicChannelCard, PublicSettings } from '../api/models';
 import { Session } from '../session';
 
 // ── Formatting shared by the public, TV and admin screens ──
@@ -109,6 +109,15 @@ export function dayKey(offset = 0, timeZone?: string | null): string {
 
 export type Season = 'none' | 'halloween' | 'christmas';
 
+function seasonOf(settings: PublicSettings): Season {
+  return settings.season === 'Halloween' ? 'halloween' : settings.season === 'Christmas' ? 'christmas' : 'none';
+}
+
+/** Season whose decorations (site atmosphere, fullscreen glow) are on: "Efectos de temporada" in the platform settings. */
+export function seasonalEffects(settings: PublicSettings | null | undefined): Season {
+  return settings?.seasonalEffectsEnabled ? seasonOf(settings) : 'none';
+}
+
 /**
  * Public channels and categories, shared by every screen and refreshed every minute while the app is open.
  */
@@ -124,9 +133,9 @@ export class PublicData {
   readonly onAir = computed(() => this.channels().filter(c => c.on));
   readonly season = computed<Season>(() => {
     const settings = this.session.settings();
-    if (!settings?.seasonalThemesEnabled) return 'none';
-    return settings.season === 'Halloween' ? 'halloween' : settings.season === 'Christmas' ? 'christmas' : 'none';
+    return settings?.seasonalThemesEnabled ? seasonOf(settings) : 'none';
   });
+  readonly effects = computed(() => seasonalEffects(this.session.settings()));
   private timer: ReturnType<typeof setInterval> | null = null;
 
   /** Starts loading (idempotent); screens call it from their constructor. */
