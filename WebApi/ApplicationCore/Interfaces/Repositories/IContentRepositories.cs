@@ -48,6 +48,8 @@ public interface IInterludeRepository
     Task<(InterludeItem Item, IReadOnlyList<int> AffectedChannels)> UpdateAsync(int id, InterludeRequest request);
     Task<IReadOnlyList<int>> SetApprovalAsync(int id, bool approved);
     Task DeleteAsync(int id);
+    /// <summary>Imports the videos of an era's folder as bumpers assigned to that era.</summary>
+    Task<EraFolderScan> ScanEraFolderAsync(int channelId, int eraId, CancellationToken token);
 }
 
 public interface IChannelRepository

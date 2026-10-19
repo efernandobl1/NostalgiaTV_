@@ -488,7 +488,8 @@ Table MediaWorkerStates {
 
 Table MediaProcessingJobs {
   Id bigint [pk, increment]
-  SeriesId int [not null]
+  SeriesId int [null, note: 'Exactly one of SeriesId / ChannelEraId']
+  ChannelEraId int [null, note: 'Era folder bumper converted for the era scan']
   Worker nvarchar(20) [not null]
   Fingerprint nvarchar(64) [not null]
   SourcePath nvarchar(2048) [not null]
@@ -505,6 +506,7 @@ Table MediaProcessingJobs {
     (Worker, Fingerprint) [unique]
     (Worker, Status, Id)
     (SeriesId, Status)
+    (ChannelEraId, Status)
   }
 
   Note: 'CK_Status: [Status] IN (\'Queued\', \'Processing\', \'Completed\', \'Failed\', \'Skipped\')\nCK_Progress: [Progress] BETWEEN 0 AND 100'
@@ -680,6 +682,7 @@ Ref: ScheduledPlaybackSegments.InterludeId > Interludes.Id [delete: restrict]
 
 // Media
 Ref: MediaProcessingJobs.SeriesId > Series.Id [delete: restrict]
+Ref: MediaProcessingJobs.ChannelEraId > ChannelEras.Id [delete: restrict]
 Ref: MediaProcessingJobs.Worker > MediaWorkerStates.Id [delete: restrict]
 
 // Settings

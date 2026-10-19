@@ -81,6 +81,7 @@ export class AdminApi {
     const query = seriesId ? `?seriesId=${seriesId}` : '';
     return this.api.put<M.EraInterludeItem>(`/admin/channels/${channelId}/eras/${eraId}/interludes/${interludeId}${query}`, { weight, minimumGapSeconds });
   }
+  scanEraInterludes(channelId: number, eraId: number) { return this.api.post<M.EraFolderScan>(`/admin/channels/${channelId}/eras/${eraId}/interludes/scan`); }
   removeInterlude(channelId: number, eraId: number, interludeId: number, seriesId: number | null) {
     const query = seriesId ? `?seriesId=${seriesId}` : '';
     return this.api.delete(`/admin/channels/${channelId}/eras/${eraId}/interludes/${interludeId}${query}`);
