@@ -1,4 +1,5 @@
 <app-page-header eyebrow="CH 03 · OPERACIÓN" title="Canales y eras">
+  <button class="btn btn-ghost" type="button" (click)="open('import')">Importar canal</button>
   <button class="btn btn-primary" type="button" (click)="open('channel', 'create')">Nuevo canal</button>
 </app-page-header>
 
@@ -39,6 +40,7 @@
       <div class="flex flex-col gap-2 items-start">
         <button class="btn btn-ghost" type="button" (click)="share()">Copiar enlace público</button>
         <button class="btn btn-ghost" type="button" (click)="open('channel')">Editar canal</button>
+        <button class="btn btn-ghost" type="button" (click)="exportChannel()">Exportar</button>
       </div>
     </section>
 
@@ -151,6 +153,9 @@
 @switch (dlg()) {
   @case ('channel') {
     <app-channel-dialog [channel]="mode() === 'create' ? null : detail()" (saved)="refresh($event.id)" (deleted)="channelDeleted()" (closed)="dlg.set(null)" />
+  }
+  @case ('import') {
+    <app-channel-import-dialog (imported)="imported($event)" (closed)="dlg.set(null)" />
   }
   @case ('era') {
     @if (detail(); as d) {

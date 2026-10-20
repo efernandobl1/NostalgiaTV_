@@ -1,3 +1,4 @@
+import { packageGaps } from '../features/admin/channels/channel-import-dialog';
 import { dayKey, episodeCode, playTime, randomEpisode, resumeEpisode, years } from '../core/data/public-data';
 import { passwordScore } from '../features/auth/password';
 import { playerShortcut } from '../features/public/episode/episode';
@@ -116,5 +117,29 @@ describe('TV CRT levels', () => {
     expect(stepLevel('intensity', 100, 1, true)).toBe(0);
     expect(stepLevel('density', 10, 1, true)).toBe(1);
     expect(stepLevel('density', 2, -1)).toBe(1);
+  });
+});
+
+describe('channel package preview', () => {
+  it('lists the series, seasons and interludes the library lacks', () => {
+    const gaps = packageGaps({
+      version: 1, name: 'Canal', nameTaken: false, sourceChannelId: null, eras: [],
+      series: [
+        { key: 'a', name: 'Local', startYear: 1990, status: 'matched', seriesId: 1, matchedBy: 'name', missingSeasons: [0, 5] },
+        { key: 'b', name: 'Fantasma', startYear: 1992, status: 'missing', seriesId: null, matchedBy: null, missingSeasons: [] },
+        { key: 'c', name: 'Doble', startYear: 1993, status: 'ambiguous', seriesId: null, matchedBy: null, missingSeasons: [] },
+        { key: 'd', name: 'Completa', startYear: 1994, status: 'matched', seriesId: 2, matchedBy: 'externalId', missingSeasons: [] },
+      ],
+      interludes: [
+        { key: 'x', title: 'Ya viene', kind: 'Bumper', bumperType: 'ComingUp', status: 'missing', interludeId: null, matchedBy: null },
+        { key: 'y', title: 'Refresco', kind: 'Advertisement', bumperType: null, status: 'matched', interludeId: 3, matchedBy: 'filePath' },
+      ],
+    });
+    expect(gaps).toEqual([
+      { label: 'Fantasma (1992)', detail: 'Serie · no está en tu biblioteca' },
+      { label: 'Doble (1993)', detail: 'Serie · varias coincidencias, revisa la biblioteca' },
+      { label: 'Local', detail: 'Faltan temporadas: especiales, T5' },
+      { label: 'Ya viene', detail: 'Bumper · Ya viene · no está en tu biblioteca' },
+    ]);
   });
 });

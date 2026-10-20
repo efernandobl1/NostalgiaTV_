@@ -48,6 +48,13 @@ export interface ChannelListItem { id: number; shareId: string; name: string; lo
 export interface ChannelDetail { id: number; shareId: string; name: string; history: string | null; logoPath: string | null; startDate: string; endDate: string | null; activeEraId: number | null; eras: EraItem[] }
 export interface EraSeriesItem { seriesId: number; name: string; availableSeasons: number[]; seasons: number[]; episodeCount: number }
 export interface EraInterludeItem { interludeId: number; title: string; kind: string; bumperType: string | null; season: string; durationSeconds: number; approvedForBroadcast: boolean; weight: number; minimumGapSeconds: number; seriesId: number | null; seriesName: string | null }
+/** Preview of a channel package: what an import creates and which references the library lacks. Status: matched | missing | ambiguous. */
+export type PackageMatchStatus = 'matched' | 'missing' | 'ambiguous';
+export interface PackagePreviewEra { name: string; historicalStartYear: number; historicalEndYear: number | null; onAir: boolean; breakRule: BreakRule | null; seriesCount: number; missingSeries: number; interludeCount: number; missingInterludes: number }
+export interface PackagePreviewSeries { key: string; name: string; startYear: number; status: PackageMatchStatus; seriesId: number | null; matchedBy: 'externalId' | 'name' | null; missingSeasons: number[] }
+export interface PackagePreviewInterlude { key: string; title: string; kind: string; bumperType: string | null; status: PackageMatchStatus; interludeId: number | null; matchedBy: 'filePath' | 'title' | null }
+export interface ChannelPackagePreview { version: number; name: string; nameTaken: boolean; sourceChannelId: number | null; eras: PackagePreviewEra[]; series: PackagePreviewSeries[]; interludes: PackagePreviewInterlude[] }
+export interface ChannelPackageImportResult { channelId: number; name: string; eras: number; seriesLinked: number; seriesSkipped: number; interludesLinked: number; interludesSkipped: number }
 /** Result of importing an era folder's videos as bumpers; `converting` files are imported by a later scan. */
 export interface EraFolderScan { folder: string; imported: number; converting: number; skipped: number }
 export interface DashboardSummary { seriesCount: number; episodeCount: number; missingEpisodeFiles: number; channelCount: number; liveChannelCount: number; eraCount: number; userCount: number; activeDevices: number; pendingComments: number; queuedMediaJobs: number; failedMediaJobs: number; channels: ChannelListItem[]; latestActivity: ActivityItem[] }
