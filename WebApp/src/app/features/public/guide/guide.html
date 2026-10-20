@@ -46,12 +46,17 @@
             <span class="font-display font-bold text-[20px] text-amber">{{ r.num }}</span>
             <span class="text-[14px] font-semibold">{{ r.name }}</span>
           </a>
-          <div class="flex-1 flex gap-1 py-1.5">
+          <!-- min-w-0: without it the row grows to fit every title and the blocks drift from the hour ruler. -->
+          <div class="flex-1 min-w-0 flex py-1.5">
             @for (s of r.slots; track $index) {
-              <a class="min-w-0 box-border flex flex-col justify-center gap-0.5 py-2 px-2.5 rounded-lg no-underline transition-opacity hover:brightness-110" [routerLink]="s.link" [style]="s.style">
-                <span class="text-[14px] font-semibold truncate">{{ s.title }}</span>
-                <span class="font-mono text-[11px] opacity-80 overflow-hidden whitespace-nowrap">{{ s.sub }}</span>
-              </a>
+              @if (s.spacer) {
+                <span class="min-w-0" [style]="s.style" aria-hidden="true"></span>
+              } @else {
+                <a class="min-w-0 box-border flex flex-col justify-center gap-0.5 py-2 px-2.5 rounded-lg border-r-4 border-panel no-underline transition-opacity hover:brightness-110" [routerLink]="s.link!" [style]="s.style" [title]="s.title + ' · ' + s.sub">
+                  <span class="text-[14px] font-semibold truncate">{{ s.title }}</span>
+                  <span class="font-mono text-[11px] opacity-80 truncate">{{ s.sub }}</span>
+                </a>
+              }
             }
           </div>
         </div>

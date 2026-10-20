@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { createTuner } from '../../../core/data/live';
 import { PlayerPrefs } from '../../../core/player-prefs';
 import { PublicData } from '../../../core/data/public-data';
+import { CrtSettings } from '../../../shared/ui/crt-settings';
 import { VideoScreen } from '../../../shared/ui/video-screen';
 
 type Overlay = 'controls' | 'zapping' | 'guide' | 'break' | 'idle';
@@ -13,7 +14,7 @@ const ZAP_MS = 3000;
 /** Design: "Web · Pantalla completa (overlay)" + "Móvil · Pantalla completa (horizontal)". */
 @Component({
   selector: 'app-fullscreen',
-  imports: [RouterLink, VideoScreen],
+  imports: [RouterLink, VideoScreen, CrtSettings],
   host: {
     class: 'fixed inset-0 z-50 block bg-black text-fg font-sans select-none',
     '(document:mousemove)': 'wake()',
@@ -35,7 +36,8 @@ export class Fullscreen {
   readonly ch = this.tuner.ch;
   readonly channels = this.tuner.channels;
   private readonly data = inject(PublicData);
-  readonly seasonFx = computed(() => this.data.season() === 'halloween');
+  /** Seasonal glow over the picture, on with "Efectos de temporada" like the site atmosphere. */
+  readonly seasonFx = this.data.effects;
   /** Mirrors the `compact:` variant so only one `<video>` plays. */
   readonly compact = signal(false);
 
@@ -46,6 +48,9 @@ export class Fullscreen {
   readonly show = signal(true);
   readonly locked = signal(false);
   readonly mobileControls = computed(() => this.show() && !this.locked());
+
+  /** The CRT panel is open: keep the controls up and let Escape close it first. */
+  readonly crtOpen = signal(false);
 
   private timer?: ReturnType<typeof setTimeout>;
 
@@ -94,8 +99,10 @@ export class Fullscreen {
   }
 
   onKey(e: KeyboardEvent): void {
+    // Keys typed inside the CRT panel (sliders use the arrows) are not player shortcuts.
+    if ((e.target as Element | null)?.closest?.('app-crt-settings')) return;
     switch (e.key) {
-      case 'Escape': this.mode() === 'guide' ? this.setMode('controls') : this.exit(); break;
+      case 'Escape': this.crtOpen() ? this.crtOpen.set(false) : this.mode() === 'guide' ? this.setMode('controls') : this.exit(); break;
       case 'ArrowUp': this.tune(this.index() + 1); break;
       case 'ArrowDown': this.tune(this.index() - 1); break;
       case 'g': case 'G': this.setMode(this.mode() === 'guide' ? 'controls' : 'guide'); break;
@@ -111,6 +118,6 @@ export class Fullscreen {
 
   private schedule(ms: number): void {
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.mode.set('idle'), ms);
+    this.timer = setTimeout(() => this.crtOpen() ? this.schedule(ms) : this.mode.set('idle'), ms);
   }
 }

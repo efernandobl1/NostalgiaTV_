@@ -6,6 +6,7 @@ import { createTuner } from '../../../core/data/live';
 import { ago } from '../../../core/data/public-data';
 import { PlayerPrefs } from '../../../core/player-prefs';
 import { Session } from '../../../core/session';
+import { CrtSettings } from '../../../shared/ui/crt-settings';
 import { VideoScreen } from '../../../shared/ui/video-screen';
 import { copyLink } from '../../../shared/utils/share';
 
@@ -14,7 +15,7 @@ interface LiveComment { ini: string; user: string; time: string; body: string; p
 /** Design: "Web · Ver canal en vivo" + "Móvil · En vivo". */
 @Component({
   selector: 'app-live',
-  imports: [RouterLink, VideoScreen],
+  imports: [RouterLink, VideoScreen, CrtSettings],
   host: { class: 'flex-1 flex flex-col' },
   templateUrl: './live.html',
 })

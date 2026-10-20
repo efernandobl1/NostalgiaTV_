@@ -1,6 +1,7 @@
 import { afterNextRender, Component, DestroyRef, inject, input, numberAttribute, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { createTuner } from '../../core/data/live';
+import { TvPrefs } from '../../core/tv-prefs';
 import { VideoScreen } from '../../shared/ui/video-screen';
 
 const OSD_MS = 5000;
@@ -19,7 +20,9 @@ const OSD_MS = 5000;
     @if (ch().inBreak) {
       <span class="absolute top-14 left-24 py-3 px-5 rounded-xl font-mono text-[22px] tracking-[0.1em] text-[#0A1A1F] bg-info">CORTE · VOLVEMOS EN {{ ch().breakLeft }}</span>
     }
-    <span class="absolute top-14 right-24 font-display font-bold text-[120px] leading-none text-ok [text-shadow:0_0_18px_rgba(139,224,143,0.55)] transition-opacity" [class.opacity-35]="!osd()">{{ ch().num }}</span>
+    @if (tvPrefs.values().channelNumber) {
+      <span class="absolute top-14 right-24 font-display font-bold text-[120px] leading-none text-ok [text-shadow:0_0_18px_rgba(139,224,143,0.55)] transition-opacity" [class.opacity-35]="!osd()">{{ ch().num }}</span>
+    }
 
     @if (osd()) {
       <div class="absolute left-0 right-0 bottom-0 pt-35 px-24 pb-14 flex flex-col gap-7 bg-[linear-gradient(0deg,rgba(5,5,4,0.96)_40%,rgba(5,5,4,0))]">
@@ -54,6 +57,8 @@ const OSD_MS = 5000;
 })
 export class TvPlayer {
   private readonly router = inject(Router);
+  /** "Mostrar número al cambiar de canal": the green tube-TV number in the corner. */
+  protected readonly tvPrefs = inject(TvPrefs);
   readonly id = input(0, { transform: numberAttribute });
   readonly tuner = createTuner(this.id);
   readonly index = this.tuner.index;
