@@ -80,6 +80,15 @@ public interface IChannelRepository
     Task<PublicChannelDetail> PublicGetAsync(int id);
 }
 
+/// <summary>Channel packages: a channel exported as versioned JSON and imported into another library.</summary>
+public interface IChannelPackageRepository
+{
+    Task<ChannelPackageFile> ExportAsync(int channelId);
+    Task<ChannelPackagePreview> PreviewAsync(FileUpload file, CancellationToken token);
+    /// <summary>Name overrides the package's channel name (needed when that name is already taken).</summary>
+    Task<ChannelPackageImportResult> ImportAsync(FileUpload file, string? name, CancellationToken token);
+}
+
 public interface IScheduleRepository
 {
     Task EnsureGeneratedAsync(int channelId, DateTime untilUtc, CancellationToken token = default);

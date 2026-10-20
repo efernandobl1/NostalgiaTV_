@@ -46,7 +46,7 @@ public sealed class AdminScheduleController(IScheduleRepository schedule) : ApiC
 
 /// <summary>Canales: channels, eras, lineups, break rules and interlude assignments.</summary>
 [Authorize(Policy = AdminPolicies.Channels), Route("api/v{version:apiVersion}/admin/channels")]
-public sealed class AdminChannelsController(IChannelRepository channels) : ApiController
+public sealed class AdminChannelsController(IChannelRepository channels, IChannelPackageRepository packages) : ApiController
 {
     [HttpGet]
     public Task<IReadOnlyList<ChannelListItem>> List() => channels.ListAsync();
@@ -131,7 +131,26 @@ public sealed class AdminChannelsController(IChannelRepository channels) : ApiCo
         return NoContent();
     }
 
+    /// <summary>Downloads the channel as a versioned .ntv.json package (references only, no media files).</summary>
+    [HttpGet("{id:int}/export")]
+    public async Task<IActionResult> Export(int id)
+    {
+        var package = await packages.ExportAsync(id);
+        return File(package.Content, "application/json", package.FileName);
+    }
+
+    /// <summary>Validates a package and reports what an import would create and what the library is missing.</summary>
+    [HttpPost("import/preview"), EnableRateLimiting("UploadPolicy"), RequestSizeLimit(PackageLimit), RequestFormLimits(MultipartBodyLengthLimit = PackageLimit)]
+    public Task<ChannelPackagePreview> PreviewImport(IFormFile file, CancellationToken token) => packages.PreviewAsync(file.ToUpload(), token);
+
+    /// <summary>Creates a new channel from a package; name overrides the package's channel name.</summary>
+    [HttpPost("import"), EnableRateLimiting("UploadPolicy"), RequestSizeLimit(PackageLimit), RequestFormLimits(MultipartBodyLengthLimit = PackageLimit)]
+    public Task<ChannelPackageImportResult> Import(IFormFile file, [FromForm] string? name, CancellationToken token) =>
+        packages.ImportAsync(file.ToUpload(), name, token);
+
     private const long ImageLimit = 16L * 1024 * 1024;
+    // The package itself is capped at 1 MiB; the rest is room for the multipart envelope.
+    private const long PackageLimit = ChannelPackage.MaxBytes + 64 * 1024;
 }
 
 /// <summary>Series: catalog, seasons, episodes, break points, uploads and metadata.</summary>
