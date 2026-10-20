@@ -11,6 +11,7 @@ export const TV_ROUTES: Routes = [
       { path: 'canal/:id', title: 'NostalgiaTV TV · Canal', loadComponent: () => import('./tv-channel').then(m => m.TvChannel) },
       { path: 'series', title: 'NostalgiaTV TV · Series', loadComponent: () => import('./tv-catalog').then(m => m.TvCatalog) },
       { path: 'series/:id', title: 'NostalgiaTV TV · Serie', loadComponent: () => import('./tv-series').then(m => m.TvSeries) },
+      { path: 'series/:id/episodio/:episodeId', title: 'NostalgiaTV TV · Episodio', loadComponent: () => import('./tv-episode').then(m => m.TvEpisode) },
       { path: 'guia', title: 'NostalgiaTV TV · Guía', loadComponent: () => import('./tv-guide').then(m => m.TvGuide) },
       { path: 'ver/:id', title: 'NostalgiaTV TV · En vivo', loadComponent: () => import('./tv-player').then(m => m.TvPlayer) },
       { path: 'ajustes', title: 'NostalgiaTV TV · Ajustes', loadComponent: () => import('./tv-settings').then(m => m.TvSettings) },

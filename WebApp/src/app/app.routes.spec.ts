@@ -19,7 +19,7 @@ describe('app routes', () => {
     const paths = await collect(routes);
     for (const expected of ['/', '/series/:id', '/canal/:id', '/ver/:id/pantalla-completa', '/guia', '/perfil', '/vincular',
       '/login', '/registro', '/recuperar', '/nueva-contrasena', '/sesion-cerrada', '/bloqueo', '/error', '/**',
-      '/admin', '/admin/programacion', '/admin/ajustes', '/tv', '/tv/ver/:id', '/tv/guia']) {
+      '/admin', '/admin/programacion', '/admin/ajustes', '/tv', '/tv/ver/:id', '/tv/series/:id/episodio/:episodeId', '/tv/guia']) {
       expect(paths).toContain(expected);
     }
   });

@@ -1,7 +1,8 @@
-import { dayKey, episodeCode, playTime, years } from '../core/data/public-data';
+import { dayKey, episodeCode, playTime, randomEpisode, resumeEpisode, years } from '../core/data/public-data';
 import { passwordScore } from '../features/auth/password';
-import { playerShortcut, randomEpisode } from '../features/public/episode/episode';
+import { playerShortcut } from '../features/public/episode/episode';
 import { formatPairCode } from '../features/public/pair/pair';
+import { stepLevel } from '../features/tv/tv-settings';
 import { sectionOf } from '../layouts/public/public-section';
 
 describe('TV pairing code', () => {
@@ -65,6 +66,8 @@ describe('episode player shortcuts', () => {
     expect(key(' ')).toBe('toggle');
     expect(key('ArrowLeft')).toBe('back');
     expect(key('ArrowRight')).toBe('forward');
+    expect(key('f')).toBe('fullscreen');
+    expect(key('F')).toBe('fullscreen');
     expect(key('Enter')).toBeNull();
     expect(key('ArrowRight', document.body, { ctrlKey: true })).toBeNull();
   });
@@ -87,5 +90,31 @@ describe('random playback', () => {
     expect(randomEpisode(episodes, 1, new Set([2]), () => 0.99)?.id).toBe(3);
     expect(randomEpisode(episodes, 1, new Set([2, 3]), () => 0)?.id).toBe(2);
     expect(randomEpisode(episodes.slice(0, 1), 1, new Set())).toBeNull();
+  });
+});
+
+describe('series resume', () => {
+  const episodes = [{ id: 1, seasonNumber: 0 }, { id: 2, seasonNumber: 1 }, { id: 3, seasonNumber: 1 }];
+  const progress = (entries: [number, number, boolean][]) => new Map(entries.map(([id, currentSecond, completed]) => [id, { currentSecond, completed }]));
+
+  it('continues the episode in progress', () => {
+    expect(resumeEpisode(episodes, progress([[2, 0, true], [3, 120, false]]))).toEqual({ episode: episodes[2], started: true });
+  });
+
+  it('plays the first unwatched regular episode, then the first one', () => {
+    expect(resumeEpisode(episodes, progress([]))).toEqual({ episode: episodes[1], started: false });
+    expect(resumeEpisode(episodes, progress([[2, 0, true], [3, 0, true]]))).toEqual({ episode: episodes[0], started: false });
+    expect(resumeEpisode([], progress([]))).toBeNull();
+  });
+});
+
+describe('TV CRT levels', () => {
+  it('steps within range and wraps only on OK', () => {
+    expect(stepLevel('intensity', 20, 1)).toBe(30);
+    expect(stepLevel('intensity', 0, -1)).toBe(0);
+    expect(stepLevel('intensity', 100, 1)).toBe(100);
+    expect(stepLevel('intensity', 100, 1, true)).toBe(0);
+    expect(stepLevel('density', 10, 1, true)).toBe(1);
+    expect(stepLevel('density', 2, -1)).toBe(1);
   });
 });

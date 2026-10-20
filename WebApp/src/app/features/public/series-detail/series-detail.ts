@@ -1,9 +1,10 @@
 import { Component, computed, effect, inject, input, numberAttribute, signal, untracked } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Api, errorMessage, mediaUrl } from '../../../core/api/api';
 import { PublicComment, PublicEpisode, PublicSeriesDetail } from '../../../core/api/models';
-import { ago, channelNumber, episodeCode, playTime, years } from '../../../core/data/public-data';
+import { ago, channelNumber, episodeCode, playTime, randomEpisode, resumeEpisode, years } from '../../../core/data/public-data';
 import { Session } from '../../../core/session';
+import { ConfirmDialog } from '../../../shared/ui/confirm-dialog';
 import { ProgressBar } from '../../../shared/ui/progress-bar';
 import { copyLink } from '../../../shared/utils/share';
 
@@ -13,12 +14,13 @@ interface CommentView { id: number; ini: string; user: string; time: string; bod
 /** Design: "Web · Detalle de serie" + "Móvil · Serie". */
 @Component({
   selector: 'app-series-detail',
-  imports: [RouterLink, ProgressBar],
+  imports: [RouterLink, ProgressBar, ConfirmDialog],
   host: { class: 'flex-1 flex flex-col' },
   templateUrl: './series-detail.html',
 })
 export class SeriesDetail {
   private readonly api = inject(Api);
+  private readonly router = inject(Router);
   protected readonly session = inject(Session);
 
   /** Route param `:id`. */
@@ -67,14 +69,15 @@ export class SeriesDetail {
 
   /** Episode to continue: the one in progress, else the first unwatched regular episode. */
   readonly resume = computed(() => {
-    const list = this.allEpisodes();
-    const progress = this.progress();
-    const episode = list.find(e => { const p = progress.get(e.id); return p && !p.completed && p.currentSecond > 0; })
-      ?? list.find(e => !progress.get(e.id)?.completed && e.seasonNumber > 0) ?? list[0];
-    if (!episode) return null;
-    const started = (progress.get(episode.id)?.currentSecond ?? 0) > 0 && !progress.get(episode.id)?.completed;
-    return { id: episode.id, label: `${started ? 'Continuar' : 'Reproducir'} ${episodeCode(episode.seasonNumber, episode.episodeNumber, episode.episodeType, episode.episodePart)}` };
+    const pick = resumeEpisode(this.allEpisodes(), this.progress());
+    if (!pick) return null;
+    const e = pick.episode;
+    return { id: e.id, label: `${pick.started ? 'Continuar' : 'Reproducir'} ${episodeCode(e.seasonNumber, e.episodeNumber, e.episodeType, e.episodePart)}` };
   });
+  /** "Reiniciar vistos" only does something once an episode of the series has progress. */
+  readonly hasProgress = computed(() => this.allEpisodes().some(e => this.progress().has(e.id)));
+  readonly confirmReset = signal(false);
+  readonly actionError = signal('');
 
   readonly comments = computed<CommentView[]>(() => {
     const list = this.rawComments();
@@ -129,6 +132,24 @@ export class SeriesDetail {
       this.notice.set('Gracias. Tu comentario aparecerá cuando un moderador lo apruebe.');
     } catch (error) {
       this.notice.set(errorMessage(error, 'No se pudo publicar el comentario.'));
+    }
+  }
+
+  /** "Aleatorio": plays a random episode of the series now, preferring the ones not finished yet. */
+  playRandom(): void {
+    const finished = new Set([...this.progress().values()].filter(p => p.completed).map(p => p.episodeId));
+    const pick = randomEpisode(this.allEpisodes(), 0, finished);
+    if (pick) this.router.navigate(['/series', this.series().id, 'episodio', pick.id]);
+  }
+
+  /** "Reiniciar vistos": forgets the progress of every episode of the series on this profile. */
+  async resetWatched(): Promise<void> {
+    try {
+      await this.api.resetSeries(this.series().id);
+      await this.session.refreshViewer();
+      this.actionError.set('');
+    } catch (error) {
+      this.actionError.set(errorMessage(error, 'No se pudo reiniciar el progreso de la serie.'));
     }
   }
 
