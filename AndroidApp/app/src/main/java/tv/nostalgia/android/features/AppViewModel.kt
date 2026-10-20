@@ -101,6 +101,8 @@ class AppViewModel @JvmOverloads constructor(application: Application,
     val state = mutableState.asStateFlow()
     private var request: Job? = null
     private val sessionMutex = Mutex()
+    /** "Iniciar en el último canal" applies once, to the first catalog this process loads. */
+    private var startupTuned = false
 
     init {
         serverPreferences.load()?.let { connectServer(it.toString()) }
@@ -280,6 +282,18 @@ class AppViewModel @JvmOverloads constructor(application: Application,
         val categoryList = categories.await()
         mutableState.update { it.copy(channels = channelList, categories = categoryList, series = result.items, totalSeries = result.totalCount,
             seriesPage = 1, seriesFilter = SeriesFilter(), settings = settings.await() ?: it.settings) }
+        if (!startupTuned) {
+            startupTuned = true
+            startupChannel(preferences.value, channelList)?.let { channel ->
+                try {
+                    val live = api.channelState(channel.id)
+                    mutableState.update { if (it.playback == null) it.copy(playback = live.playback(channel)) else it }
+                } catch (exception: Exception) {
+                    // A channel that went off the air just opens the home screen.
+                    if (exception is CancellationException) throw exception
+                }
+            }
+        }
     }
 
     /** Updates what each channel is airing without blocking the screen. */
@@ -479,6 +493,8 @@ class AppViewModel @JvmOverloads constructor(application: Application,
         mutableVideoSettings.value = safe
     }
 
+    fun editVideoSettings(edit: (VideoSettings) -> VideoSettings) = updateVideoSettings(edit(videoSettings.value))
+
     fun updatePreferences(preferences: AppSettings) {
         appPreferences.save(preferences)
         mutablePreferences.value = preferences
@@ -502,6 +518,10 @@ class AppViewModel @JvmOverloads constructor(application: Application,
     }
 
     companion object {
+        /** Channel to tune when the app opens: the last one watched, if "Iniciar en el último canal" is on and it still exists. */
+        fun startupChannel(preferences: AppSettings, channels: List<Channel>): Channel? =
+            if (preferences.startOnLastChannel) channels.firstOrNull { it.id == preferences.lastChannelId } else null
+
         /** Calendar day (yyyy-MM-dd) in the platform's zone, which is how the guide endpoint reads it. */
         fun dayKey(offset: Int, timeZoneId: String? = null, now: Long = System.currentTimeMillis()): String {
             val zone = timeZoneId?.let(TimeZone::getTimeZone)?.takeIf { it.id == timeZoneId } ?: TimeZone.getDefault()

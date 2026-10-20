@@ -30,6 +30,9 @@ enum class NtvIcon(val viewport: Float, val stroke: String, val fill: String? = 
     Sort(24f, "M7,4 V20 M3,16 L7,20 L11,16 M17,20 V4 M13,8 L17,4 L21,8"),
     Scan(24f, "M4,8 V4 H8 M20,8 V4 H16 M4,16 V20 H8 M20,16 V20 H16 M9,9 H15 V15 H9 Z"),
     Check(24f, "M5,12 L10,17 L20,7"),
+    Tune(24f, "M4,7 H13 M19,7 H20 M16,4 A3,3 0 1 0 16,10 A3,3 0 1 0 16,4 M4,17 H5 M11,17 H20 M8,14 A3,3 0 1 0 8,20 A3,3 0 1 0 8,14"),
+    Previous(24f, "M6,6 V18 M18,6 L9,12 L18,18 Z"),
+    Next(24f, "M18,6 V18 M6,6 L15,12 L6,18 Z"),
     Play(24f, "", "M7,4 L20,12 L7,20 Z"),
     Pause(24f, "", "M6,4 H10 V20 H6 Z M14,4 H18 V20 H14 Z"),
     Google(24f, "M3,12 A9,9 0 1 0 21,12 A9,9 0 1 0 3,12 M12,12 H20");

@@ -65,7 +65,8 @@ data class ServerFeatures(val registrationEnabled: Boolean, val googleEnabled: B
  * Public theming: the platform's current season (AllYear, Halloween or Christmas). [timeZoneId] is the platform's
  * zone: the guide's "day" is a calendar day there, not on the device.
  */
-data class PublicSettings(val season: String, val seasonalThemes: Boolean, val timeZoneId: String? = null)
+/** Public platform settings; seasonalEffects is the admin switch for on-screen Halloween and Christmas effects. */
+data class PublicSettings(val season: String, val seasonalThemes: Boolean, val timeZoneId: String? = null, val seasonalEffects: Boolean = false)
 data class Playback(
     val title: String, val subtitle: String, val filePath: String,
     val episodeId: Int, val startSecond: Double = 0.0,
