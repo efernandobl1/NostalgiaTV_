@@ -74,7 +74,7 @@ class ScreenshotTest {
             ViewerDevice("d3", "Navegador", now - 2 * 86_400_000, false)))
 
     private val base = AppState(connectionStep = ConnectionStep.Ready, serverAddress = "https://tu-servidor.example/", loading = false,
-        settings = PublicSettings("Halloween", true), channels = channels, guide = guide, series = series, totalSeries = series.size,
+        settings = PublicSettings("Halloween", true, seasonalEffects = true), channels = channels, guide = guide, series = series, totalSeries = series.size,
         categories = listOf(Category(1, "Anime"), Category(2, "Caricatura"), Category(3, "Comedia")), session = session,
         seriesDetail = SeriesDetail(1, "Dragon Ball Z", "Goku y sus amigos defienden la Tierra de enemigos cada vez más poderosos.", null,
             1989, 1996, 8.8f, listOf("Anime", "Acción", "Aventura"), listOf(0, 1, 2, 3, 4), listOf(5 to "Canal 5 Retro")),
@@ -116,6 +116,9 @@ class ScreenshotTest {
     @Test @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi") fun tvPair() = capture("tv-04-pair", true,
         base.copy(connectionStep = ConnectionStep.Login, session = null)) { m, s -> TvPair(m, s) }
 
+    @Test @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi") fun tvImagePanel() = capture("tv-09-image", true, base) { _, _ ->
+        Box(Modifier.fillMaxSize()) { TvImagePanel(VideoSettings(), {}) {} } }
+
     @Test @Config(qualifiers = "w390dp-h844dp-xxhdpi") fun phoneHome() = capture("phone-01-home", false, base) { m, s -> MobileApp(m, s) }
     @Test @Config(qualifiers = "w390dp-h844dp-xxhdpi") fun phoneGuide() = capture("phone-03-guide", false, base.copy(screen = Screen.Guide)) { m, s -> MobileApp(m, s) }
     @Test @Config(qualifiers = "w390dp-h844dp-xxhdpi") fun phoneCatalog() = capture("phone-04-catalog", false, base.copy(screen = Screen.Catalog)) { m, s -> MobileApp(m, s) }
@@ -123,6 +126,8 @@ class ScreenshotTest {
     @Test @Config(qualifiers = "w390dp-h844dp-xxhdpi") fun phonePair() = capture("phone-06-pair", false, base.copy(screen = Screen.Pair)) { m, s -> MobileApp(m, s) }
     @Test @Config(qualifiers = "w390dp-h844dp-xxhdpi") fun phoneChannel() = capture("phone-07-channel", false, base.copy(screen = Screen.ChannelInfo(5))) { m, s -> MobileApp(m, s) }
     @Test @Config(qualifiers = "w390dp-h844dp-xxhdpi") fun phoneProfile() = capture("phone-08-profile", false, base.copy(screen = Screen.Profile)) { m, s -> MobileApp(m, s) }
+    @Test @Config(qualifiers = "w390dp-h844dp-xxhdpi") fun phoneImagePanel() = capture("phone-10-image", false, base) { _, _ ->
+        Box(Modifier.fillMaxSize()) { MobileImagePanel(VideoSettings(), {}, side = false) {} } }
     @Test @Config(qualifiers = "w390dp-h844dp-xxhdpi") fun phoneLogin() = capture("phone-09-login", false,
         base.copy(connectionStep = ConnectionStep.Login, serverFeatures = ServerFeatures(true, true))) { m, s -> MobileConnection(m, s) }
 }

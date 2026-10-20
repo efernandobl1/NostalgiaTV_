@@ -40,6 +40,14 @@ class NostalgiaApiTest {
         assertEquals("/api/v1/auth/revoke", server.takeRequest().path)
     }
 
+    @Test fun readsSeasonalSwitchesSeparately() = runTest {
+        server.enqueue(MockResponse().setBody("""{"timeZoneId":"America/Guatemala","season":"Halloween","seasonalThemesEnabled":false,"seasonalEffectsEnabled":true}"""))
+        val settings = api.publicSettings()
+        assertEquals("Halloween", settings.season)
+        assertFalse(settings.seasonalThemes)
+        assertTrue(settings.seasonalEffects)
+    }
+
     @Test fun rejectsOtherServerProducts() = runTest {
         server.enqueue(MockResponse().setBody("""{"product":"Unrelated","deviceAuthorizationVersion":1}"""))
         try { api.verifyServer(); fail("Expected unsupported server") }

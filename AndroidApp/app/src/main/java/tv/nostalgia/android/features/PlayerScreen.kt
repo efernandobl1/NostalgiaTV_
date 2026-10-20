@@ -28,11 +28,16 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -64,8 +69,8 @@ import tv.nostalgia.android.core.*
 import tv.nostalgia.android.shared.*
 import kotlin.math.abs
 
-/** Shared playback controls handed to the TV and phone layouts. */
-class PlayerControls(val player: Player, val overlay: MutableState<Boolean>, val poke: () -> Unit)
+/** Shared playback controls handed to the TV and phone layouts; [keys] is the first button of the TV OSD row. */
+class PlayerControls(val player: Player, val overlay: MutableState<Boolean>, val keys: FocusRequester = FocusRequester(), val poke: () -> Unit)
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
@@ -84,7 +89,10 @@ fun PlayerScreen(model: AppViewModel, playback: Playback) {
     val overlay = remember { mutableStateOf(true) }
     var interaction by remember { mutableLongStateOf(0L) }
     var guideOpen by remember { mutableStateOf(false) }
+    var imageOpen by remember { mutableStateOf(false) }
     val wakeFocus = remember { FocusRequester() }
+    // The OSD buttons sit inside the focusable player surface; the remote reaches them with ▶ (live) or ▼ (episodes).
+    var surfaceFocused by remember { mutableStateOf(false) }
     val blockedByData = !tv && !preferences.mobileData &&
         context.getSystemService(ConnectivityManager::class.java)?.isActiveNetworkMetered == true
     val visibleError = if (blockedByData) "Reproducción con datos móviles desactivada. Conéctate a Wi-Fi o cámbialo en Perfil → Ajustes."
@@ -101,13 +109,15 @@ fun PlayerScreen(model: AppViewModel, playback: Playback) {
     val mediaSession = remember(player) { MediaSession.Builder(context, player).build() }
     val controls = remember(player) { PlayerControls(player, overlay) { interaction++; overlay.value = true } }
     BackHandler(guideOpen) { guideOpen = false; overlay.value = true }
-    LaunchedEffect(overlay.value, interaction, guideOpen, visibleError, fullscreen) {
-        if (fullscreen && overlay.value && !guideOpen && visibleError == null) {
+    BackHandler(imageOpen) { imageOpen = false; overlay.value = true }
+    LaunchedEffect(overlay.value, interaction, guideOpen, imageOpen, visibleError, fullscreen) {
+        if (fullscreen && overlay.value && !guideOpen && !imageOpen && visibleError == null) {
             delay(5000)
             if (player.isPlaying) overlay.value = false
         }
     }
-    LaunchedEffect(overlay.value, guideOpen) { if (tv && !guideOpen) runCatching { wakeFocus.requestFocus() } }
+    LaunchedEffect(overlay.value, guideOpen, imageOpen) { if (tv && !guideOpen && !imageOpen) runCatching { wakeFocus.requestFocus() } }
+    val openImage = { imageOpen = true; guideOpen = false }
 
     fun prepare() {
         if (blockedByData) return
@@ -157,7 +167,8 @@ fun PlayerScreen(model: AppViewModel, playback: Playback) {
             mediaSession.release()
             player.release()
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            if (!tv) activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            // Rotating recreates the activity; only a player that is really closing gives the orientation back.
+            if (!tv && activity?.isChangingConfigurations != true) activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 
@@ -224,10 +235,21 @@ fun PlayerScreen(model: AppViewModel, playback: Playback) {
     }
 
     val live = playback.channel != null
-    val keys = Modifier.focusRequester(wakeFocus).onPreviewKeyEvent { event ->
-        if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN || guideOpen) return@onPreviewKeyEvent false
+    val keys = Modifier.focusRequester(wakeFocus).onFocusChanged { surfaceFocused = it.isFocused }.onPreviewKeyEvent { event ->
+        if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN || guideOpen || imageOpen) return@onPreviewKeyEvent false
         interaction++
-        when (event.nativeKeyEvent.keyCode) {
+        val code = event.nativeKeyEvent.keyCode
+        if (tv && !surfaceFocused) return@onPreviewKeyEvent when (code) {
+            // A button of the OSD row has focus: the D-pad moves between buttons and ▲ leaves the row.
+            KeyEvent.KEYCODE_DPAD_UP -> { runCatching { wakeFocus.requestFocus() }; true }
+            KeyEvent.KEYCODE_CHANNEL_UP -> { if (live) model.nextChannel(1); true }
+            KeyEvent.KEYCODE_CHANNEL_DOWN -> { if (live) model.nextChannel(-1); true }
+            KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_SETTINGS -> { openImage(); true }
+            else -> false
+        }
+        if (tv && overlay.value && visibleError == null && (if (live) code == KeyEvent.KEYCODE_DPAD_RIGHT else code == KeyEvent.KEYCODE_DPAD_DOWN))
+            return@onPreviewKeyEvent runCatching { controls.keys.requestFocus() }.isSuccess
+        when (code) {
             KeyEvent.KEYCODE_CHANNEL_UP -> { if (live) model.nextChannel(1); true }
             KeyEvent.KEYCODE_CHANNEL_DOWN -> { if (live) model.nextChannel(-1); true }
             KeyEvent.KEYCODE_DPAD_UP -> if (live && tv) { model.nextChannel(1); true } else false
@@ -237,6 +259,7 @@ fun PlayerScreen(model: AppViewModel, playback: Playback) {
                 !overlay.value -> { overlay.value = true; true }
                 else -> false
             }
+            KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_SETTINGS -> { openImage(); true }
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> { if (player.isPlaying) player.pause() else player.play(); overlay.value = true; true }
             KeyEvent.KEYCODE_DPAD_LEFT -> if (!live && tv) { player.seekTo((player.currentPosition - 10_000).coerceAtLeast(0)); overlay.value = true; true } else false
             KeyEvent.KEYCODE_DPAD_RIGHT -> if (!live && tv) { player.seekTo(player.currentPosition + 10_000); overlay.value = true; true } else false
@@ -253,18 +276,23 @@ fun PlayerScreen(model: AppViewModel, playback: Playback) {
             // The green channel number flashes on every channel change.
             if (live && preferences.showChannelNumber) ChannelFlash(playback, overlay.value, tv)
             if (visibleError == null) {
-                if (tv) { if (overlay.value) TvOsd(model, appState, playback, controls) }
-                else MobileFullscreenControls(model, appState, playback, controls)
+                if (tv) { if (overlay.value && !imageOpen) TvOsd(model, appState, playback, controls, openImage) }
+                else MobileFullscreenControls(model, appState, playback, controls, openImage)
             }
             visibleError?.let { PlayerError(it, { if (live) model.playChannel(playback.channel!!) else prepare() }, { model.back() }) }
             if (guideOpen) Box(Modifier.fillMaxSize().background(Ntv.Ink2.copy(alpha = .96f))) {
                 TvGuide(model, appState) { guideOpen = false; overlay.value = true }
             }
+            if (imageOpen) {
+                if (tv) TvImagePanel(settings, model::editVideoSettings) { imageOpen = false; overlay.value = true }
+                else MobileImagePanel(settings, model::editVideoSettings, side = true) { imageOpen = false }
+            }
         }
-    } else {
+    } else Box(Modifier.fillMaxSize()) {
         MobileLive(model, appState, playback, controls, visibleError, { modifier -> video(modifier) }, retry = {
             if (live) model.playChannel(playback.channel!!) else prepare()
-        })
+        }, onImage = openImage)
+        if (imageOpen) MobileImagePanel(settings, model::editVideoSettings, side = false) { imageOpen = false }
     }
 }
 
@@ -315,7 +343,7 @@ private fun Playback.detail(): String = listOf(episodeCode(seasonNumber, episode
 // ── Android TV OSD ──
 
 @Composable
-private fun TvOsd(model: AppViewModel, state: AppState, playback: Playback, controls: PlayerControls) {
+private fun TvOsd(model: AppViewModel, state: AppState, playback: Playback, controls: PlayerControls, onImage: () -> Unit) {
     val live = playback.channel != null
     val (position, duration) = rememberPosition(controls.player)
     val channel = state.channels.firstOrNull { it.id == playback.channel?.id } ?: playback.channel
@@ -350,11 +378,12 @@ private fun TvOsd(model: AppViewModel, state: AppState, playback: Playback, cont
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 if (live) {
-                    Hint("▲ ▼", "Cambiar canal"); Hint("OK", "Guía"); Hint("◀", "Volver")
+                    Hint("▲ ▼", "Cambiar canal"); Hint("OK", "Guía"); Hint("▶", "Botones"); Hint("◀", "Volver")
                 } else {
-                    Hint("◀ ▶", "10 s"); Hint("▶❚❚", "Pausa"); Hint("ATRÁS", "Volver")
+                    Hint("◀ ▶", "10 s"); Hint("▼", "Botones"); Hint("▶❚❚", "Pausa"); Hint("ATRÁS", "Volver")
                 }
                 Spacer(Modifier.weight(1f))
+                OsdKey("Imagen", Modifier.focusRequester(controls.keys), onImage)
                 if (live) {
                     OsdKey("CH−") { model.nextChannel(-1) }
                     OsdKey("CH+") { model.nextChannel(1) }
@@ -380,9 +409,9 @@ private fun Hint(key: String, label: String) {
 }
 
 @Composable
-private fun OsdKey(label: String, onClick: () -> Unit) {
+private fun OsdKey(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(50)
-    Box(Modifier.focusRing(shape, onClick).heightIn(min = 32.dp).widthIn(min = 44.dp).border(1.dp, Ntv.Edge, shape).padding(horizontal = 12.dp),
+    Box(modifier.focusRing(shape, onClick).heightIn(min = 32.dp).widthIn(min = 44.dp).border(1.dp, Ntv.Edge, shape).padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center) { Txt(label, 11.sp, font = Mono, weight = FontWeight.SemiBold) }
 }
 
@@ -390,7 +419,7 @@ private fun OsdKey(label: String, onClick: () -> Unit) {
 
 @Composable
 private fun MobileLive(model: AppViewModel, state: AppState, playback: Playback, controls: PlayerControls, error: String?,
-    video: @Composable (Modifier) -> Unit, retry: () -> Unit) {
+    video: @Composable (Modifier) -> Unit, retry: () -> Unit, onImage: () -> Unit) {
     val context = LocalContext.current
     val live = playback.channel != null
     val channel = state.channels.firstOrNull { it.id == playback.channel?.id } ?: playback.channel
@@ -407,6 +436,7 @@ private fun MobileLive(model: AppViewModel, state: AppState, playback: Playback,
             }
             if (live) ChannelNumber(channel?.number ?: "", 32.sp, Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 14.dp))
             Row(Modifier.align(Alignment.BottomEnd).padding(end = 6.dp, bottom = 8.dp)) {
+                ImageButton(onImage)
                 Box(Modifier.size(44.dp).clip(CircleShape).clickable { muted = !muted; controls.player.volume = if (muted) 0f else 1f },
                     contentAlignment = Alignment.Center) { Icon(if (muted) NtvIcon.Muted else NtvIcon.Volume, 20.dp, Ntv.Fg) }
                 Box(Modifier.size(44.dp).clip(CircleShape).clickable { goFullscreen() }, contentAlignment = Alignment.Center) {
@@ -472,12 +502,21 @@ private fun MobileLive(model: AppViewModel, state: AppState, playback: Playback,
                 }
             } else {
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        MobileButton("−10 s", { controls.player.seekTo((position - 10_000).coerceAtLeast(0)) })
-                        MobileButton(if (controls.player.isPlaying) "Pausa" else "Reproducir", {
-                            if (controls.player.isPlaying) controls.player.pause() else controls.player.play()
-                        }, primary = true)
-                        MobileButton("+10 s", { controls.player.seekTo(position + 10_000) })
+                    val index = state.episodes.indexOfFirst { it.id == playback.episodeId }
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SeekBar(position, duration, { controls.player.seekTo(it) })
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MobileButton("−10 s", { controls.player.seekTo((position - 10_000).coerceAtLeast(0)) })
+                            MobileButton(if (controls.player.isPlaying) "Pausa" else "Reproducir", {
+                                if (controls.player.isPlaying) controls.player.pause() else controls.player.play()
+                            }, Modifier.weight(1f), primary = true)
+                            MobileButton("+10 s", { controls.player.seekTo(seekForward(position, duration)) })
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MobileButton("Anterior", { model.nextEpisode(-1) }, Modifier.weight(1f), enabled = index > 0, icon = NtvIcon.Previous, height = 44.dp)
+                            MobileButton("Siguiente", { model.nextEpisode(1) }, Modifier.weight(1f), enabled = index >= 0 && index < state.episodes.lastIndex,
+                                icon = NtvIcon.Next, height = 44.dp)
+                        }
                     }
                 }
                 items(state.episodes.filter { it.season == state.episodes.firstOrNull { e -> e.id == playback.episodeId }?.season }, key = { it.id }) { episode ->
@@ -497,7 +536,7 @@ private fun MobileLive(model: AppViewModel, state: AppState, playback: Playback,
 // ── Phone: fullscreen (landscape) ──
 
 @Composable
-private fun BoxScope.MobileFullscreenControls(model: AppViewModel, state: AppState, playback: Playback, controls: PlayerControls) {
+private fun BoxScope.MobileFullscreenControls(model: AppViewModel, state: AppState, playback: Playback, controls: PlayerControls, onImage: () -> Unit) {
     val context = LocalContext.current
     var locked by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(controls.player.volume == 0f) }
@@ -527,11 +566,12 @@ private fun BoxScope.MobileFullscreenControls(model: AppViewModel, state: AppSta
             Txt(listOf(if (playback.isBumper) playback.title else playback.seriesName.ifEmpty { playback.title }, episodeCode(playback.seasonNumber, playback.episodeNumber, part = playback.part))
                 .filter { it.isNotEmpty() }.joinToString(" · "), 16.sp, weight = FontWeight.SemiBold, lines = 1)
         }
+        ImageButton(onImage, Modifier.background(Ntv.Glass(.12f), CircleShape))
         Box(Modifier.size(44.dp).clip(CircleShape).background(Ntv.Glass(.12f)).clickable { locked = true }, contentAlignment = Alignment.Center) {
             Icon(NtvIcon.Lock, 18.dp, Ntv.Fg)
         }
     }
-    Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(56.dp)) {
+    Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (live) 56.dp else 36.dp)) {
         val round = Modifier.clip(CircleShape).background(Ntv.Ink2.copy(alpha = .65f))
         if (live) {
             Box(round.size(64.dp).clickable { model.nextChannel(-1) }, contentAlignment = Alignment.Center) { Txt("CH−", 15.sp, font = Mono, weight = FontWeight.SemiBold) }
@@ -539,12 +579,18 @@ private fun BoxScope.MobileFullscreenControls(model: AppViewModel, state: AppSta
                 .height(52.dp).padding(horizontal = 20.dp), contentAlignment = Alignment.Center) { Txt("Guía", 14.sp, weight = FontWeight.SemiBold) }
             Box(round.size(64.dp).clickable { model.nextChannel(1) }, contentAlignment = Alignment.Center) { Txt("CH+", 15.sp, font = Mono, weight = FontWeight.SemiBold) }
         } else {
+            val index = state.episodes.indexOfFirst { it.id == playback.episodeId }
+            Box(round.size(48.dp).alpha(if (index > 0) 1f else .35f).clickable(enabled = index > 0) { model.nextEpisode(-1) },
+                contentAlignment = Alignment.Center) { Icon(NtvIcon.Previous, 20.dp, Ntv.Fg) }
             Box(round.size(56.dp).clickable { controls.player.seekTo((position - 10_000).coerceAtLeast(0)); controls.poke() }, contentAlignment = Alignment.Center) {
                 Txt("−10", 14.sp, font = Mono, weight = FontWeight.SemiBold) }
             Box(round.size(64.dp).clickable { if (controls.player.isPlaying) controls.player.pause() else controls.player.play() }, contentAlignment = Alignment.Center) {
                 Icon(if (controls.player.isPlaying) NtvIcon.Pause else NtvIcon.Play, 24.dp, Ntv.Fg) }
-            Box(round.size(56.dp).clickable { controls.player.seekTo(position + 10_000); controls.poke() }, contentAlignment = Alignment.Center) {
+            Box(round.size(56.dp).clickable { controls.player.seekTo(seekForward(position, duration)); controls.poke() }, contentAlignment = Alignment.Center) {
                 Txt("+10", 14.sp, font = Mono, weight = FontWeight.SemiBold) }
+            val next = index >= 0 && index < state.episodes.lastIndex
+            Box(round.size(48.dp).alpha(if (next) 1f else .35f).clickable(enabled = next) { model.nextEpisode(1) },
+                contentAlignment = Alignment.Center) { Icon(NtvIcon.Next, 20.dp, Ntv.Fg) }
         }
     }
     Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Ntv.Ink3.copy(alpha = .9f))))
@@ -552,9 +598,47 @@ private fun BoxScope.MobileFullscreenControls(model: AppViewModel, state: AppSta
         Box(Modifier.size(44.dp).clip(CircleShape).clickable { muted = !muted; controls.player.volume = if (muted) 0f else 1f }, contentAlignment = Alignment.Center) {
             Icon(if (muted) NtvIcon.Muted else NtvIcon.Volume, 20.dp, Ntv.Fg)
         }
-        Txt(if (live) (if (playback.startsAt > 0) clock(playback.startsAt) else "") else playTime(position), 11.sp, Ntv.Muted, font = Mono)
-        ProgressLine(if (live) liveFraction(playback) else if (duration > 0) position.toFloat() / duration else 0f, Modifier.weight(1f), 4.dp, Color.White.copy(alpha = .18f))
-        Txt(if (live) (if (playback.endsAt > 0) clock(playback.endsAt) else "") else playTime(duration), 11.sp, Ntv.Muted, font = Mono)
+        if (live) {
+            Txt(if (playback.startsAt > 0) clock(playback.startsAt) else "", 11.sp, Ntv.Muted, font = Mono)
+            ProgressLine(liveFraction(playback), Modifier.weight(1f), 4.dp, Color.White.copy(alpha = .18f))
+            Txt(if (playback.endsAt > 0) clock(playback.endsAt) else "", 11.sp, Ntv.Muted, font = Mono)
+        } else SeekBar(position, duration, { controls.player.seekTo(it); controls.poke() }, Modifier.weight(1f), inline = true, onDrag = controls.poke)
         if (live) (playback.nextTitle ?: channel?.next?.seriesName)?.let { Txt("Sigue: $it", 12.sp, Ntv.Fg2, lines = 1) }
+    }
+}
+
+@Composable
+private fun ImageButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClick).semantics { contentDescription = "Imagen" },
+        contentAlignment = Alignment.Center) { Icon(NtvIcon.Tune, 20.dp, Ntv.Fg) }
+}
+
+/** +10 s that stops at the end instead of running past the duration. */
+private fun seekForward(position: Long, duration: Long): Long = if (duration > 0) (position + 10_000).coerceAtMost(duration) else position + 10_000
+
+/**
+ * Seekable bar with "posición / duración". The thumb follows the finger and the player seeks once on release,
+ * so dragging does not flood the decoder with seeks.
+ */
+@Composable
+private fun SeekBar(position: Long, duration: Long, onSeek: (Long) -> Unit, modifier: Modifier = Modifier, inline: Boolean = false, onDrag: () -> Unit = {}) {
+    var dragging by remember { mutableStateOf<Float?>(null) }
+    val shown = dragging?.toLong() ?: position.coerceAtMost(duration)
+    val colors = SliderDefaults.colors(thumbColor = Ntv.Amber, activeTrackColor = Ntv.Amber, inactiveTrackColor = Color.White.copy(alpha = .18f))
+    val slider = @Composable { sliderModifier: Modifier ->
+        Slider(shown.toFloat(), { dragging = it; onDrag() }, sliderModifier, enabled = duration > 0,
+            valueRange = 0f..duration.coerceAtLeast(1).toFloat(), colors = colors,
+            onValueChangeFinished = { dragging?.let { onSeek(it.toLong()) }; dragging = null })
+    }
+    if (inline) Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Txt(playTime(shown), 11.sp, Ntv.Muted, font = Mono)
+        slider(Modifier.weight(1f))
+        Txt(playTime(duration), 11.sp, Ntv.Muted, font = Mono)
+    } else Column(modifier) {
+        slider(Modifier.fillMaxWidth())
+        Row {
+            Txt(playTime(shown), 12.sp, Ntv.Fg2, font = Mono, modifier = Modifier.weight(1f))
+            Txt(playTime(duration), 12.sp, Ntv.Muted, font = Mono)
+        }
     }
 }

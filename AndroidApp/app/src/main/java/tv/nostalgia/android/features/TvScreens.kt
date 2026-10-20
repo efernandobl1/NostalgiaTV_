@@ -3,6 +3,8 @@ package tv.nostalgia.android.features
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -98,9 +100,13 @@ private fun TvHome(model: AppViewModel, state: AppState) {
     val featured = state.channels.firstOrNull { it.id == featuredId } ?: state.channels.firstOrNull { it.now != null } ?: state.channels.firstOrNull()
     val watch = remember { FocusRequester() }
     LaunchedEffect(featured != null) { if (featured != null) runCatching { watch.requestFocus() } }
+    val preferences by model.preferences.collectAsState()
+    val season = seasonTheme(state.settings, preferences.seasonalEffects)
 
     Box(Modifier.fillMaxSize()) {
-        LivePreview(model, featured, Modifier.align(Alignment.TopEnd).width(550.dp).height(320.dp))
+        LivePreview(model, featured, Modifier.align(Alignment.TopEnd).width(550.dp).height(320.dp), season?.glow)
+        // Over the preview, so the hero text and the channel row keep their place.
+        season?.let { SeasonBanner(it, Modifier.align(Alignment.TopEnd).padding(top = 246.dp, end = 48.dp)) }
         Column(Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             TvHeader(model, state)
             if (featured != null) Column(Modifier.width(410.dp).padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -139,8 +145,8 @@ private fun TvHome(model: AppViewModel, state: AppState) {
 }
 
 @Composable
-private fun LivePreview(model: AppViewModel, channel: Channel?, modifier: Modifier) {
-    Box(modifier.crtGlow()) {
+private fun LivePreview(model: AppViewModel, channel: Channel?, modifier: Modifier, glow: Color? = null) {
+    Box(if (glow != null) modifier.crtGlow(center = glow) else modifier.crtGlow()) {
         val image = imageUrl(model, channel?.logoPath)
         if (image != null) AsyncImage(image, null, Modifier.align(Alignment.Center).fillMaxSize(.42f).alpha(.5f), contentScale = ContentScale.Fit)
         else if (channel != null) Txt("%02d".format(channel.id), 64.sp, Ntv.Faint, Modifier.align(Alignment.Center), font = Display)
@@ -501,16 +507,8 @@ private fun TvSettings(model: AppViewModel, state: AppState) {
             SettingRow("Efectos de temporada", "Halloween y Navidad en pantalla", yes(preferences.seasonalEffects),
                 if (preferences.seasonalEffects) "on" else "") { model.updatePreferences(preferences.copy(seasonalEffects = !preferences.seasonalEffects)) },
         ),
-        "Imagen" to listOf(
-            SettingRow("Efecto CRT", "Líneas de barrido sobre el video", yes(video.enabled), if (video.enabled) "on" else "") {
-                model.updateVideoSettings(video.copy(enabled = !video.enabled)) },
-            SettingRow("Curvatura", "Bordes como pantalla de tubo", yes(video.curvature), if (video.curvature) "on" else "") {
-                model.updateVideoSettings(video.copy(curvature = !video.curvature)) },
-            SettingRow("Oscurecer bordes", "Viñeta alrededor de la imagen", yes(video.vignette), if (video.vignette) "on" else "") {
-                model.updateVideoSettings(video.copy(vignette = !video.vignette)) },
-            SettingRow("Intensidad de líneas", "OK para cambiar", "${video.intensity}%") {
-                model.updateVideoSettings(video.copy(intensity = (video.intensity + 25) % 125)) },
-        ),
+        // Rendered by TvImageControls: ranges need ◀ ▶, not a single OK action.
+        "Imagen" to emptyList(),
         "Dispositivo" to listOf(
             SettingRow("Nombre", "Así aparece en Mis dispositivos", model.deviceName()),
             SettingRow("Dispositivos del perfil", "TV, teléfonos y navegadores vinculados", "${session?.deviceCount ?: 1}"),
@@ -547,10 +545,11 @@ private fun TvSettings(model: AppViewModel, state: AppState) {
                 }
             }
         }
-        Column(Modifier.weight(1f).fillMaxHeight().background(Ntv.Panel2, RoundedCornerShape(14.dp)).padding(horizontal = 24.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Column(Modifier.weight(1f).fillMaxHeight().background(Ntv.Panel2, RoundedCornerShape(14.dp)).verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 20.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Txt(sections[section].first, 24.sp, font = Display, weight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
             state.profileError?.let { Txt(it, 11.sp, Ntv.Danger) }
+            if (sections[section].first == "Imagen") TvImageControls(video, model::editVideoSettings)
             for (row in sections[section].second) SettingLine(row)
         }
     }

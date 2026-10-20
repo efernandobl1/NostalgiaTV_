@@ -123,14 +123,8 @@ private fun MobileHome(model: AppViewModel, state: AppState) {
         }
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            seasonBanner(state.settings, preferences.seasonalEffects)?.let { (title, text, colors) ->
-                item {
-                    Row(Modifier.fillMaxWidth().background(colors.first, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Txt(title, 11.sp, colors.second, font = Mono, tracking = tracking(.1f))
-                        Txt(text, 13.sp, colors.second)
-                    }
-                }
+            seasonTheme(state.settings, preferences.seasonalEffects)?.let { theme ->
+                item { SeasonBanner(theme, Modifier.fillMaxWidth()) }
             }
             if (featured?.now != null) item { HeroCard(model, featured, featured.now) }
             item {
@@ -161,14 +155,6 @@ private fun MobileHome(model: AppViewModel, state: AppState) {
             }
         }
     }
-}
-
-/** Seasonal strip when the platform is in Halloween or Christmas and the viewer keeps seasonal effects on. */
-private fun seasonBanner(settings: PublicSettings, enabled: Boolean): Triple<String, String, Pair<Color, Color>>? = when {
-    !enabled || !settings.seasonalThemes -> null
-    settings.season == "Halloween" -> Triple("HALLOWEEN", "Especiales de terror hasta el 31", Color(0xFF2A1A0C) to Color(0xFFFFC48A))
-    settings.season == "Christmas" -> Triple("NAVIDAD", "Especiales navideños todo diciembre", Color(0xFF12261A) to Color(0xFF9FE3B0))
-    else -> null
 }
 
 @Composable
@@ -657,8 +643,9 @@ private fun MobileProfile(model: AppViewModel, state: AppState) {
                         model.updatePreferences(preferences.copy(showChannelNumber = !preferences.showChannelNumber)) }
                     Toggle("Efectos de temporada", "Halloween y Navidad", preferences.seasonalEffects) {
                         model.updatePreferences(preferences.copy(seasonalEffects = !preferences.seasonalEffects)) }
-                    Toggle("Imagen retro", "Líneas de barrido y bordes de TV de tubo", video.enabled) {
-                        model.updateVideoSettings(video.copy(enabled = !video.enabled)) }
+                    SectionTitle("La imagen de antes", 16.sp, Modifier.padding(top = 18.dp))
+                    MobileImageControls(video, model::editVideoSettings)
+                    SectionTitle("Cuenta y servidor", 16.sp, Modifier.padding(top = 18.dp))
                     LinkRow("Mis dispositivos") { model.navigate(Screen.Pair) }
                     LinkRow("Servidor · ${state.serverAddress.removePrefix("https://").trimEnd('/')}",
                         if (confirm == "server") "Toca otra vez para cambiar" else "Cambiar") { if (confirm == "server") model.chooseServer() else confirm = "server" }
@@ -676,7 +663,7 @@ private fun Modifier.drawBottomBar(): Modifier = this.drawBehind {
 }
 
 @Composable
-private fun Toggle(label: String, hint: String, on: Boolean, onClick: () -> Unit) {
+internal fun Toggle(label: String, hint: String, on: Boolean, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).topLine(Ntv.Raised2, bottom = true).clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
