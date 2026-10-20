@@ -1,18 +1,19 @@
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { AdminApi } from '../../../core/api/admin-api';
 import { errorMessage, mediaUrl } from '../../../core/api/api';
-import { ChannelDetail, ChannelListItem, EraInterludeItem, EraSeriesItem } from '../../../core/api/models';
+import { ChannelDetail, ChannelListItem, ChannelPackageImportResult, EraInterludeItem, EraSeriesItem } from '../../../core/api/models';
 import { channelNumber, years } from '../../../core/data/public-data';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog';
 import { PageHeader } from '../../../shared/ui/page-header';
 import { copyLink } from '../../../shared/utils/share';
 import { interludeTag } from '../interludes/interlude-labels';
 import { ChannelDialog } from './channel-dialog';
+import { ChannelImportDialog } from './channel-import-dialog';
 import { EraDialog } from './era-dialog';
 import { EraInterludeDialog } from './era-interlude-dialog';
 import { EraSeriesDialog } from './era-series-dialog';
 
-type Dlg = 'channel' | 'era' | 'eraSeries' | 'eraInterlude' | 'broadcast' | null;
+type Dlg = 'channel' | 'import' | 'era' | 'eraSeries' | 'eraInterlude' | 'broadcast' | null;
 
 const ALL = [{ label: 'Todas', ink: '#ECE8DC', bg: '#3A3A33' }];
 
@@ -24,7 +25,7 @@ function gapLabel(seconds: number): string {
 
 @Component({
   selector: 'app-channels',
-  imports: [PageHeader, ConfirmDialog, ChannelDialog, EraDialog, EraSeriesDialog, EraInterludeDialog],
+  imports: [PageHeader, ConfirmDialog, ChannelDialog, ChannelImportDialog, EraDialog, EraSeriesDialog, EraInterludeDialog],
   host: { class: 'flex flex-col gap-6' },
   templateUrl: './channels.html',
 })
@@ -40,6 +41,7 @@ export class Channels {
   readonly mode = signal<'create' | 'edit'>('edit');
   readonly error = signal('');
   readonly notice = signal('');
+  readonly scanning = signal(false);
   readonly loading = signal(true);
 
   readonly info = computed(() => {
@@ -179,6 +181,25 @@ export class Channels {
     }
   }
 
+  /** Imports the era folder's videos as bumpers of the era (v1 "escanear bumpers"). */
+  async scanInterludes(): Promise<void> {
+    const id = this.detail()?.id, era = this.era();
+    if (!id || !era || this.scanning()) return;
+    this.scanning.set(true);
+    try {
+      const scan = await this.admin.scanEraInterludes(id, era.id);
+      const parts = [`${scan.imported} ${scan.imported === 1 ? 'bumper importado' : 'bumpers importados'}`];
+      if (scan.converting) parts.push(`${scan.converting} en conversión (vuelve a escanear cuando terminen)`);
+      if (scan.skipped) parts.push(`${scan.skipped} sin cambios`);
+      this.notice.set(`Carpeta ${scan.folder}: ${parts.join(', ')}.`);
+      await this.loadEra(id, era.id);
+    } catch (error) {
+      this.error.set(errorMessage(error, 'No se pudo escanear la carpeta de la era.'));
+    } finally {
+      this.scanning.set(false);
+    }
+  }
+
   async removeInterlude(interludeId: number, seriesId: number | null): Promise<void> {
     const id = this.detail()?.id, era = this.era();
     if (!id || !era) return;
@@ -188,6 +209,30 @@ export class Channels {
     } catch (error) {
       this.error.set(errorMessage(error, 'No se pudo quitar el interludio.'));
     }
+  }
+
+  /** Downloads the channel as a .ntv.json package (eras, lineups, rules and interlude references; no videos). */
+  async exportChannel(): Promise<void> {
+    const id = this.detail()?.id;
+    if (!id) return;
+    try {
+      const { blob, fileName } = await this.admin.exportChannel(id);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+      this.notice.set(`Paquete «${fileName}» descargado.`);
+    } catch (error) {
+      this.error.set(errorMessage(error, 'No se pudo exportar el canal.'));
+    }
+  }
+
+  async imported(result: ChannelPackageImportResult): Promise<void> {
+    const skipped = result.seriesSkipped + result.interludesSkipped;
+    this.notice.set(`Canal «${result.name}» importado: ${result.eras} eras, ${result.seriesLinked} series y ${result.interludesLinked} interludios enlazados`
+      + (skipped ? `; se omitieron ${result.seriesSkipped} series y ${result.interludesSkipped} interludios que faltan en la biblioteca.` : '.'));
+    await this.refresh(result.channelId);
   }
 
   share(): void { const id = this.detail()?.id; if (id) copyLink(`/canal/${id}`); }

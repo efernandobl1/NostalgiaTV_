@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<IMetadataRepository, MetadataRepository>();
         services.AddScoped<IInterludeRepository, InterludeRepository>();
         services.AddScoped<IChannelRepository, ChannelRepository>();
+        services.AddScoped<IChannelPackageRepository, ChannelPackageRepository>();
         services.AddScoped<IScheduleRepository, ScheduleRepository>();
         services.AddScoped<ICommentRepository, CommentRepository>();
         services.AddScoped<IViewerRepository, ViewerRepository>();

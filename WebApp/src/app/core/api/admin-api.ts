@@ -1,6 +1,6 @@
 import { HttpClient, HttpEvent, HttpEventType } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { filter, map, Observable } from 'rxjs';
+import { filter, firstValueFrom, map, Observable } from 'rxjs';
 import { Api } from './api';
 import * as M from './models';
 
@@ -81,10 +81,21 @@ export class AdminApi {
     const query = seriesId ? `?seriesId=${seriesId}` : '';
     return this.api.put<M.EraInterludeItem>(`/admin/channels/${channelId}/eras/${eraId}/interludes/${interludeId}${query}`, { weight, minimumGapSeconds });
   }
+  scanEraInterludes(channelId: number, eraId: number) { return this.api.post<M.EraFolderScan>(`/admin/channels/${channelId}/eras/${eraId}/interludes/scan`); }
   removeInterlude(channelId: number, eraId: number, interludeId: number, seriesId: number | null) {
     const query = seriesId ? `?seriesId=${seriesId}` : '';
     return this.api.delete(`/admin/channels/${channelId}/eras/${eraId}/interludes/${interludeId}${query}`);
   }
+
+  /** Downloads the channel package; the file name comes from Content-Disposition when the API exposes it. */
+  async exportChannel(id: number): Promise<{ blob: Blob; fileName: string }> {
+    const response = await firstValueFrom(this.http.get(`/api/v1/admin/channels/${id}/export`, { responseType: 'blob', observe: 'response' }));
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    const name = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1] ?? /filename="?([^";]+)"?/i.exec(disposition)?.[1];
+    return { blob: response.body ?? new Blob(), fileName: name ? decodeURIComponent(name) : `canal-${id}.ntv.json` };
+  }
+  previewChannelImport(file: File) { return this.api.post<M.ChannelPackagePreview>('/admin/channels/import/preview', form({}, { file })); }
+  importChannel(file: File, name: string | null) { return this.api.post<M.ChannelPackageImportResult>('/admin/channels/import', form({ name }, { file })); }
 
   // ── Series ──
   series(search?: string) { return this.api.get<M.SeriesListItem[]>('/admin/series', { search }); }

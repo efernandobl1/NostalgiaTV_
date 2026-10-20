@@ -48,6 +48,8 @@ public interface IInterludeRepository
     Task<(InterludeItem Item, IReadOnlyList<int> AffectedChannels)> UpdateAsync(int id, InterludeRequest request);
     Task<IReadOnlyList<int>> SetApprovalAsync(int id, bool approved);
     Task DeleteAsync(int id);
+    /// <summary>Imports the videos of an era's folder as bumpers assigned to that era.</summary>
+    Task<EraFolderScan> ScanEraFolderAsync(int channelId, int eraId, CancellationToken token);
 }
 
 public interface IChannelRepository
@@ -76,6 +78,15 @@ public interface IChannelRepository
     // Public
     Task<IReadOnlyList<PublicChannelCard>> PublicListAsync();
     Task<PublicChannelDetail> PublicGetAsync(int id);
+}
+
+/// <summary>Channel packages: a channel exported as versioned JSON and imported into another library.</summary>
+public interface IChannelPackageRepository
+{
+    Task<ChannelPackageFile> ExportAsync(int channelId);
+    Task<ChannelPackagePreview> PreviewAsync(FileUpload file, CancellationToken token);
+    /// <summary>Name overrides the package's channel name (needed when that name is already taken).</summary>
+    Task<ChannelPackageImportResult> ImportAsync(FileUpload file, string? name, CancellationToken token);
 }
 
 public interface IScheduleRepository
