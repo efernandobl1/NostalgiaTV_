@@ -30,6 +30,13 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>
               {{ r.label }}
             </a>
+            <button class="pill min-h-13 px-4.5 gap-2 rounded-[26px]" type="button" (click)="playRandom()" title="Reproduce un episodio al azar, primero los que no has visto">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"></path></svg>
+              Aleatorio
+            </button>
+            @if (hasProgress()) {
+              <button class="pill min-h-13 px-4.5 rounded-[26px] font-normal" type="button" (click)="confirmReset.set(true)">Reiniciar vistos</button>
+            }
           }
           @if (channel(); as ch) {
             <a class="pill min-h-13 px-4.5 rounded-[26px] text-fg-2 font-normal" [routerLink]="['/ver', ch.id]">Se emite en <strong class="ml-1.5 font-semibold text-fg">{{ ch.code }} · {{ ch.name }}</strong></a>
@@ -37,6 +44,7 @@
           <a class="pill min-h-13 px-4.5 rounded-[26px] font-normal" routerLink="/guia">Próximas emisiones</a>
           <button class="pill min-h-13 px-4.5 rounded-[26px]" type="button" (click)="share()">Compartir</button>
         </div>
+        @if (actionError()) { <span class="text-[13px] text-danger" role="alert">{{ actionError() }}</span> }
       </div>
     </div>
   </section>
@@ -123,6 +131,16 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg>
         {{ r.label }}
       </a>
+      <div class="flex gap-2">
+        <button class="pill flex-1 min-h-11 gap-2 rounded-3xl text-[14px]" type="button" (click)="playRandom()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"></path></svg>
+          Aleatorio
+        </button>
+        @if (hasProgress()) {
+          <button class="pill flex-1 min-h-11 rounded-3xl text-[14px] font-normal" type="button" (click)="confirmReset.set(true)">Reiniciar vistos</button>
+        }
+      </div>
+      @if (actionError()) { <span class="text-[13px] text-danger" role="alert">{{ actionError() }}</span> }
     }
     @if (channel(); as ch) {
       <a class="pill min-h-12 rounded-3xl text-[14px] font-normal" [routerLink]="['/ver', ch.id]">Al aire en {{ ch.name }}</a>
@@ -151,4 +169,10 @@
     </div>
   </div>
 </main>
+
+@if (confirmReset()) {
+  <app-confirm-dialog heading="¿Reiniciar los episodios vistos?" tone="warning" confirmLabel="Reiniciar vistos"
+                      [message]="'Se borrará el avance de ' + series().name + (session.signedIn() ? ' en todos los dispositivos de tu perfil.' : ' en este dispositivo.')"
+                      (confirmed)="resetWatched()" (closed)="confirmReset.set(false)" />
+}
 }

@@ -92,6 +92,18 @@ public sealed record PublicEra(int Id, string Name, string? Description, DateTim
 
 public sealed record PublicEraSeries(int SeriesId, string Name, string? LogoPath, IReadOnlyList<int> Seasons);
 
+/// <summary>
+/// Pushed over SignalR to viewers of the channel list and guide when a channel changes: a new segment starts ("segment",
+/// with its Kind), its schedule is rewritten, for example when an era goes on air ("schedule"), or the channel is added
+/// or removed ("lineup").
+/// </summary>
+public sealed record ChannelChange(int ChannelId, string Reason, string? Kind = null)
+{
+    public const string Segment = "segment";
+    public const string Schedule = "schedule";
+    public const string Lineup = "lineup";
+}
+
 /// <summary>Live state pushed every second over SignalR and returned by GET .../state.</summary>
 public sealed record ChannelState(int ChannelId, long SegmentId, string Kind, int? EpisodeId, int? SeriesId, string? SeriesName,
     string? SeriesLogoPath, string Title, int? SeasonNumber, int? EpisodeNumber, string FilePath, double MediaStartSecond, double CurrentSecond,

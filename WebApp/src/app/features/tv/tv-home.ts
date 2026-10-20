@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { episodeCode, hhmm, lastChannel, LiveChannel, PublicData } from '../../core/data/public-data';
+import { TvPrefs } from '../../core/tv-prefs';
 import { TvHeader } from './tv-header';
 
 const FILTERS: [string, (c: LiveChannel) => boolean][] = [
@@ -89,5 +90,12 @@ export class TvHome {
     return [code, now.title !== now.seriesName ? now.title : '', `termina ${hhmm(now.endsAtUtc)}`].filter(Boolean).join(' · ');
   });
 
-  constructor() { this.data.use(); }
+  constructor() {
+    this.data.use();
+    // "Iniciar en el último canal": only when the app opens on this screen, so coming back here stays here.
+    const router = inject(Router);
+    const last = lastChannel();
+    const opening = !router.currentNavigation()?.previousNavigation;
+    if (opening && last && inject(TvPrefs).values().lastChannel) router.navigate(['/tv/ver', last]);
+  }
 }

@@ -1,6 +1,7 @@
 import { computed, DestroyRef, effect, inject, Signal, signal, untracked } from '@angular/core';
 import { Api } from '../api/api';
 import { ChannelState, ScheduleProgram } from '../api/models';
+import { ChannelEvents } from './channel-events';
 import { airedPct, episodeCode, hhmm, LiveChannel, PublicData, rememberChannel } from './public-data';
 
 /** What's on a channel right now, shared by the live player, fullscreen and the TV player. */
@@ -73,7 +74,10 @@ export function createTuner(id: Signal<number>) {
       const end = new Date(p.endsAtUtc).getTime();
       const kind = start <= now && end > now ? 'now' as const : end <= now ? 'past' as const : undefined;
       const code = episodeCode(p.seasonNumber, p.episodeNumber, p.episodeType, p.episodePart);
-      return { time: hhmm(p.startsAtUtc), title: p.seriesName, sub: kind === 'now' ? `${code} · ahora` : code, kind, seriesId: p.seriesId };
+      // The episode name leads; the series and its code go below (the series alone when the episode has no own name).
+      const named = !!p.title && p.title !== p.seriesName;
+      const sub = [named ? p.seriesName : '', code, kind === 'now' ? 'ahora' : ''].filter(Boolean).join(' · ');
+      return { time: hhmm(p.startsAtUtc), title: named ? p.title : p.seriesName, sub, kind, seriesId: p.seriesId };
     });
   });
 
@@ -95,6 +99,10 @@ export function createTuner(id: Signal<number>) {
       rememberChannel(channelId);
       loadPrograms(channelId);
     });
+  });
+  inject(ChannelEvents).listen(change => {
+    const tuned = id();
+    if (tuned && ((change.reason === 'schedule' && change.channelId === tuned) || change.reason === 'reconnected')) loadPrograms(tuned);
   });
 
   return {
