@@ -197,6 +197,9 @@ jobs:
   # The job always runs so its required matrix checks report even when a PR only touches Android/docs.
   build-and-push:
     needs: [changes, security-scan]
+    # Skipped test jobs (Android/docs-only PRs) would otherwise skip this job too, and its required
+    # matrix checks would never report; run whenever the aggregated gate passed.
+    if: ${{ !cancelled() && needs.security-scan.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
